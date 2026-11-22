@@ -934,6 +934,16 @@ impl Module for MeetingsModule {
         "Video meetings over WebRTC: rooms, waiting room, roles, signalling over the shared WebSocket hub, in-meeting chat, screen-share events, recording references, attendance, and paid rooms via product entitlements. Media transport is browser-to-browser WebRTC; no media server or SFU is built in."
     }
 
+    /// Meetings is sold as a product: a customer buys a module
+    /// entitlement for it (see `crate::modules::licensing`).
+    fn available_as_product(&self) -> bool {
+        true
+    }
+
+    fn product_category(&self) -> Option<&'static str> {
+        Some("communication")
+    }
+
     fn requires(&self) -> &[&'static str] {
         &["scheduler", "storage", "store"]
     }

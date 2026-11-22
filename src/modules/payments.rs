@@ -110,6 +110,46 @@
 // chargeback webhooks emit `payment.failed` / `payment.chargeback`
 // plus a `notification.requested` event.
 //
+// Card validation (batch 18) is a gate, not a provider feature:
+// before a card payment is processed, the gateway emits
+// `cards.validate_requested` on the hook bus and proceeds ONLY on
+// a successful validation answer from the cards module; a missing
+// or negative answer rejects the payment (see
+// `request_card_validation`). Raw card details are accepted ONLY
+// through the optional `card` object on the checkout requests, are
+// held in memory for that one validation call, and are never
+// stored, logged, or returned. The token boundary is unchanged: a
+// value that looks like a card number is still rejected as a
+// `payment_method_token` by `validate_token`. Payment reference
+// settings (default prefix, per-product prefixes, total-length
+// cap) live in `crate::core::reference_id::ReferenceIdSettings`
+// and are owned by the store and billing modules, edited through
+// their reference-settings endpoints (changes emitted as
+// `reference.settings_changed`). The gateway keeps no
+// `reference_id.*` settings surface of its own: it generates
+// references with the shared defaults only (see
+// `charge_reference`), and the store / billing endpoints are the
+// only live read paths for generation. Likewise, card validation
+// settings are owned per tenant by the cards module
+// (`PUT /api/v1/cards/settings`: test_mode live/sandbox,
+// max_expiry_years_ahead 1-50, gpn_enabled,
+// disabled_standard_brands) — the gateway keeps no `cards.*`
+// settings surface either. The gateway's old `cards.*` /
+// `reference_id.*` settings namespace was DROPPED (batch-18
+// integration decision), not mirrored: it used a divergent
+// allowlist (`enabled_brands`) and bound (max 30), and a global
+// (tenant-less) mirror cannot track the cards module's per-tenant
+// values — the validator reads its own per-tenant settings and
+// ignores anything the gateway sends — so any mirror would go
+// stale on the first cards-settings edit and present stale values
+// as effective. Writes to either namespace through the settings
+// module are refused with 422 by `on_config_validate_cards`,
+// which points the caller at the canonical endpoint, instead of
+// silently doing nothing. The provider-facing reference for every
+// charge is resolved by `charge_reference` in this module
+// (threaded store reference, else the order id when it already is
+// a valid reference, else a freshly generated one).
+//
 // Persistence: records are kept in memory (same pattern as the
 // provider registry and the store). Durable persistence is a
 // follow-up for the integrator — see the migration sketch in the
@@ -117,14 +157,16 @@
 
 use crate::core::context::AppContext;
 use crate::core::error::{UnifiedError, UnifiedResult};
-use crate::core::hooks::{HookBus, HookContext};
+use crate::core::hooks::{events, HookBus, HookContext};
 use crate::core::json;
 use crate::core::modules::{Module, ModuleRegistry, RouteInfo};
 use crate::core::pagination::{PageResult, PaginationParams};
+use crate::core::reference_id;
+use crate::core::tenancy::TenantContext;
 use actix_web::{web, HttpRequest, HttpResponse};
 use async_trait::async_trait;
 use base64::Engine;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Datelike, Utc};
 use dashmap::DashMap;
 use hmac::{Hmac, Mac};
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE, RETRY_AFTER};
@@ -168,6 +210,655 @@ pub const PAYMENT_SPLIT_PART_PAID: &str = "payment.split.part.paid";
 pub const PAYMENT_SPLIT_COMPLETED: &str = "payment.split.completed";
 /// Emitted when a split bill is cancelled.
 pub const PAYMENT_SPLIT_CANCELLED: &str = "payment.split.cancelled";
+
+// ---------------------------------------------------------------------------
+// Batch 18 — card validation wiring.
+//
+// The gateway never validates a card number itself: it emits
+// `cards.validate_requested` and the cards module answers. This
+// section is the whole wiring surface — the event contract, the
+// reason codes, the capability names, and the fail-closed gate
+// (`request_card_validation`) the checkout handlers call before
+// any card payment is processed. The cards module itself
+// (validation, brand data, custom rules, and its per-tenant
+// settings) and the reference-id generator live in their own
+// modules; this section only wires them into the payment flow.
+// The gateway keeps no `cards.*` / `reference_id.*` settings of
+// its own: those namespaces were dropped (see the module header
+// and `on_config_validate_cards`) because the cards module's
+// per-tenant settings and the store / billing reference settings
+// are the single sources of truth.
+// ---------------------------------------------------------------------------
+
+/// Emitted before a card payment is processed, asking the cards
+/// module to validate the card. The gateway proceeds ONLY on a
+/// successful validation answer; see `request_card_validation`.
+/// WARNING: the payload carries the card number (`number`,
+/// digits only), the expiry (`expiry`, `"MM/YYYY"`), and the CVV
+/// (`cvv`, the value) so the validator can run Luhn, brand
+/// detection, expiry, and CVV-length checks. All three travel on
+/// the in-process hook bus only: the cards module's validator is
+/// pure — it never stores, logs, or returns them — and the
+/// payload must never be audited, persisted, or forwarded to a
+/// webhook. `cards.validate_requested` is therefore deliberately
+/// absent from the audit event list and from the webhooks
+/// known-events list; only the `cards.validated` outcome event
+/// (masked PAN only) is auditable.
+pub const CARDS_VALIDATE_REQUESTED: &str = "cards.validate_requested";
+/// Emitted by the cards module (not by this gateway) once per
+/// answered validation, with the masked PAN only — never the full
+/// number. The audit log subscribes to this event, not to the
+/// request event above. Payload (cards module): `tenant_id`,
+/// `masked_pan`, `brand_id`, `brand_name`, `matched_rule`,
+/// `valid`, `reason_codes`, `is_test_number`.
+pub const CARDS_VALIDATED: &str = "cards.validated";
+/// Emitted by the cards module when an admin creates, updates, or
+/// deletes a custom card validation rule. NOTE: the cards module
+/// does not emit this event yet (no emit site in `cards.rs` at
+/// batch-18 time); the audit snippet lists it as a required
+/// addition for the cards module, not as a live event.
+pub const CARDS_CUSTOM_RULE_CHANGED: &str = "cards.custom_rule.changed";
+/// Emitted by the reference-id generator when it mints a
+/// reference order id. The event name is the generator's own
+/// (`reference.generated`, see `reference_id::
+/// EVENT_REFERENCE_GENERATED`); the payload is `{ "reference",
+/// "prefix", "tenant_id" }`.
+pub const REFERENCE_ID_GENERATED: &str = "reference.generated";
+/// Emitted after the reference-id settings change (see
+/// `reference_id::EVENT_REFERENCE_SETTINGS_CHANGED`).
+pub const REFERENCE_SETTINGS_CHANGED: &str = "reference.settings_changed";
+
+/// Card validation failed the Luhn checksum.
+pub const CARD_REASON_INVALID_LUHN: &str = "invalid_luhn";
+/// The card number matches no known brand (and no custom rule).
+pub const CARD_REASON_UNKNOWN_BRAND: &str = "unknown_brand";
+/// The card number has the wrong length for its brand.
+pub const CARD_REASON_INVALID_LENGTH: &str = "invalid_length";
+/// The expiry date is past, malformed, or beyond the upper bound
+/// in the cards module's per-tenant settings
+/// (`max_expiry_years_ahead`).
+pub const CARD_REASON_INVALID_EXPIRY: &str = "invalid_expiry";
+/// The CVV has the wrong length or format for the brand.
+pub const CARD_REASON_INVALID_CVV: &str = "invalid_cvv";
+/// The detected brand is disabled by the cards module's
+/// per-tenant settings.
+pub const CARD_REASON_BRAND_DISABLED: &str = "brand_disabled";
+/// The number is a known test number and the tenant is in live
+/// mode (the cards module's per-tenant `test_mode` is `live`).
+pub const CARD_REASON_TEST_NUMBER_REJECTED: &str = "test_number_rejected";
+/// The number is malformed (illegal characters, or missing where
+/// the validator requires a number). The gateway pre-checks the
+/// shape, so this surfaces mainly when a number-less payload
+/// reaches a validator that requires one (method / claim modes
+/// before the cards handler learns them).
+pub const CARD_REASON_INVALID_FORMAT: &str = "invalid_format";
+/// The cards module did not answer (not registered, silent, or an
+/// answer that breaks the contract). Fail closed, never proceed.
+pub const CARD_REASON_UNAVAILABLE: &str = "cards_unavailable";
+
+/// Every reason code a validation answer may carry. An answer
+/// whose reason is outside this list is a contract violation
+/// and is treated as `cards_unavailable`. The cards module's
+/// `missing_tenant_context` refusal is not a validation reason:
+/// it maps to `cards_unavailable` (the gate guarantees a tenant
+/// id is always present, so it should never fire).
+pub const CARD_VALIDATION_REASONS: &[&str] = &[
+    CARD_REASON_INVALID_LUHN,
+    CARD_REASON_UNKNOWN_BRAND,
+    CARD_REASON_INVALID_LENGTH,
+    CARD_REASON_INVALID_EXPIRY,
+    CARD_REASON_INVALID_CVV,
+    CARD_REASON_BRAND_DISABLED,
+    CARD_REASON_TEST_NUMBER_REJECTED,
+    CARD_REASON_INVALID_FORMAT,
+    CARD_REASON_UNAVAILABLE,
+];
+
+/// Capability: read card validation settings and the validation contract.
+pub const CARDS_READ: &str = "cards:read";
+/// Capability: validate a card (server-side checkout gate and the
+/// admin validation flow). Never granted to unprivileged roles:
+/// an open validation oracle lets anyone probe card numbers.
+pub const CARDS_VALIDATE: &str = "cards:validate";
+/// Capability: manage card validation settings and custom rules.
+pub const CARDS_MANAGE: &str = "cards:manage";
+
+/// Coarse upper bound for the local expiry-year shape guard in
+/// `create_payment_method`: the cards module accepts
+/// `max_expiry_years_ahead` 1-50 per tenant, so a card expiring
+/// more than 50 years past the current year can never validate.
+/// This guard only rejects years no tenant setting could ever
+/// accept; the validator stays authoritative for the real
+/// per-tenant bound and for past-ness (`invalid_expiry`). There
+/// is deliberately no settings-driven bound here: the gateway
+/// keeps no `cards.*` settings surface (see the module header),
+/// so a gateway-side bound would drift from the cards module's
+/// per-tenant value.
+pub const CARDS_EXPIRY_YEAR_GUARD_MAX_AHEAD: u32 = 50;
+
+/// Raw card details for one validation, supplied on a checkout
+/// request. All fields are optional and defaulted so older
+/// clients that send no `card` object keep working: the gate
+/// only runs when `number` is non-empty. The struct is
+/// deserialize-only and is never serialized anywhere — the number,
+/// expiry, and CVV value leave this handler only as the
+/// in-memory `cards.validate_requested` bus payload (`number`,
+/// `expiry`, `cvv`) to the cards module's pure validator, and
+/// all three are dropped with the request. Never store, log, or
+/// return these fields.
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct CardDetailsInput {
+    /// Card number; spaces and dashes are tolerated and stripped.
+    #[serde(default)]
+    pub number: String,
+    /// Expiry month, 1-12.
+    #[serde(default)]
+    pub exp_month: u32,
+    /// Expiry year, four digits.
+    #[serde(default)]
+    pub exp_year: u32,
+    /// Card verification value. It is sent to the cards module
+    /// only as the `cvv` field of the in-memory
+    /// `cards.validate_requested` payload (the validator needs
+    /// the value for its length check); it is never stored,
+    /// logged, or returned.
+    #[serde(default)]
+    pub cvv: Option<String>,
+}
+
+/// Outcome of a successful card validation: the mode that ran and
+/// the validator's brand and masked PAN, when the answer carried
+/// them. `Ok(Some(_))` from `request_card_validation` always
+/// means the card is valid; failures are errors, never a
+/// `valid: false` outcome.
+#[derive(Debug, Clone)]
+pub struct CardValidationOutcome {
+    /// `"full"` (raw card details), `"method"` (stored method),
+    /// or `"claim"` (claimed brand / last4 / expiry on
+    /// method onboarding).
+    pub mode: String,
+    /// Brand detected by the validator, when the answer carried it.
+    pub brand: Option<String>,
+    /// Masked PAN (first 6 + last 4 in full mode, `******` + last
+    /// 4 in method mode), when known.
+    pub masked_pan: Option<String>,
+}
+
+/// Keep only the ASCII digits of a value (strips the spaces and
+/// dashes callers use to group a card number).
+pub fn digits_only(value: &str) -> String {
+    value.chars().filter(|c| c.is_ascii_digit()).collect()
+}
+
+/// Mask a card number for logs, errors, and audit records: first 6
+/// digits, six asterisks, last 4 digits (`411111******1111`).
+/// Shorter inputs mask everything except the last 4 digits; an
+/// input shorter than 4 digits masks to `****`. The full number is
+/// never returned.
+pub fn mask_pan(pan_digits: &str) -> String {
+    let digits = digits_only(pan_digits);
+    if digits.len() < 4 {
+        return "*".repeat(4);
+    }
+    let last4 = &digits[digits.len() - 4..];
+    if digits.len() >= 10 {
+        format!("{}******{}", &digits[..6], last4)
+    } else {
+        format!("{}{}", "*".repeat(digits.len() - 4), last4)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Card settings: the gateway keeps none (single source of truth).
+// ---------------------------------------------------------------------------
+//
+// The gateway's old `cards.*` / `reference_id.*` settings
+// namespace (definitions, effective-value store, `config.validate`
+// arms, `settings.changed` mirror) was DROPPED, not mirrored —
+// see the module header and `on_config_validate_cards`. Card
+// validation settings are owned per tenant by the cards module
+// (`PUT /api/v1/cards/settings`); reference-id settings are owned
+// by the store and billing modules. The only card-settings
+// behaviour left in this module is the coarse expiry-year guard
+// constant above, used by `create_payment_method`.
+
+// ---------------------------------------------------------------------------
+// Card / reference-id settings: the gateway owns none (refuse writes).
+// ---------------------------------------------------------------------------
+
+/// `config.validate` handler for the `cards.*` and
+/// `reference_id.*` namespaces: every admin write to these
+/// namespaces through the settings module is refused with 422.
+///
+/// Single-source-of-truth decision (batch-18 integration): the
+/// cards module owns card validation settings per tenant
+/// (`PUT /api/v1/cards/settings`: `test_mode` live/sandbox,
+/// `max_expiry_years_ahead` 1-50, `gpn_enabled`,
+/// `disabled_standard_brands`), and the store / billing modules
+/// own reference-id settings (`PUT /api/v1/store/reference-settings`
+/// and `PUT /api/v1/billing/reference-settings`). The gateway
+/// keeps no settings surface for either namespace — its old
+/// namespace was dropped, not mirrored (see the module header).
+/// Accepting a write here would silently do nothing (the
+/// validator reads only its own per-tenant settings; the gateway
+/// never reads these keys), so the write is refused and the
+/// caller is pointed at the canonical endpoint instead of being
+/// left believing the value took effect. The handler only
+/// validates — it never applies a value — and there is no
+/// `settings.changed` listener left in this module.
+fn on_config_validate_cards(ctx: &mut HookContext) {
+    let namespace = ctx
+        .get("namespace")
+        .and_then(|value| value.as_str())
+        .unwrap_or("");
+    if namespace != "cards" && namespace != "reference_id" {
+        return;
+    }
+    let key = ctx
+        .get("key")
+        .and_then(|value| value.as_str())
+        .unwrap_or("")
+        .to_string();
+    let message = if namespace == "cards" {
+        format!(
+            "Setting \"cards.{key}\" is owned by the cards module; edit it with PUT /api/v1/cards/settings (test_mode, max_expiry_years_ahead, gpn_enabled, disabled_standard_brands). The gateway keeps no cards.* settings."
+        )
+    } else {
+        format!(
+            "Setting \"reference_id.{key}\" is owned by the store and billing modules; edit it with PUT /api/v1/store/reference-settings or PUT /api/v1/billing/reference-settings. The gateway keeps no reference_id.* settings."
+        )
+    };
+    ctx.set("valid", json!(false));
+    ctx.set("message", json!(message));
+}
+
+// ---------------------------------------------------------------------------
+// Card validation: capability check and the checkout gate.
+// ---------------------------------------------------------------------------
+
+/// Fail when the caller does not hold `permission` for the cards
+/// resource. Follows the entitlements module's `role.check`
+/// pattern: ask the hook bus, fail closed on silence (no roles
+/// module answering means denied). The role comes from the
+/// `x-role` header — the same trusted-header caveat as the rest of
+/// the codebase applies until the auth extractor lands. Used by
+/// the cards settings endpoint; the checkout gate itself runs
+/// server-side on behalf of the paying customer (ownership is
+/// enforced by `require_customer` at the call sites) and does not
+/// take a role.
+fn require_cards_capability(
+    ctx: &AppContext,
+    req: &HttpRequest,
+    permission: &str,
+) -> UnifiedResult<()> {
+    let denied = || {
+        UnifiedError::forbidden(format!(
+            "Role lacks required capability: {permission}"
+        ))
+    };
+    let Some(role) = req
+        .headers()
+        .get("x-role")
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    else {
+        return Err(denied());
+    };
+    let outcome = ctx.hooks.emit(
+        "role.check",
+        json!({ "role": role, "permission": permission, "allowed": false }),
+    );
+    if outcome
+        .get("allowed")
+        .and_then(|value| value.as_bool())
+        .unwrap_or(false)
+    {
+        Ok(())
+    } else {
+        Err(denied())
+    }
+}
+
+/// Fail-closed error for a card payment rejected because the
+/// validator could not answer: the cards module is not
+/// registered, it stayed silent, or its answer broke the
+/// contract. 503, with the generic reason code and the masked PAN
+/// only — never the full number, never a per-digit detail.
+fn cards_unavailable(masked_pan: Option<&str>) -> UnifiedError {
+    let mut error = UnifiedError::new(
+        "Card validation is unavailable; the card payment was rejected",
+        503,
+    )
+    .with_metadata(
+        "reason",
+        Value::String(CARD_REASON_UNAVAILABLE.to_string()),
+    );
+    if let Some(masked) = masked_pan {
+        error = error.with_metadata("masked_pan", Value::String(masked.to_string()));
+    }
+    error
+}
+
+/// Card data the validator can check without a PAN: a brand,
+/// last 4 digits, and expiry — as claimed on a method-onboarding
+/// request. The stored-method path resolves the same fields from
+/// the stored record instead; the two shapes are identical on the
+/// wire, only the source (and the mode label) differs.
+#[derive(Debug, Clone)]
+pub struct CardMethodRef {
+    pub brand: String,
+    pub last4: String,
+    pub exp_month: u32,
+    pub exp_year: u32,
+}
+
+/// Ask the cards module to validate the card for one checkout and
+/// return the outcome, or reject the payment.
+///
+/// The gate runs only when the gateway actually holds card data:
+///
+///   - raw `card` details in the request → mode `"full"`: Luhn,
+///     brand detection, per-brand length, expiry, CVV length,
+///     brand enabled, test-number policy;
+///   - a stored `payment_method_id` (and no raw details) → mode
+///     `"method"`: brand known / enabled and expiry, from the
+///     stored brand, last4, and expiry (no PAN exists to run Luhn
+///     over);
+///   - a claimed brand / last4 / expiry on a method-onboarding
+///     request (and no raw details) → mode `"claim"`: the same
+///     brand and expiry checks as `"method"`, so a disabled brand
+///     or an out-of-bound expiry is rejected at onboarding instead
+///     of at the first charge;
+///   - an opaque token alone → no gate: the token came from a
+///     PCI-compliant tokenization step upstream and the gateway
+///     cannot validate what it cannot see. `Ok(None)` means
+///     "nothing to validate", not "validation passed".
+///
+/// KNOWN GAP (batch-18 integrator item): the cards module's hook
+/// handler currently requires `number` and answers
+/// `invalid_format` when it is missing, so `"method"` and
+/// `"claim"` emits fail closed with `invalid_format` until the
+/// handler learns number-less validation (brand / last4 / expiry
+/// only). The gate keeps emitting them anyway — silently
+/// skipping stored-method validation would be a fail-open — so
+/// stored-method card payments stay rejected until that handler
+/// extension lands. See the batch report for the exact
+/// extension.
+///
+/// Fail closed, in order: no resolved tenant context (401/403
+/// from the tenant extractor — card payments are tenant-scoped
+/// and never fall back to the control plane); the cards module
+/// is not registered on `cards.validate_requested` (503
+/// `cards_unavailable`); the module stays silent or answers
+/// without a boolean `valid` (503 `cards_unavailable`); the
+/// answer is invalid (422 with the generic reason code from the
+/// allowlist, the masked PAN only, and the brand when the answer
+/// carried one); the answer carries a reason outside the
+/// allowlist (503 `cards_unavailable` — a contract violation,
+/// never a guessed reason). The full PAN and the CVV value are
+/// never stored, logged, or returned: they travel only on the
+/// in-process bus to the cards module's pure validator
+/// (`number`, `expiry`, `cvv`), which never stores or logs them,
+/// and the request event is never audited or forwarded.
+#[allow(clippy::too_many_arguments)]
+fn request_card_validation(
+    state: &PaymentsState,
+    req: &HttpRequest,
+    card: Option<&CardDetailsInput>,
+    method_id: Option<Uuid>,
+    claimed: Option<CardMethodRef>,
+    connection: &PaymentConnection,
+    customer_id: &str,
+    order_id: Option<&str>,
+    intent_id: Option<Uuid>,
+) -> UnifiedResult<Option<CardValidationOutcome>> {
+    let tenant = TenantContext::from_http_request(req)?;
+    let full = card
+        .map(|details| !details.number.trim().is_empty())
+        .unwrap_or(false);
+    let method = if full {
+        None
+    } else {
+        method_id.and_then(|id| {
+            methods_store()
+                .get(&id)
+                .map(|entry| entry.value().clone())
+        })
+    };
+    if !full && method.is_none() && claimed.is_none() {
+        return Ok(None);
+    }
+    let mode = if full {
+        "full"
+    } else if method.is_some() {
+        "method"
+    } else {
+        "claim"
+    };
+    let (pan_digits, masked_pan, brand, exp_month, exp_year, cvv_present, cvv_length, cvv_digits_only, claimed_last4, cvv_value) =
+        if full {
+            let details = card.expect("full mode implies card details are present");
+            if details.number.trim().len() > 64 {
+                return Err(UnifiedError::bad_request(
+                    "Card number is too long",
+                ));
+            }
+            let digits = digits_only(&details.number);
+            if digits.is_empty()
+                || !details
+                    .number
+                    .chars()
+                    .all(|c| c.is_ascii_digit() || c == ' ' || c == '-')
+            {
+                return Err(UnifiedError::bad_request(
+                    "Card number must contain only digits, spaces, or dashes",
+                ));
+            }
+            if !(1..=12).contains(&details.exp_month) {
+                return Err(UnifiedError::bad_request("exp_month must be 1-12"));
+            }
+            if !(1000..=9999).contains(&details.exp_year) {
+                return Err(UnifiedError::bad_request(
+                    "exp_year must be a four-digit year",
+                ));
+            }
+            let cvv = details.cvv.clone().unwrap_or_default();
+            if cvv.len() > 8 {
+                return Err(UnifiedError::bad_request("CVV is too long"));
+            }
+            let masked = mask_pan(&digits);
+            (
+                Some(digits),
+                Some(masked),
+                None,
+                details.exp_month,
+                details.exp_year,
+                !cvv.is_empty(),
+                cvv.len(),
+                cvv.chars().all(|c| c.is_ascii_digit()),
+                None,
+                if cvv.is_empty() { None } else { Some(cvv) },
+            )
+        } else {
+            // Method mode resolves the stored record (ownership is
+            // re-checked here even though `resolve_token` already
+            // checked it at the call site); claim mode uses the
+            // caller-supplied fields, which the call site already
+            // ownership-checked with `require_customer`.
+            let reference = match method {
+                Some(method) => {
+                    if method.customer_id != customer_id {
+                        return Err(UnifiedError::forbidden(
+                            "Payment method belongs to a different customer",
+                        ));
+                    }
+                    CardMethodRef {
+                        brand: method.brand,
+                        last4: method.last4,
+                        exp_month: method.exp_month,
+                        exp_year: method.exp_year,
+                    }
+                }
+                None => claimed
+                    .expect("method or claim mode implies a method or claim was supplied"),
+            };
+            (
+                None,
+                Some(format!("******{}", reference.last4)),
+                Some(reference.brand.clone()),
+                reference.exp_month,
+                reference.exp_year,
+                false,
+                0,
+                false,
+                Some(reference.last4.clone()),
+                None,
+            )
+        };
+    if !state.bus().has(CARDS_VALIDATE_REQUESTED) {
+        return Err(cards_unavailable(masked_pan.as_deref()));
+    }
+    // The validator's wire shape: `number` (digits), `expiry`
+    // (`"MM/YYYY"`, zero-padded month), `cvv` (the value, or null
+    // when none was supplied). No settings ride along: the cards
+    // module validates against its own per-tenant settings
+    // (`PUT /api/v1/cards/settings`) and ignores any gateway-side
+    // values, so the gateway sends none — the old
+    // `test_mode` / `gpn_enabled` / `enabled_brands` /
+    // `expiry_upper_bound_years` payload fields were dropped with
+    // the gateway's `cards.*` settings namespace.
+    let expiry = format!("{exp_month:02}/{exp_year}");
+    let context = state.bus().emit(
+        CARDS_VALIDATE_REQUESTED,
+        json!({
+            "mode": mode,
+            "number": pan_digits,
+            "expiry": expiry,
+            "cvv": cvv_value,
+            "masked_pan": masked_pan,
+            "brand": brand,
+            "cvv_present": cvv_present,
+            "cvv_length": cvv_length,
+            "cvv_digits_only": cvv_digits_only,
+            "claimed_brand": brand,
+            "claimed_last4": claimed_last4,
+            "tenant_id": tenant.tenant_id.to_string(),
+            "schema_name": tenant.schema_name,
+            "customer_id": customer_id,
+            "connection_id": connection.id.to_string(),
+            "provider": connection.kind.as_str(),
+            "order_id": order_id,
+            "intent_id": intent_id.map(|id| id.to_string()),
+        }),
+    );
+    // The cards module answers in two channels: `result` set on
+    // the payload and the same object contributed via `add_result`.
+    // Either may carry the boolean `valid`; the payload's `result`
+    // wins when both are present. Silence on both channels is a
+    // fail-closed `cards_unavailable`.
+    let answered = context
+        .results
+        .iter()
+        .find(|result| result.get("valid").and_then(Value::as_bool).is_some());
+    let answer = context.get("result").or(answered);
+    let valid = answer
+        .and_then(|result| result.get("valid"))
+        .and_then(Value::as_bool)
+        .or_else(|| context.get("valid").and_then(Value::as_bool));
+    let Some(valid) = valid else {
+        return Err(cards_unavailable(masked_pan.as_deref()));
+    };
+    if !valid {
+        // The validator reports generic codes in `reason_codes`
+        // (first code wins — the validator emits exactly one per
+        // failure). Its `missing_tenant_context` refusal is not a
+        // validation reason: it maps to `cards_unavailable` (the
+        // gate always supplies a tenant id, so it should never
+        // fire). Any code outside the allowlist is a contract
+        // violation and also maps to `cards_unavailable` — never
+        // a guessed reason.
+        let reason = answer
+            .and_then(|result| result.get("reason_codes"))
+            .and_then(Value::as_array)
+            .and_then(|codes| codes.first())
+            .and_then(Value::as_str)
+            .unwrap_or(CARD_REASON_UNAVAILABLE);
+        let reason = if reason == "missing_tenant_context" {
+            CARD_REASON_UNAVAILABLE
+        } else {
+            reason
+        };
+        if !CARD_VALIDATION_REASONS.contains(&reason) {
+            return Err(cards_unavailable(masked_pan.as_deref()));
+        }
+        let mut error = UnifiedError::unprocessable(format!("Card validation failed: {reason}"))
+            .with_metadata("reason", Value::String(reason.to_string()))
+            .with_metadata("mode", Value::String(mode.to_string()));
+        if let Some(masked) = &masked_pan {
+            error = error.with_metadata("masked_pan", Value::String(masked.clone()));
+        }
+        if let Some(answer_brand) = answer
+            .and_then(|result| result.get("brand_name"))
+            .or_else(|| answer.and_then(|result| result.get("brand_id")))
+            .and_then(Value::as_str)
+        {
+            error = error.with_metadata("brand", Value::String(answer_brand.to_string()));
+        }
+        return Err(error);
+    }
+    Ok(Some(CardValidationOutcome {
+        mode: mode.to_string(),
+        brand: answer
+            .and_then(|result| result.get("brand_name"))
+            .or_else(|| answer.and_then(|result| result.get("brand_id")))
+            .and_then(Value::as_str)
+            .map(str::to_string)
+            .or(brand),
+        masked_pan: answer
+            .and_then(|result| result.get("masked_pan"))
+            .and_then(Value::as_str)
+            .filter(|masked| !masked.is_empty())
+            .map(str::to_string)
+            .or(masked_pan),
+    }))
+}
+
+/// Cards settings endpoint: the capability names and the
+/// validation contract for the card validation gate, plus
+/// pointers to the canonical settings surfaces. Admin-only
+/// (`cards:read`). The gateway keeps no `cards.*` /
+/// `reference_id.*` settings of its own (see
+/// `on_config_validate_cards`): card validation settings are
+/// owned per tenant by the cards module
+/// (`PUT /api/v1/cards/settings`), and reference-id settings are
+/// owned by the store and billing modules
+/// (`PUT /api/v1/store/reference-settings`,
+/// `PUT /api/v1/billing/reference-settings`).
+async fn get_cards_settings(
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let result: UnifiedResult<Value> = (|| {
+        require_cards_capability(&ctx, &req, CARDS_READ)?;
+        Ok(json!({
+            "capabilities": {
+                "read": CARDS_READ,
+                "validate": CARDS_VALIDATE,
+                "manage": CARDS_MANAGE,
+            },
+            "card_settings": "PUT /api/v1/cards/settings",
+            "reference_settings": [
+                "PUT /api/v1/store/reference-settings",
+                "PUT /api/v1/billing/reference-settings",
+            ],
+            "validation_event": CARDS_VALIDATE_REQUESTED,
+            "validation_reasons": CARD_VALIDATION_REASONS,
+        }))
+    })();
+    json::respond(result, debug)
+}
 
 // ---------------------------------------------------------------------------
 // Limits.
@@ -757,6 +1448,13 @@ pub struct ChargeInput {
     pub currency: String,
     pub customer_id: String,
     pub order_id: Option<String>,
+    /// Provider-facing payment reference for this charge, in the
+    /// shared 30-character reference format (see
+    /// `crate::core::reference_id`). Threaded from the store order's
+    /// reference when the caller knows it; adapters derive one from
+    /// `order_id` or generate a fresh one when this is `None`.
+    /// Never a card number or other sensitive value.
+    pub reference_id: Option<String>,
     pub invoice_id: Option<String>,
     pub description: Option<String>,
     /// Tokenized payment method (card token, wallet token, vault id).
@@ -768,6 +1466,72 @@ pub struct ChargeInput {
     /// Billing details, required by 2Checkout, ignored elsewhere.
     pub billing: Option<BillingDetails>,
 }
+
+// ---------------------------------------------------------------------------
+// Batch 18: payment reference ids (BEGIN — append-only section)
+// ---------------------------------------------------------------------------
+//
+// The provider-facing reference for every charge, payout, refund,
+// and subscription name in this module is a reference in the single
+// shared format (`PREFIX-12hex-12hex`, 30 characters; see
+// `crate::core::reference_id`). The store order id (a UUID) is NEVER
+// sent to a provider as the order reference: the provider sees only
+// the 30-character reference, while the store link stays in
+// `ChargeInput::order_id` and on the recorded transaction, so
+// reconciliation never loses the order. The reference for a charge
+// resolves in this order: the reference threaded on the input, the
+// order id when it already is a valid reference, otherwise a freshly
+// generated reference. Nothing here invents a second format: the
+// `pay-{uuid}`, `ord-{uuid}`, `txn-{uuid}`, `payout-{uuid}`,
+// `subscription-{uuid}`, `bt-{uuid}`, and `bt-refund-{uuid}`
+// fallbacks are all replaced by this one helper.
+
+/// Resolve the provider-facing reference for a charge: the threaded
+/// `reference_id` when it is a valid reference, otherwise the order
+/// id when it already is one, otherwise a freshly generated
+/// reference.
+fn charge_reference(input: &ChargeInput) -> String {
+    if let Some(reference) = input
+        .reference_id
+        .as_deref()
+        .filter(|reference| reference_id::is_valid(reference))
+    {
+        return reference.to_string();
+    }
+    provider_reference(input.order_id.as_deref())
+}
+
+/// Resolve a provider-facing reference from an order id alone: the
+/// id itself when it already is a valid reference, otherwise a
+/// freshly generated reference with the default prefix.
+fn provider_reference(order_id: Option<&str>) -> String {
+    match order_id.filter(|id| reference_id::is_valid(id)) {
+        Some(id) => id.to_string(),
+        None => reference_id::generate(None),
+    }
+}
+
+/// The store order's reference for a pending checkout, when the
+/// store recorded one through `payment.initiated`. The pending
+/// checkout payload carries the order JSON, which includes the
+/// `reference` issued at checkout. Returns `None` when there is no
+/// pending checkout for the order or its reference is not valid.
+fn pending_checkout_reference(order_id: Option<&str>) -> Option<String> {
+    let order_id = order_id?;
+    let record = pending_checkouts_store().get(order_id)?;
+    let reference = record
+        .get("order")?
+        .get("reference")?
+        .as_str()?;
+    if reference_id::is_valid(reference) {
+        Some(reference.to_string())
+    } else {
+        None
+    }
+}
+
+// Batch 18: payment reference ids (END)
+// ---------------------------------------------------------------------------
 
 /// Input to an adapter refund call.
 #[derive(Debug, Clone)]
@@ -1485,6 +2249,12 @@ pub struct PaymentIntent {
     /// token is a payment reference, not a display value.
     #[serde(skip_serializing)]
     pub payment_method_token: Option<String>,
+    /// Stored payment method supplied at creation, kept for the
+    /// same reason — and so confirm can run the card validation
+    /// gate in method mode without the caller resending it.
+    /// Never serialized: a method reference, not a display value.
+    #[serde(skip_serializing)]
+    pub payment_method_id: Option<Uuid>,
     pub idempotency_key: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -3849,14 +4619,12 @@ impl ProviderAdapter {
 
 impl ProviderAdapter {
     /// Xendit card charge (Charges API v2, one-time payment with a
-    /// tokenized card). The reference id is the order id when the
-    /// caller supplied one, otherwise a generated reference.
+    /// tokenized card). The provider reference is the order's
+    /// reference when the caller threaded one, otherwise a generated
+    /// reference in the shared format (see `charge_reference`).
     async fn xendit_charge(&self, input: &ChargeInput) -> UnifiedResult<ChargeResult> {
         let token = validate_token(input.payment_method_token.as_deref(), "xendit")?;
-        let reference = input
-            .order_id
-            .clone()
-            .unwrap_or_else(|| format!("pay-{}", Uuid::now_v7()));
+        let reference = charge_reference(input);
         let url = self.url("/v2/charges")?;
         let body = send_json(
             self.client
@@ -3882,10 +4650,7 @@ impl ProviderAdapter {
     /// the funds are held and captured later.
     async fn xendit_authorize(&self, input: &ChargeInput) -> UnifiedResult<ChargeResult> {
         let token = validate_token(input.payment_method_token.as_deref(), "xendit")?;
-        let reference = input
-            .order_id
-            .clone()
-            .unwrap_or_else(|| format!("pay-{}", Uuid::now_v7()));
+        let reference = charge_reference(input);
         let url = self.url("/v2/charges")?;
         let body = send_json(
             self.client
@@ -4021,7 +4786,7 @@ impl ProviderAdapter {
                 .headers(self.auth_headers()?)
                 .header("X-Idempotency-Key", input.idempotency_key.clone())
                 .json(&json!({
-                    "external_id": format!("payout-{}", Uuid::now_v7()),
+                    "external_id": reference_id::generate_with_prefix("PYOT"),
                     "amount": major_i64(input.amount_minor, &input.currency),
                     "bank_code": bank_code,
                     "account_holder_name": input.description.clone().unwrap_or_default(),
@@ -4095,18 +4860,16 @@ impl ProviderAdapter {
 // ---------------------------------------------------------------------------
 
 impl ProviderAdapter {
-    /// Midtrans charge (Core API). The order reference is the order id
-    /// when supplied, otherwise a generated reference; the provider
-    /// transaction id stored by this module IS that order reference,
-    /// because Midtrans capture / refund / status endpoints are all
-    /// addressed by order id. The Midtrans transaction id is kept in
-    /// `authorization_code`.
+    /// Midtrans charge (Core API). The order reference is the
+    /// order's reference when the caller threaded one, otherwise a
+    /// generated reference in the shared format (see
+    /// `charge_reference`); the provider transaction id stored by
+    /// this module IS that order reference, because Midtrans capture
+    /// / refund / status endpoints are all addressed by order id.
+    /// The Midtrans transaction id is kept in `authorization_code`.
     async fn midtrans_charge(&self, input: &ChargeInput) -> UnifiedResult<ChargeResult> {
         let token = validate_token(input.payment_method_token.as_deref(), "midtrans")?;
-        let reference = input
-            .order_id
-            .clone()
-            .unwrap_or_else(|| format!("pay-{}", Uuid::now_v7()));
+        let reference = charge_reference(input);
         let url = self.url("/v2/charge")?;
         let body = send_json(
             self.client
@@ -4239,7 +5002,7 @@ impl ProviderAdapter {
         let name = input
             .plan_id
             .clone()
-            .unwrap_or_else(|| format!("subscription-{}", Uuid::now_v7()));
+            .unwrap_or_else(|| reference_id::generate_with_prefix("SUBS"));
         let url = self.url("/v1/subscriptions")?;
         let body = send_json(
             self.client
@@ -4811,11 +5574,8 @@ impl ProviderAdapter {
             .clone()
             .filter(|v| !v.is_empty())
             .ok_or_else(|| UnifiedError::bad_request("Mastercard connection needs merchant_id"))?;
-        let order_id = input
-            .order_id
-            .clone()
-            .unwrap_or_else(|| format!("ord-{}", Uuid::now_v7()));
-        let txn_id = format!("txn-{}", Uuid::now_v7());
+        let order_id = charge_reference(input);
+        let txn_id = reference_id::generate_with_prefix("TXNS");
         let url = self.url(&format!(
             "/api/rest/version/100/merchant/{merchant}/order/{order_id}/transaction/{txn_id}"
         ))?;
@@ -4913,6 +5673,7 @@ impl ProviderAdapter {
             currency: stored.currency.clone(),
             customer_id: String::new(),
             order_id: None,
+            reference_id: None,
             invoice_id: None,
             description: None,
             payment_method_token: None,
@@ -4933,6 +5694,7 @@ impl ProviderAdapter {
             currency: input.currency.clone(),
             customer_id: String::new(),
             order_id: None,
+            reference_id: None,
             invoice_id: None,
             description: input.reason.clone(),
             payment_method_token: None,
@@ -4962,6 +5724,7 @@ impl ProviderAdapter {
             currency: stored.as_ref().map(|t| t.currency.clone()).unwrap_or_else(|| "USD".to_string()),
             customer_id: String::new(),
             order_id: None,
+            reference_id: None,
             invoice_id: None,
             description: None,
             payment_method_token: None,
@@ -5696,7 +6459,7 @@ impl ProviderAdapter {
     }
 
     fn bank_transfer_transaction_id() -> String {
-        format!("bt-{}", Uuid::now_v7())
+        reference_id::generate_with_prefix("BTRF")
     }
 
     async fn bank_transfer_charge(&self, input: &ChargeInput) -> UnifiedResult<ChargeResult> {
@@ -5745,7 +6508,7 @@ impl ProviderAdapter {
             ));
         }
         Ok(RefundResult {
-            provider_refund_id: format!("bt-refund-{}", Uuid::now_v7()),
+            provider_refund_id: reference_id::generate_with_prefix("RFND"),
             status: PaymentStatus::Pending,
             amount_minor: amount,
             currency: input.currency.clone(),
@@ -5785,6 +6548,7 @@ impl ProviderAdapter {
             currency: input.currency.clone(),
             customer_id: input.customer_id.clone(),
             order_id: input.order_id.clone(),
+            reference_id: None,
             invoice_id: None,
             description: Some(format!(
                 "Subscription first period (plan {})",
@@ -5926,6 +6690,11 @@ pub struct CreateIntentRequest {
     pub billing: Option<BillingDetailsRequest>,
     #[serde(default)]
     pub three_ds: bool,
+    /// Raw card details for validation only (see `CardDetailsInput`).
+    /// When present, confirm / charge runs the card validation gate
+    /// before any provider call. Never stored.
+    #[serde(default)]
+    pub card: Option<CardDetailsInput>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -5936,6 +6705,11 @@ pub struct ConfirmIntentRequest {
     pub payment_method_id: Option<Uuid>,
     #[serde(default)]
     pub idempotency_key: Option<String>,
+    /// Raw card details for validation only (see `CardDetailsInput`).
+    /// When present, confirm runs the card validation gate before
+    /// any provider call. Never stored.
+    #[serde(default)]
+    pub card: Option<CardDetailsInput>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -5966,6 +6740,11 @@ pub struct CreateChargeRequest {
     pub billing: Option<BillingDetailsRequest>,
     #[serde(default)]
     pub three_ds: bool,
+    /// Raw card details for validation only (see `CardDetailsInput`).
+    /// When present, the charge runs the card validation gate
+    /// before any provider call. Never stored.
+    #[serde(default)]
+    pub card: Option<CardDetailsInput>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -6013,6 +6792,12 @@ pub struct CreatePaymentMethodRequest {
     pub exp_year: u32,
     #[serde(default)]
     pub is_default: bool,
+    /// Raw card details for validation only (see `CardDetailsInput`).
+    /// When present, the method is validated before it is stored
+    /// and the stored brand comes from the validator's answer.
+    /// Never stored.
+    #[serde(default)]
+    pub card: Option<CardDetailsInput>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -6036,6 +6821,11 @@ pub struct CreateSubscriptionRequest {
     pub order_id: Option<String>,
     #[serde(default)]
     pub idempotency_key: Option<String>,
+    /// Raw card details for validation only (see `CardDetailsInput`).
+    /// When present, subscription creation runs the card validation
+    /// gate before any provider call. Never stored.
+    #[serde(default)]
+    pub card: Option<CardDetailsInput>,
 }
 
 fn default_interval_count() -> u32 {
@@ -6068,6 +6858,11 @@ pub struct PayOrderRequest {
     pub billing: Option<BillingDetailsRequest>,
     #[serde(default)]
     pub three_ds: bool,
+    /// Raw card details for validation only (see `CardDetailsInput`).
+    /// When present, the order payment runs the card validation
+    /// gate before any provider call. Never stored.
+    #[serde(default)]
+    pub card: Option<CardDetailsInput>,
 }
 
 // ---------------------------------------------------------------------------
@@ -6115,6 +6910,11 @@ pub struct PaySplitPartRequest {
     pub description: Option<String>,
     #[serde(default)]
     pub three_ds: bool,
+    /// Raw card details for validation only (see `CardDetailsInput`).
+    /// When present, the split-part payment runs the card
+    /// validation gate before any provider call. Never stored.
+    #[serde(default)]
+    pub card: Option<CardDetailsInput>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -6781,6 +7581,7 @@ async fn create_intent(
             provider_transaction_id: None,
             fee_minor: None,
             payment_method_token: token,
+            payment_method_id: input.payment_method_id,
             idempotency_key: idempotency_key(input.idempotency_key),
             created_at: now,
             updated_at: now,
@@ -6853,12 +7654,18 @@ async fn confirm_intent(
             &intent.customer_id,
         )?
         .or_else(|| intent.payment_method_token.clone());
+        // Batch 18 (S1): validate the card before any provider
+        // call. Raw details on the request run in `full` mode; a
+        // stored method id (from the request or the intent) runs
+        // in `method` mode; an opaque token alone skips the gate.
+        request_card_validation(&state, &req, request.card.as_ref(), request.payment_method_id.or(intent.payment_method_id), None, &connection, &intent.customer_id, intent.order_id.as_deref(), Some(intent.id))?;
         let adapter = adapter_for(&connection)?;
         let charge_input = ChargeInput {
             amount_minor: intent.amount_minor,
             currency: intent.currency.clone(),
             customer_id: intent.customer_id.clone(),
             order_id: intent.order_id.clone(),
+            reference_id: pending_checkout_reference(intent.order_id.as_deref()),
             invoice_id: intent.invoice_id.clone(),
             description: None,
             payment_method_token: token,
@@ -7125,12 +7932,18 @@ async fn create_charge(
             input.payment_method_id,
             &input.customer_id,
         )?;
+        // Batch 18 (S2): validate the card before any provider
+        // call. Raw details on the request run in `full` mode; a
+        // stored method id runs in `method` mode; an opaque token
+        // alone skips the gate.
+        request_card_validation(&state, &req, input.card.as_ref(), input.payment_method_id, None, &connection, &input.customer_id, input.order_id.as_deref(), None)?;
         let adapter = adapter_for(&connection)?;
         let charge_input = ChargeInput {
             amount_minor: input.amount_minor,
             currency: input.currency.clone(),
             customer_id: input.customer_id.clone(),
             order_id: input.order_id.clone(),
+            reference_id: pending_checkout_reference(input.order_id.as_deref()),
             invoice_id: input.invoice_id.clone(),
             description: input.description.clone(),
             payment_method_token: token,
@@ -7695,6 +8508,7 @@ async fn create_payout(
 
 async fn create_payment_method(
     ctx: web::Data<Arc<AppContext>>,
+    state: web::Data<Arc<PaymentsState>>,
     req: HttpRequest,
     body: web::Json<CreatePaymentMethodRequest>,
 ) -> HttpResponse {
@@ -7717,17 +8531,53 @@ async fn create_payment_method(
         if !(1..=12).contains(&input.exp_month) {
             return Err(UnifiedError::bad_request("exp_month must be 1-12"));
         }
-        if !(2000..=2100).contains(&input.exp_year) {
-            return Err(UnifiedError::bad_request("exp_year must be a four-digit year"));
+        // Coarse shape guard only: the year must be a plausible
+        // four-digit year no tenant setting could ever accept
+        // beyond (current year + the cards module's 50-year
+        // maximum). Past-ness and the real per-tenant bound stay
+        // the validator's `invalid_expiry` — the gate below runs
+        // it. See `CARDS_EXPIRY_YEAR_GUARD_MAX_AHEAD`.
+        let latest_expiry_year =
+            Utc::now().year() + CARDS_EXPIRY_YEAR_GUARD_MAX_AHEAD as i32;
+        if input.exp_year < 2000 || input.exp_year > latest_expiry_year as u32 {
+            return Err(UnifiedError::bad_request(
+                "exp_year must be a four-digit year no more than 50 years ahead",
+            ));
         }
         let connection = find_connection(input.connection_id)?;
+        // Batch 18 (S5): validate the claimed brand / last4 /
+        // expiry before storing the method (`claim` mode when no
+        // raw card details were supplied, `full` mode when they
+        // were). The stored brand comes from the validator's
+        // answer — authoritative — falling back to the claimed
+        // brand when the answer carried none.
+        let outcome = request_card_validation(
+            &state,
+            &req,
+            input.card.as_ref(),
+            None,
+            Some(CardMethodRef {
+                brand: input.brand.trim().to_string(),
+                last4: input.last4.clone(),
+                exp_month: input.exp_month,
+                exp_year: input.exp_year,
+            }),
+            &connection,
+            &input.customer_id,
+            None,
+            None,
+        )?;
+        let brand = outcome
+            .as_ref()
+            .and_then(|outcome| outcome.brand.clone())
+            .unwrap_or_else(|| input.brand.trim().to_string());
         let method = PaymentMethod {
             id: Uuid::now_v7(),
             customer_id: input.customer_id.clone(),
             connection_id: connection.id,
             provider: connection.kind.as_str().to_string(),
             provider_token: token,
-            brand: input.brand.trim().to_string(),
+            brand,
             last4: input.last4,
             exp_month: input.exp_month,
             exp_year: input.exp_year,
@@ -7909,6 +8759,7 @@ async fn renew_one(
             currency: subscription.currency.clone(),
             customer_id: subscription.customer_id.clone(),
             order_id: subscription.order_id.clone(),
+            reference_id: None,
             invoice_id: None,
             description: Some(format!(
                 "Subscription renewal (plan {})",
@@ -8035,6 +8886,7 @@ fn renewal_failed(
 async fn create_subscription(
     ctx: web::Data<Arc<AppContext>>,
     state: web::Data<Arc<PaymentsState>>,
+    req: HttpRequest,
     body: web::Json<CreateSubscriptionRequest>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
@@ -8060,6 +8912,13 @@ async fn create_subscription(
             input.payment_method_id,
             &input.customer_id,
         )?;
+        // Batch 18 (S6): validate the card before the provider
+        // call — `subscription_create` can charge immediately.
+        // Raw details run in `full` mode; a stored method id runs
+        // in `method` mode; an opaque token alone skips the gate.
+        // NOTE (pre-existing gap, not fixed here): this handler
+        // has no `require_customer` ownership check.
+        request_card_validation(&state, &req, input.card.as_ref(), input.payment_method_id, None, &connection, &input.customer_id, input.order_id.as_deref(), None)?;
         let adapter = adapter_for(&connection)?;
         let key = idempotency_key(input.idempotency_key.clone());
         let created = adapter
@@ -8358,6 +9217,11 @@ async fn pay_order(
             input.payment_method_id,
             &input.customer_id,
         )?;
+        // Batch 18 (S3): validate the card before any provider
+        // call. Raw details on the request run in `full` mode; a
+        // stored method id runs in `method` mode; an opaque token
+        // alone skips the gate.
+        request_card_validation(&state, &req, input.card.as_ref(), input.payment_method_id, None, &connection, &input.customer_id, Some(order_id.as_str()), None)?;
         let adapter = adapter_for(&connection)?;
         let result = adapter
             .charge(&ChargeInput {
@@ -8365,6 +9229,7 @@ async fn pay_order(
                 currency: input.currency.clone(),
                 customer_id: input.customer_id.clone(),
                 order_id: Some(order_id.clone()),
+                reference_id: pending_checkout_reference(Some(order_id.as_str())),
                 invoice_id: input.invoice_id.clone(),
                 description: input.description.clone(),
                 payment_method_token: token,
@@ -9219,6 +10084,7 @@ async fn get_split(
 async fn pay_split_part(
     ctx: web::Data<Arc<AppContext>>,
     state: web::Data<Arc<PaymentsState>>,
+    req: HttpRequest,
     path: web::Path<(Uuid, Uuid)>,
     body: web::Json<PaySplitPartRequest>,
 ) -> HttpResponse {
@@ -9305,6 +10171,12 @@ async fn pay_split_part(
             request.payment_method_id,
             &customer_id,
         )?;
+        // Batch 18 (S4): validate the card before any provider
+        // call. The bank-transfer early return above stays before
+        // the gate — no card is involved there. Raw details on the
+        // request run in `full` mode; a stored method id runs in
+        // `method` mode; an opaque token alone skips the gate.
+        request_card_validation(&state, &req, request.card.as_ref(), request.payment_method_id, None, &connection, &customer_id, split.order_id.as_deref(), None)?;
         let adapter = adapter_for(&connection)?;
         let charge = adapter
             .charge(&ChargeInput {
@@ -9312,6 +10184,7 @@ async fn pay_split_part(
                 currency: part.currency.clone(),
                 customer_id: customer_id.clone(),
                 order_id: split.order_id.clone(),
+                reference_id: None,
                 invoice_id: split.invoice_id.clone(),
                 description: request.description.clone(),
                 payment_method_token: token,
@@ -9917,6 +10790,19 @@ impl Module for PaymentsModule {
                 on_subscription_renew_requested(state.clone(), ctx)
             }),
         );
+        // Batch 18: refuse `cards.*` / `reference_id.*` admin
+        // writes through the settings module. The gateway keeps no
+        // settings surface for either namespace (single source of
+        // truth: the cards module per tenant, and the store /
+        // billing modules for reference ids), so `config.validate`
+        // rejects those writes with 422 and points at the
+        // canonical endpoint. There is deliberately no
+        // `settings.changed` listener here: nothing is mirrored.
+        bus.register(
+            events::CONFIG_VALIDATE,
+            "payments",
+            Arc::new(on_config_validate_cards),
+        );
     }
 
     fn configure_routes(&self, cfg: &mut web::ServiceConfig) {
@@ -9926,6 +10812,7 @@ impl Module for PaymentsModule {
                 .route("/providers", web::get().to(list_providers))
                 .route("/providers/{kind}", web::get().to(get_provider))
                 .route("/providers/{kind}/settings", web::get().to(get_provider_settings))
+                .route("/cards/settings", web::get().to(get_cards_settings))
                 .route("/connections", web::get().to(list_connections))
                 .route("/connections", web::post().to(create_connection))
                 .route("/connections/{id}", web::get().to(get_connection))
@@ -9973,6 +10860,7 @@ impl Module for PaymentsModule {
             RouteInfo { method: "GET", path: "/api/v1/payments/providers", owner: "payments", description: "Provider catalog with capability matrix, currencies, and settings fields" },
             RouteInfo { method: "GET", path: "/api/v1/payments/providers/{kind}", owner: "payments", description: "One provider's catalog entry" },
             RouteInfo { method: "GET", path: "/api/v1/payments/providers/{kind}/settings", owner: "payments", description: "Settings-page field definitions for one provider" },
+            RouteInfo { method: "GET", path: "/api/v1/payments/cards/settings", owner: "payments", description: "Card validation contract: capabilities, validation event and reason codes, and pointers to the canonical card and reference-id settings surfaces (admin-only, cards:read)" },
             RouteInfo { method: "GET", path: "/api/v1/payments/connections", owner: "payments", description: "List provider connections (credentials masked)" },
             RouteInfo { method: "POST", path: "/api/v1/payments/connections", owner: "payments", description: "Create a provider connection" },
             RouteInfo { method: "GET", path: "/api/v1/payments/connections/{id}", owner: "payments", description: "Get one connection (credentials masked)" },

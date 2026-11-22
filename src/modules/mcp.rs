@@ -2467,6 +2467,16 @@ impl Module for McpModule {
         "Model Context Protocol server for the site's own context: scoped per-site servers (a sellable product, gated by the product entitlement hook), read-only tools, resources, and prompts over content, products, orders, tickets, knowledgebase, settings, email templates, newsletter, and site-builder pages, plus allowlisted read-only database queries. API-key authenticated with per-key tool scopes; public servers are published through the API Manager registry."
     }
 
+    /// MCP is sold as a product: a customer buys a module
+    /// entitlement for it (see `crate::modules::licensing`).
+    fn available_as_product(&self) -> bool {
+        true
+    }
+
+    fn product_category(&self) -> Option<&'static str> {
+        Some("ai")
+    }
+
     fn requires(&self) -> &[&'static str] {
         &["api-manager", "apikeys", "products", "store"]
     }

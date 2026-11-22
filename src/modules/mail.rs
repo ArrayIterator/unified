@@ -34,7 +34,8 @@ use crate::core::hooks::HookBus;
 use crate::core::json as api_json;
 use crate::core::modules::{Module, ModuleRegistry, RouteInfo};
 use crate::core::pagination::{PageResult, PaginationParams};
-use actix_web::{web, HttpResponse};
+use crate::modules::ai;
+use actix_web::{web, HttpRequest, HttpResponse};
 use base64::Engine;
 use chrono::Utc;
 use lettre::message::header::ContentType;
@@ -833,6 +834,65 @@ async fn list_connectors(state: web::Data<Arc<MailState>>) -> HttpResponse {
 }
 
 // ---------------------------------------------------------------------------
+// AI capabilities (AI Capabilities Contract, see `crate::modules::ai`).
+//
+// Declared here, registered once in `init`, grounded through the
+// `mail.ai.draft_requested` hook, and run through the AI module's
+// gated runner. Drafts are returned inline and are never sent by
+// this module: sending stays on the existing human endpoints.
+// ---------------------------------------------------------------------------
+
+/// AI capabilities this module exposes through the AI module's
+/// contract. The capability is non-PII: inputs are redacted before
+/// they reach the model.
+pub const AI_CAPABILITIES: &[ai::AiCapability] = &[
+    ai::AiCapability {
+        id: "draft",
+        module_id: "mail",
+        name: "Draft email",
+        description: "Draft an email from a subject and bullet points (a string, or a JSON array of points). The output is returned inline; it is never sent by this module.",
+        input_fields: &["subject", "bullets"],
+        allows_pii: false,
+        use_case: "email",
+    },
+];
+
+/// Run one registered mail AI capability:
+/// `POST /api/v1/mail/ai/{capability}` with body
+/// `{"input": {...}}`. Requires `ai:use`; delegates to the AI
+/// module's gated runner.
+async fn ai_capability(
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+    path: web::Path<String>,
+    body: web::Json<ai::CapabilityCallInput>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let capability = path.into_inner();
+    let caller = match ai::caller(&req) {
+        Ok(caller) => caller,
+        Err(error) => return api_json::error_response(&error, debug),
+    };
+    if let Err(error) = ai::require_permission(&ctx, &caller.role, ai::PERM_AI_USE) {
+        return api_json::error_response(&error, debug);
+    }
+    let company_id = ai::resolve_capability_company(&ctx, &req, &caller);
+    match ai::run_ai_capability(
+        &ctx,
+        &caller,
+        company_id,
+        "mail",
+        &capability,
+        body.into_inner().input,
+    )
+    .await
+    {
+        Ok(data) => api_json::success_response(data, 200),
+        Err(error) => api_json::error_response(&error, debug),
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Module
 // ---------------------------------------------------------------------------
 
@@ -872,6 +932,7 @@ impl Module for MailModule {
     fn init(&self, ctx: &AppContext) -> UnifiedResult<()> {
         self.state.debug.store(ctx.is_debug(), Ordering::SeqCst);
         self.state.set_hooks(ctx.hooks.clone());
+        ai::register_ai_capabilities("mail", AI_CAPABILITIES);
         Ok(())
     }
 
@@ -1002,6 +1063,20 @@ impl Module for MailModule {
                 }
             }),
         );
+
+        // Ground the `draft` AI capability. This module holds no
+        // groundable store: the subject and bullet points come from
+        // the caller, and the send log holds recipient addresses, so
+        // it is never offered as grounding. The empty result keeps
+        // the hook contract explicit and `grounded` false. Tenant
+        // scoping is vacuous here: no tenant data is read at all.
+        bus.register(
+            "mail.ai.draft_requested",
+            "mail",
+            Arc::new(move |ctx| {
+                ctx.add_result(json!({}));
+            }),
+        );
     }
 
     fn route_info(&self) -> Vec<RouteInfo> {
@@ -1012,6 +1087,7 @@ impl Module for MailModule {
             RouteInfo { method: "POST", path: "/api/v1/mail/test", owner: "mail", description: "Test mail" },
             RouteInfo { method: "GET", path: "/api/v1/mail/log", owner: "mail", description: "List log" },
             RouteInfo { method: "GET", path: "/api/v1/mail/connectors", owner: "mail", description: "List connectors" },
+            RouteInfo { method: "POST", path: "/api/v1/mail/ai/{capability}", owner: "mail", description: "Run one registered mail AI capability (draft)" },
         ]
     }
 
@@ -1025,7 +1101,8 @@ impl Module for MailModule {
                 .route("/send", web::post().to(send_mail))
                 .route("/test", web::post().to(test_mail))
                 .route("/log", web::get().to(list_log))
-                .route("/connectors", web::get().to(list_connectors)),
+                .route("/connectors", web::get().to(list_connectors))
+                .route("/ai/{capability}", web::post().to(ai_capability)),
         );
     }
 }

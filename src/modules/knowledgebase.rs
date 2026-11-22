@@ -26,6 +26,7 @@ use crate::core::hooks::HookBus;
 use crate::core::json;
 use crate::core::modules::{Module, ModuleRegistry, RouteInfo};
 use crate::core::pagination::{PageResult, PaginationParams};
+use crate::modules::ai;
 use actix_web::{web, HttpRequest, HttpResponse};
 use chrono::{DateTime, Utc};
 use dashmap::DashMap;
@@ -385,6 +386,65 @@ pub fn search_articles(
 }
 
 // ---------------------------------------------------------------------------
+// AI capabilities (AI Capabilities Contract, see `crate::modules::ai`).
+//
+// Declared here, registered once in `init`, grounded through the
+// `knowledgebase.ai.answer_draft_requested` hook (published
+// articles only), and run through the AI module's gated runner.
+// Drafts are returned inline and are never published by this module.
+// ---------------------------------------------------------------------------
+
+/// AI capabilities this module exposes through the AI module's
+/// contract. The capability is non-PII: the question is redacted
+/// before it reaches the model, and grounding uses published
+/// articles only.
+pub const AI_CAPABILITIES: &[ai::AiCapability] = &[
+    ai::AiCapability {
+        id: "answer_draft",
+        module_id: "knowledgebase",
+        name: "Draft an answer",
+        description: "Draft an answer to a question, grounded in published knowledgebase articles. The output is returned inline; it is never published by this module.",
+        input_fields: &["question"],
+        allows_pii: false,
+        use_case: "kb_answer",
+    },
+];
+
+/// Run one registered knowledgebase AI capability:
+/// `POST /api/v1/knowledgebase/ai/{capability}` with body
+/// `{"input": {...}}`. Requires `ai:use`; delegates to the AI
+/// module's gated runner.
+async fn ai_capability(
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+    path: web::Path<String>,
+    body: web::Json<ai::CapabilityCallInput>,
+) -> HttpResponse {
+    let capability = path.into_inner();
+    let caller = match ai::caller(&req) {
+        Ok(caller) => caller,
+        Err(error) => return err(error),
+    };
+    if let Err(error) = ai::require_permission(&ctx, &caller.role, ai::PERM_AI_USE) {
+        return err(error);
+    }
+    let company_id = ai::resolve_capability_company(&ctx, &req, &caller);
+    match ai::run_ai_capability(
+        &ctx,
+        &caller,
+        company_id,
+        "knowledgebase",
+        &capability,
+        body.into_inner().input,
+    )
+    .await
+    {
+        Ok(data) => ok(data),
+        Err(error) => err(error),
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Module
 // ---------------------------------------------------------------------------
 
@@ -423,6 +483,7 @@ impl Module for KnowledgebaseModule {
 
     fn init(&self, ctx: &AppContext) -> UnifiedResult<()> {
         *self.state.hooks.write().expect("hooks lock poisoned") = Some(Arc::clone(&ctx.hooks));
+        ai::register_ai_capabilities("knowledgebase", AI_CAPABILITIES);
         Ok(())
     }
 
@@ -463,6 +524,44 @@ impl Module for KnowledgebaseModule {
                 ctx.add_result(json!({ "articles": articles }));
             }),
         );
+        // Ground the `answer_draft` AI capability with the same
+        // published-only search the `knowledgebase.search` hook
+        // uses, so answers are grounded in real articles. Tenant
+        // scoping: this store is in-memory with no tenant partition
+        // yet; when batch 17 persistence lands, this handler must
+        // return only the calling tenant's articles, keyed by the
+        // caller company id in the payload.
+        let state = self.state.clone();
+        bus.register(
+            "knowledgebase.ai.answer_draft_requested",
+            "knowledgebase",
+            Arc::new(move |ctx| {
+                let question = ctx
+                    .get("input")
+                    .and_then(|input| input.get("question"))
+                    .and_then(|value| value.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                if question.trim().is_empty() {
+                    ctx.add_result(json!({ "articles": [] }));
+                    return;
+                }
+                let hits = search_articles(&state.articles, &question, true, 5);
+                let articles: Vec<Value> = hits
+                    .iter()
+                    .map(|hit| {
+                        json!({
+                            "id": hit.id.to_string(),
+                            "title": hit.title,
+                            "excerpt": hit.excerpt,
+                            "score": hit.score,
+                            "url": hit.url,
+                        })
+                    })
+                    .collect();
+                ctx.add_result(json!({ "articles": articles }));
+            }),
+        );
     }
 
     fn route_info(&self) -> Vec<RouteInfo> {
@@ -483,6 +582,7 @@ impl Module for KnowledgebaseModule {
             RouteInfo { method: "PATCH", path: "/api/v1/knowledgebase/categories/{id}", owner: "knowledgebase", description: "Update category" },
             RouteInfo { method: "DELETE", path: "/api/v1/knowledgebase/categories/{id}", owner: "knowledgebase", description: "Delete category" },
             RouteInfo { method: "GET", path: "/api/v1/knowledgebase/search", owner: "knowledgebase", description: "Search endpoint" },
+            RouteInfo { method: "POST", path: "/api/v1/knowledgebase/ai/{capability}", owner: "knowledgebase", description: "Run one registered knowledgebase AI capability (answer_draft)" },
         ]
     }
 
@@ -521,7 +621,8 @@ impl Module for KnowledgebaseModule {
                 .route("/categories/{id}", web::get().to(get_category))
                 .route("/categories/{id}", web::patch().to(update_category))
                 .route("/categories/{id}", web::delete().to(delete_category))
-                .route("/search", web::get().to(search_endpoint)),
+                .route("/search", web::get().to(search_endpoint))
+                .route("/ai/{capability}", web::post().to(ai_capability)),
         );
     }
 }
