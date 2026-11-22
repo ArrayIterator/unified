@@ -152,6 +152,15 @@ pub const KNOWN_EVENTS: &[&str] = &[
     "notification.requested",
     "notification.webhook",
     "license.validate_requested",
+    // Batch 18 (cards / reference ids): only the outcome events
+    // are subscribable. `cards.validate_requested` is deliberately
+    // absent — its payload carries the card number, expiry, and
+    // CVV, which must never leave the process to a webhook
+    // endpoint. `cards.custom_rule.changed` is not listed either:
+    // the cards module does not emit it yet.
+    "cards.validated",
+    "reference.generated",
+    "reference.settings_changed",
 ];
 
 // ---------------------------------------------------------------------------
@@ -421,8 +430,12 @@ pub fn validate_webhook_url(raw: &str) -> UnifiedResult<Url> {
 }
 
 /// At delivery time, resolve the host and refuse the delivery when
-/// every resolved address is forbidden. This closes the DNS-rebinding
-/// gap between endpoint creation and delivery.
+/// ANY resolved address is forbidden. This closes the DNS-rebinding
+/// gap between endpoint creation and delivery. Every address must be
+/// safe: requiring only one safe address would let a resolver that
+/// returns a mix of public and private addresses steer the request
+/// at a private one (the HTTP client picks among the resolved
+/// addresses), so a mixed answer is refused outright.
 fn resolved_addresses_are_safe(url: &Url) -> bool {
     let Some(host) = url.host_str() else {
         return false;
@@ -435,15 +448,14 @@ fn resolved_addresses_are_safe(url: &Url) -> bool {
         return false;
     };
     let mut any = false;
-    let mut any_safe = false;
     for socket in addresses {
         any = true;
         let ip = socket.ip();
-        if is_loopback(ip) || !is_forbidden_ip(ip) {
-            any_safe = true;
+        if !is_loopback(ip) && is_forbidden_ip(ip) {
+            return false;
         }
     }
-    any && any_safe
+    any
 }
 
 fn validate_event_names(events: &[String]) -> UnifiedResult<()> {

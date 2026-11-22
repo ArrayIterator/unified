@@ -8,15 +8,59 @@
 // download entitlements, a WordPress-style update API, and per-company
 // payout attribution.
 //
+// Subscription checkout: a paid order holding exactly one
+// subscription product creates a `Subscription` (`trialing` when the
+// product has trial days, else `active`), snapshotting the product's
+// plan fields (proration policy, grace period, dunning settings).
+// Plan changes mid-cycle apply the proration policy, cancellation
+// is immediate or at period end, and the billing module drives the
+// lifecycle (renewals, dunning, grace, reminders) through
+// `subscription.lifecycle.apply` events, which this module applies
+// to the authoritative record. A subscription to a product bound to
+// a sellable module counts as a module entitlement through
+// `subscription.module_entitlement.check` (see the integration
+// notes for the licensing convergence point).
+//
+// Digital products (ebooks and other downloadable digital goods):
+// a store product gains a digital profile (an admin-extensible
+// type from the digital type registry, file metadata such as
+// author, ISBN, pages, language, publisher and edition, a cover
+// image reference, and its deliverable files as storage
+// references). Digital products sell through the normal checkout
+// like any other product. When an order containing one becomes
+// paid, this module mints one download entitlement per file and
+// accrues the per-sale royalty for the author or vendor. Delivery
+// reuses the existing signed expiring download-link flow: the
+// purchase grant id plays the `license_id` role in the signed URL
+// and the file id plays the `release_id` role, so no second
+// download system exists. Free samples are served from preview
+// files the seller allows, rate-limited and logged. Watermarking
+// is metadata-level only: the buyer identity is embedded into the
+// delivered file's metadata where the format supports it (see the
+// watermark format registry); it is NOT unbreakable DRM and must
+// never be claimed as such. Royalties accrue here; payout requests
+// only emit `store.digital.payout.requested` for billing, which
+// owns moving money. Digital-products selling is a sellable store
+// capability, category `commerce` (see
+// `DIGITAL_PRODUCTS_AVAILABLE_AS_PRODUCT`); the store module
+// itself is the marketplace, not a sellable module.
+//
 // Interconnection happens only through the hook bus: this module never
 // calls another module directly. License issuance is done by the
 // licensing module through the `order.created` hook; this module reads
 // the hook results back and records the download entitlement for each
 // license that was issued.
 //
-// All data lives in memory in this module (no new tables are touched
-// here); persistence of products, tiers, coupons, orders, entitlements
-// and download records is a wiring step for the database layer.
+// All data lives in memory in this module; persistence of
+// products, tiers, coupons, orders, entitlements and download
+// records is a wiring step for the database layer. The digital
+// products tables (`digital_products`, `digital_product_files`,
+// `digital_product_previews`, `digital_royalties`,
+// `digital_downloads`, plus the `digital_product_types` registry
+// and `digital_payout_requests`) exist as persistence targets in
+// migration 2026-11-22-000075 and are not yet this module's read
+// path: the in-memory maps stay authoritative until the database
+// layer is wired.
 
 use crate::core::config::AppConfig;
 use crate::core::context::AppContext;
@@ -25,6 +69,7 @@ use crate::core::hooks::{events, HookBus, HookContext};
 use crate::core::json;
 use crate::core::modules::{Module, ModuleRegistry, RouteInfo};
 use crate::core::pagination::{PageResult, PaginationParams};
+use crate::core::reference_id::{self, ReferenceIdSettings};
 use actix_web::{web, HttpRequest, HttpResponse};
 use chrono::{DateTime, Utc};
 use dashmap::DashMap;
@@ -49,6 +94,18 @@ fn default_product_status() -> String {
 
 fn default_pricing_model() -> String {
     "one_time".to_string()
+}
+
+fn default_proration_policy() -> String {
+    "prorate".to_string()
+}
+
+fn default_dunning_max_retries() -> u32 {
+    3
+}
+
+fn default_dunning_retry_interval_days() -> u32 {
+    3
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -90,6 +147,30 @@ pub struct Product {
     /// Free trial length in days (0 means no trial).
     #[serde(default)]
     pub trial_days: u32,
+    /// Mid-cycle plan-change policy: `prorate`, `no_prorate`, or
+    /// `credit_only`. Mirrored from the products catalogue on
+    /// `product.listed`; snapshotted into a subscription at checkout.
+    #[serde(default = "default_proration_policy")]
+    pub proration_policy: String,
+    /// Days of continued access after a failed renewal payment
+    /// before the subscription is cancelled (0 = cancel as soon as
+    /// dunning is exhausted).
+    #[serde(default)]
+    pub grace_period_days: u32,
+    /// Maximum failed-payment (dunning) retries before the
+    /// subscription is cancelled.
+    #[serde(default = "default_dunning_max_retries")]
+    pub dunning_max_retries: u32,
+    /// Days between dunning retries.
+    #[serde(default = "default_dunning_retry_interval_days")]
+    pub dunning_retry_interval_days: u32,
+    /// Sellable module this product sells access to (a module id
+    /// from the module registry, for example `meetings`), when the
+    /// product is a module offering. A subscription to this product
+    /// then counts as a module entitlement for that module (see
+    /// `subscription.module_entitlement.check`).
+    #[serde(default)]
+    pub module_id: Option<String>,
     /// Years of updates included with a one-time purchase (default 1).
     #[serde(default)]
     pub updates_years: Option<u32>,
@@ -115,6 +196,11 @@ pub struct CreateProduct {
     pub billing_period: Option<String>,
     pub renewal_price: Option<f64>,
     pub trial_days: Option<u32>,
+    pub proration_policy: Option<String>,
+    pub grace_period_days: Option<u32>,
+    pub dunning_max_retries: Option<u32>,
+    pub dunning_retry_interval_days: Option<u32>,
+    pub module_id: Option<String>,
     pub updates_years: Option<u32>,
 }
 
@@ -136,6 +222,11 @@ pub struct UpdateProduct {
     pub billing_period: Option<String>,
     pub renewal_price: Option<f64>,
     pub trial_days: Option<u32>,
+    pub proration_policy: Option<String>,
+    pub grace_period_days: Option<u32>,
+    pub dunning_max_retries: Option<u32>,
+    pub dunning_retry_interval_days: Option<u32>,
+    pub module_id: Option<String>,
     pub updates_years: Option<u32>,
 }
 
@@ -308,6 +399,28 @@ pub struct OrderItem {
     /// Maximum downloads granted by the tier.
     #[serde(default = "default_download_limit")]
     pub download_limit: u32,
+    /// E-learning course this line buys a seat in (see
+    /// `CheckoutItem::course_id`). Serialized on the order, so the
+    /// `order.paid` / `store.order.completed` payloads carry it
+    /// for the e-learning module's activation listener.
+    #[serde(default)]
+    pub course_id: Option<String>,
+    /// Subscription plan snapshot, resolved at checkout from the
+    /// product (or tier) so the subscription lifecycle can run
+    /// without reading the catalogue again. Only meaningful for
+    /// subscription items.
+    #[serde(default)]
+    pub trial_days: u32,
+    #[serde(default = "default_proration_policy")]
+    pub proration_policy: String,
+    #[serde(default)]
+    pub grace_period_days: u32,
+    #[serde(default = "default_dunning_max_retries")]
+    pub dunning_max_retries: u32,
+    #[serde(default = "default_dunning_retry_interval_days")]
+    pub dunning_retry_interval_days: u32,
+    #[serde(default)]
+    pub module_id: Option<String>,
 }
 
 fn default_seats() -> i32 {
@@ -321,6 +434,16 @@ fn default_download_limit() -> u32 {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Order {
     pub id: String,
+    /// Public payment reference for this order, in the single shared
+    /// reference format (`PREFIX-12hex-12hex`, 30 characters; see
+    /// `crate::core::reference_id`). Issued once at checkout and
+    /// never changed afterwards: gateways reconcile against this
+    /// value, while `id` stays the internal UUID primary key.
+    /// `#[serde(default)]` keeps orders serialized before this field
+    /// existed readable; such orders carry an empty reference until
+    /// the integrator backfills them (see the batch report).
+    #[serde(default)]
+    pub reference: String,
     pub user_id: String,
     pub items: Vec<OrderItem>,
     pub subtotal: f64,
@@ -329,6 +452,17 @@ pub struct Order {
     pub currency: String,
     #[serde(default)]
     pub coupon_code: Option<String>,
+    /// The discount evaluation that priced this order: the pricing
+    /// module's answer (full trace, `evaluator: "pricing"`) when
+    /// it answered, or the store-local fallback trace
+    /// (`evaluator: "store-local"`) with the reason the shared
+    /// evaluator could not price it. Exactly one evaluator's math
+    /// is ever applied to an order; this field records which one.
+    /// Store money is float major units (pre-existing); the pricing
+    /// answer arrives as integer scaled units and is converted to
+    /// cents with half-up rounding at this boundary.
+    #[serde(default)]
+    pub discount_evaluation: Option<Value>,
     /// Vendor / company of the first line item, for payout attribution.
     #[serde(default)]
     pub company_id: Option<String>,
@@ -348,11 +482,109 @@ pub struct Order {
     pub updated_at: DateTime<Utc>,
 }
 
+/// One paid subscription: the commercial record of a recurring
+/// purchase. Created by the store when a subscription order becomes
+/// paid (see `activate_subscription_for_paid_order`); the billing
+/// module runs the lifecycle (renewals, dunning, grace, reminders)
+/// against this record through `subscription.lifecycle.apply`
+/// events, and this module applies those decisions here so there is
+/// exactly one authoritative copy.
+///
+/// Statuses: `trialing` (inside the free trial), `active`,
+/// `past_due` (a renewal payment failed and the subscription is
+/// inside its grace period or dunning window), `cancelled`.
+/// A subscription cancelled at period end keeps its status
+/// (`active` or `trialing`) with `cancel_at_period_end` set until
+/// the period ends, so access continues until then.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Subscription {
+    pub id: String,
+    pub user_id: String,
+    #[serde(default)]
+    pub company_id: Option<String>,
+    pub product_id: String,
+    #[serde(default)]
+    pub tier_id: Option<String>,
+    pub order_id: String,
+    /// Sellable module this subscription entitles the buyer to,
+    /// when the product is a module offering.
+    #[serde(default)]
+    pub module_id: Option<String>,
+    /// `trialing`, `active`, `past_due`, or `cancelled`.
+    pub status: String,
+    /// `weekly`, `monthly`, or `yearly`.
+    pub billing_period: String,
+    /// Price charged per period, in major units.
+    pub price: f64,
+    pub currency: String,
+    /// Free trial length in days (0 means no trial).
+    pub trial_days: u32,
+    /// End of the free trial, when trialing.
+    #[serde(default)]
+    pub trial_end: Option<DateTime<Utc>>,
+    pub current_period_start: DateTime<Utc>,
+    pub current_period_end: DateTime<Utc>,
+    /// Mid-cycle plan-change policy: `prorate`, `no_prorate`, or
+    /// `credit_only`.
+    pub proration_policy: String,
+    pub grace_period_days: u32,
+    pub dunning_max_retries: u32,
+    pub dunning_retry_interval_days: u32,
+    /// True when the subscription was cancelled with effect at the
+    /// end of the current period.
+    #[serde(default)]
+    pub cancel_at_period_end: bool,
+    #[serde(default)]
+    pub cancelled_at: Option<DateTime<Utc>>,
+    /// Plan change waiting to take effect at the next period end
+    /// (`no_prorate` and `credit_only` changes, and a `prorate`
+    /// change is applied immediately instead, so it never lands
+    /// here).
+    #[serde(default)]
+    pub pending_product_id: Option<String>,
+    #[serde(default)]
+    pub pending_tier_id: Option<String>,
+    #[serde(default)]
+    pub pending_price: Option<f64>,
+    #[serde(default)]
+    pub pending_billing_period: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct ChangePlanRequest {
+    pub product_id: String,
+    #[serde(default)]
+    pub tier_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct CancelSubscriptionRequest {
+    /// When true (default) the subscription stays active until the
+    /// end of the current period; when false it ends immediately.
+    #[serde(default = "default_true")]
+    pub cancel_at_period_end: bool,
+}
+
+fn default_true() -> bool {
+    true
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct CheckoutItem {
     pub product_id: String,
     pub quantity: Option<u32>,
     pub tier_id: Option<String>,
+    /// E-learning course this line buys a seat in, when the buyer
+    /// is completing a paid course enrollment. The course id is
+    /// carried onto the order item and then onto the `order.paid` /
+    /// `store.order.completed` payloads, which is what activates
+    /// the pending enrollment in the e-learning module. The store
+    /// never invents this id: it comes from the enrollment
+    /// purchase flow, and it must be a UUID.
+    #[serde(default)]
+    pub course_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -528,6 +760,393 @@ pub struct PackageQuery {
 }
 
 // ---------------------------------------------------------------------------
+// Digital products (ebooks and other downloadable digital goods)
+// ---------------------------------------------------------------------------
+
+/// Capability declaration for the product registry, for the
+/// integrator: digital-products selling is a sellable store
+/// capability, category `commerce`. The store module itself stays
+/// `available_as_product() == false` (see the note on the `Module`
+/// implementation below): the store is the marketplace, not a
+/// sellable module, so the flag lives here as data for the
+/// integrator instead of on the module.
+pub const DIGITAL_PRODUCTS_AVAILABLE_AS_PRODUCT: bool = true;
+pub const DIGITAL_PRODUCTS_PRODUCT_CATEGORY: &str = "commerce";
+
+/// Capability names checked through the `role.check` hook for the
+/// digital-products routes (same fail-closed shape as the products
+/// module: no answer means not allowed).
+const PERM_DIGITAL_READ: &str = "store.digital:read";
+const PERM_DIGITAL_MANAGE: &str = "store.digital:manage";
+
+/// Configurable defaults for digital products. These are seed values
+/// only: an administrator can change every one of them through
+/// `PUT /api/v1/store/digital/settings`, and the live values live in
+/// `StoreState::digital_defaults`.
+const DEFAULT_DIGITAL_DOWNLOAD_LIMIT: u32 = 10;
+const DEFAULT_SAMPLE_RATE_LIMIT_PER_HOUR: u32 = 5;
+const DEFAULT_SAMPLE_RATE_LIMIT_WINDOW_MINUTES: u32 = 60;
+const DEFAULT_ROYALTY_KIND: &str = "percent";
+/// No royalty accrues unless the seller configures one: the default
+/// royalty value is zero on purpose, so money is never promised to
+/// an author or vendor by accident.
+const DEFAULT_ROYALTY_VALUE: f64 = 0.0;
+
+fn default_royalty_kind() -> String {
+    DEFAULT_ROYALTY_KIND.to_string()
+}
+
+/// One digital product type from the admin-extensible registry.
+/// The type list is data, not a hard-coded enum: administrators add,
+/// rename, disable, or remove types through the type endpoints, and
+/// the seed rows below are configurable defaults, not a closed set.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DigitalProductType {
+    /// Slug, for example `ebook`.
+    pub id: String,
+    pub label: String,
+    #[serde(default)]
+    pub description: String,
+    pub enabled: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct CreateDigitalProductType {
+    pub id: String,
+    pub label: Option<String>,
+    pub description: Option<String>,
+    pub enabled: Option<bool>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct UpdateDigitalProductType {
+    pub label: Option<String>,
+    pub description: Option<String>,
+    pub enabled: Option<bool>,
+}
+
+/// A digital profile on a store product: the product stays the
+/// sellable record (price, currency, checkout), and this profile
+/// carries everything that makes it a digital good.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DigitalProduct {
+    pub id: String,
+    /// The store product this profile sells.
+    pub product_id: String,
+    /// Type slug from the admin-extensible digital type registry
+    /// (seeded with ebook, audiobook, template, course-pack, and
+    /// digital-asset; administrators can add more).
+    pub type_id: String,
+    #[serde(default)]
+    pub author: Option<String>,
+    #[serde(default)]
+    pub publisher: Option<String>,
+    #[serde(default)]
+    pub edition: Option<String>,
+    /// ISBN-10 or ISBN-13, hyphens and spaces allowed.
+    #[serde(default)]
+    pub isbn: Option<String>,
+    /// Language tag, for example `en` or `id`.
+    #[serde(default)]
+    pub language: Option<String>,
+    #[serde(default)]
+    pub pages: Option<u32>,
+    /// Delivered formats, for example `["pdf", "epub"]`.
+    #[serde(default)]
+    pub formats: Vec<String>,
+    /// Storage reference of the cover image (a tokenized storage
+    /// id, never file bytes).
+    #[serde(default)]
+    pub cover_storage_id: Option<String>,
+    /// When true, anyone may download the free sample file
+    /// (rate-limited and logged).
+    #[serde(default)]
+    pub sample_allowed: bool,
+    /// Downloads allowed per purchased file. 0 means "use the
+    /// configured default".
+    #[serde(default)]
+    pub download_limit: u32,
+    /// Royalty rule for this product: `percent` or `fixed`.
+    #[serde(default = "default_royalty_kind")]
+    pub royalty_kind: String,
+    /// Percentage (0..=100) or fixed amount per unit sold, in the
+    /// order currency.
+    #[serde(default)]
+    pub royalty_value: f64,
+    /// Author / vendor who earns the royalty (user id).
+    #[serde(default)]
+    pub royalty_payee: Option<String>,
+    /// Vendor company that earns the royalty, when the payee is a
+    /// company rather than a single author.
+    #[serde(default)]
+    pub royalty_payee_company_id: Option<String>,
+    /// `draft` or `published`. Only published products are listed
+    /// on the public storefront.
+    #[serde(default = "default_product_status")]
+    pub status: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct CreateDigitalProduct {
+    pub product_id: String,
+    pub type_id: String,
+    pub author: Option<String>,
+    pub publisher: Option<String>,
+    pub edition: Option<String>,
+    pub isbn: Option<String>,
+    pub language: Option<String>,
+    pub pages: Option<u32>,
+    pub formats: Option<Vec<String>>,
+    pub cover_storage_id: Option<String>,
+    pub sample_allowed: Option<bool>,
+    pub download_limit: Option<u32>,
+    pub royalty_kind: Option<String>,
+    pub royalty_value: Option<f64>,
+    pub royalty_payee: Option<String>,
+    pub royalty_payee_company_id: Option<String>,
+    pub status: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct UpdateDigitalProduct {
+    pub type_id: Option<String>,
+    pub author: Option<String>,
+    pub publisher: Option<String>,
+    pub edition: Option<String>,
+    pub isbn: Option<String>,
+    pub language: Option<String>,
+    pub pages: Option<u32>,
+    pub formats: Option<Vec<String>>,
+    pub cover_storage_id: Option<String>,
+    pub sample_allowed: Option<bool>,
+    pub download_limit: Option<u32>,
+    pub royalty_kind: Option<String>,
+    pub royalty_value: Option<f64>,
+    pub royalty_payee: Option<String>,
+    pub royalty_payee_company_id: Option<String>,
+    pub status: Option<String>,
+}
+
+/// One deliverable file of a digital product, stored in the storage
+/// module and referenced here by its storage id only.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DigitalProductFile {
+    pub id: String,
+    pub digital_product_id: String,
+    /// Storage reference of the delivered file (a tokenized storage
+    /// id, never file bytes). This id doubles as the `release_id`
+    /// in the signed download flow, so the existing signed-link
+    /// machinery serves digital files without a second system.
+    pub storage_file_id: String,
+    pub format: String,
+    #[serde(default)]
+    pub label: Option<String>,
+    #[serde(default)]
+    pub file_size_bytes: Option<u64>,
+    /// Content hash (hex digest) of the file, when the seller
+    /// supplied one. Only the digest is stored, never the content.
+    #[serde(default)]
+    pub checksum: Option<String>,
+    #[serde(default)]
+    pub is_primary: bool,
+    #[serde(default)]
+    pub sort_order: i32,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct CreateDigitalFile {
+    pub storage_file_id: String,
+    pub format: String,
+    pub label: Option<String>,
+    pub file_size_bytes: Option<u64>,
+    pub checksum: Option<String>,
+    pub is_primary: Option<bool>,
+    pub sort_order: Option<i32>,
+}
+
+/// One free excerpt / sample file of a digital product, served
+/// publicly when the seller allows it.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DigitalProductPreview {
+    pub id: String,
+    pub digital_product_id: String,
+    pub storage_file_id: String,
+    pub format: String,
+    #[serde(default)]
+    pub label: Option<String>,
+    /// The seller allows public download of this sample.
+    #[serde(default)]
+    pub allowed: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct CreateDigitalPreview {
+    pub storage_file_id: String,
+    pub format: String,
+    pub label: Option<String>,
+    pub allowed: Option<bool>,
+}
+
+/// One accrued royalty: a per-sale share owed to an author or
+/// vendor for a digital product. The ledger only records what is
+/// owed; moving money is the billing module's job (see
+/// `DigitalPayoutRequest`).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DigitalRoyalty {
+    pub id: String,
+    pub digital_product_id: String,
+    pub product_id: String,
+    pub order_id: String,
+    pub buyer_user_id: String,
+    #[serde(default)]
+    pub payee: Option<String>,
+    #[serde(default)]
+    pub payee_company_id: Option<String>,
+    pub amount: f64,
+    pub currency: String,
+    /// Royalty rule snapshot: `percent` or `fixed`.
+    pub royalty_kind: String,
+    pub royalty_value: f64,
+    /// `accrued`, `payout_requested`, `approved`, `paid`,
+    /// `rejected`, or `reversed`.
+    pub status: String,
+    #[serde(default)]
+    pub payout_id: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// One payout request grouping royalty entries for a single payee.
+/// Lifecycle: `requested` -> `approved` -> `paid`, or `rejected`
+/// from `requested` / `approved`. Requesting and approving only
+/// emit events for billing (`store.digital.payout.requested` and
+/// friends); the payout itself (moving money) happens in billing,
+/// and `mark-paid` only records that billing moved it. This mirrors
+/// the affiliates payout precedent.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DigitalPayoutRequest {
+    pub id: String,
+    #[serde(default)]
+    pub payee: Option<String>,
+    #[serde(default)]
+    pub payee_company_id: Option<String>,
+    pub currency: String,
+    pub amount: f64,
+    pub royalty_ids: Vec<String>,
+    /// `requested`, `approved`, `paid`, or `rejected`.
+    pub status: String,
+    pub requested_by: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct CreateDigitalPayout {
+    pub royalty_ids: Vec<String>,
+}
+
+/// One download of a digital file, for the per-buyer download
+/// history: purchases (through the signed download flow) and free
+/// samples alike. The watermark columns record what buyer identity
+/// was embedded into the delivered file's metadata, when the
+/// format supports metadata at all.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DigitalDownload {
+    pub id: String,
+    pub digital_product_id: String,
+    #[serde(default)]
+    pub file_id: Option<String>,
+    #[serde(default)]
+    pub preview_id: Option<String>,
+    pub buyer_user_id: String,
+    #[serde(default)]
+    pub order_id: Option<String>,
+    /// Purchase grant id (the `license_id` carried by the signed
+    /// download URL) for purchases; absent for samples.
+    #[serde(default)]
+    pub grant_id: Option<String>,
+    /// `purchase` or `sample`.
+    pub kind: String,
+    /// Buyer identity embedded into the delivered file metadata
+    /// (watermark subject), when the format supports metadata.
+    #[serde(default)]
+    pub watermark_subject: Option<String>,
+    pub watermark_applied: bool,
+    #[serde(default)]
+    pub watermark_formats: Vec<String>,
+    pub downloaded_at: DateTime<Utc>,
+}
+
+/// One watermarkable format, from the admin-editable registry.
+/// `metadata_supported` says whether the format has standard
+/// document metadata a buyer identity can be embedded into; the
+/// registry is data, so new formats are added without code changes.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WatermarkFormat {
+    pub format: String,
+    pub metadata_supported: bool,
+    pub metadata_fields: Vec<String>,
+    pub notes: String,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// Admin-editable digital defaults. Every field is a configurable
+/// default: the values below seed the state at startup and the live
+/// values are changed through `PUT /api/v1/store/digital/settings`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DigitalDefaults {
+    pub default_download_limit: u32,
+    pub sample_rate_limit_per_hour: u32,
+    pub sample_rate_limit_window_minutes: u32,
+    pub default_royalty_kind: String,
+    pub default_royalty_value: f64,
+    pub watermark_enabled: bool,
+}
+
+impl Default for DigitalDefaults {
+    fn default() -> Self {
+        Self {
+            default_download_limit: DEFAULT_DIGITAL_DOWNLOAD_LIMIT,
+            sample_rate_limit_per_hour: DEFAULT_SAMPLE_RATE_LIMIT_PER_HOUR,
+            sample_rate_limit_window_minutes: DEFAULT_SAMPLE_RATE_LIMIT_WINDOW_MINUTES,
+            default_royalty_kind: DEFAULT_ROYALTY_KIND.to_string(),
+            default_royalty_value: DEFAULT_ROYALTY_VALUE,
+            watermark_enabled: true,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct UpdateDigitalSettings {
+    pub default_download_limit: Option<u32>,
+    pub sample_rate_limit_per_hour: Option<u32>,
+    pub sample_rate_limit_window_minutes: Option<u32>,
+    pub default_royalty_kind: Option<String>,
+    pub default_royalty_value: Option<f64>,
+    pub watermark_enabled: Option<bool>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct UpdateWatermarkFormat {
+    pub metadata_supported: Option<bool>,
+    pub metadata_fields: Option<Vec<String>>,
+    pub notes: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct DigitalDownloadLinkRequest {
+    pub file_id: Option<String>,
+}
+
+// ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
 
@@ -538,26 +1157,74 @@ pub struct StoreState {
     coupons: DashMap<String, Coupon>,
     carts: DashMap<String, Cart>,
     orders: DashMap<String, Order>,
+    /// Paid subscriptions, keyed by subscription id. Authoritative
+    /// for the subscription lifecycle; billing keeps a mirror and
+    /// drives decisions through `subscription.lifecycle.apply`.
+    subscriptions: DashMap<String, Subscription>,
     entitlements: DashMap<String, DownloadEntitlement>,
     downloads: DashMap<String, DownloadRecord>,
     catalog: DashMap<String, CatalogEntry>,
     issued_licenses: DashMap<String, IssuedLicense>,
+    digital_products: DashMap<String, DigitalProduct>,
+    /// Admin-extensible digital type registry, seeded with the
+    /// configurable default types (see `seed_digital_types`).
+    digital_types: DashMap<String, DigitalProductType>,
+    digital_files: DashMap<String, DigitalProductFile>,
+    digital_previews: DashMap<String, DigitalProductPreview>,
+    digital_royalties: DashMap<String, DigitalRoyalty>,
+    digital_payouts: DashMap<String, DigitalPayoutRequest>,
+    digital_downloads: DashMap<String, DigitalDownload>,
+    /// Admin-editable watermark format registry, seeded with the
+    /// configurable default formats (see `seed_watermark_formats`).
+    watermark_formats: DashMap<String, WatermarkFormat>,
+    digital_defaults: RwLock<DigitalDefaults>,
+    /// Sample-download timestamps per identity and preview, for the
+    /// sample rate limit. Entries are pruned on each check.
+    sample_downloads: DashMap<String, Vec<DateTime<Utc>>>,
+    /// Admin-editable payment reference settings (default prefix and
+    /// per-product prefix map; see `crate::core::reference_id`).
+    /// Read at checkout; changed through
+    /// `GET/PUT /api/v1/store/reference-settings`.
+    reference_settings: RwLock<ReferenceIdSettings>,
 }
 
 impl StoreState {
     fn new() -> Self {
-        Self {
+        let state = Self {
             hooks: RwLock::new(Arc::new(HookBus::new())),
             products: DashMap::new(),
             tiers: DashMap::new(),
             coupons: DashMap::new(),
             carts: DashMap::new(),
             orders: DashMap::new(),
+            subscriptions: DashMap::new(),
             entitlements: DashMap::new(),
             downloads: DashMap::new(),
             catalog: DashMap::new(),
             issued_licenses: DashMap::new(),
+            digital_products: DashMap::new(),
+            digital_types: DashMap::new(),
+            digital_files: DashMap::new(),
+            digital_previews: DashMap::new(),
+            digital_royalties: DashMap::new(),
+            digital_payouts: DashMap::new(),
+            digital_downloads: DashMap::new(),
+            watermark_formats: DashMap::new(),
+            digital_defaults: RwLock::new(DigitalDefaults::default()),
+            sample_downloads: DashMap::new(),
+            reference_settings: RwLock::new(ReferenceIdSettings::default()),
+        };
+        for digital_type in seed_digital_types() {
+            state
+                .digital_types
+                .insert(digital_type.id.clone(), digital_type);
         }
+        for format in seed_watermark_formats() {
+            state
+                .watermark_formats
+                .insert(format.format.clone(), format);
+        }
+        state
     }
 
     fn bus(&self) -> Arc<HookBus> {
@@ -584,6 +1251,132 @@ fn new_id() -> String {
 fn now() -> DateTime<Utc> {
     Utc::now()
 }
+
+// ---------------------------------------------------------------------------
+// Batch 18: payment reference ids (BEGIN — append-only section)
+// ---------------------------------------------------------------------------
+//
+// Every order issued by this module carries one public payment
+// reference in the single shared format (`PREFIX-12hex-12hex`, 30
+// characters; see `crate::core::reference_id`). The internal `id`
+// stays a UUID; the reference is what gateways see and reconcile
+// against. The default prefix and the per-product prefix map are
+// admin-editable settings held on `StoreState` (durable form: the
+// `reference_id_settings` table in the migration snippet in the
+// batch report). A single-product order uses that product's
+// configured prefix; a mixed order uses the default prefix.
+// References are issued once at checkout and never changed: the
+// update-order endpoint deliberately has no reference field.
+
+/// Capability needed to read the reference settings.
+const PERM_REFERENCE_READ: &str = "store.reference:read";
+
+/// Capability needed to change the reference settings.
+const PERM_REFERENCE_MANAGE: &str = "store.reference:manage";
+
+/// Snapshot of the current reference settings.
+fn reference_settings(state: &StoreState) -> ReferenceIdSettings {
+    state
+        .reference_settings
+        .read()
+        .expect("reference settings lock poisoned")
+        .clone()
+}
+
+/// Issue the reference for a checkout: the single product's
+/// configured prefix when the order holds exactly one product,
+/// otherwise the default prefix.
+fn new_order_reference(state: &StoreState, items: &[OrderItem]) -> String {
+    let settings = reference_settings(state);
+    let product_id = if items.len() == 1 {
+        Some(items[0].product_id.as_str())
+    } else {
+        None
+    };
+    reference_id::generate_for(&settings, product_id, None)
+}
+
+/// Admin input for `PUT /api/v1/store/reference-settings`. All fields
+/// are optional and applied together: `default_prefix` replaces the
+/// default prefix, `product_prefixes` replaces the whole per-product
+/// map, and `remove_product_prefixes` deletes individual overrides.
+/// Every prefix is normalized with `format_prefix` before it is
+/// stored, so an administrator can send `hstg` and the stored value
+/// is `HSTG`.
+#[derive(Debug, Clone, Deserialize)]
+pub struct UpdateReferenceSettings {
+    pub default_prefix: Option<String>,
+    pub product_prefixes: Option<HashMap<String, String>>,
+    pub remove_product_prefixes: Option<Vec<String>>,
+}
+
+/// Read the reference settings (capability `store.reference:read`).
+async fn get_reference_settings(
+    state: web::Data<Arc<StoreState>>,
+    req: HttpRequest,
+) -> HttpResponse {
+    let result: UnifiedResult<ReferenceIdSettings> = (|| {
+        require_digital_permission(&state, &req, PERM_REFERENCE_READ)?;
+        Ok(reference_settings(&state))
+    })();
+    json::respond(result, false)
+}
+
+/// Update the reference settings (capability
+/// `store.reference:manage`). Already-issued references keep
+/// validating: changing a prefix never rewrites an issued id.
+async fn update_reference_settings(
+    state: web::Data<Arc<StoreState>>,
+    req: HttpRequest,
+    body: web::Json<UpdateReferenceSettings>,
+) -> HttpResponse {
+    let result: UnifiedResult<ReferenceIdSettings> = (|| {
+        require_digital_permission(&state, &req, PERM_REFERENCE_MANAGE)?;
+        let input = body.into_inner();
+        let mut candidate = reference_settings(&state);
+        if let Some(prefix) = input.default_prefix {
+            candidate.default_prefix = reference_id::format_prefix(&prefix);
+        }
+        if let Some(prefixes) = input.product_prefixes {
+            let mut next = ReferenceIdSettings::default();
+            next.default_prefix = candidate.default_prefix.clone();
+            for (key, prefix) in prefixes {
+                next.set_product_prefix(&key, &prefix).map_err(|problem| {
+                    UnifiedError::bad_request(problem)
+                })?;
+            }
+            candidate = next;
+        }
+        if let Some(keys) = input.remove_product_prefixes {
+            for key in keys {
+                candidate.remove_product_prefix(&key);
+            }
+        }
+        let problems = candidate.validate();
+        if !problems.is_empty() {
+            return Err(UnifiedError::unprocessable(format!(
+                "Reference settings are invalid: {}",
+                problems.join("; ")
+            )));
+        }
+        {
+            let mut settings = state
+                .reference_settings
+                .write()
+                .expect("reference settings lock poisoned");
+            *settings = candidate.clone();
+        }
+        state.emit(
+            reference_id::EVENT_REFERENCE_SETTINGS_CHANGED,
+            serde_json::to_value(&candidate).unwrap_or(Value::Null),
+        );
+        Ok(candidate)
+    })();
+    json::respond(result, false)
+}
+
+// Batch 18: payment reference ids (END)
+// ---------------------------------------------------------------------------
 
 fn round_money(value: f64) -> f64 {
     (value * 100.0).round() / 100.0
@@ -623,7 +1416,48 @@ fn valid_pricing_model(model: &str) -> bool {
 }
 
 fn valid_billing_period(period: &str) -> bool {
-    matches!(period, "monthly" | "yearly")
+    matches!(period, "monthly" | "yearly" | "weekly")
+}
+
+/// Subscription plan settings as resolved at checkout: the
+/// proration policy must be one of `prorate`, `no_prorate`,
+/// `credit_only`; grace days 0..=90; dunning retries 0..=10;
+/// retry interval 1..=30 days. Bounds match the products module.
+fn validate_subscription_settings(
+    proration_policy: Option<&str>,
+    grace_period_days: Option<u32>,
+    dunning_max_retries: Option<u32>,
+    dunning_retry_interval_days: Option<u32>,
+) -> UnifiedResult<()> {
+    if let Some(policy) = proration_policy {
+        if !matches!(policy, "prorate" | "no_prorate" | "credit_only") {
+            return Err(UnifiedError::bad_request(
+                "Proration policy must be one of: prorate, no_prorate, credit_only",
+            ));
+        }
+    }
+    if let Some(grace) = grace_period_days {
+        if grace > 90 {
+            return Err(UnifiedError::bad_request(
+                "Grace period must be at most 90 days",
+            ));
+        }
+    }
+    if let Some(max_retries) = dunning_max_retries {
+        if max_retries > 10 {
+            return Err(UnifiedError::bad_request(
+                "Dunning max retries must be at most 10",
+            ));
+        }
+    }
+    if let Some(interval) = dunning_retry_interval_days {
+        if interval == 0 || interval > 30 {
+            return Err(UnifiedError::bad_request(
+                "Dunning retry interval must be between 1 and 30 days",
+            ));
+        }
+    }
+    Ok(())
 }
 
 fn valid_product_status(status: &str) -> bool {
@@ -678,12 +1512,86 @@ fn license_expiry_for(
     let current = now();
     match pricing_model {
         "subscription" => match billing_period {
+            Some("weekly") => Some(current + chrono::Duration::days(7)),
             Some("monthly") => Some(current + chrono::Duration::days(30)),
             Some("yearly") => Some(current + chrono::Duration::days(365)),
             _ => Some(current + chrono::Duration::days(30)),
         },
         _ => Some(current + chrono::Duration::days(365 * updates_years.unwrap_or(1) as i64)),
     }
+}
+
+/// Length of one billing period in days, using the same convention
+/// as `license_expiry_for`: weekly 7, monthly 30, yearly 365.
+fn period_days(billing_period: &str) -> i64 {
+    match billing_period {
+        "weekly" => 7,
+        "yearly" => 365,
+        _ => 30,
+    }
+}
+
+/// End of the billing period that starts at `start`.
+fn period_end(start: DateTime<Utc>, billing_period: &str) -> DateTime<Utc> {
+    start + chrono::Duration::days(period_days(billing_period))
+}
+
+/// True when the subscription currently grants access: trialing or
+/// active inside the current period; past-due inside the grace
+/// period; cancelled at period end inside the current period.
+/// A subscription cancelled immediately, or past its grace period,
+/// grants nothing.
+fn subscription_grants_access(subscription: &Subscription, at: DateTime<Utc>) -> bool {
+    match subscription.status.as_str() {
+        "trialing" | "active" => at <= subscription.current_period_end,
+        "past_due" => {
+            at <= subscription.current_period_end
+                + chrono::Duration::days(i64::from(subscription.grace_period_days))
+        }
+        "cancelled" => {
+            subscription.cancel_at_period_end && at <= subscription.current_period_end
+        }
+        _ => false,
+    }
+}
+
+/// Proration for a mid-cycle plan change, in major units.
+///
+/// `remaining_days` is the time left in the current period and
+/// `period_total_days` its full length. The credit is the unused
+/// share of the old price; the charge is the new price for the same
+/// remaining share of the new period. Both are rounded to cents;
+/// the net amount is `charge - credit` and may be negative (a
+/// downgrade credits more than it charges). `no_prorate` changes
+/// return zeroes: nothing is charged or credited mid-cycle.
+fn proration_amounts(
+    policy: &str,
+    old_price: f64,
+    new_price: f64,
+    remaining_days: f64,
+    period_total_days: f64,
+    new_period_total_days: f64,
+) -> (f64, f64, f64) {
+    if policy == "no_prorate" || remaining_days <= 0.0 || period_total_days <= 0.0 {
+        return (0.0, 0.0, 0.0);
+    }
+    let share = (remaining_days / period_total_days).clamp(0.0, 1.0);
+    let credit = round_money(old_price * share);
+    let new_share = if new_period_total_days > 0.0 {
+        (remaining_days / new_period_total_days).clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    // `credit_only` credits the unused time but charges nothing
+    // until the next period; `prorate` charges the new plan for the
+    // remaining time as well.
+    let charge = if policy == "credit_only" {
+        0.0
+    } else {
+        round_money(new_price * new_share)
+    };
+    let net = round_money(charge - credit);
+    (credit, charge, net)
 }
 
 /// Cart owner: `x-session-id` header, then `x-user-id`, then `guest`.
@@ -746,6 +1654,673 @@ fn require_order_owner(req: &HttpRequest, order: &Order) -> UnifiedResult<()> {
             "Order belongs to a different user",
         ))
     }
+}
+
+// ---------------------------------------------------------------------------
+// Digital products: seeds, capability checks, validation, watermarking
+// ---------------------------------------------------------------------------
+
+/// Seed rows for the digital type registry. Configurable defaults
+/// only: administrators can add, rename, disable, or remove types
+/// through the type endpoints, and the migration seeds the same
+/// five rows as data so the database copy matches this seed.
+fn seed_digital_types() -> Vec<DigitalProductType> {
+    let timestamp = now();
+    [
+        (
+            "ebook",
+            "Ebook",
+            "A digital book delivered as a document file.",
+        ),
+        (
+            "audiobook",
+            "Audiobook",
+            "A narrated audio edition of a book.",
+        ),
+        (
+            "template",
+            "Template",
+            "A reusable document, design, or code template.",
+        ),
+        (
+            "course-pack",
+            "Course pack",
+            "A bundled set of course materials.",
+        ),
+        (
+            "digital-asset",
+            "Digital asset",
+            "A downloadable digital asset such as graphics, fonts, or data.",
+        ),
+    ]
+    .into_iter()
+    .map(|(id, label, description)| DigitalProductType {
+        id: id.to_string(),
+        label: label.to_string(),
+        description: description.to_string(),
+        enabled: true,
+        created_at: timestamp,
+        updated_at: timestamp,
+    })
+    .collect()
+}
+
+/// Seed rows for the watermark format registry. Configurable
+/// defaults only: administrators can add formats or change what
+/// metadata is embedded through the watermark-format endpoints, and
+/// the migration seeds the same rows as data.
+fn seed_watermark_formats() -> Vec<WatermarkFormat> {
+    let timestamp = now();
+    [
+        (
+            "pdf",
+            true,
+            vec!["Author", "Creator", "Keywords"],
+            "Buyer identity is written into the PDF document information dictionary.",
+        ),
+        (
+            "epub",
+            true,
+            vec!["dc:identifier", "dc:creator"],
+            "Buyer identity is written into the EPUB package metadata.",
+        ),
+        (
+            "mobi",
+            true,
+            vec!["EXTH author", "EXTH identifier"],
+            "Buyer identity is written into the MOBI EXTH records where the writer supports them.",
+        ),
+        (
+            "mp3",
+            true,
+            vec!["ID3 comment", "ID3 artist"],
+            "Buyer identity is written into the ID3 comment frame.",
+        ),
+        (
+            "m4b",
+            true,
+            vec!["copyright", "comment"],
+            "Buyer identity is written into the audiobook metadata atoms.",
+        ),
+        (
+            "mp4",
+            true,
+            vec!["copyright", "comment"],
+            "Buyer identity is written into the video metadata atoms.",
+        ),
+        (
+            "zip",
+            false,
+            Vec::<&str>::new(),
+            "Archives carry no standard document metadata; the buyer is recorded in the delivery manifest instead.",
+        ),
+    ]
+    .into_iter()
+    .map(|(format, metadata_supported, metadata_fields, notes)| WatermarkFormat {
+        format: format.to_string(),
+        metadata_supported,
+        metadata_fields: metadata_fields
+            .into_iter()
+            .map(str::to_string)
+            .collect(),
+        notes: notes.to_string(),
+        updated_at: timestamp,
+    })
+    .collect()
+}
+
+/// Caller identity for the capability-checked digital routes, from
+/// the headers every capability-checked module in this codebase
+/// uses: `X-User-Id` identifies the actor, `X-Role` carries the
+/// role slug or id the capability check runs against.
+struct DigitalCaller {
+    actor: String,
+    role: String,
+}
+
+fn digital_caller(req: &HttpRequest) -> UnifiedResult<DigitalCaller> {
+    let actor = req
+        .headers()
+        .get("x-user-id")
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+        .ok_or_else(|| UnifiedError::unauthorized("Missing X-User-Id header"))?;
+    let role = req
+        .headers()
+        .get("x-role")
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+        .ok_or_else(|| UnifiedError::unauthorized("Missing X-Role header"))?;
+    Ok(DigitalCaller { actor, role })
+}
+
+/// Ask the roles module whether `role` holds `permission` through
+/// the `role.check` hook. Fails closed: no answer means not allowed.
+/// The store keeps only the hook bus (no `AppContext`), so the check
+/// runs through `state.bus().emit`, the same hook other modules
+/// reach through the context.
+fn digital_has_capability(state: &StoreState, role: &str, permission: &str) -> bool {
+    let context = state.bus().emit(
+        "role.check",
+        json!({ "role": role, "permission": permission, "allowed": false }),
+    );
+    context
+        .get("allowed")
+        .and_then(|value| value.as_bool())
+        .unwrap_or(false)
+}
+
+fn require_digital_permission(
+    state: &StoreState,
+    req: &HttpRequest,
+    permission: &str,
+) -> UnifiedResult<DigitalCaller> {
+    let caller = digital_caller(req)?;
+    if digital_has_capability(state, &caller.role, permission) {
+        Ok(caller)
+    } else {
+        Err(UnifiedError::forbidden(format!(
+            "Role \"{}\" does not hold permission \"{}\"",
+            caller.role, permission
+        )))
+    }
+}
+
+fn require_digital_manage(
+    state: &StoreState,
+    req: &HttpRequest,
+) -> UnifiedResult<DigitalCaller> {
+    require_digital_permission(state, req, PERM_DIGITAL_MANAGE)
+}
+
+fn require_digital_read(
+    state: &StoreState,
+    req: &HttpRequest,
+) -> UnifiedResult<DigitalCaller> {
+    require_digital_permission(state, req, PERM_DIGITAL_READ)
+}
+
+/// True when the caller holds the manage permission (used to widen
+/// a self-service read to another user's records). Missing identity
+/// headers mean "no", never an error: this is a widening check, not
+/// the gate itself.
+fn digital_can_manage(state: &StoreState, req: &HttpRequest) -> bool {
+    let Ok(caller) = digital_caller(req) else {
+        return false;
+    };
+    digital_has_capability(state, &caller.role, PERM_DIGITAL_MANAGE)
+}
+
+/// Gate for the intentionally public storefront reads (public
+/// digital catalog, previews, sample download). The API layer still
+/// denies these endpoints by default until an administrator creates
+/// an allow rule (see `api_manager`); inside the handler, a caller
+/// that presents a role must hold `store.digital:read`, while an
+/// anonymous caller only ever sees published products and
+/// seller-allowed samples. The check runs on every call so the
+/// public surface is never an unguarded code path.
+fn require_digital_public(state: &StoreState, req: &HttpRequest) -> UnifiedResult<()> {
+    let Some(role) = req
+        .headers()
+        .get("x-role")
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    else {
+        return Ok(());
+    };
+    if digital_has_capability(state, role, PERM_DIGITAL_READ) {
+        Ok(())
+    } else {
+        Err(UnifiedError::forbidden(format!(
+            "Role \"{role}\" does not hold permission \"{PERM_DIGITAL_READ}\""
+        )))
+    }
+}
+
+fn valid_type_slug(value: &str) -> bool {
+    !value.is_empty()
+        && value.len() <= 32
+        && value
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
+}
+
+fn valid_format(value: &str) -> bool {
+    !value.is_empty()
+        && value.len() <= 12
+        && value
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit())
+}
+
+fn valid_isbn(value: &str) -> bool {
+    let compact: String = value
+        .chars()
+        .filter(|c| *c != '-' && *c != ' ')
+        .collect();
+    if compact.len() != 10 && compact.len() != 13 {
+        return false;
+    }
+    let (head, tail) = compact.split_at(compact.len() - 1);
+    if !head.chars().all(|c| c.is_ascii_digit()) {
+        return false;
+    }
+    let tail = tail.chars().next().expect("split leaves one char");
+    if compact.len() == 10 {
+        tail.is_ascii_digit() || tail == 'X' || tail == 'x'
+    } else {
+        tail.is_ascii_digit()
+    }
+}
+
+fn valid_language(value: &str) -> bool {
+    let parts: Vec<&str> = value.split('-').collect();
+    if parts.len() > 2 {
+        return false;
+    }
+    let language = parts[0];
+    if language.len() < 2
+        || language.len() > 3
+        || !language.chars().all(|c| c.is_ascii_lowercase())
+    {
+        return false;
+    }
+    match parts.get(1) {
+        None => true,
+        Some(region) => {
+            region.len() == 2 && region.chars().all(|c| c.is_ascii_uppercase())
+        }
+    }
+}
+
+fn valid_royalty_kind(kind: &str) -> bool {
+    matches!(kind, "percent" | "fixed")
+}
+
+fn validate_royalty(kind: &str, value: f64) -> UnifiedResult<()> {
+    if !valid_royalty_kind(kind) {
+        return Err(UnifiedError::bad_request(
+            "Royalty kind must be one of: percent, fixed",
+        ));
+    }
+    if !value.is_finite() || value < 0.0 {
+        return Err(UnifiedError::bad_request(
+            "Royalty value must be a non-negative number",
+        ));
+    }
+    if kind == "percent" && value > 100.0 {
+        return Err(UnifiedError::bad_request(
+            "Percentage royalty must be at most 100",
+        ));
+    }
+    Ok(())
+}
+
+fn validate_digital_metadata(
+    isbn: Option<&str>,
+    language: Option<&str>,
+    pages: Option<u32>,
+    formats: Option<&[String]>,
+) -> UnifiedResult<()> {
+    if let Some(isbn) = isbn {
+        if !isbn.trim().is_empty() && !valid_isbn(isbn.trim()) {
+            return Err(UnifiedError::bad_request(
+                "ISBN must be a valid ISBN-10 or ISBN-13 (digits, with an optional trailing X for ISBN-10)",
+            ));
+        }
+    }
+    if let Some(language) = language {
+        if !language.trim().is_empty() && !valid_language(language.trim()) {
+            return Err(UnifiedError::bad_request(
+                "Language must be a tag such as en or id-ID",
+            ));
+        }
+    }
+    if let Some(pages) = pages {
+        if pages == 0 {
+            return Err(UnifiedError::bad_request(
+                "Page count must be at least 1 when set",
+            ));
+        }
+    }
+    if let Some(formats) = formats {
+        if formats.len() > 16 {
+            return Err(UnifiedError::bad_request(
+                "At most 16 formats can be listed for a digital product",
+            ));
+        }
+        for format in formats {
+            if !valid_format(&format.to_lowercase()) {
+                return Err(UnifiedError::bad_request(
+                    "Formats must be lowercase alphanumeric tokens such as pdf or epub",
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Searchable text for a digital product: its metadata plus the
+/// linked store product's name and description.
+fn digital_search_text(state: &StoreState, digital: &DigitalProduct) -> String {
+    let product_text = state
+        .products
+        .get(&digital.product_id)
+        .map(|entry| format!("{} {}", entry.value().name, entry.value().description))
+        .unwrap_or_default();
+    format!(
+        "{} {} {} {} {} {}",
+        product_text,
+        digital.type_id,
+        digital.author.clone().unwrap_or_default(),
+        digital.publisher.clone().unwrap_or_default(),
+        digital.edition.clone().unwrap_or_default(),
+        digital.isbn.clone().unwrap_or_default()
+    )
+}
+
+/// Purchase grant id carried as the `license_id` of a digital
+/// download entitlement. Digital products have no license; the
+/// grant id (one per order line) plays the `license_id` role in the
+/// signed URL so the existing HMAC-signed download flow serves
+/// digital files unchanged, with per-file download limits.
+fn digital_grant_id(order_id: &str, product_id: &str) -> String {
+    format!("digital:{order_id}:{product_id}")
+}
+
+/// Storage reference of a digital file by its file id, for the
+/// signed-download response (the catalog lookup only knows software
+/// releases, so digital files resolve here).
+fn digital_file_storage_id(state: &StoreState, file_id: &str) -> Option<String> {
+    state
+        .digital_files
+        .get(file_id)
+        .map(|entry| entry.value().storage_file_id.clone())
+}
+
+/// Watermark descriptor for one delivered digital file: the metadata
+/// fields the delivery layer must embed, carrying the buyer identity.
+///
+/// HONESTY NOTE (read before changing this): watermarking is
+/// metadata-level only. It embeds the buyer identity into file
+/// metadata where the format supports it (see the watermark format
+/// registry, seeded with PDF, EPUB, MOBI, MP3, M4B and MP4, and
+/// editable by administrators). It does NOT prevent copying or
+/// redistribution, it is NOT unbreakable DRM, and it must never be
+/// described as DRM anywhere. Formats without standard document
+/// metadata (archives, installers) record the buyer in the delivery
+/// manifest instead and say so in the descriptor.
+fn watermark_descriptor(
+    state: &StoreState,
+    format: &str,
+    buyer_id: &str,
+    order_id: &str,
+) -> Value {
+    const LIMITATION: &str = "Watermarking embeds the buyer identity into file metadata only. It does not prevent copying or redistribution and is not unbreakable DRM.";
+    let format = format.to_lowercase();
+    let enabled = state
+        .digital_defaults
+        .read()
+        .map(|defaults| defaults.watermark_enabled)
+        .unwrap_or(true);
+    let Some(entry) = state.watermark_formats.get(format.as_str()) else {
+        return json!({
+            "format": format,
+            "metadata_supported": false,
+            "buyer": buyer_id,
+            "order_id": order_id,
+            "fields": {},
+            "limitation": "Unknown file format: no metadata watermark is defined for this format. The buyer is recorded in the download history only. Watermarking is metadata-level only and is not unbreakable DRM.",
+        });
+    };
+    let format_entry = entry.value().clone();
+    drop(entry);
+    if !enabled || !format_entry.metadata_supported {
+        return json!({
+            "format": format,
+            "metadata_supported": false,
+            "buyer": buyer_id,
+            "order_id": order_id,
+            "fields": {},
+            "limitation": if enabled { format_entry.notes } else { "Watermarking is disabled in the digital settings.".to_string() },
+        });
+    }
+    let mut fields = serde_json::Map::new();
+    for field in &format_entry.metadata_fields {
+        fields.insert(
+            field.clone(),
+            json!(format!("Licensed to {buyer_id} - order {order_id}")),
+        );
+    }
+    json!({
+        "format": format,
+        "metadata_supported": true,
+        "buyer": buyer_id,
+        "order_id": order_id,
+        "fields": fields,
+        "limitation": LIMITATION,
+    })
+}
+
+/// Mint (or return the existing) download entitlement for one
+/// digital file of a paid order. One entitlement per file, so each
+/// file has its own download limit; the purchase grant id is shared
+/// across the files of the same order line. Returns the entitlement
+/// and whether it was newly created.
+fn ensure_digital_entitlement(
+    state: &StoreState,
+    order: &Order,
+    digital: &DigitalProduct,
+    file: &DigitalProductFile,
+) -> (DownloadEntitlement, bool) {
+    let grant_id = digital_grant_id(&order.id, &digital.product_id);
+    if let Some(existing) = state
+        .entitlements
+        .iter()
+        .find(|entry| {
+            let entitlement = entry.value();
+            entitlement.order_id == order.id
+                && entitlement.product_id == digital.product_id
+                && entitlement.release_id.as_deref() == Some(file.id.as_str())
+        })
+        .map(|entry| entry.value().clone())
+    {
+        return (existing, false);
+    }
+    let limit = if digital.download_limit > 0 {
+        digital.download_limit
+    } else {
+        state
+            .digital_defaults
+            .read()
+            .map(|defaults| defaults.default_download_limit)
+            .unwrap_or(DEFAULT_DIGITAL_DOWNLOAD_LIMIT)
+    };
+    let entitlement = DownloadEntitlement {
+        id: new_id(),
+        license_id: Some(grant_id),
+        license_key: None,
+        order_id: order.id.clone(),
+        user_id: order.user_id.clone(),
+        product_id: digital.product_id.clone(),
+        tier_id: None,
+        software_id: None,
+        software_slug: None,
+        release_id: Some(file.id.clone()),
+        download_limit: limit,
+        downloads_used: 0,
+        status: "active".to_string(),
+        expires_at: None,
+        created_at: now(),
+        updated_at: now(),
+    };
+    state
+        .entitlements
+        .insert(entitlement.id.clone(), entitlement.clone());
+    (entitlement, true)
+}
+
+/// Grant downloads and accrue royalties for the digital products in
+/// a paid order. Called from every place an order becomes paid (the
+/// `payment.captured` listener, the manual pay path, and the manual
+/// status update), so a digital purchase always unlocks its files
+/// and always accrues its royalty exactly once: minting is
+/// idempotent (an existing entitlement for the same order line and
+/// file is returned, never duplicated) and royalty accrual skips
+/// lines that already accrued for the order (one royalty row per
+/// digital product per order). Royalties accrue on the net line
+/// total: the order discount is shared across lines in proportion
+/// to their line totals, and a fixed royalty is charged per unit
+/// sold. A product with a zero royalty value accrues nothing.
+fn grant_digital_purchases_for_paid_order(state: &StoreState, order: &Order) {
+    let mut files_granted = 0usize;
+    let mut royalties_accrued = 0usize;
+    for item in &order.items {
+        let Some(digital) = state
+            .digital_products
+            .iter()
+            .find(|entry| entry.value().product_id == item.product_id)
+            .map(|entry| entry.value().clone())
+        else {
+            continue;
+        };
+        let files: Vec<DigitalProductFile> = state
+            .digital_files
+            .iter()
+            .filter(|entry| entry.value().digital_product_id == digital.id)
+            .map(|entry| entry.value().clone())
+            .collect();
+        for file in &files {
+            let (_, created) = ensure_digital_entitlement(state, order, &digital, file);
+            if created {
+                files_granted += 1;
+            }
+        }
+        if digital.royalty_value <= 0.0 {
+            continue;
+        }
+        let already_accrued = state.digital_royalties.iter().any(|entry| {
+            entry.value().order_id == order.id
+                && entry.value().digital_product_id == digital.id
+        });
+        if already_accrued {
+            continue;
+        }
+        let share = if order.subtotal > 0.0 {
+            item.line_total / order.subtotal
+        } else {
+            0.0
+        };
+        let net = round_money(item.line_total - order.discount_total * share);
+        let amount = match digital.royalty_kind.as_str() {
+            "fixed" => round_money(digital.royalty_value * item.quantity as f64),
+            _ => round_money(net * digital.royalty_value / 100.0),
+        };
+        if amount <= 0.0 {
+            continue;
+        }
+        let royalty = DigitalRoyalty {
+            id: new_id(),
+            digital_product_id: digital.id.clone(),
+            product_id: item.product_id.clone(),
+            order_id: order.id.clone(),
+            buyer_user_id: order.user_id.clone(),
+            payee: digital.royalty_payee.clone(),
+            payee_company_id: digital
+                .royalty_payee_company_id
+                .clone()
+                .or_else(|| item.company_id.clone()),
+            amount,
+            currency: order.currency.clone(),
+            royalty_kind: digital.royalty_kind.clone(),
+            royalty_value: digital.royalty_value,
+            status: "accrued".to_string(),
+            payout_id: None,
+            created_at: now(),
+            updated_at: now(),
+        };
+        state
+            .digital_royalties
+            .insert(royalty.id.clone(), royalty.clone());
+        royalties_accrued += 1;
+        state.emit(
+            "store.digital.royalty.accrued",
+            serde_json::to_value(&royalty).unwrap_or(Value::Null),
+        );
+    }
+    if files_granted > 0 || royalties_accrued > 0 {
+        state.emit(
+            "store.digital.downloads.granted",
+            json!({
+                "order_id": order.id,
+                "user_id": order.user_id,
+                "files_granted": files_granted,
+                "royalties_accrued": royalties_accrued,
+            }),
+        );
+    }
+}
+
+/// Reverse still-unpaid royalties of a refunded order. Only
+/// `accrued` royalties reverse automatically: royalties already
+/// attached to a payout request (`payout_requested` or `approved`)
+/// or already paid keep their status and need a manual adjustment,
+/// because money may already have been approved or moved. Called
+/// from `transition_order` next to the license suspension, so every
+/// refund path reverses the same way. Returns the reversed count.
+fn reverse_digital_royalties_for_order(state: &StoreState, order_id: &str) -> usize {
+    let mut reversed = 0usize;
+    for mut entry in state.digital_royalties.iter_mut() {
+        if entry.value().order_id == order_id && entry.value().status == "accrued" {
+            entry.value().status = "reversed".to_string();
+            entry.value().updated_at = now();
+            reversed += 1;
+        }
+    }
+    reversed
+}
+
+/// Sample-download rate limit: at most `limit` downloads per window
+/// for one identity and one preview. Returns an error when the
+/// window is exhausted. Old entries are pruned on each check so the
+/// map does not grow without bound.
+fn check_sample_rate_limit(
+    state: &StoreState,
+    identity: &str,
+    preview_id: &str,
+) -> UnifiedResult<()> {
+    let (limit, window_minutes) = state
+        .digital_defaults
+        .read()
+        .map(|defaults| {
+            (
+                defaults.sample_rate_limit_per_hour,
+                defaults.sample_rate_limit_window_minutes,
+            )
+        })
+        .unwrap_or((
+            DEFAULT_SAMPLE_RATE_LIMIT_PER_HOUR,
+            DEFAULT_SAMPLE_RATE_LIMIT_WINDOW_MINUTES,
+        ));
+    let key = format!("{identity}:{preview_id}");
+    let cutoff = now() - chrono::Duration::minutes(i64::from(window_minutes));
+    let mut timestamps = state.sample_downloads.entry(key).or_default();
+    timestamps.retain(|timestamp| *timestamp > cutoff);
+    if timestamps.len() as u32 >= limit {
+        return Err(UnifiedError::new(
+            format!(
+                "Sample download rate limit reached: at most {limit} sample downloads per {window_minutes} minutes for this preview"
+            ),
+            429,
+        ));
+    }
+    timestamps.push(now());
+    Ok(())
 }
 
 /// True for zero-decimal currencies (no minor units), matching the
@@ -859,6 +2434,130 @@ fn coupon_discount(
     }
     let discount = coupon_discount_for(&coupon, product_id, subtotal);
     Ok((coupon, round_money(discount)))
+}
+
+/// Convert pricing scaled units (exponent 4) back to integer cents
+/// with half-up rounding: the store boundary conversion, mirroring
+/// the pricing module's own helper without calling across modules
+/// (this module interconnects only through the hook bus).
+fn scaled_to_cents(scaled: i64) -> i64 {
+    if scaled >= 0 {
+        (scaled + 50) / 100
+    } else {
+        (scaled - 50) / 100
+    }
+}
+
+/// Evaluate a store coupon through the shared pricing evaluator
+/// (`pricing.discount.evaluate_requested`, which never mutates the
+/// order). Returns the discount in major units plus the evaluation
+/// trace to record on the order. The pricing answer is used only
+/// when it is valid AND it priced this coupon (no
+/// `coupon_problem`): pricing holds its own coupon records, so a
+/// store coupon it does not know reports
+/// `coupon_problem: "Coupon not found"` and must not zero out a
+/// valid store coupon. When pricing does not answer, answers
+/// invalid, does not hold the coupon, or no tenant context
+/// resolves for the request, the store-local float math applies
+/// instead and the trace says so. Exactly one evaluator's math is
+/// ever applied to an order. The tenant id comes from the
+/// request's resolved tenant context, never from a client header.
+/// Store money is float major units (pre-existing); the pricing
+/// discount arrives as integer scaled units and is converted to
+/// cents with half-up rounding at this boundary.
+fn evaluate_coupon_with_pricing(
+    state: &StoreState,
+    req: &HttpRequest,
+    items: &[OrderItem],
+    coupon: &Coupon,
+    customer_id: &str,
+    currency: &str,
+) -> (f64, Value) {
+    let mut local_discount = 0.0;
+    for item in items {
+        local_discount += coupon_discount_for(coupon, &item.product_id, item.line_total);
+    }
+    let local_discount = round_money(local_discount);
+    let local_trace = |reason: &str, pricing_answer: Value| {
+        json!({
+            "evaluator": "store-local",
+            "reason": reason,
+            "coupon_code": coupon.code,
+            "currency": currency,
+            "local_discount": local_discount,
+            "pricing_answer": pricing_answer,
+        })
+    };
+    let Ok(tenant) = crate::core::tenancy::TenantContext::from_http_request(req) else {
+        return (
+            local_discount,
+            local_trace(
+                "No resolved tenant context, so the pricing hook could not run",
+                Value::Null,
+            ),
+        );
+    };
+    let lines: Vec<Value> = items
+        .iter()
+        .map(|item| {
+            json!({
+                "product_id": item.product_id,
+                "unit_price": format!("{:.4}", item.unit_price),
+                "quantity": item.quantity,
+            })
+        })
+        .collect();
+    let hook_context = state.emit_with_results(
+        "pricing.discount.evaluate_requested",
+        json!({
+            "tenant_id": tenant.tenant_id.to_string(),
+            "lines": lines,
+            "coupon_code": coupon.code,
+            "customer_id": customer_id,
+            "currency": currency,
+        }),
+    );
+    let Some(answer) = hook_context.results.into_iter().next() else {
+        return (
+            local_discount,
+            local_trace("No pricing evaluator answered", Value::Null),
+        );
+    };
+    let valid = answer
+        .get("valid")
+        .and_then(|value| value.as_bool())
+        .unwrap_or(false);
+    let coupon_problem = answer
+        .get("coupon_problem")
+        .and_then(|value| value.as_str())
+        .map(str::to_string);
+    if !valid {
+        let reason = answer
+            .get("error")
+            .and_then(|value| value.as_str())
+            .map(|error| format!("Pricing evaluator refused the evaluation: {error}"))
+            .unwrap_or_else(|| "Pricing evaluator answered valid: false".to_string());
+        return (local_discount, local_trace(&reason, answer));
+    }
+    if let Some(problem) = coupon_problem {
+        return (
+            local_discount,
+            local_trace(
+                &format!("Pricing evaluator did not hold this coupon ({problem}); store-local math applied"),
+                answer,
+            ),
+        );
+    }
+    let discount_scaled = answer
+        .get("total_discount_scaled")
+        .and_then(|value| value.as_i64())
+        .unwrap_or(0);
+    let discount_major = round_money(scaled_to_cents(discount_scaled) as f64 / 100.0);
+    let mut trace = answer;
+    if let Value::Object(map) = &mut trace {
+        map.insert("evaluator".to_string(), Value::String("pricing".to_string()));
+    }
+    (discount_major, trace)
 }
 
 /// Application configuration stashed by `StoreModule::init`, so the
@@ -1138,6 +2837,7 @@ fn transition_order(
     drop(order);
     if target == "refunded" {
         suspend_order_licenses(state, order_id);
+        reverse_digital_royalties_for_order(state, order_id);
     }
     Ok(updated)
 }
@@ -1161,6 +2861,56 @@ const BANK_TRANSFER_REJECTED: &str = "bank_transfer.rejected";
 /// is already paid is left alone, so redelivered captures are safe.
 /// The payment reference (provider transaction id) is recorded on the
 /// order, and the same downstream events the manual pay path emits
+/// Serialize an order for the `order.paid` / `store.order.completed`
+/// events, carrying the e-learning course id the activation listener
+/// needs. The contract is a top-level `course_id` plus `module` =
+/// `"elearning"`, or an `items` entry carrying them. Order items
+/// already serialize their `course_id` (set at checkout); items
+/// also serialize `module_id`, never `module`, so each item that
+/// carries a course id gains an explicit `module: "elearning"`
+/// here, and a single distinct course id is hoisted to the top
+/// level. With several distinct course ids the top level stays
+/// ambiguous and only the per-item entries carry them.
+fn order_paid_value(order: &Order) -> Value {
+    let mut value = serde_json::to_value(order).unwrap_or(Value::Null);
+    let mut course_ids: Vec<String> = Vec::new();
+    if let Some(items) = value
+        .get_mut("items")
+        .and_then(|items| items.as_array_mut())
+    {
+        for item in items.iter_mut() {
+            let course_id = item
+                .get("course_id")
+                .and_then(|id| id.as_str())
+                .map(str::to_string);
+            if let Some(course_id) = course_id {
+                if let Value::Object(map) = item {
+                    map.insert(
+                        "module".to_string(),
+                        Value::String("elearning".to_string()),
+                    );
+                }
+                if !course_ids.contains(&course_id) {
+                    course_ids.push(course_id);
+                }
+            }
+        }
+    }
+    if course_ids.len() == 1 {
+        if let Value::Object(map) = &mut value {
+            map.insert(
+                "course_id".to_string(),
+                Value::String(course_ids[0].clone()),
+            );
+            map.insert(
+                "module".to_string(),
+                Value::String("elearning".to_string()),
+            );
+        }
+    }
+    value
+}
+
 /// (`payment.completed`, `order.paid`) are emitted, so licensing,
 /// hosting, and billing react exactly as they do for a manual payment.
 ///
@@ -1293,11 +3043,14 @@ fn on_payment_captured(state: Arc<StoreState>, ctx: &mut HookContext) {
         Ok(updated) => {
             let order_value = serde_json::to_value(&updated).unwrap_or(Value::Null);
             state.emit("payment.completed", order_value.clone());
-            state.emit("order.paid", order_value);
+            state.emit("order.paid", order_paid_value(&updated));
+            let subscription = activate_subscription_for_paid_order(&state, &updated);
+            grant_digital_purchases_for_paid_order(&state, &updated);
             ctx.add_result(json!({
                 "store": "paid",
                 "order_id": order_id,
                 "payment_reference": reference,
+                "subscription_id": subscription.map(|subscription| subscription.id),
             }));
         }
         Err(error) => {
@@ -1403,12 +3156,15 @@ fn on_payment_refunded(state: Arc<StoreState>, ctx: &mut HookContext) {
                 .filter(|entry| entry.value().order_id.as_deref() == Some(order_id.as_str()))
                 .map(|entry| entry.value().license_id.clone())
                 .collect();
+            let cancelled_subscriptions =
+                cancel_subscriptions_for_order(&state, &order_id, "order_refunded");
             state.emit(
                 "store.order.refunded",
                 json!({
                     "order": serde_json::to_value(&updated).unwrap_or(Value::Null),
                     "order_id": updated.id,
                     "license_ids": license_ids,
+                    "cancelled_subscriptions": cancelled_subscriptions,
                     "reason": ctx.get("reason").cloned().unwrap_or(Value::Null),
                     "provider_refund_id": ctx.get("provider_refund_id").cloned().unwrap_or(Value::Null),
                     "transaction_id": ctx.get("transaction_id").cloned().unwrap_or(Value::Null),
@@ -1656,6 +3412,24 @@ fn on_product_listed(state: Arc<StoreState>, ctx: &mut HookContext) {
         .get("trial_days")
         .and_then(|value| value.as_u64())
         .unwrap_or(0) as u32;
+    let proration_policy = ctx
+        .get("proration_policy")
+        .and_then(|value| value.as_str())
+        .filter(|policy| matches!(*policy, "prorate" | "no_prorate" | "credit_only"))
+        .unwrap_or("prorate")
+        .to_string();
+    let grace_period_days = ctx
+        .get("grace_period_days")
+        .and_then(|value| value.as_u64())
+        .unwrap_or(0) as u32;
+    let dunning_max_retries = ctx
+        .get("dunning_max_retries")
+        .and_then(|value| value.as_u64())
+        .unwrap_or(3) as u32;
+    let dunning_retry_interval_days = ctx
+        .get("dunning_retry_interval_days")
+        .and_then(|value| value.as_u64())
+        .unwrap_or(3) as u32;
     let software_id = ctx
         .get("software_id")
         .and_then(|value| value.as_str())
@@ -1694,6 +3468,10 @@ fn on_product_listed(state: Arc<StoreState>, ctx: &mut HookContext) {
         existing.billing_period = billing_period;
         existing.renewal_price = renewal_price;
         existing.trial_days = trial_days;
+        existing.proration_policy = proration_policy;
+        existing.grace_period_days = grace_period_days;
+        existing.dunning_max_retries = dunning_max_retries;
+        existing.dunning_retry_interval_days = dunning_retry_interval_days;
         existing.license_product = license_product;
         existing.company_id = company_id;
         existing.status = "published".to_string();
@@ -1719,6 +3497,11 @@ fn on_product_listed(state: Arc<StoreState>, ctx: &mut HookContext) {
                 billing_period,
                 renewal_price,
                 trial_days,
+                proration_policy,
+                grace_period_days,
+                dunning_max_retries,
+                dunning_retry_interval_days,
+                module_id: None,
                 updates_years: None,
                 created_at: now(),
                 updated_at: now(),
@@ -1777,6 +3560,180 @@ fn on_product_delisted(state: Arc<StoreState>, ctx: &mut HookContext) {
         "store": "product_delisted",
         "product_id": product_id,
         "status": "draft",
+    }));
+}
+
+/// Create a store order for a properties block purchase
+/// (`properties.block.purchase_requested`
+/// `{purchase_id, property_id, plan_id, block_id, buyer_id, price,
+/// currency}`): one line item for the block at the payload's price,
+/// buyer as the order owner, status `pending` — the block is NOT
+/// marked sold here; the properties module owns that transition on
+/// `payment.captured`. Emits `properties.order.created`
+/// `{purchase_id, order_id, block_id, property_id, buyer_id,
+/// total, currency}` so the properties module can link the order
+/// id to the purchase record. A repeat request for the same
+/// `purchase_id` returns the existing order instead of creating a
+/// second one (the properties module emits the request once per
+/// purchase, but a redelivery must never double-sell the block).
+/// The block is not a store product, so the line carries the block
+/// id as its `product_id` with a descriptive name; no catalogue
+/// lookup is performed.
+fn on_properties_purchase_requested(state: Arc<StoreState>, ctx: &mut HookContext) {
+    let data = ctx.data.clone();
+    let required = |key: &str| {
+        data.get(key)
+            .and_then(|value| value.as_str())
+            .map(str::to_string)
+            .filter(|value| !value.trim().is_empty())
+    };
+    let Some(purchase_id) = required("purchase_id") else {
+        ctx.add_result(json!({
+            "store": "skipped",
+            "reason": "properties.block.purchase_requested carries no purchase_id",
+        }));
+        return;
+    };
+    let Some(block_id) = required("block_id") else {
+        ctx.add_result(json!({
+            "store": "skipped",
+            "purchase_id": purchase_id,
+            "reason": "properties.block.purchase_requested carries no block_id",
+        }));
+        return;
+    };
+    let Some(property_id) = required("property_id") else {
+        ctx.add_result(json!({
+            "store": "skipped",
+            "purchase_id": purchase_id,
+            "reason": "properties.block.purchase_requested carries no property_id",
+        }));
+        return;
+    };
+    let Some(buyer_id) = required("buyer_id") else {
+        ctx.add_result(json!({
+            "store": "skipped",
+            "purchase_id": purchase_id,
+            "reason": "properties.block.purchase_requested carries no buyer_id",
+        }));
+        return;
+    };
+    let price = data.get("price").and_then(|value| value.as_f64());
+    let Some(price) = price.filter(|value| value.is_finite() && *value >= 0.0) else {
+        ctx.add_result(json!({
+            "store": "skipped",
+            "purchase_id": purchase_id,
+            "reason": "properties.block.purchase_requested carries no valid price",
+        }));
+        return;
+    };
+    let currency = data
+        .get("currency")
+        .and_then(|value| value.as_str())
+        .unwrap_or("USD")
+        .to_string();
+    if currency.len() != 3 || !currency.chars().all(|c| c.is_ascii_alphabetic()) {
+        ctx.add_result(json!({
+            "store": "skipped",
+            "purchase_id": purchase_id,
+            "reason": "properties.block.purchase_requested currency must be a 3-letter code",
+        }));
+        return;
+    }
+    // Idempotency: orders carry no purchase-link field, so a
+    // repeat request is detected by the block line — a pending
+    // order owned by this buyer with this block as its only line.
+    // That is the same purchase by construction (one block sells
+    // once), so the existing order is returned instead of a
+    // second one.
+    if let Some(existing) = state
+        .orders
+        .iter()
+        .find(|entry| {
+            let order = entry.value();
+            order.user_id == buyer_id
+                && order.status == "pending"
+                && order.items.len() == 1
+                && order.items[0].product_id == block_id
+        })
+        .map(|entry| entry.value().clone())
+    {
+        ctx.add_result(json!({
+            "store": "order_already_created",
+            "purchase_id": purchase_id,
+            "order_id": existing.id,
+            "block_id": block_id,
+        }));
+        return;
+    }
+    let total = round_money(price);
+    let item = OrderItem {
+        product_id: block_id.clone(),
+        name: format!("Property block {block_id}"),
+        unit_price: total,
+        quantity: 1,
+        line_total: total,
+        license_product: false,
+        file_id: None,
+        tier_id: None,
+        tier_name: None,
+        software_id: None,
+        software_slug: None,
+        company_id: None,
+        pricing_model: "one_time".to_string(),
+        billing_period: None,
+        seats: 1,
+        expires_at: None,
+        download_limit: 0,
+        course_id: None,
+        trial_days: 0,
+        proration_policy: default_proration_policy(),
+        grace_period_days: 0,
+        dunning_max_retries: default_dunning_max_retries(),
+        dunning_retry_interval_days: default_dunning_retry_interval_days(),
+        module_id: Some("properties".to_string()),
+    };
+    let items = vec![item];
+    let order = Order {
+        id: new_id(),
+        reference: new_order_reference(&state, &items),
+        user_id: buyer_id.clone(),
+        items,
+        subtotal: total,
+        discount_total: 0.0,
+        total,
+        currency: currency.to_uppercase(),
+        coupon_code: None,
+        discount_evaluation: None,
+        company_id: None,
+        trial_until: None,
+        status: "pending".to_string(),
+        provider: None,
+        payment_reference: None,
+        created_at: now(),
+        updated_at: now(),
+    };
+    state.orders.insert(order.id.clone(), order.clone());
+    state.emit(
+        "properties.order.created",
+        json!({
+            "purchase_id": purchase_id,
+            "order_id": order.id,
+            "block_id": block_id,
+            "property_id": property_id,
+            "buyer_id": buyer_id,
+            "total": total,
+            "currency": currency.to_uppercase(),
+        }),
+    );
+    ctx.add_result(json!({
+        "store": "order_created",
+        "purchase_id": purchase_id,
+        "order_id": order.id,
+        "block_id": block_id,
+        "property_id": property_id,
+        "total": total,
+        "currency": currency.to_uppercase(),
     }));
 }
 
@@ -1852,6 +3809,24 @@ fn on_store_entitlement_check(state: Arc<StoreState>, ctx: &mut HookContext) {
                     "status": "active",
                 }));
             }
+        }
+    }
+    // An active subscription to the product also entitles the user,
+    // for as long as it grants access (trialing/active inside the
+    // period, past-due inside grace, cancelled at period end inside
+    // the period).
+    for entry in state.subscriptions.iter() {
+        let subscription = entry.value();
+        if subscription.product_id == product_id
+            && subscription.user_id == user_id
+            && subscription_grants_access(subscription, now)
+        {
+            matches.push(json!({
+                "id": subscription.id,
+                "source": "subscription",
+                "status": subscription.status,
+                "expires_at": subscription.current_period_end,
+            }));
         }
     }
     let entitled = !matches.is_empty();
@@ -1988,6 +3963,12 @@ async fn create_product(
                 ));
             }
         }
+        validate_subscription_settings(
+            input.proration_policy.as_deref(),
+            input.grace_period_days,
+            input.dunning_max_retries,
+            input.dunning_retry_interval_days,
+        )?;
         let pricing_model = input
             .pricing_model
             .unwrap_or_else(default_pricing_model);
@@ -2018,6 +3999,17 @@ async fn create_product(
             billing_period: input.billing_period,
             renewal_price: input.renewal_price.map(round_money),
             trial_days: input.trial_days.unwrap_or(0),
+            proration_policy: input
+                .proration_policy
+                .unwrap_or_else(default_proration_policy),
+            grace_period_days: input.grace_period_days.unwrap_or(0),
+            dunning_max_retries: input
+                .dunning_max_retries
+                .unwrap_or_else(default_dunning_max_retries),
+            dunning_retry_interval_days: input
+                .dunning_retry_interval_days
+                .unwrap_or_else(default_dunning_retry_interval_days),
+            module_id: input.module_id,
             updates_years: input.updates_years,
             created_at: now(),
             updated_at: now(),
@@ -2132,6 +4124,49 @@ async fn update_product(
         }
         if let Some(trial_days) = input.trial_days {
             product.trial_days = trial_days;
+        }
+        if let Some(proration_policy) = input.proration_policy {
+            if !matches!(
+                proration_policy.as_str(),
+                "prorate" | "no_prorate" | "credit_only"
+            ) {
+                return Err(UnifiedError::bad_request(
+                    "Proration policy must be one of: prorate, no_prorate, credit_only",
+                ));
+            }
+            product.proration_policy = proration_policy;
+        }
+        if let Some(grace_period_days) = input.grace_period_days {
+            if grace_period_days > 90 {
+                return Err(UnifiedError::bad_request(
+                    "Grace period must be at most 90 days",
+                ));
+            }
+            product.grace_period_days = grace_period_days;
+        }
+        if let Some(dunning_max_retries) = input.dunning_max_retries {
+            if dunning_max_retries > 10 {
+                return Err(UnifiedError::bad_request(
+                    "Dunning max retries must be at most 10",
+                ));
+            }
+            product.dunning_max_retries = dunning_max_retries;
+        }
+        if let Some(dunning_retry_interval_days) = input.dunning_retry_interval_days {
+            if dunning_retry_interval_days == 0 || dunning_retry_interval_days > 30 {
+                return Err(UnifiedError::bad_request(
+                    "Dunning retry interval must be between 1 and 30 days",
+                ));
+            }
+            product.dunning_retry_interval_days = dunning_retry_interval_days;
+        }
+        if let Some(module_id) = input.module_id {
+            if module_id.trim().is_empty() {
+                return Err(UnifiedError::bad_request(
+                    "Module id must not be empty",
+                ));
+            }
+            product.module_id = Some(module_id.trim().to_string());
         }
         if let Some(updates_years) = input.updates_years {
             product.updates_years = Some(updates_years);
@@ -2892,6 +4927,15 @@ async fn checkout(
             if quantity == 0 {
                 return Err(UnifiedError::bad_request("Quantity must be at least 1"));
             }
+            let course_id = match &requested_item.course_id {
+                Some(raw) if !raw.trim().is_empty() => {
+                    Uuid::parse_str(raw.trim()).map_err(|_| {
+                        UnifiedError::bad_request("course_id must be a UUID")
+                    })?;
+                    Some(raw.trim().to_string())
+                }
+                _ => None,
+            };
             let product = state
                 .products
                 .get(&requested_item.product_id)
@@ -2976,31 +5020,81 @@ async fn checkout(
                     product.updates_years,
                 ),
                 download_limit,
+                course_id,
+                trial_days,
+                proration_policy: product.proration_policy.clone(),
+                grace_period_days: product.grace_period_days,
+                dunning_max_retries: product.dunning_max_retries,
+                dunning_retry_interval_days: product.dunning_retry_interval_days,
+                module_id: product.module_id.clone(),
             });
+        }
+        // A subscription order holds exactly one subscription
+        // product: a subscription is one recurring purchase, and
+        // mixing it with other items would leave the subscription
+        // created at payment ambiguous about which item it covers.
+        let subscription_items = items
+            .iter()
+            .filter(|item| item.pricing_model == "subscription")
+            .count();
+        if subscription_items > 0 {
+            if items.len() != 1 || subscription_items != 1 {
+                return Err(UnifiedError::unprocessable(
+                    "A subscription order must reference exactly one subscription product",
+                ));
+            }
+            if items[0].quantity != 1 {
+                return Err(UnifiedError::bad_request(
+                    "A subscription product is bought one at a time (quantity must be 1)",
+                ));
+            }
+            if items[0].billing_period.is_none() {
+                return Err(UnifiedError::unprocessable(
+                    "A subscription product requires a billing period",
+                ));
+            }
         }
         subtotal = round_money(subtotal);
         // A coupon discounts only the line items it covers; a coupon
-        // that covers nothing in the order is rejected below.
+        // that covers nothing in the order is rejected below. The
+        // discount is evaluated through the shared pricing
+        // evaluator first, with the store-local float math as the
+        // fallback when pricing cannot price this coupon — exactly
+        // one evaluator's math is applied, and the trace is
+        // recorded on the order.
         let mut discount_total = 0.0;
         let mut coupon_code: Option<String> = None;
         let mut applied_coupon: Option<Coupon> = None;
+        let mut discount_evaluation: Option<Value> = None;
         if let Some(code) = input.coupon_code.filter(|code| !code.trim().is_empty()) {
             let coupon = validate_coupon_usable(&state, &code)?;
-            let mut order_discount = 0.0;
-            for item in &items {
-                order_discount += coupon_discount_for(&coupon, &item.product_id, item.line_total);
-            }
+            let (order_discount, trace) = evaluate_coupon_with_pricing(
+                &state,
+                &req,
+                &items,
+                &coupon,
+                &owner,
+                currency.as_deref().unwrap_or("USD"),
+            );
             if order_discount <= 0.0 {
                 return Err(UnifiedError::unprocessable(
                     "Coupon does not apply to any item in this order",
                 ));
             }
             discount_total = round_money(order_discount.min(subtotal));
+            discount_evaluation = Some(trace);
             coupon_code = Some(code.trim().to_uppercase());
             applied_coupon = Some(coupon);
         }
+        // Single payment reference for the order (batch 18): issued
+        // once here, in the shared format, and never changed. The
+        // reference travels with the order into `order.created` and
+        // `payment.initiated`, so billing and the gateway see the
+        // same value.
+        let order_reference = new_order_reference(&state, &items);
         let order = Order {
             id: new_id(),
+            reference: order_reference,
             user_id: owner.clone(),
             items,
             subtotal,
@@ -3008,6 +5102,7 @@ async fn checkout(
             total: round_money(subtotal - discount_total),
             currency: currency.unwrap_or_else(|| "USD".to_string()),
             coupon_code: coupon_code.clone(),
+            discount_evaluation: discount_evaluation.clone(),
             company_id: company_id.clone(),
             trial_until,
             status: "pending".to_string(),
@@ -3124,6 +5219,715 @@ fn create_entitlements_from_hook(state: &StoreState, order: &Order, hook_context
     }
 }
 
+/// Emit `subscription.entitlement_changed` for a subscription whose
+/// access changed, so the licensing module (and any listener) can
+/// grant or revoke the module the subscription covers. Only
+/// subscriptions bound to a sellable module (`module_id`) emit it.
+fn emit_subscription_entitlement_changed(
+    state: &StoreState,
+    subscription: &Subscription,
+    entitled: bool,
+    reason: &str,
+) {
+    let Some(module_id) = &subscription.module_id else {
+        return;
+    };
+    state.emit(
+        "subscription.entitlement_changed",
+        json!({
+            "subscription_id": subscription.id,
+            "user_id": subscription.user_id,
+            "company_id": subscription.company_id,
+            "product_id": subscription.product_id,
+            "module_id": module_id,
+            "order_id": subscription.order_id,
+            "entitled": entitled,
+            "reason": reason,
+        }),
+    );
+}
+
+/// Create the subscription for a paid subscription order, or return
+/// the existing one when the order already has one (redelivered
+/// `payment.captured` events and manual re-pays must never create a
+/// second subscription). A trial starts as `trialing` with the
+/// trial end recorded; otherwise the subscription starts `active`.
+/// The first period runs from now to one billing period after the
+/// trial ends (trialing) or from now (no trial). The recurring price
+/// is the product renewal price when one is set, else the price paid.
+/// Emits `subscription.created` and, for module products,
+/// `subscription.entitlement_changed` with `entitled: true`.
+fn activate_subscription_for_paid_order(
+    state: &StoreState,
+    order: &Order,
+) -> Option<Subscription> {
+    let item = order
+        .items
+        .iter()
+        .find(|item| item.pricing_model == "subscription")?;
+    if let Some(existing) = state
+        .subscriptions
+        .iter()
+        .find(|entry| entry.value().order_id == order.id)
+        .map(|entry| entry.value().clone())
+    {
+        return Some(existing);
+    }
+    let billing_period = item.billing_period.clone()?;
+    let price = state
+        .products
+        .get(&item.product_id)
+        .and_then(|product| product.renewal_price)
+        .unwrap_or(item.unit_price);
+    let start = now();
+    let trial_end = if item.trial_days > 0 {
+        Some(start + chrono::Duration::days(i64::from(item.trial_days)))
+    } else {
+        None
+    };
+    let current_period_end = match trial_end {
+        Some(trial_end) => period_end(trial_end, &billing_period),
+        None => period_end(start, &billing_period),
+    };
+    let subscription = Subscription {
+        id: new_id(),
+        user_id: order.user_id.clone(),
+        company_id: order.company_id.clone(),
+        product_id: item.product_id.clone(),
+        tier_id: item.tier_id.clone(),
+        order_id: order.id.clone(),
+        module_id: item.module_id.clone(),
+        status: if trial_end.is_some() {
+            "trialing".to_string()
+        } else {
+            "active".to_string()
+        },
+        billing_period,
+        price: round_money(price),
+        currency: order.currency.clone(),
+        trial_days: item.trial_days,
+        trial_end,
+        current_period_start: start,
+        current_period_end,
+        proration_policy: item.proration_policy.clone(),
+        grace_period_days: item.grace_period_days,
+        dunning_max_retries: item.dunning_max_retries,
+        dunning_retry_interval_days: item.dunning_retry_interval_days,
+        cancel_at_period_end: false,
+        cancelled_at: None,
+        pending_product_id: None,
+        pending_tier_id: None,
+        pending_price: None,
+        pending_billing_period: None,
+        created_at: start,
+        updated_at: start,
+    };
+    state
+        .subscriptions
+        .insert(subscription.id.clone(), subscription.clone());
+    state.emit(
+        "subscription.created",
+        serde_json::to_value(&subscription).unwrap_or(Value::Null),
+    );
+    emit_subscription_entitlement_changed(state, &subscription, true, "subscription_created");
+    Some(subscription)
+}
+
+/// Cancel every live subscription of a refunded order. A refund is
+/// final, so the cancellation is immediate (not at period end) and
+/// revokes the module entitlement when the subscription covers one.
+fn cancel_subscriptions_for_order(state: &StoreState, order_id: &str, reason: &str) -> usize {
+    let ids: Vec<String> = state
+        .subscriptions
+        .iter()
+        .filter(|entry| {
+            entry.value().order_id == order_id && entry.value().status != "cancelled"
+        })
+        .map(|entry| entry.key().clone())
+        .collect();
+    let mut cancelled = 0usize;
+    for id in ids {
+        let Some(mut subscription) = state.subscriptions.get_mut(&id) else {
+            continue;
+        };
+        subscription.status = "cancelled".to_string();
+        subscription.cancel_at_period_end = false;
+        subscription.cancelled_at = Some(now());
+        subscription.updated_at = now();
+        let updated = subscription.clone();
+        drop(subscription);
+        cancelled += 1;
+        state.emit(
+            "subscription.cancelled",
+            json!({
+                "subscription": serde_json::to_value(&updated).unwrap_or(Value::Null),
+                "subscription_id": updated.id,
+                "reason": reason,
+            }),
+        );
+        emit_subscription_entitlement_changed(state, &updated, false, reason);
+    }
+    cancelled
+}
+
+/// Apply a lifecycle decision from the billing module
+/// (`subscription.lifecycle.apply`). Billing owns the lifecycle
+/// engine (renewals, dunning, grace, reminders) but never writes
+/// this store's records directly; it asks here, and this handler
+/// applies the decision to the authoritative subscription and emits
+/// the public `subscription.*` event billing mirrors from.
+///
+/// Actions: `renew` (advance the period to the supplied
+/// `current_period_start` / `current_period_end`, applying any
+/// pending plan change), `mark_past_due`, `end_trial`,
+/// `cancel` (with `reason`). Unknown actions and transitions from
+/// a terminal state are reported in the hook result, never applied.
+fn on_subscription_lifecycle_apply(state: Arc<StoreState>, ctx: &mut HookContext) {
+    let subscription_id = ctx
+        .get("subscription_id")
+        .and_then(|value| value.as_str())
+        .unwrap_or("")
+        .to_string();
+    let action = ctx
+        .get("action")
+        .and_then(|value| value.as_str())
+        .unwrap_or("")
+        .to_string();
+    let Some(mut subscription) = state.subscriptions.get_mut(&subscription_id) else {
+        ctx.add_result(json!({
+            "store": "subscription_not_found",
+            "subscription_id": subscription_id,
+            "action": action,
+        }));
+        return;
+    };
+    let parse_date = |value: Option<&Value>| {
+        value
+            .and_then(|value| value.as_str())
+            .and_then(|text| text.parse::<DateTime<Utc>>().ok())
+    };
+    let updated: Option<Subscription> = match action.as_str() {
+        "renew" => {
+            if subscription.status == "cancelled" {
+                ctx.add_result(json!({
+                    "store": "skipped",
+                    "subscription_id": subscription_id,
+                    "action": action,
+                    "reason": "subscription is cancelled",
+                }));
+                return;
+            }
+            if subscription.cancel_at_period_end {
+                ctx.add_result(json!({
+                    "store": "skipped",
+                    "subscription_id": subscription_id,
+                    "action": action,
+                    "reason": "subscription is scheduled for cancellation at period end",
+                }));
+                return;
+            }
+            let Some(period_start) = parse_date(ctx.get("current_period_start")) else {
+                ctx.add_result(json!({
+                    "store": "skipped",
+                    "subscription_id": subscription_id,
+                    "action": action,
+                    "reason": "current_period_start is required",
+                }));
+                return;
+            };
+            let Some(period_end_value) = parse_date(ctx.get("current_period_end")) else {
+                ctx.add_result(json!({
+                    "store": "skipped",
+                    "subscription_id": subscription_id,
+                    "action": action,
+                    "reason": "current_period_end is required",
+                }));
+                return;
+            };
+            if period_end_value <= period_start {
+                ctx.add_result(json!({
+                    "store": "skipped",
+                    "subscription_id": subscription_id,
+                    "action": action,
+                    "reason": "current_period_end must be after current_period_start",
+                }));
+                return;
+            }
+            // A plan change waiting for the next period takes effect
+            // with the renewal.
+            if let Some(pending_product_id) = subscription.pending_product_id.clone() {
+                subscription.product_id = pending_product_id;
+                if let Some(pending_price) = subscription.pending_price {
+                    subscription.price = pending_price;
+                }
+                if let Some(pending_period) = subscription.pending_billing_period.clone() {
+                    subscription.billing_period = pending_period;
+                }
+                subscription.tier_id = subscription.pending_tier_id.clone();
+                subscription.pending_product_id = None;
+                subscription.pending_tier_id = None;
+                subscription.pending_price = None;
+                subscription.pending_billing_period = None;
+            }
+            subscription.status = "active".to_string();
+            subscription.current_period_start = period_start;
+            subscription.current_period_end = period_end_value;
+            subscription.updated_at = now();
+            let updated = subscription.clone();
+            drop(subscription);
+            state.emit(
+                "subscription.renewed",
+                json!({
+                    "subscription": serde_json::to_value(&updated).unwrap_or(Value::Null),
+                    "subscription_id": updated.id,
+                    "invoice_id": ctx.get("invoice_id").cloned().unwrap_or(Value::Null),
+                }),
+            );
+            Some(updated)
+        }
+        "mark_past_due" => {
+            if !matches!(subscription.status.as_str(), "active" | "trialing") {
+                ctx.add_result(json!({
+                    "store": "skipped",
+                    "subscription_id": subscription_id,
+                    "action": action,
+                    "reason": format!("subscription is {}", subscription.status),
+                }));
+                return;
+            }
+            subscription.status = "past_due".to_string();
+            subscription.updated_at = now();
+            let updated = subscription.clone();
+            drop(subscription);
+            state.emit(
+                "subscription.past_due",
+                json!({
+                    "subscription": serde_json::to_value(&updated).unwrap_or(Value::Null),
+                    "subscription_id": updated.id,
+                    "reason": ctx.get("reason").cloned().unwrap_or(Value::Null),
+                }),
+            );
+            Some(updated)
+        }
+        "end_trial" => {
+            if subscription.status != "trialing" {
+                ctx.add_result(json!({
+                    "store": "skipped",
+                    "subscription_id": subscription_id,
+                    "action": action,
+                    "reason": format!("subscription is {}", subscription.status),
+                }));
+                return;
+            }
+            subscription.status = "active".to_string();
+            subscription.updated_at = now();
+            let updated = subscription.clone();
+            drop(subscription);
+            state.emit(
+                "subscription.trial_ended",
+                json!({
+                    "subscription": serde_json::to_value(&updated).unwrap_or(Value::Null),
+                    "subscription_id": updated.id,
+                }),
+            );
+            Some(updated)
+        }
+        "cancel" => {
+            if subscription.status == "cancelled" {
+                ctx.add_result(json!({
+                    "store": "already_cancelled",
+                    "subscription_id": subscription_id,
+                    "action": action,
+                }));
+                return;
+            }
+            let reason = ctx
+                .get("reason")
+                .and_then(|value| value.as_str())
+                .unwrap_or("cancelled")
+                .to_string();
+            subscription.status = "cancelled".to_string();
+            subscription.cancel_at_period_end = false;
+            subscription.cancelled_at = Some(now());
+            subscription.updated_at = now();
+            let updated = subscription.clone();
+            drop(subscription);
+            state.emit(
+                "subscription.cancelled",
+                json!({
+                    "subscription": serde_json::to_value(&updated).unwrap_or(Value::Null),
+                    "subscription_id": updated.id,
+                    "reason": reason,
+                }),
+            );
+            emit_subscription_entitlement_changed(state, &updated, false, &reason);
+            Some(updated)
+        }
+        other => {
+            ctx.add_result(json!({
+                "store": "skipped",
+                "subscription_id": subscription_id,
+                "action": action,
+                "reason": format!("unknown lifecycle action \"{other}\""),
+            }));
+            return;
+        }
+    };
+    if let Some(updated) = updated {
+        ctx.add_result(json!({
+            "store": "applied",
+            "subscription_id": updated.id,
+            "action": action,
+            "status": updated.status,
+        }));
+    }
+}
+
+/// Answer `subscription.module_entitlement.check` with payload
+/// `{"company_id", "module_id"}`: entitled when the company holds a
+/// subscription that covers the module and currently grants access
+/// (trialing/active inside the period, past-due inside grace, or
+/// cancelled at period end inside the period). This is the hook the
+/// licensing module's `check_module_entitlement` must call (see the
+/// integration notes) so an active subscription counts as a module
+/// entitlement alongside a license.
+fn on_subscription_module_entitlement_check(state: Arc<StoreState>, ctx: &mut HookContext) {
+    let company_id = ctx
+        .get("company_id")
+        .and_then(|value| value.as_str())
+        .unwrap_or("")
+        .to_string();
+    let module_id = ctx
+        .get("module_id")
+        .and_then(|value| value.as_str())
+        .unwrap_or("")
+        .to_string();
+    let now = now();
+    let found = state
+        .subscriptions
+        .iter()
+        .find(|entry| {
+            let subscription = entry.value();
+            subscription.module_id.as_deref() == Some(module_id.as_str())
+                && subscription.company_id.as_deref() == Some(company_id.as_str())
+                && subscription_grants_access(subscription, now)
+        })
+        .map(|entry| entry.value().clone());
+    match found {
+        Some(subscription) => ctx.add_result(json!({
+            "entitled": true,
+            "module_id": module_id,
+            "company_id": company_id,
+            "subscription_id": subscription.id,
+            "source": "subscription",
+        })),
+        None => ctx.add_result(json!({
+            "entitled": false,
+            "module_id": module_id,
+            "company_id": company_id,
+            "source": "subscription",
+            "reason": "no_active_subscription",
+        })),
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Subscription handlers
+// ---------------------------------------------------------------------------
+
+fn require_subscription_owner(req: &HttpRequest, subscription: &Subscription) -> UnifiedResult<()> {
+    if caller_owns(req, &subscription.user_id) {
+        Ok(())
+    } else {
+        Err(UnifiedError::forbidden(
+            "Subscription belongs to a different user",
+        ))
+    }
+}
+
+async fn list_subscriptions(
+    state: web::Data<Arc<StoreState>>,
+    query: web::Query<PaginationParams>,
+) -> HttpResponse {
+    let params = query.into_inner();
+    let mut items: Vec<Subscription> = state
+        .subscriptions
+        .iter()
+        .map(|entry| entry.value().clone())
+        .filter(|subscription| {
+            matches_search(
+                &format!(
+                    "{} {} {}",
+                    subscription.id, subscription.user_id, subscription.product_id
+                ),
+                &params,
+            ) && params
+                .filters
+                .get("status")
+                .is_none_or(|status| subscription.status == *status)
+                && params
+                    .filters
+                    .get("user_id")
+                    .is_none_or(|user_id| subscription.user_id == *user_id)
+                && params
+                    .filters
+                    .get("product_id")
+                    .is_none_or(|product_id| subscription.product_id == *product_id)
+                && params.filters.get("module_id").is_none_or(|module_id| {
+                    subscription.module_id.as_deref() == Some(module_id.as_str())
+                })
+                && params
+                    .filters
+                    .get("company_id")
+                    .is_none_or(|company_id| {
+                        subscription.company_id.as_deref() == Some(company_id.as_str())
+                    })
+        })
+        .collect();
+    items.sort_by(|a, b| a.created_at.cmp(&b.created_at));
+    if params.normalized().order == "desc" {
+        items.reverse();
+    }
+    let page = paginate(items, &params);
+    json::success_response(page, 200)
+}
+
+async fn get_subscription(
+    state: web::Data<Arc<StoreState>>,
+    req: HttpRequest,
+    path: web::Path<String>,
+) -> HttpResponse {
+    let result: UnifiedResult<Subscription> = (|| {
+        let subscription = state
+            .subscriptions
+            .get(path.as_str())
+            .map(|entry| entry.value().clone())
+            .ok_or_else(|| UnifiedError::not_found("Subscription not found"))?;
+        require_subscription_owner(&req, &subscription)?;
+        Ok(subscription)
+    })();
+    json::respond(result, false)
+}
+
+/// Change the plan of a subscription mid-cycle, applying the
+/// subscription's proration policy.
+///
+/// `prorate` applies the change immediately: the unused share of
+/// the old plan is credited, the new plan is charged for the
+/// remaining time, and the new period starts now. `no_prorate`
+/// stores the new plan as pending and applies it at the next period
+/// end with no mid-cycle charge or credit. `credit_only` credits
+/// the unused time now and applies the new price from the next
+/// period. The `subscription.upgraded` / `subscription.downgraded`
+/// event carries the proration lines (`credit`, `charge`, `net`,
+/// `currency`) so billing can invoice them.
+async fn change_subscription_plan(
+    state: web::Data<Arc<StoreState>>,
+    req: HttpRequest,
+    path: web::Path<String>,
+    body: web::Json<ChangePlanRequest>,
+) -> HttpResponse {
+    let result: UnifiedResult<Subscription> = (|| {
+        let input = body.into_inner();
+        let existing = state
+            .subscriptions
+            .get(path.as_str())
+            .map(|entry| entry.value().clone())
+            .ok_or_else(|| UnifiedError::not_found("Subscription not found"))?;
+        require_subscription_owner(&req, &existing)?;
+        if !matches!(existing.status.as_str(), "active" | "trialing") {
+            return Err(UnifiedError::unprocessable(format!(
+                "A {} subscription cannot change plan",
+                existing.status
+            )));
+        }
+        let product = state
+            .products
+            .get(&input.product_id)
+            .map(|entry| entry.value().clone())
+            .ok_or_else(|| {
+                UnifiedError::not_found(format!("Product {} not found", input.product_id))
+            })?;
+        if product.status != "published" {
+            return Err(UnifiedError::unprocessable(format!(
+                "Product {} is not published",
+                product.name
+            )));
+        }
+        if product.pricing_model != "subscription" {
+            return Err(UnifiedError::unprocessable(
+                "The new product is not a subscription product",
+            ));
+        }
+        let Some(new_billing_period) = product.billing_period.clone() else {
+            return Err(UnifiedError::unprocessable(
+                "The new product has no billing period",
+            ));
+        };
+        let (new_price, tier_id) = match &input.tier_id {
+            Some(tier_id) => {
+                let tier = resolve_tier(&state, &product.id, tier_id)?;
+                (tier.price, Some(tier.id.clone()))
+            }
+            None => (
+                product.renewal_price.unwrap_or(product.price),
+                None,
+            ),
+        };
+        if !new_price.is_finite() || new_price < 0.0 {
+            return Err(UnifiedError::bad_request(
+                "The new plan price must be a non-negative number",
+            ));
+        }
+        let now = now();
+        let remaining_days = ((existing.current_period_end - now).num_seconds() as f64 / 86_400.0)
+            .max(0.0);
+        let period_total_days = period_days(&existing.billing_period) as f64;
+        let new_period_total_days = period_days(&new_billing_period) as f64;
+        let (credit, charge, net) = proration_amounts(
+            &existing.proration_policy,
+            existing.price,
+            new_price,
+            remaining_days,
+            period_total_days,
+            new_period_total_days,
+        );
+        let direction = if new_price >= existing.price {
+            "upgraded"
+        } else {
+            "downgraded"
+        };
+        let event = format!("subscription.{direction}");
+        let previous_product_id = existing.product_id.clone();
+        let previous_price = existing.price;
+        let mut subscription = state
+            .subscriptions
+            .get_mut(path.as_str())
+            .ok_or_else(|| UnifiedError::not_found("Subscription not found"))?;
+        let effective_at = match existing.proration_policy.as_str() {
+            // Immediate change: the new period starts now.
+            "prorate" => {
+                subscription.product_id = product.id.clone();
+                subscription.tier_id = tier_id;
+                subscription.price = round_money(new_price);
+                subscription.billing_period = new_billing_period.clone();
+                subscription.current_period_start = now;
+                subscription.current_period_end = period_end(now, &new_billing_period);
+                subscription.pending_product_id = None;
+                subscription.pending_tier_id = None;
+                subscription.pending_price = None;
+                subscription.pending_billing_period = None;
+                subscription.current_period_end
+            }
+            // Deferred change: the new plan waits for the next
+            // period end; the current period runs out unchanged.
+            _ => {
+                subscription.pending_product_id = Some(product.id.clone());
+                subscription.pending_tier_id = tier_id;
+                subscription.pending_price = Some(round_money(new_price));
+                subscription.pending_billing_period = Some(new_billing_period);
+                subscription.current_period_end
+            }
+        };
+        subscription.module_id = product.module_id.clone();
+        subscription.updated_at = now;
+        let updated = subscription.clone();
+        drop(subscription);
+        state.emit(
+            &event,
+            json!({
+                "subscription": serde_json::to_value(&updated).unwrap_or(Value::Null),
+                "subscription_id": updated.id,
+                "previous_product_id": previous_product_id,
+                "previous_price": previous_price,
+                "proration": {
+                    "policy": updated.proration_policy,
+                    "credit": credit,
+                    "charge": charge,
+                    "net": net,
+                    "currency": updated.currency,
+                },
+                "effective_at": effective_at,
+            }),
+        );
+        emit_subscription_entitlement_changed(
+            state,
+            &updated,
+            true,
+            &format!("subscription_{direction}"),
+        );
+        Ok(updated)
+    })();
+    json::respond(result, false)
+}
+
+/// Cancel a subscription. With `cancel_at_period_end` (default)
+/// the subscription stays active until the end of the current
+/// period and access continues until then; with `false` it ends
+/// immediately. Emits `subscription.cancelled` and, for module
+/// products, `subscription.entitlement_changed`.
+async fn cancel_subscription(
+    state: web::Data<Arc<StoreState>>,
+    req: HttpRequest,
+    path: web::Path<String>,
+    body: web::Json<CancelSubscriptionRequest>,
+) -> HttpResponse {
+    let result: UnifiedResult<Subscription> = (|| {
+        let cancel_at_period_end = body.into_inner().cancel_at_period_end;
+        let existing = state
+            .subscriptions
+            .get(path.as_str())
+            .map(|entry| entry.value().clone())
+            .ok_or_else(|| UnifiedError::not_found("Subscription not found"))?;
+        require_subscription_owner(&req, &existing)?;
+        if existing.status == "cancelled" {
+            return Err(UnifiedError::conflict("Subscription is already cancelled"));
+        }
+        if !matches!(existing.status.as_str(), "active" | "trialing" | "past_due") {
+            return Err(UnifiedError::unprocessable(format!(
+                "A {} subscription cannot be cancelled",
+                existing.status
+            )));
+        }
+        let mut subscription = state
+            .subscriptions
+            .get_mut(path.as_str())
+            .ok_or_else(|| UnifiedError::not_found("Subscription not found"))?;
+        let effective = if cancel_at_period_end {
+            subscription.cancel_at_period_end = true;
+            subscription.updated_at = now();
+            "period_end"
+        } else {
+            subscription.status = "cancelled".to_string();
+            subscription.cancel_at_period_end = false;
+            subscription.cancelled_at = Some(now());
+            subscription.updated_at = now();
+            "immediate"
+        };
+        let updated = subscription.clone();
+        drop(subscription);
+        state.emit(
+            "subscription.cancelled",
+            json!({
+                "subscription": serde_json::to_value(&updated).unwrap_or(Value::Null),
+                "subscription_id": updated.id,
+                "effective": effective,
+                "reason": "cancelled_by_customer",
+            }),
+        );
+        if effective == "immediate" {
+            emit_subscription_entitlement_changed(
+                state,
+                &updated,
+                false,
+                "cancelled_by_customer",
+            );
+        }
+        Ok(updated)
+    })();
+    json::respond(result, false)
+}
+
 async fn list_orders(
     state: web::Data<Arc<StoreState>>,
     query: web::Query<PaginationParams>,
@@ -3201,7 +6005,9 @@ async fn update_order(
         match status.as_str() {
             "paid" => {
                 state.emit("payment.completed", order_value.clone());
-                state.emit("order.paid", order_value);
+                state.emit("order.paid", order_paid_value(&updated));
+                activate_subscription_for_paid_order(&state, &updated);
+                grant_digital_purchases_for_paid_order(&state, &updated);
             }
             "completed" => state.emit("store.order.completed", order_value),
             "refunded" => state.emit(
@@ -3284,14 +6090,16 @@ async fn pay_order(
             order.updated_at = now();
             let order_value = serde_json::to_value(&*order).unwrap_or(Value::Null);
             drop(order);
-            state.emit("payment.completed", order_value.clone());
-            state.emit("order.paid", order_value.clone());
             let paid = state
                 .orders
                 .get(path.as_str())
                 .map(|entry| entry.value().clone())
                 .expect("order still present");
-            return Ok(json!({ "order": paid, "payment_status": "completed", "provider": provider }));
+            state.emit("payment.completed", order_value.clone());
+            state.emit("order.paid", order_paid_value(&paid));
+            let subscription = activate_subscription_for_paid_order(&state, &paid);
+            grant_digital_purchases_for_paid_order(&state, &paid);
+            return Ok(json!({ "order": paid, "payment_status": "completed", "provider": provider, "subscription_id": subscription.map(|subscription| subscription.id) }));
         }
         // Any other provider is handed off through hooks: a real gateway
         // module listens to `payment.initiated` and completes the payment
@@ -3331,10 +6139,7 @@ async fn complete_order(
             .ok_or_else(|| UnifiedError::not_found("Order not found"))?;
         require_order_owner(&req, &current)?;
         let updated = transition_order(&state, path.as_str(), "completed")?;
-        state.emit(
-            "store.order.completed",
-            serde_json::to_value(&updated).unwrap_or(Value::Null),
-        );
+        state.emit("store.order.completed", order_paid_value(&updated));
         Ok(updated)
     })();
     json::respond(result, false)
@@ -3383,18 +6188,22 @@ async fn refund_order(
             .filter(|entry| entry.value().order_id.as_deref() == Some(path.as_str()))
             .map(|entry| entry.value().license_id.clone())
             .collect();
+        let cancelled_subscriptions =
+            cancel_subscriptions_for_order(&state, path.as_str(), "order_refunded");
         state.emit(
             "store.order.refunded",
             json!({
                 "order": serde_json::to_value(&updated).unwrap_or(Value::Null),
                 "order_id": updated.id,
                 "license_ids": license_ids,
+                "cancelled_subscriptions": cancelled_subscriptions,
                 "reason": reason,
             }),
         );
         Ok(json!({
             "order": updated,
             "license_ids": license_ids,
+            "cancelled_subscriptions": cancelled_subscriptions,
             "reason": reason,
         }))
     })();
@@ -3592,8 +6401,16 @@ async fn signed_download(
                 )
             })?;
         let entitlement = record_download(&state, &entitlement_id, &input.release_id)?;
-        let file_id = catalog_release_file(&state, &input.release_id);
-        Ok(json!({
+        // A digital file resolves through the digital file map (its
+        // file id is the `release_id` of the entitlement); software
+        // releases resolve through the catalog as before.
+        let digital_file = state
+            .digital_files
+            .get(&input.release_id)
+            .map(|entry| entry.value().clone());
+        let file_id = catalog_release_file(&state, &input.release_id)
+            .or_else(|| digital_file.as_ref().map(|file| file.storage_file_id.clone()));
+        let mut body = json!({
             "download": {
                 "license_id": input.license_id,
                 "release_id": input.release_id,
@@ -3604,7 +6421,64 @@ async fn signed_download(
                 "download_limit": entitlement.download_limit,
                 "expires_at": expires_at.to_rfc3339(),
             }
-        }))
+        });
+        // A digital download is watermarked and recorded in the
+        // per-buyer digital download history. The descriptor tells
+        // the delivery layer which metadata fields to embed; the
+        // byte-level embedding itself happens there, from this
+        // descriptor (see `watermark_descriptor`).
+        if let Some(file) = digital_file {
+            let watermark = watermark_descriptor(
+                &state,
+                &file.format,
+                &entitlement.user_id,
+                &entitlement.order_id,
+            );
+            let watermark_applied = watermark
+                .get("metadata_supported")
+                .and_then(|value| value.as_bool())
+                .unwrap_or(false);
+            let record = DigitalDownload {
+                id: new_id(),
+                digital_product_id: file.digital_product_id.clone(),
+                file_id: Some(file.id.clone()),
+                preview_id: None,
+                buyer_user_id: entitlement.user_id.clone(),
+                order_id: Some(entitlement.order_id.clone()),
+                grant_id: entitlement.license_id.clone(),
+                kind: "purchase".to_string(),
+                watermark_subject: Some(entitlement.user_id.clone()),
+                watermark_applied,
+                watermark_formats: if watermark_applied {
+                    vec![file.format.clone()]
+                } else {
+                    Vec::new()
+                },
+                downloaded_at: now(),
+            };
+            state
+                .digital_downloads
+                .insert(record.id.clone(), record.clone());
+            state.emit(
+                "store.digital.download",
+                json!({
+                    "download": serde_json::to_value(&record).unwrap_or(Value::Null),
+                    "watermark": watermark.clone(),
+                    "file_id": file.storage_file_id,
+                }),
+            );
+            if let Some(download) = body
+                .get_mut("download")
+                .and_then(|value| value.as_object_mut())
+            {
+                download.insert(
+                    "digital_product_id".to_string(),
+                    json!(file.digital_product_id),
+                );
+                download.insert("watermark".to_string(), watermark);
+            }
+        }
+        Ok(body)
     })();
     json::respond(result, false)
 }
@@ -4038,6 +6912,1617 @@ async fn download_package(
 }
 
 // ---------------------------------------------------------------------------
+// Digital products: types, products, files, previews, samples
+// ---------------------------------------------------------------------------
+
+/// Load a digital product for a read that may come from the public
+/// storefront: drafts are invisible to anyone without the manage
+/// permission (answered as "not found" so drafts do not leak).
+fn digital_product_for_read(
+    state: &StoreState,
+    req: &HttpRequest,
+    id: &str,
+) -> UnifiedResult<DigitalProduct> {
+    let digital = state
+        .digital_products
+        .get(id)
+        .map(|entry| entry.value().clone())
+        .ok_or_else(|| UnifiedError::not_found("Digital product not found"))?;
+    if digital.status != "published" && !digital_can_manage(state, req) {
+        return Err(UnifiedError::not_found("Digital product not found"));
+    }
+    Ok(digital)
+}
+
+fn load_digital_product(state: &StoreState, id: &str) -> UnifiedResult<DigitalProduct> {
+    state
+        .digital_products
+        .get(id)
+        .map(|entry| entry.value().clone())
+        .ok_or_else(|| UnifiedError::not_found("Digital product not found"))
+}
+
+async fn list_digital_types(
+    state: web::Data<Arc<StoreState>>,
+    req: HttpRequest,
+    query: web::Query<PaginationParams>,
+) -> HttpResponse {
+    let result: UnifiedResult<PageResult<DigitalProductType>> = (|| {
+        require_digital_read(&state, &req)?;
+        let params = query.into_inner();
+        let mut items: Vec<DigitalProductType> = state
+            .digital_types
+            .iter()
+            .map(|entry| entry.value().clone())
+            .filter(|digital_type| {
+                matches_search(
+                    &format!(
+                        "{} {} {}",
+                        digital_type.id, digital_type.label, digital_type.description
+                    ),
+                    &params,
+                ) && params.filters.get("enabled").is_none_or(|flag| {
+                    digital_type.enabled == (*flag == "true" || *flag == "1")
+                })
+            })
+            .collect();
+        items.sort_by(|a, b| a.id.cmp(&b.id));
+        if params.normalized().order == "desc" {
+            items.reverse();
+        }
+        Ok(paginate(items, &params))
+    })();
+    json::respond(result, false)
+}
+
+async fn create_digital_type(
+    state: web::Data<Arc<StoreState>>,
+    req: HttpRequest,
+    body: web::Json<CreateDigitalProductType>,
+) -> HttpResponse {
+    let result: UnifiedResult<DigitalProductType> = (|| {
+        require_digital_manage(&state, &req)?;
+        let input = body.into_inner();
+        let id = input.id.trim().to_lowercase();
+        if !valid_type_slug(&id) {
+            return Err(UnifiedError::bad_request(
+                "Type id must be a lowercase slug of letters, digits, and hyphens (at most 32 characters)",
+            ));
+        }
+        if state.digital_types.contains_key(&id) {
+            return Err(UnifiedError::conflict(
+                "A digital product type with this id already exists",
+            ));
+        }
+        let label = input
+            .label
+            .filter(|label| !label.trim().is_empty())
+            .map(|label| label.trim().to_string())
+            .unwrap_or_else(|| id.clone());
+        if label.len() > 80 {
+            return Err(UnifiedError::bad_request(
+                "Type label must be at most 80 characters",
+            ));
+        }
+        let description = input.description.unwrap_or_default();
+        if description.len() > 500 {
+            return Err(UnifiedError::bad_request(
+                "Type description must be at most 500 characters",
+            ));
+        }
+        let digital_type = DigitalProductType {
+            id: id.clone(),
+            label,
+            description,
+            enabled: input.enabled.unwrap_or(true),
+            created_at: now(),
+            updated_at: now(),
+        };
+        state
+            .digital_types
+            .insert(id, digital_type.clone());
+        Ok(digital_type)
+    })();
+    respond_created(result)
+}
+
+async fn update_digital_type(
+    state: web::Data<Arc<StoreState>>,
+    req: HttpRequest,
+    path: web::Path<String>,
+    body: web::Json<UpdateDigitalProductType>,
+) -> HttpResponse {
+    let result: UnifiedResult<DigitalProductType> = (|| {
+        require_digital_manage(&state, &req)?;
+        let input = body.into_inner();
+        let mut digital_type = state
+            .digital_types
+            .get_mut(path.as_str())
+            .ok_or_else(|| UnifiedError::not_found("Digital product type not found"))?;
+        if let Some(label) = input.label {
+            if label.trim().is_empty() || label.len() > 80 {
+                return Err(UnifiedError::bad_request(
+                    "Type label must not be empty and must be at most 80 characters",
+                ));
+            }
+            digital_type.label = label.trim().to_string();
+        }
+        if let Some(description) = input.description {
+            if description.len() > 500 {
+                return Err(UnifiedError::bad_request(
+                    "Type description must be at most 500 characters",
+                ));
+            }
+            digital_type.description = description;
+        }
+        if let Some(enabled) = input.enabled {
+            digital_type.enabled = enabled;
+        }
+        digital_type.updated_at = now();
+        Ok(digital_type.clone())
+    })();
+    json::respond(result, false)
+}
+
+async fn delete_digital_type(
+    state: web::Data<Arc<StoreState>>,
+    req: HttpRequest,
+    path: web::Path<String>,
+) -> HttpResponse {
+    let result: UnifiedResult<Value> = (|| {
+        require_digital_manage(&state, &req)?;
+        let id = path.as_str().to_string();
+        let in_use = state
+            .digital_products
+            .iter()
+            .any(|entry| entry.value().type_id == id);
+        if in_use {
+            return Err(UnifiedError::conflict(
+                "Digital product type is still used by digital products; disable it instead of deleting it",
+            ));
+        }
+        state
+            .digital_types
+            .remove(&id)
+            .map(|_| json!({ "deleted": true, "id": id }))
+            .ok_or_else(|| UnifiedError::not_found("Digital product type not found"))
+    })();
+    json::respond(result, false)
+}
+
+async fn list_digital_products(
+    state: web::Data<Arc<StoreState>>,
+    req: HttpRequest,
+    query: web::Query<PaginationParams>,
+) -> HttpResponse {
+    let result: UnifiedResult<PageResult<DigitalProduct>> = (|| {
+        require_digital_public(&state, &req)?;
+        let params = query.into_inner();
+        let show_all = digital_can_manage(&state, &req);
+        let mut items: Vec<DigitalProduct> = state
+            .digital_products
+            .iter()
+            .map(|entry| entry.value().clone())
+            .filter(|digital| {
+                (show_all || digital.status == "published")
+                    && params
+                        .filters
+                        .get("type_id")
+                        .is_none_or(|type_id| digital.type_id == *type_id)
+                    && params
+                        .filters
+                        .get("status")
+                        .is_none_or(|status| digital.status == *status)
+                    && params
+                        .filters
+                        .get("product_id")
+                        .is_none_or(|product_id| digital.product_id == *product_id)
+                    && params.filters.get("author").is_none_or(|author| {
+                        digital.author.as_deref() == Some(author.as_str())
+                    })
+                    && matches_search(&digital_search_text(&state, digital), &params)
+            })
+            .collect();
+        items.sort_by(|a, b| a.created_at.cmp(&b.created_at));
+        if params.normalized().order == "desc" {
+            items.reverse();
+        }
+        Ok(paginate(items, &params))
+    })();
+    json::respond(result, false)
+}
+
+async fn create_digital_product(
+    state: web::Data<Arc<StoreState>>,
+    req: HttpRequest,
+    body: web::Json<CreateDigitalProduct>,
+) -> HttpResponse {
+    let result: UnifiedResult<DigitalProduct> = (|| {
+        require_digital_manage(&state, &req)?;
+        let input = body.into_inner();
+        if !state.products.contains_key(&input.product_id) {
+            return Err(UnifiedError::not_found(format!(
+                "Product {} not found",
+                input.product_id
+            )));
+        }
+        let type_id = input.type_id.trim().to_lowercase();
+        match state.digital_types.get(&type_id) {
+            Some(digital_type) if digital_type.enabled => {}
+            Some(_) => {
+                return Err(UnifiedError::unprocessable(format!(
+                    "Digital product type \"{type_id}\" is disabled"
+                )));
+            }
+            None => {
+                return Err(UnifiedError::not_found(format!(
+                    "Digital product type \"{type_id}\" not found"
+                )));
+            }
+        }
+        if state
+            .digital_products
+            .iter()
+            .any(|entry| entry.value().product_id == input.product_id)
+        {
+            return Err(UnifiedError::conflict(
+                "This product already has a digital profile",
+            ));
+        }
+        validate_digital_metadata(
+            input.isbn.as_deref(),
+            input.language.as_deref(),
+            input.pages,
+            input.formats.as_deref(),
+        )?;
+        let royalty_kind = input
+            .royalty_kind
+            .unwrap_or_else(default_royalty_kind);
+        let royalty_value = input.royalty_value.unwrap_or(DEFAULT_ROYALTY_VALUE);
+        validate_royalty(&royalty_kind, royalty_value)?;
+        if let Some(status) = &input.status {
+            if !valid_product_status(status) {
+                return Err(UnifiedError::bad_request(
+                    "Digital product status must be one of: draft, published",
+                ));
+            }
+        }
+        if let Some(download_limit) = input.download_limit {
+            if download_limit > 10_000 {
+                return Err(UnifiedError::bad_request(
+                    "Download limit must be at most 10000 (0 means the configured default)",
+                ));
+            }
+        }
+        let formats: Vec<String> = input
+            .formats
+            .unwrap_or_default()
+            .into_iter()
+            .map(|format| format.trim().to_lowercase())
+            .collect();
+        let digital = DigitalProduct {
+            id: new_id(),
+            product_id: input.product_id,
+            type_id,
+            author: input.author.filter(|value| !value.trim().is_empty()),
+            publisher: input.publisher.filter(|value| !value.trim().is_empty()),
+            edition: input.edition.filter(|value| !value.trim().is_empty()),
+            isbn: input.isbn.filter(|value| !value.trim().is_empty()),
+            language: input.language.filter(|value| !value.trim().is_empty()),
+            pages: input.pages,
+            formats,
+            cover_storage_id: input
+                .cover_storage_id
+                .filter(|value| !value.trim().is_empty()),
+            sample_allowed: input.sample_allowed.unwrap_or(false),
+            download_limit: input.download_limit.unwrap_or(0),
+            royalty_kind,
+            royalty_value,
+            royalty_payee: input.royalty_payee.filter(|value| !value.trim().is_empty()),
+            royalty_payee_company_id: input
+                .royalty_payee_company_id
+                .filter(|value| !value.trim().is_empty()),
+            status: input.status.unwrap_or_else(default_product_status),
+            created_at: now(),
+            updated_at: now(),
+        };
+        state
+            .digital_products
+            .insert(digital.id.clone(), digital.clone());
+        state.emit(
+            "store.digital.created",
+            serde_json::to_value(&digital).unwrap_or(Value::Null),
+        );
+        Ok(digital)
+    })();
+    respond_created(result)
+}
+
+async fn get_digital_product(
+    state: web::Data<Arc<StoreState>>,
+    req: HttpRequest,
+    path: web::Path<String>,
+) -> HttpResponse {
+    let result: UnifiedResult<DigitalProduct> = (|| {
+        require_digital_public(&state, &req)?;
+        digital_product_for_read(&state, &req, path.as_str())
+    })();
+    json::respond(result, false)
+}
+
+async fn update_digital_product(
+    state: web::Data<Arc<StoreState>>,
+    req: HttpRequest,
+    path: web::Path<String>,
+    body: web::Json<UpdateDigitalProduct>,
+) -> HttpResponse {
+    let result: UnifiedResult<DigitalProduct> = (|| {
+        require_digital_manage(&state, &req)?;
+        let input = body.into_inner();
+        // Validate the new type and royalty pair before touching the
+        // stored record, so a rejected update never leaves a
+        // half-mutated record behind.
+        if let Some(type_id) = &input.type_id {
+            let type_id = type_id.trim().to_lowercase();
+            match state.digital_types.get(&type_id) {
+                Some(digital_type) if digital_type.enabled => {}
+                Some(_) => {
+                    return Err(UnifiedError::unprocessable(format!(
+                        "Digital product type \"{type_id}\" is disabled"
+                    )));
+                }
+                None => {
+                    return Err(UnifiedError::not_found(format!(
+                        "Digital product type \"{type_id}\" not found"
+                    )));
+                }
+            }
+        }
+        validate_digital_metadata(
+            input.isbn.as_deref(),
+            input.language.as_deref(),
+            input.pages,
+            input.formats.as_deref(),
+        )?;
+        let existing = load_digital_product(&state, path.as_str())?;
+        let royalty_kind = input
+            .royalty_kind
+            .clone()
+            .unwrap_or_else(|| existing.royalty_kind.clone());
+        let royalty_value = input.royalty_value.unwrap_or(existing.royalty_value);
+        validate_royalty(&royalty_kind, royalty_value)?;
+        if let Some(status) = &input.status {
+            if !valid_product_status(status) {
+                return Err(UnifiedError::bad_request(
+                    "Digital product status must be one of: draft, published",
+                ));
+            }
+        }
+        let mut digital = state
+            .digital_products
+            .get_mut(path.as_str())
+            .ok_or_else(|| UnifiedError::not_found("Digital product not found"))?;
+        if let Some(type_id) = input.type_id {
+            digital.type_id = type_id.trim().to_lowercase();
+        }
+        if let Some(author) = input.author {
+            digital.author = if author.trim().is_empty() {
+                None
+            } else {
+                Some(author.trim().to_string())
+            };
+        }
+        if let Some(publisher) = input.publisher {
+            digital.publisher = if publisher.trim().is_empty() {
+                None
+            } else {
+                Some(publisher.trim().to_string())
+            };
+        }
+        if let Some(edition) = input.edition {
+            digital.edition = if edition.trim().is_empty() {
+                None
+            } else {
+                Some(edition.trim().to_string())
+            };
+        }
+        if let Some(isbn) = input.isbn {
+            digital.isbn = if isbn.trim().is_empty() {
+                None
+            } else {
+                Some(isbn.trim().to_string())
+            };
+        }
+        if let Some(language) = input.language {
+            digital.language = if language.trim().is_empty() {
+                None
+            } else {
+                Some(language.trim().to_string())
+            };
+        }
+        if let Some(pages) = input.pages {
+            digital.pages = Some(pages);
+        }
+        if let Some(formats) = input.formats {
+            digital.formats = formats
+                .into_iter()
+                .map(|format| format.trim().to_lowercase())
+                .collect();
+        }
+        if let Some(cover_storage_id) = input.cover_storage_id {
+            digital.cover_storage_id = if cover_storage_id.trim().is_empty() {
+                None
+            } else {
+                Some(cover_storage_id.trim().to_string())
+            };
+        }
+        if let Some(sample_allowed) = input.sample_allowed {
+            digital.sample_allowed = sample_allowed;
+        }
+        if let Some(download_limit) = input.download_limit {
+            if download_limit > 10_000 {
+                return Err(UnifiedError::bad_request(
+                    "Download limit must be at most 10000 (0 means the configured default)",
+                ));
+            }
+            digital.download_limit = download_limit;
+        }
+        digital.royalty_kind = royalty_kind;
+        digital.royalty_value = royalty_value;
+        if let Some(royalty_payee) = input.royalty_payee {
+            digital.royalty_payee = if royalty_payee.trim().is_empty() {
+                None
+            } else {
+                Some(royalty_payee.trim().to_string())
+            };
+        }
+        if let Some(royalty_payee_company_id) = input.royalty_payee_company_id {
+            digital.royalty_payee_company_id = if royalty_payee_company_id.trim().is_empty()
+            {
+                None
+            } else {
+                Some(royalty_payee_company_id.trim().to_string())
+            };
+        }
+        if let Some(status) = input.status {
+            digital.status = status;
+        }
+        digital.updated_at = now();
+        Ok(digital.clone())
+    })();
+    json::respond(result, false)
+}
+
+async fn delete_digital_product(
+    state: web::Data<Arc<StoreState>>,
+    req: HttpRequest,
+    path: web::Path<String>,
+) -> HttpResponse {
+    let result: UnifiedResult<Value> = (|| {
+        require_digital_manage(&state, &req)?;
+        let id = path.as_str().to_string();
+        let _digital = load_digital_product(&state, &id)?;
+        if state
+            .digital_files
+            .iter()
+            .any(|entry| entry.value().digital_product_id == id)
+        {
+            return Err(UnifiedError::conflict(
+                "Digital product still has files; delete the files first",
+            ));
+        }
+        if state
+            .digital_previews
+            .iter()
+            .any(|entry| entry.value().digital_product_id == id)
+        {
+            return Err(UnifiedError::conflict(
+                "Digital product still has previews; delete the previews first",
+            ));
+        }
+        if state
+            .digital_royalties
+            .iter()
+            .any(|entry| entry.value().digital_product_id == id)
+        {
+            return Err(UnifiedError::conflict(
+                "Digital product has royalty history; it cannot be deleted",
+            ));
+        }
+        if state
+            .digital_downloads
+            .iter()
+            .any(|entry| entry.value().digital_product_id == id)
+        {
+            return Err(UnifiedError::conflict(
+                "Digital product has download history; it cannot be deleted",
+            ));
+        }
+        state
+            .digital_products
+            .remove(&id)
+            .map(|_| json!({ "deleted": true, "id": id }))
+            .ok_or_else(|| UnifiedError::not_found("Digital product not found"))
+    })();
+    json::respond(result, false)
+}
+
+fn set_digital_product_status(
+    state: &StoreState,
+    req: &HttpRequest,
+    id: &str,
+    status: &str,
+    event: &str,
+) -> UnifiedResult<DigitalProduct> {
+    require_digital_manage(state, req)?;
+    let mut digital = state
+        .digital_products
+        .get_mut(id)
+        .ok_or_else(|| UnifiedError::not_found("Digital product not found"))?;
+    if digital.status == status {
+        return Err(UnifiedError::conflict(format!(
+            "Digital product is already {status}"
+        )));
+    }
+    digital.status = status.to_string();
+    digital.updated_at = now();
+    let updated = digital.clone();
+    drop(digital);
+    state.emit(event, serde_json::to_value(&updated).unwrap_or(Value::Null));
+    Ok(updated)
+}
+
+async fn publish_digital_product(
+    state: web::Data<Arc<StoreState>>,
+    req: HttpRequest,
+    path: web::Path<String>,
+) -> HttpResponse {
+    let result = set_digital_product_status(
+        &state,
+        &req,
+        path.as_str(),
+        "published",
+        "store.digital.published",
+    );
+    json::respond(result, false)
+}
+
+async fn unpublish_digital_product(
+    state: web::Data<Arc<StoreState>>,
+    req: HttpRequest,
+    path: web::Path<String>,
+) -> HttpResponse {
+    let result = set_digital_product_status(
+        &state,
+        &req,
+        path.as_str(),
+        "draft",
+        "store.digital.unpublished",
+    );
+    json::respond(result, false)
+}
+
+async fn list_digital_files(
+    state: web::Data<Arc<StoreState>>,
+    req: HttpRequest,
+    path: web::Path<String>,
+    query: web::Query<PaginationParams>,
+) -> HttpResponse {
+    let result: UnifiedResult<PageResult<DigitalProductFile>> = (|| {
+        require_digital_read(&state, &req)?;
+        let digital = digital_product_for_read(&state, &req, path.as_str())?;
+        let params = query.into_inner();
+        let mut items: Vec<DigitalProductFile> = state
+            .digital_files
+            .iter()
+            .map(|entry| entry.value().clone())
+            .filter(|file| {
+                file.digital_product_id == digital.id
+                    && matches_search(
+                        &format!("{} {}", file.format, file.label.clone().unwrap_or_default()),
+                        &params,
+                    )
+                    && params
+                        .filters
+                        .get("format")
+                        .is_none_or(|format| file.format == *format)
+                    && params.filters.get("is_primary").is_none_or(|flag| {
+                        file.is_primary == (*flag == "true" || *flag == "1")
+                    })
+            })
+            .collect();
+        items.sort_by(|a, b| {
+            a.sort_order
+                .cmp(&b.sort_order)
+                .then(a.created_at.cmp(&b.created_at))
+        });
+        if params.normalized().order == "desc" {
+            items.reverse();
+        }
+        Ok(paginate(items, &params))
+    })();
+    json::respond(result, false)
+}
+
+async fn create_digital_file(
+    state: web::Data<Arc<StoreState>>,
+    req: HttpRequest,
+    path: web::Path<String>,
+    body: web::Json<CreateDigitalFile>,
+) -> HttpResponse {
+    let result: UnifiedResult<DigitalProductFile> = (|| {
+        require_digital_manage(&state, &req)?;
+        let digital = load_digital_product(&state, path.as_str())?;
+        let input = body.into_inner();
+        let storage_file_id = input.storage_file_id.trim().to_string();
+        if storage_file_id.is_empty() || storage_file_id.len() > 512 {
+            return Err(UnifiedError::bad_request(
+                "Storage file id must not be empty and must be at most 512 characters",
+            ));
+        }
+        let format = input.format.trim().to_lowercase();
+        if !valid_format(&format) {
+            return Err(UnifiedError::bad_request(
+                "Format must be a lowercase alphanumeric token such as pdf or epub",
+            ));
+        }
+        if let Some(checksum) = &input.checksum {
+            let checksum = checksum.trim();
+            if !checksum.is_empty()
+                && (checksum.len() < 32
+                    || checksum.len() > 128
+                    || !checksum.chars().all(|c| c.is_ascii_hexdigit()))
+            {
+                return Err(UnifiedError::bad_request(
+                    "Checksum must be a hex digest of 32 to 128 characters",
+                ));
+            }
+        }
+        if let Some(file_size_bytes) = input.file_size_bytes {
+            if file_size_bytes == 0 {
+                return Err(UnifiedError::bad_request(
+                    "File size must be greater than zero when set",
+                ));
+            }
+        }
+        let is_primary = input.is_primary.unwrap_or(false);
+        if is_primary {
+            for mut entry in state.digital_files.iter_mut() {
+                if entry.value().digital_product_id == digital.id {
+                    entry.value().is_primary = false;
+                    entry.value().updated_at = now();
+                }
+            }
+        }
+        let file = DigitalProductFile {
+            id: new_id(),
+            digital_product_id: digital.id.clone(),
+            storage_file_id,
+            format,
+            label: input.label.filter(|value| !value.trim().is_empty()),
+            file_size_bytes: input.file_size_bytes,
+            checksum: input.checksum.filter(|value| !value.trim().is_empty()),
+            is_primary,
+            sort_order: input.sort_order.unwrap_or(0),
+            created_at: now(),
+            updated_at: now(),
+        };
+        state.digital_files.insert(file.id.clone(), file.clone());
+        Ok(file)
+    })();
+    respond_created(result)
+}
+
+async fn delete_digital_file(
+    state: web::Data<Arc<StoreState>>,
+    req: HttpRequest,
+    path: web::Path<String>,
+) -> HttpResponse {
+    let result: UnifiedResult<Value> = (|| {
+        require_digital_manage(&state, &req)?;
+        let id = path.as_str().to_string();
+        let file = state
+            .digital_files
+            .get(&id)
+            .map(|entry| entry.value().clone())
+            .ok_or_else(|| UnifiedError::not_found("Digital file not found"))?;
+        if state
+            .entitlements
+            .iter()
+            .any(|entry| entry.value().release_id.as_deref() == Some(id.as_str()))
+        {
+            return Err(UnifiedError::conflict(
+                "Digital file has download entitlements; it cannot be deleted",
+            ));
+        }
+        if state
+            .digital_downloads
+            .iter()
+            .any(|entry| entry.value().file_id.as_deref() == Some(id.as_str()))
+        {
+            return Err(UnifiedError::conflict(
+                "Digital file has download history; it cannot be deleted",
+            ));
+        }
+        state
+            .digital_files
+            .remove(&id)
+            .map(|_| json!({ "deleted": true, "id": file.id }))
+            .ok_or_else(|| UnifiedError::not_found("Digital file not found"))
+    })();
+    json::respond(result, false)
+}
+
+async fn list_digital_previews(
+    state: web::Data<Arc<StoreState>>,
+    req: HttpRequest,
+    path: web::Path<String>,
+    query: web::Query<PaginationParams>,
+) -> HttpResponse {
+    let result: UnifiedResult<PageResult<DigitalProductPreview>> = (|| {
+        require_digital_public(&state, &req)?;
+        let digital = digital_product_for_read(&state, &req, path.as_str())?;
+        let params = query.into_inner();
+        let show_all = digital_can_manage(&state, &req);
+        let mut items: Vec<DigitalProductPreview> = state
+            .digital_previews
+            .iter()
+            .map(|entry| entry.value().clone())
+            .filter(|preview| {
+                preview.digital_product_id == digital.id
+                    && (show_all || preview.allowed)
+                    && matches_search(
+                        &format!(
+                            "{} {}",
+                            preview.format,
+                            preview.label.clone().unwrap_or_default()
+                        ),
+                        &params,
+                    )
+                    && params.filters.get("format").is_none_or(|format| {
+                        preview.format == *format
+                    })
+                    && params.filters.get("allowed").is_none_or(|flag| {
+                        preview.allowed == (*flag == "true" || *flag == "1")
+                    })
+            })
+            .collect();
+        items.sort_by(|a, b| a.created_at.cmp(&b.created_at));
+        if params.normalized().order == "desc" {
+            items.reverse();
+        }
+        Ok(paginate(items, &params))
+    })();
+    json::respond(result, false)
+}
+
+async fn create_digital_preview(
+    state: web::Data<Arc<StoreState>>,
+    req: HttpRequest,
+    path: web::Path<String>,
+    body: web::Json<CreateDigitalPreview>,
+) -> HttpResponse {
+    let result: UnifiedResult<DigitalProductPreview> = (|| {
+        require_digital_manage(&state, &req)?;
+        let digital = load_digital_product(&state, path.as_str())?;
+        let input = body.into_inner();
+        let storage_file_id = input.storage_file_id.trim().to_string();
+        if storage_file_id.is_empty() || storage_file_id.len() > 512 {
+            return Err(UnifiedError::bad_request(
+                "Storage file id must not be empty and must be at most 512 characters",
+            ));
+        }
+        let format = input.format.trim().to_lowercase();
+        if !valid_format(&format) {
+            return Err(UnifiedError::bad_request(
+                "Format must be a lowercase alphanumeric token such as pdf or epub",
+            ));
+        }
+        let preview = DigitalProductPreview {
+            id: new_id(),
+            digital_product_id: digital.id.clone(),
+            storage_file_id,
+            format,
+            label: input.label.filter(|value| !value.trim().is_empty()),
+            allowed: input.allowed.unwrap_or(false),
+            created_at: now(),
+            updated_at: now(),
+        };
+        state
+            .digital_previews
+            .insert(preview.id.clone(), preview.clone());
+        Ok(preview)
+    })();
+    respond_created(result)
+}
+
+async fn delete_digital_preview(
+    state: web::Data<Arc<StoreState>>,
+    req: HttpRequest,
+    path: web::Path<String>,
+) -> HttpResponse {
+    let result: UnifiedResult<Value> = (|| {
+        require_digital_manage(&state, &req)?;
+        let id = path.as_str().to_string();
+        if state
+            .digital_downloads
+            .iter()
+            .any(|entry| entry.value().preview_id.as_deref() == Some(id.as_str()))
+        {
+            return Err(UnifiedError::conflict(
+                "Preview has download history; it cannot be deleted",
+            ));
+        }
+        state
+            .digital_previews
+            .remove(&id)
+            .map(|_| json!({ "deleted": true, "id": id }))
+            .ok_or_else(|| UnifiedError::not_found("Digital preview not found"))
+    })();
+    json::respond(result, false)
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct SampleQuery {
+    pub preview_id: Option<String>,
+}
+
+/// Download the free sample of a digital product. Public by design
+/// when the seller allows samples, and rate-limited per identity and
+/// preview plus logged in the download history, so a free excerpt
+/// cannot be harvested without a trace. Samples are excerpts, not
+/// the purchased file, so they carry no buyer watermark.
+async fn download_sample(
+    state: web::Data<Arc<StoreState>>,
+    req: HttpRequest,
+    path: web::Path<String>,
+    query: web::Query<SampleQuery>,
+) -> HttpResponse {
+    let result: UnifiedResult<Value> = (|| {
+        require_digital_public(&state, &req)?;
+        let digital = digital_product_for_read(&state, &req, path.as_str())?;
+        if !digital.sample_allowed {
+            return Err(UnifiedError::forbidden(
+                "This digital product offers no free sample",
+            ));
+        }
+        let preview = match &query.into_inner().preview_id {
+            Some(preview_id) => {
+                let preview = state
+                    .digital_previews
+                    .get(preview_id)
+                    .map(|entry| entry.value().clone())
+                    .ok_or_else(|| UnifiedError::not_found("Digital preview not found"))?;
+                if preview.digital_product_id != digital.id {
+                    return Err(UnifiedError::not_found("Digital preview not found"));
+                }
+                if !preview.allowed {
+                    return Err(UnifiedError::forbidden(
+                        "This preview is not available for public download",
+                    ));
+                }
+                preview
+            }
+            None => {
+                let mut allowed: Vec<DigitalProductPreview> = state
+                    .digital_previews
+                    .iter()
+                    .filter(|entry| {
+                        entry.value().digital_product_id == digital.id
+                            && entry.value().allowed
+                    })
+                    .map(|entry| entry.value().clone())
+                    .collect();
+                allowed.sort_by(|a, b| a.created_at.cmp(&b.created_at));
+                match allowed.len() {
+                    0 => {
+                        return Err(UnifiedError::not_found(
+                            "This digital product has no public sample",
+                        ));
+                    }
+                    1 => allowed.into_iter().next().expect("one allowed preview"),
+                    _ => {
+                        return Err(UnifiedError::bad_request(
+                            "This product has several samples; pass preview_id to choose one",
+                        ));
+                    }
+                }
+            }
+        };
+        let identity = owner_of(&req);
+        check_sample_rate_limit(&state, &identity, &preview.id)?;
+        let record = DigitalDownload {
+            id: new_id(),
+            digital_product_id: digital.id.clone(),
+            file_id: None,
+            preview_id: Some(preview.id.clone()),
+            buyer_user_id: identity.clone(),
+            order_id: None,
+            grant_id: None,
+            kind: "sample".to_string(),
+            watermark_subject: None,
+            watermark_applied: false,
+            watermark_formats: Vec::new(),
+            downloaded_at: now(),
+        };
+        state
+            .digital_downloads
+            .insert(record.id.clone(), record.clone());
+        state.emit(
+            "store.digital.sample.downloaded",
+            serde_json::to_value(&record).unwrap_or(Value::Null),
+        );
+        Ok(json!({
+            "sample": {
+                "digital_product_id": digital.id,
+                "preview_id": preview.id,
+                "storage_file_id": preview.storage_file_id,
+                "format": preview.format,
+                "status": "ready",
+                "download_id": record.id,
+            }
+        }))
+    })();
+    json::respond(result, false)
+}
+
+// ---------------------------------------------------------------------------
+// Digital products: downloads, royalties, payouts, settings
+// ---------------------------------------------------------------------------
+
+/// Create a signed expiring download link for one file of a digital
+/// product the caller bought. This reuses the existing signed-link
+/// flow end to end: the caller must hold a paid or completed order
+/// containing the product, the entitlement (minted at payment, or
+/// lazily here when the order was paid before the digital profile
+/// existed) enforces the per-file download limit, and the actual
+/// download is counted by `signed_download`, exactly like a software
+/// release. The response also carries the watermark descriptor for
+/// the file, so the buyer sees what will be embedded.
+async fn create_digital_download_link(
+    state: web::Data<Arc<StoreState>>,
+    req: HttpRequest,
+    path: web::Path<String>,
+    body: Option<web::Json<DigitalDownloadLinkRequest>>,
+) -> HttpResponse {
+    let result: UnifiedResult<Value> = (|| {
+        let caller = require_digital_read(&state, &req)?;
+        let digital = load_digital_product(&state, path.as_str())?;
+        let order = state
+            .orders
+            .iter()
+            .filter(|entry| {
+                let order = entry.value();
+                order.user_id == caller.actor
+                    && matches!(order.status.as_str(), "paid" | "completed")
+                    && order
+                        .items
+                        .iter()
+                        .any(|item| item.product_id == digital.product_id)
+            })
+            .map(|entry| entry.value().clone())
+            .max_by(|a, b| a.created_at.cmp(&b.created_at))
+            .ok_or_else(|| {
+                UnifiedError::forbidden(
+                    "No paid order for this digital product belongs to the caller",
+                )
+            })?;
+        let requested_file_id = body.and_then(|body| body.into_inner().file_id);
+        let files: Vec<DigitalProductFile> = state
+            .digital_files
+            .iter()
+            .filter(|entry| entry.value().digital_product_id == digital.id)
+            .map(|entry| entry.value().clone())
+            .collect();
+        let file = match &requested_file_id {
+            Some(file_id) => files
+                .iter()
+                .find(|file| file.id == *file_id)
+                .ok_or_else(|| UnifiedError::not_found("Digital file not found"))?,
+            None => files
+                .iter()
+                .find(|file| file.is_primary)
+                .or_else(|| {
+                    files.iter().min_by(|a, b| {
+                        a.sort_order
+                            .cmp(&b.sort_order)
+                            .then(a.created_at.cmp(&b.created_at))
+                    })
+                })
+                .ok_or_else(|| {
+                    UnifiedError::unprocessable(
+                        "This digital product has no deliverable file",
+                    )
+                })?,
+        };
+        let (entitlement, _) = ensure_digital_entitlement(&state, &order, &digital, file);
+        if entitlement.status == "revoked" {
+            return Err(UnifiedError::forbidden(
+                "Download entitlement has been revoked",
+            ));
+        }
+        if let Some(expires_at) = entitlement.expires_at {
+            if expires_at <= now() {
+                return Err(UnifiedError::forbidden(
+                    "Download entitlement has expired",
+                ));
+            }
+        }
+        if entitlement.downloads_used >= entitlement.download_limit {
+            return Err(UnifiedError::forbidden(
+                "Download limit reached for this purchase",
+            ));
+        }
+        let license_id = entitlement.license_id.clone().ok_or_else(|| {
+            UnifiedError::unprocessable("Entitlement has no purchase grant attached")
+        })?;
+        let (download_url, expires_at) = build_signed_url(&license_id, &file.id);
+        let watermark =
+            watermark_descriptor(&state, &file.format, &caller.actor, &order.id);
+        Ok(json!({
+            "download_url": download_url,
+            "digital_product_id": digital.id,
+            "file_id": file.id,
+            "storage_file_id": file.storage_file_id,
+            "format": file.format,
+            "grant_id": license_id,
+            "expires_at": expires_at.to_rfc3339(),
+            "downloads_used": entitlement.downloads_used,
+            "download_limit": entitlement.download_limit,
+            "watermark": watermark,
+        }))
+    })();
+    json::respond(result, false)
+}
+
+async fn list_digital_downloads(
+    state: web::Data<Arc<StoreState>>,
+    req: HttpRequest,
+    query: web::Query<PaginationParams>,
+) -> HttpResponse {
+    let result: UnifiedResult<PageResult<DigitalDownload>> = (|| {
+        let caller = require_digital_read(&state, &req)?;
+        let params = query.into_inner();
+        let user_id = params
+            .filters
+            .get("user_id")
+            .cloned()
+            .unwrap_or_else(|| caller.actor.clone());
+        if user_id != caller.actor && !digital_can_manage(&state, &req) {
+            return Err(UnifiedError::forbidden(
+                "Download history of another user requires the manage permission",
+            ));
+        }
+        let mut items: Vec<DigitalDownload> = state
+            .digital_downloads
+            .iter()
+            .map(|entry| entry.value().clone())
+            .filter(|download| {
+                download.buyer_user_id == user_id
+                    && params.filters.get("product_id").is_none_or(|product_id| {
+                        download.digital_product_id == *product_id
+                    })
+                    && params
+                        .filters
+                        .get("kind")
+                        .is_none_or(|kind| download.kind == *kind)
+                    && params.filters.get("file_id").is_none_or(|file_id| {
+                        download.file_id.as_deref() == Some(file_id.as_str())
+                    })
+            })
+            .collect();
+        items.sort_by(|a, b| a.downloaded_at.cmp(&b.downloaded_at));
+        if params.normalized().order == "desc" {
+            items.reverse();
+        }
+        Ok(paginate(items, &params))
+    })();
+    json::respond(result, false)
+}
+
+async fn list_digital_royalties(
+    state: web::Data<Arc<StoreState>>,
+    req: HttpRequest,
+    query: web::Query<PaginationParams>,
+) -> HttpResponse {
+    let result: UnifiedResult<PageResult<DigitalRoyalty>> = (|| {
+        let caller = require_digital_read(&state, &req)?;
+        let params = query.into_inner();
+        let payee = params
+            .filters
+            .get("payee")
+            .cloned()
+            .unwrap_or_else(|| caller.actor.clone());
+        if payee != caller.actor && !digital_can_manage(&state, &req) {
+            return Err(UnifiedError::forbidden(
+                "Royalty history of another payee requires the manage permission",
+            ));
+        }
+        let mut items: Vec<DigitalRoyalty> = state
+            .digital_royalties
+            .iter()
+            .map(|entry| entry.value().clone())
+            .filter(|royalty| {
+                royalty.payee.as_deref() == Some(payee.as_str())
+                    && params.filters.get("status").is_none_or(|status| {
+                        royalty.status == *status
+                    })
+                    && params.filters.get("product_id").is_none_or(|product_id| {
+                        royalty.product_id == *product_id
+                    })
+                    && params.filters.get("order_id").is_none_or(|order_id| {
+                        royalty.order_id == *order_id
+                    })
+                    && params.filters.get("currency").is_none_or(|currency| {
+                        royalty.currency.eq_ignore_ascii_case(currency)
+                    })
+            })
+            .collect();
+        items.sort_by(|a, b| a.created_at.cmp(&b.created_at));
+        if params.normalized().order == "desc" {
+            items.reverse();
+        }
+        Ok(paginate(items, &params))
+    })();
+    json::respond(result, false)
+}
+
+async fn get_digital_royalty(
+    state: web::Data<Arc<StoreState>>,
+    req: HttpRequest,
+    path: web::Path<String>,
+) -> HttpResponse {
+    let result: UnifiedResult<DigitalRoyalty> = (|| {
+        let caller = require_digital_read(&state, &req)?;
+        let royalty = state
+            .digital_royalties
+            .get(path.as_str())
+            .map(|entry| entry.value().clone())
+            .ok_or_else(|| UnifiedError::not_found("Royalty not found"))?;
+        if royalty.payee.as_deref() != Some(caller.actor.as_str())
+            && !digital_can_manage(&state, &req)
+        {
+            return Err(UnifiedError::forbidden(
+                "Royalty belongs to a different payee",
+            ));
+        }
+        Ok(royalty)
+    })();
+    json::respond(result, false)
+}
+
+async fn create_digital_payout(
+    state: web::Data<Arc<StoreState>>,
+    req: HttpRequest,
+    body: web::Json<CreateDigitalPayout>,
+) -> HttpResponse {
+    let result: UnifiedResult<DigitalPayoutRequest> = (|| {
+        let caller = require_digital_read(&state, &req)?;
+        let input = body.into_inner();
+        if input.royalty_ids.is_empty() {
+            return Err(UnifiedError::bad_request(
+                "At least one royalty id is required",
+            ));
+        }
+        if input.royalty_ids.len() > 100 {
+            return Err(UnifiedError::bad_request(
+                "At most 100 royalties can be grouped into one payout request",
+            ));
+        }
+        let mut royalties: Vec<DigitalRoyalty> = Vec::new();
+        for royalty_id in &input.royalty_ids {
+            let royalty = state
+                .digital_royalties
+                .get(royalty_id)
+                .map(|entry| entry.value().clone())
+                .ok_or_else(|| {
+                    UnifiedError::not_found(format!("Royalty {royalty_id} not found"))
+                })?;
+            if royalty.status != "accrued" {
+                return Err(UnifiedError::unprocessable(format!(
+                    "Royalty {} is {} and cannot be paid out",
+                    royalty.id, royalty.status
+                )));
+            }
+            royalties.push(royalty);
+        }
+        let first = royalties.first().expect("royalties is not empty");
+        let payee = first.payee.clone();
+        let payee_company_id = first.payee_company_id.clone();
+        let currency = first.currency.clone();
+        if payee.is_none() && payee_company_id.is_none() {
+            return Err(UnifiedError::unprocessable(
+                "Royalty has no payee, so no payout can be requested for it",
+            ));
+        }
+        for royalty in &royalties {
+            if royalty.payee != payee
+                || royalty.payee_company_id != payee_company_id
+                || royalty.currency != currency
+            {
+                return Err(UnifiedError::unprocessable(
+                    "All royalties in one payout request must share the same payee and currency",
+                ));
+            }
+        }
+        // A payee requests their own payout; anyone else needs the
+        // manage permission (an administrator requesting on a
+        // payee's behalf).
+        if payee.as_deref() != Some(caller.actor.as_str())
+            && !digital_can_manage(&state, &req)
+        {
+            return Err(UnifiedError::forbidden(
+                "Payout can only be requested by its payee",
+            ));
+        }
+        let amount = round_money(royalties.iter().map(|royalty| royalty.amount).sum());
+        let payout = DigitalPayoutRequest {
+            id: new_id(),
+            payee: payee.clone(),
+            payee_company_id: payee_company_id.clone(),
+            currency,
+            amount,
+            royalty_ids: input.royalty_ids.clone(),
+            status: "requested".to_string(),
+            requested_by: caller.actor.clone(),
+            created_at: now(),
+            updated_at: now(),
+        };
+        state
+            .digital_payouts
+            .insert(payout.id.clone(), payout.clone());
+        for royalty_id in &input.royalty_ids {
+            if let Some(mut royalty) = state.digital_royalties.get_mut(royalty_id) {
+                royalty.status = "payout_requested".to_string();
+                royalty.payout_id = Some(payout.id.clone());
+                royalty.updated_at = now();
+            }
+        }
+        // Events only: billing owns the payout itself. The payout
+        // request carries everything billing needs to pay it.
+        state.emit(
+            "store.digital.payout.requested",
+            serde_json::to_value(&payout).unwrap_or(Value::Null),
+        );
+        Ok(payout)
+    })();
+    respond_created(result)
+}
+
+async fn list_digital_payouts(
+    state: web::Data<Arc<StoreState>>,
+    req: HttpRequest,
+    query: web::Query<PaginationParams>,
+) -> HttpResponse {
+    let result: UnifiedResult<PageResult<DigitalPayoutRequest>> = (|| {
+        let caller = require_digital_read(&state, &req)?;
+        let params = query.into_inner();
+        let payee = params
+            .filters
+            .get("payee")
+            .cloned()
+            .unwrap_or_else(|| caller.actor.clone());
+        if payee != caller.actor && !digital_can_manage(&state, &req) {
+            return Err(UnifiedError::forbidden(
+                "Payout history of another payee requires the manage permission",
+            ));
+        }
+        let mut items: Vec<DigitalPayoutRequest> = state
+            .digital_payouts
+            .iter()
+            .map(|entry| entry.value().clone())
+            .filter(|payout| {
+                payout.payee.as_deref() == Some(payee.as_str())
+                    && params
+                        .filters
+                        .get("status")
+                        .is_none_or(|status| payout.status == *status)
+                    && params.filters.get("currency").is_none_or(|currency| {
+                        payout.currency.eq_ignore_ascii_case(currency)
+                    })
+            })
+            .collect();
+        items.sort_by(|a, b| a.created_at.cmp(&b.created_at));
+        if params.normalized().order == "desc" {
+            items.reverse();
+        }
+        Ok(paginate(items, &params))
+    })();
+    json::respond(result, false)
+}
+
+async fn get_digital_payout(
+    state: web::Data<Arc<StoreState>>,
+    req: HttpRequest,
+    path: web::Path<String>,
+) -> HttpResponse {
+    let result: UnifiedResult<DigitalPayoutRequest> = (|| {
+        let caller = require_digital_read(&state, &req)?;
+        let payout = state
+            .digital_payouts
+            .get(path.as_str())
+            .map(|entry| entry.value().clone())
+            .ok_or_else(|| UnifiedError::not_found("Payout request not found"))?;
+        if payout.payee.as_deref() != Some(caller.actor.as_str())
+            && !digital_can_manage(&state, &req)
+        {
+            return Err(UnifiedError::forbidden(
+                "Payout request belongs to a different payee",
+            ));
+        }
+        Ok(payout)
+    })();
+    json::respond(result, false)
+}
+
+/// Shared payout transition (approve / mark-paid / reject). The
+/// payout moves only from the listed states; the grouped royalties
+/// move with it, and a rejection releases them back to `accrued`
+/// with the payout link cleared so they can be requested again.
+fn move_digital_payout(
+    state: &StoreState,
+    payout_id: &str,
+    allowed_from: &[&str],
+    to_status: &str,
+    royalty_status: &str,
+    event: &str,
+) -> UnifiedResult<DigitalPayoutRequest> {
+    let mut payout = state
+        .digital_payouts
+        .get_mut(payout_id)
+        .ok_or_else(|| UnifiedError::not_found("Payout request not found"))?;
+    if !allowed_from.contains(&payout.status.as_str()) {
+        return Err(UnifiedError::unprocessable(format!(
+            "A {} payout request cannot move to {}",
+            payout.status, to_status
+        )));
+    }
+    payout.status = to_status.to_string();
+    payout.updated_at = now();
+    let updated = payout.clone();
+    drop(payout);
+    for royalty_id in &updated.royalty_ids {
+        if let Some(mut royalty) = state.digital_royalties.get_mut(royalty_id) {
+            royalty.status = royalty_status.to_string();
+            if royalty_status == "accrued" {
+                royalty.payout_id = None;
+            }
+            royalty.updated_at = now();
+        }
+    }
+    state.emit(event, serde_json::to_value(&updated).unwrap_or(Value::Null));
+    Ok(updated)
+}
+
+async fn approve_digital_payout(
+    state: web::Data<Arc<StoreState>>,
+    req: HttpRequest,
+    path: web::Path<String>,
+) -> HttpResponse {
+    let result: UnifiedResult<DigitalPayoutRequest> = (|| {
+        require_digital_manage(&state, &req)?;
+        move_digital_payout(
+            &state,
+            path.as_str(),
+            &["requested"],
+            "approved",
+            "approved",
+            "store.digital.payout.approved",
+        )
+    })();
+    json::respond(result, false)
+}
+
+async fn mark_digital_payout_paid(
+    state: web::Data<Arc<StoreState>>,
+    req: HttpRequest,
+    path: web::Path<String>,
+) -> HttpResponse {
+    let result: UnifiedResult<DigitalPayoutRequest> = (|| {
+        require_digital_manage(&state, &req)?;
+        // Records that billing moved the money; it never moves money
+        // itself. Only an approved payout can be marked paid.
+        move_digital_payout(
+            &state,
+            path.as_str(),
+            &["approved"],
+            "paid",
+            "paid",
+            "store.digital.payout.paid",
+        )
+    })();
+    json::respond(result, false)
+}
+
+async fn reject_digital_payout(
+    state: web::Data<Arc<StoreState>>,
+    req: HttpRequest,
+    path: web::Path<String>,
+) -> HttpResponse {
+    let result: UnifiedResult<DigitalPayoutRequest> = (|| {
+        require_digital_manage(&state, &req)?;
+        move_digital_payout(
+            &state,
+            path.as_str(),
+            &["requested", "approved"],
+            "rejected",
+            "accrued",
+            "store.digital.payout.rejected",
+        )
+    })();
+    json::respond(result, false)
+}
+
+async fn get_digital_settings(
+    state: web::Data<Arc<StoreState>>,
+    req: HttpRequest,
+) -> HttpResponse {
+    let result: UnifiedResult<Value> = (|| {
+        require_digital_read(&state, &req)?;
+        let defaults = state
+            .digital_defaults
+            .read()
+            .map(|defaults| defaults.clone())
+            .unwrap_or_default();
+        let formats: Vec<WatermarkFormat> = state
+            .watermark_formats
+            .iter()
+            .map(|entry| entry.value().clone())
+            .collect();
+        Ok(json!({
+            "defaults": defaults,
+            "type_count": state.digital_types.len(),
+            "watermark_formats": formats,
+        }))
+    })();
+    json::respond(result, false)
+}
+
+async fn update_digital_settings(
+    state: web::Data<Arc<StoreState>>,
+    req: HttpRequest,
+    body: web::Json<UpdateDigitalSettings>,
+) -> HttpResponse {
+    let result: UnifiedResult<DigitalDefaults> = (|| {
+        require_digital_manage(&state, &req)?;
+        let input = body.into_inner();
+        if let Some(kind) = &input.default_royalty_kind {
+            let value = input.default_royalty_value.unwrap_or_else(|| {
+                state
+                    .digital_defaults
+                    .read()
+                    .map(|defaults| defaults.default_royalty_value)
+                    .unwrap_or(DEFAULT_ROYALTY_VALUE)
+            });
+            validate_royalty(kind, value)?;
+        } else if let Some(value) = input.default_royalty_value {
+            let kind = state
+                .digital_defaults
+                .read()
+                .map(|defaults| defaults.default_royalty_kind.clone())
+                .unwrap_or_else(|| DEFAULT_ROYALTY_KIND.to_string());
+            validate_royalty(&kind, value)?;
+        }
+        let mut defaults = state
+            .digital_defaults
+            .write()
+            .expect("digital defaults lock poisoned");
+        if let Some(limit) = input.default_download_limit {
+            if limit == 0 || limit > 10_000 {
+                return Err(UnifiedError::bad_request(
+                    "Default download limit must be between 1 and 10000",
+                ));
+            }
+            defaults.default_download_limit = limit;
+        }
+        if let Some(limit) = input.sample_rate_limit_per_hour {
+            if limit == 0 || limit > 1_000 {
+                return Err(UnifiedError::bad_request(
+                    "Sample rate limit must be between 1 and 1000 per hour",
+                ));
+            }
+            defaults.sample_rate_limit_per_hour = limit;
+        }
+        if let Some(window) = input.sample_rate_limit_window_minutes {
+            if window == 0 || window > 1_440 {
+                return Err(UnifiedError::bad_request(
+                    "Sample rate limit window must be between 1 and 1440 minutes",
+                ));
+            }
+            defaults.sample_rate_limit_window_minutes = window;
+        }
+        if let Some(kind) = input.default_royalty_kind {
+            defaults.default_royalty_kind = kind;
+        }
+        if let Some(value) = input.default_royalty_value {
+            defaults.default_royalty_value = value;
+        }
+        if let Some(enabled) = input.watermark_enabled {
+            defaults.watermark_enabled = enabled;
+        }
+        Ok(defaults.clone())
+    })();
+    json::respond(result, false)
+}
+
+async fn list_watermark_formats(
+    state: web::Data<Arc<StoreState>>,
+    req: HttpRequest,
+    query: web::Query<PaginationParams>,
+) -> HttpResponse {
+    let result: UnifiedResult<PageResult<WatermarkFormat>> = (|| {
+        require_digital_read(&state, &req)?;
+        let params = query.into_inner();
+        let mut items: Vec<WatermarkFormat> = state
+            .watermark_formats
+            .iter()
+            .map(|entry| entry.value().clone())
+            .filter(|format| {
+                matches_search(&format!("{} {}", format.format, format.notes), &params)
+                    && params.filters.get("metadata_supported").is_none_or(|flag| {
+                        format.metadata_supported == (*flag == "true" || *flag == "1")
+                    })
+            })
+            .collect();
+        items.sort_by(|a, b| a.format.cmp(&b.format));
+        if params.normalized().order == "desc" {
+            items.reverse();
+        }
+        Ok(paginate(items, &params))
+    })();
+    json::respond(result, false)
+}
+
+async fn update_watermark_format(
+    state: web::Data<Arc<StoreState>>,
+    req: HttpRequest,
+    path: web::Path<String>,
+    body: web::Json<UpdateWatermarkFormat>,
+) -> HttpResponse {
+    let result: UnifiedResult<WatermarkFormat> = (|| {
+        require_digital_manage(&state, &req)?;
+        let input = body.into_inner();
+        if let Some(fields) = &input.metadata_fields {
+            if fields.len() > 16 {
+                return Err(UnifiedError::bad_request(
+                    "At most 16 metadata fields can be listed for a format",
+                ));
+            }
+            for field in fields {
+                if field.trim().is_empty() || field.len() > 64 {
+                    return Err(UnifiedError::bad_request(
+                        "Metadata field names must not be empty and must be at most 64 characters",
+                    ));
+                }
+            }
+        }
+        if let Some(notes) = &input.notes {
+            if notes.len() > 500 {
+                return Err(UnifiedError::bad_request(
+                    "Format notes must be at most 500 characters",
+                ));
+            }
+        }
+        let mut format = state
+            .watermark_formats
+            .get_mut(path.as_str())
+            .ok_or_else(|| UnifiedError::not_found("Watermark format not found"))?;
+        if let Some(metadata_supported) = input.metadata_supported {
+            format.metadata_supported = metadata_supported;
+        }
+        if let Some(metadata_fields) = input.metadata_fields {
+            format.metadata_fields = metadata_fields;
+        }
+        if let Some(notes) = input.notes {
+            format.notes = notes;
+        }
+        format.updated_at = now();
+        Ok(format.clone())
+    })();
+    json::respond(result, false)
+}
+
+// ---------------------------------------------------------------------------
 // Vendor / company payout linkage
 // ---------------------------------------------------------------------------
 
@@ -4119,6 +8604,14 @@ impl Default for StoreModule {
     }
 }
 
+/// Digital-products selling is declared sellable for the product
+/// registry through `DIGITAL_PRODUCTS_AVAILABLE_AS_PRODUCT` (category
+/// `commerce`, see the constants near the digital types): the
+/// integrator flags that capability, not this module. This module
+/// deliberately does NOT override `available_as_product()` /
+/// `product_category()`: the store is the marketplace itself, not a
+/// sellable module, so listing "Store" as a buyable product
+/// offering would be wrong.
 impl Module for StoreModule {
     fn id(&self) -> &'static str {
         "store"
@@ -4129,7 +8622,7 @@ impl Module for StoreModule {
     }
 
     fn description(&self) -> &'static str {
-        "Store for selling software: products with pricing tiers, coupons, cart, checkout, orders, refunds, signed downloads, entitlements, and update checks."
+        "Store for selling software: products with pricing tiers, coupons, cart, checkout, orders, refunds, signed downloads, entitlements, update checks, and subscription checkout with plan changes and cancellation. Digital products (ebooks, audiobooks, templates, course packs, digital assets) sell through the same checkout: paid orders mint per-file download entitlements served by the signed download flow, accrue per-sale royalties for authors and vendors (payout requests are events for billing), offer rate-limited public samples, and watermark delivered files at the metadata level (never claimed as unbreakable DRM)."
     }
 
     fn dependencies(&self) -> Vec<&'static str> {
@@ -4211,6 +8704,30 @@ impl Module for StoreModule {
                 on_store_entitlement_check(state.clone(), ctx)
             }),
         );
+        let state = self.state.clone();
+        bus.register(
+            "subscription.lifecycle.apply",
+            "store",
+            Arc::new(move |ctx: &mut HookContext| {
+                on_subscription_lifecycle_apply(state.clone(), ctx)
+            }),
+        );
+        let state = self.state.clone();
+        bus.register(
+            "subscription.module_entitlement.check",
+            "store",
+            Arc::new(move |ctx: &mut HookContext| {
+                on_subscription_module_entitlement_check(state.clone(), ctx)
+            }),
+        );
+        let state = self.state.clone();
+        bus.register(
+            "properties.block.purchase_requested",
+            "store",
+            Arc::new(move |ctx: &mut HookContext| {
+                on_properties_purchase_requested(state.clone(), ctx)
+            }),
+        );
     }
 
     fn route_info(&self) -> Vec<RouteInfo> {
@@ -4242,12 +8759,18 @@ impl Module for StoreModule {
             RouteInfo { method: "PUT", path: "/api/v1/store/orders/{id}", owner: "store", description: "Update order" },
             RouteInfo { method: "DELETE", path: "/api/v1/store/orders/{id}", owner: "store", description: "Delete order" },
             RouteInfo { method: "POST", path: "/api/v1/store/orders/{id}/pay", owner: "store", description: "Pay order" },
+            RouteInfo { method: "GET", path: "/api/v1/store/reference-settings", owner: "store", description: "Read payment reference settings (default prefix, per-product prefixes)." },
+            RouteInfo { method: "PUT", path: "/api/v1/store/reference-settings", owner: "store", description: "Update payment reference settings (capability store.reference:manage)." },
             RouteInfo { method: "POST", path: "/api/v1/store/orders/{id}/complete", owner: "store", description: "Complete order" },
             RouteInfo { method: "POST", path: "/api/v1/store/orders/{id}/cancel", owner: "store", description: "Cancel order" },
             RouteInfo { method: "POST", path: "/api/v1/store/orders/{id}/refund", owner: "store", description: "Refund order" },
             RouteInfo { method: "GET", path: "/api/v1/store/orders/{id}/download", owner: "store", description: "Download order" },
             RouteInfo { method: "GET", path: "/api/v1/store/entitlements", owner: "store", description: "List entitlements" },
             RouteInfo { method: "GET", path: "/api/v1/store/entitlements/{id}", owner: "store", description: "Get entitlement" },
+            RouteInfo { method: "GET", path: "/api/v1/store/subscriptions", owner: "store", description: "List subscriptions with pagination and filters." },
+            RouteInfo { method: "GET", path: "/api/v1/store/subscriptions/{id}", owner: "store", description: "Get one subscription." },
+            RouteInfo { method: "POST", path: "/api/v1/store/subscriptions/{id}/change-plan", owner: "store", description: "Change a subscription plan mid-cycle, applying the product proration policy." },
+            RouteInfo { method: "POST", path: "/api/v1/store/subscriptions/{id}/cancel", owner: "store", description: "Cancel a subscription immediately or at the end of the current period." },
             RouteInfo { method: "POST", path: "/api/v1/store/entitlements/{id}/download-link", owner: "store", description: "Create download link" },
             RouteInfo { method: "GET", path: "/api/v1/store/downloads/signed", owner: "store", description: "Signed download" },
             RouteInfo { method: "GET", path: "/api/v1/store/licenses/{license_id}/downloads", owner: "store", description: "List license downloads" },
@@ -4258,6 +8781,38 @@ impl Module for StoreModule {
             RouteInfo { method: "DELETE", path: "/api/v1/store/updates/catalog/{slug}", owner: "store", description: "Delete catalog entry" },
             RouteInfo { method: "POST", path: "/api/v1/store/updates/check", owner: "store", description: "WordPress-style version check: given a slug and the installed version, return the latest version, whether an update is available, compatibility metadata,..." },
             RouteInfo { method: "GET", path: "/api/v1/store/updates/{slug}/package", owner: "store", description: "Download the latest package for a slug." },
+            RouteInfo { method: "GET", path: "/api/v1/store/digital/types", owner: "store", description: "List digital product types (read; admin-extensible registry)." },
+            RouteInfo { method: "POST", path: "/api/v1/store/digital/types", owner: "store", description: "Create digital product type (manage)." },
+            RouteInfo { method: "PUT", path: "/api/v1/store/digital/types/{type_id}", owner: "store", description: "Update digital product type (manage)." },
+            RouteInfo { method: "DELETE", path: "/api/v1/store/digital/types/{type_id}", owner: "store", description: "Delete digital product type (manage; refused while in use)." },
+            RouteInfo { method: "GET", path: "/api/v1/store/digital/downloads", owner: "store", description: "List per-buyer digital download history (read; own history, or any with manage)." },
+            RouteInfo { method: "GET", path: "/api/v1/store/digital/royalties", owner: "store", description: "List digital royalty ledger (read; own royalties, or all with manage)." },
+            RouteInfo { method: "GET", path: "/api/v1/store/digital/royalties/{id}", owner: "store", description: "Get one digital royalty (read; own royalty, or any with manage)." },
+            RouteInfo { method: "GET", path: "/api/v1/store/digital/payouts", owner: "store", description: "List digital payout requests (read; own requests, or all with manage)." },
+            RouteInfo { method: "POST", path: "/api/v1/store/digital/payouts", owner: "store", description: "Request a royalty payout (read; emits store.digital.payout.requested for billing)." },
+            RouteInfo { method: "GET", path: "/api/v1/store/digital/payouts/{id}", owner: "store", description: "Get one digital payout request (read; own request, or any with manage)." },
+            RouteInfo { method: "POST", path: "/api/v1/store/digital/payouts/{id}/approve", owner: "store", description: "Approve a digital payout request (manage)." },
+            RouteInfo { method: "POST", path: "/api/v1/store/digital/payouts/{id}/mark-paid", owner: "store", description: "Mark a digital payout paid after billing moved the money (manage)." },
+            RouteInfo { method: "POST", path: "/api/v1/store/digital/payouts/{id}/reject", owner: "store", description: "Reject a digital payout request and release its royalties (manage)." },
+            RouteInfo { method: "GET", path: "/api/v1/store/digital/settings", owner: "store", description: "Get digital defaults and watermark formats (read)." },
+            RouteInfo { method: "PUT", path: "/api/v1/store/digital/settings", owner: "store", description: "Update digital defaults (manage)." },
+            RouteInfo { method: "GET", path: "/api/v1/store/digital/watermark-formats", owner: "store", description: "List watermark formats (read)." },
+            RouteInfo { method: "PUT", path: "/api/v1/store/digital/watermark-formats/{format}", owner: "store", description: "Update a watermark format (manage)." },
+            RouteInfo { method: "DELETE", path: "/api/v1/store/digital/files/{file_id}", owner: "store", description: "Delete a digital file (manage; refused with entitlements or history)." },
+            RouteInfo { method: "DELETE", path: "/api/v1/store/digital/previews/{preview_id}", owner: "store", description: "Delete a digital preview (manage; refused with download history)." },
+            RouteInfo { method: "GET", path: "/api/v1/store/digital", owner: "store", description: "List digital products (public storefront; published only)." },
+            RouteInfo { method: "POST", path: "/api/v1/store/digital", owner: "store", description: "Create digital product (manage)." },
+            RouteInfo { method: "GET", path: "/api/v1/store/digital/{id}", owner: "store", description: "Get digital product (public storefront; published only)." },
+            RouteInfo { method: "PUT", path: "/api/v1/store/digital/{id}", owner: "store", description: "Update digital product (manage)." },
+            RouteInfo { method: "DELETE", path: "/api/v1/store/digital/{id}", owner: "store", description: "Delete digital product (manage; refused with files, previews, or history)." },
+            RouteInfo { method: "POST", path: "/api/v1/store/digital/{id}/publish", owner: "store", description: "Publish digital product (manage)." },
+            RouteInfo { method: "POST", path: "/api/v1/store/digital/{id}/unpublish", owner: "store", description: "Unpublish digital product (manage)." },
+            RouteInfo { method: "GET", path: "/api/v1/store/digital/{id}/files", owner: "store", description: "List files of a digital product (read)." },
+            RouteInfo { method: "POST", path: "/api/v1/store/digital/{id}/files", owner: "store", description: "Add a file to a digital product (manage)." },
+            RouteInfo { method: "GET", path: "/api/v1/store/digital/{id}/previews", owner: "store", description: "List previews of a digital product (public storefront; allowed only)." },
+            RouteInfo { method: "POST", path: "/api/v1/store/digital/{id}/previews", owner: "store", description: "Add a preview to a digital product (manage)." },
+            RouteInfo { method: "GET", path: "/api/v1/store/digital/{id}/sample", owner: "store", description: "Download the free sample of a digital product (public when allowed; rate-limited and logged)." },
+            RouteInfo { method: "POST", path: "/api/v1/store/digital/{id}/download-link", owner: "store", description: "Create a signed expiring download link for a purchased digital file (read; paid order required)." },
             RouteInfo { method: "GET", path: "/api/v1/store/vendors/{company_id}/payout-summary", owner: "store", description: "Vendor payout summary" },
         ]
     }
@@ -4293,12 +8848,24 @@ impl Module for StoreModule {
                 .route("/orders/{id}", web::put().to(update_order))
                 .route("/orders/{id}", web::delete().to(delete_order))
                 .route("/orders/{id}/pay", web::post().to(pay_order))
+                .route("/reference-settings", web::get().to(get_reference_settings))
+                .route("/reference-settings", web::put().to(update_reference_settings))
                 .route("/orders/{id}/complete", web::post().to(complete_order))
                 .route("/orders/{id}/cancel", web::post().to(cancel_order))
                 .route("/orders/{id}/refund", web::post().to(refund_order))
                 .route("/orders/{id}/download", web::get().to(download_order))
                 .route("/entitlements", web::get().to(list_entitlements))
                 .route("/entitlements/{id}", web::get().to(get_entitlement))
+                .route("/subscriptions", web::get().to(list_subscriptions))
+                .route("/subscriptions/{id}", web::get().to(get_subscription))
+                .route(
+                    "/subscriptions/{id}/change-plan",
+                    web::post().to(change_subscription_plan),
+                )
+                .route(
+                    "/subscriptions/{id}/cancel",
+                    web::post().to(cancel_subscription),
+                )
                 .route(
                     "/entitlements/{id}/download-link",
                     web::post().to(create_download_link),
@@ -4321,6 +8888,85 @@ impl Module for StoreModule {
                 )
                 .route("/updates/check", web::post().to(check_update))
                 .route("/updates/{slug}/package", web::get().to(download_package))
+                // Digital products: static paths first so they win
+                // over `/digital/{id}` in every router.
+                .route("/digital/types", web::get().to(list_digital_types))
+                .route("/digital/types", web::post().to(create_digital_type))
+                .route("/digital/types/{type_id}", web::put().to(update_digital_type))
+                .route(
+                    "/digital/types/{type_id}",
+                    web::delete().to(delete_digital_type),
+                )
+                .route("/digital/downloads", web::get().to(list_digital_downloads))
+                .route("/digital/royalties", web::get().to(list_digital_royalties))
+                .route(
+                    "/digital/royalties/{id}",
+                    web::get().to(get_digital_royalty),
+                )
+                .route("/digital/payouts", web::get().to(list_digital_payouts))
+                .route("/digital/payouts", web::post().to(create_digital_payout))
+                .route("/digital/payouts/{id}", web::get().to(get_digital_payout))
+                .route(
+                    "/digital/payouts/{id}/approve",
+                    web::post().to(approve_digital_payout),
+                )
+                .route(
+                    "/digital/payouts/{id}/mark-paid",
+                    web::post().to(mark_digital_payout_paid),
+                )
+                .route(
+                    "/digital/payouts/{id}/reject",
+                    web::post().to(reject_digital_payout),
+                )
+                .route("/digital/settings", web::get().to(get_digital_settings))
+                .route(
+                    "/digital/settings",
+                    web::put().to(update_digital_settings),
+                )
+                .route(
+                    "/digital/watermark-formats",
+                    web::get().to(list_watermark_formats),
+                )
+                .route(
+                    "/digital/watermark-formats/{format}",
+                    web::put().to(update_watermark_format),
+                )
+                .route(
+                    "/digital/files/{file_id}",
+                    web::delete().to(delete_digital_file),
+                )
+                .route(
+                    "/digital/previews/{preview_id}",
+                    web::delete().to(delete_digital_preview),
+                )
+                .route("/digital", web::get().to(list_digital_products))
+                .route("/digital", web::post().to(create_digital_product))
+                .route("/digital/{id}", web::get().to(get_digital_product))
+                .route("/digital/{id}", web::put().to(update_digital_product))
+                .route("/digital/{id}", web::delete().to(delete_digital_product))
+                .route(
+                    "/digital/{id}/publish",
+                    web::post().to(publish_digital_product),
+                )
+                .route(
+                    "/digital/{id}/unpublish",
+                    web::post().to(unpublish_digital_product),
+                )
+                .route("/digital/{id}/files", web::get().to(list_digital_files))
+                .route("/digital/{id}/files", web::post().to(create_digital_file))
+                .route(
+                    "/digital/{id}/previews",
+                    web::get().to(list_digital_previews),
+                )
+                .route(
+                    "/digital/{id}/previews",
+                    web::post().to(create_digital_preview),
+                )
+                .route("/digital/{id}/sample", web::get().to(download_sample))
+                .route(
+                    "/digital/{id}/download-link",
+                    web::post().to(create_digital_download_link),
+                )
                 .route(
                     "/vendors/{company_id}/payout-summary",
                     web::get().to(vendor_payout_summary),
