@@ -12,10 +12,29 @@
 use crate::core::context::AppContext;
 use crate::core::error::UnifiedResult;
 use crate::core::hooks::HookBus;
+use crate::core::middleware::MiddlewareManager;
 use actix_web::web::ServiceConfig;
 use clap::{ArgMatches, Command};
 use serde::Serialize;
 use std::sync::{Arc, RwLock};
+
+/// Metadata describing one HTTP route a module exposes. The registry
+/// aggregates these into a route catalog (see
+/// `ModuleRegistry::route_catalog`) so the admin UI and the monitor
+/// can list every route without introspecting the Actix router.
+/// Filling it in is optional; modules that do not describe their
+/// routes simply contribute nothing to the catalog.
+#[derive(Debug, Clone, Serialize)]
+pub struct RouteInfo {
+    /// HTTP method, for example `GET`. Use `*` for any method.
+    pub method: &'static str,
+    /// Route path, for example `/api/v1/theme/themes/{id}`.
+    pub path: &'static str,
+    /// Id of the module that owns the route.
+    pub owner: &'static str,
+    /// Short description of what the route does.
+    pub description: &'static str,
+}
 
 /// The contract every module implements.
 ///
@@ -38,6 +57,16 @@ pub trait Module: Send + Sync {
     fn register_hooks(&self, _bus: &HookBus) {}
     fn register_cli(&self, _registry: &mut CliRegistry) {}
     fn configure_routes(&self, _cfg: &mut ServiceConfig) {}
+    /// Metadata for the routes this module registers, for the route
+    /// catalog. Optional; the default is no entries. The paths and
+    /// methods should match what `configure_routes` registers.
+    fn route_info(&self) -> Vec<RouteInfo> {
+        Vec::new()
+    }
+    /// Register middleware contributed by this module. The middleware
+    /// runs for every request, ordered by priority (highest first)
+    /// across all modules. The default is no middleware.
+    fn register_middleware(&self, _registry: &mut MiddlewareManager) {}
     fn init(&self, _ctx: &AppContext) -> UnifiedResult<()> {
         Ok(())
     }
@@ -206,6 +235,27 @@ impl ModuleRegistry {
     pub fn configure_all_routes(&self, cfg: &mut ServiceConfig) {
         for module in self.list() {
             module.configure_routes(cfg);
+        }
+    }
+
+    /// Aggregate the route metadata of every module into one catalog,
+    /// sorted by path and then method. Only modules that implement
+    /// `route_info` contribute entries.
+    pub fn route_catalog(&self) -> Vec<RouteInfo> {
+        let mut catalog: Vec<RouteInfo> = Vec::new();
+        for module in self.list() {
+            catalog.extend(module.route_info());
+        }
+        catalog.sort_by(|a, b| a.path.cmp(b.path).then(a.method.cmp(b.method)));
+        catalog
+    }
+
+    /// Let every module register its middleware, in registration order.
+    /// The dispatcher sorts the collected middleware by priority when
+    /// the application is built.
+    pub fn register_all_middleware(&self, registry: &mut MiddlewareManager) {
+        for module in self.list() {
+            module.register_middleware(registry);
         }
     }
 }

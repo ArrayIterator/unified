@@ -98,6 +98,7 @@ fn stash_ctx(ctx: &AppContext) -> Arc<AppContext> {
         config: ctx.config.clone(),
         hooks: ctx.hooks.clone(),
         modules: ctx.modules.clone(),
+        cache: ctx.cache.clone(),
         geo: ctx.geo.clone(),
         db: ctx.db.clone(),
         start_time: std::time::Instant::now(),

@@ -136,3 +136,63 @@ in this list were verified in this batch.
 - [ ] Full `cargo build` / `cargo test` pass and release packaging
       (not run in this batch: no cargo toolchain is available in the
       build VM and crates.io is blocked)
+
+## Review-and-Adapt Round (2026-11-22)
+
+The reference implementation was reviewed file by file (read-only) and the
+stronger ideas were adapted into Unified. Full per-file verdicts live in
+`docs/REVIEW.md`. Nothing was copied file-by-file.
+
+- [x] Session tokenizer reviewed — skipped, Unified is equal or better
+      (same nested-HMAC layout; Unified fixes the same-second expiry flake
+      and has no panic paths)
+- [x] Flash messages reviewed — skipped, Unified is equal or better
+      (real per-kind cap, true consume-on-read, working periodic cleanup;
+      the reference has a silent-drop bug and a dead background recycler)
+- [x] SSL storage / SNI reviewed — adapted: separate `auto_created` map so
+      eviction never drops a live certificate; fixed `remove()` deleting
+      configured defaults; added `certificate_names()`
+- [x] ACME reviewed — adapted: multi-provider (Let's Encrypt, Google,
+      ZeroSSL, BuyPass, Custom) with EAB, challenge failure handling with
+      authorization deactivation, token cleanup on every exit path,
+      SAN-preserving renewal with a clamped 7–90 day window
+- [x] Downloader reviewed — rewritten: validated status transitions,
+      exponential-backoff retries honouring `Retry-After`, true resumability
+      (ETag / `If-Range`, `Content-Range` totals), atomic `.part` +
+      checksum + rename finalisation, streamed (not in-memory) checksum
+      verification, sha512, `POST /jobs/{id}/retry`
+- [x] Cache layer added (was missing): `src/core/cache.rs` facade with
+      filesystem adapter (sha256 sharding, atomic writes) and Redis adapter
+      (`SETEX`, prefix-scoped SCAN clear), plus `src/modules/cache.rs`
+      HTTP module; `redis = "1.0"` is the only new dependency
+- [x] i18n reviewed — adapted: corrected CLDR plural rules, gettext-style
+      lookup with `\x04` msgctxt separator, minimal pure-std `.po` parser,
+      locale negotiation, ISO 4217 currency table
+- [x] IDNA / domain / Geo reviewed — adapted: full IP classification
+      (bogon, CGNAT, documentation, benchmarking, reserved), IPv4-mapped
+      IPv6 normalization, CIDR range checks that reject non-aligned ranges,
+      `normalize_domain_input`, DNS verifier with `IpChoice`, CNAME and PTR
+      lookups
+- [x] System / process stats reviewed — adapted: tiered sampling cadence
+      in the monitor TUI, per-process stats with sort toggle, disk kind +
+      I/O rates, network packets/errors, shared 1 s snapshot cache in the
+      service monitor, new `GET /api/v1/service-monitor/processes`
+- [x] Hooks / middleware / routes / assets / themes reviewed — adapted:
+      hook priorities, once-handlers, unregister, re-entrancy guard; new
+      middleware trait/manager/dispatcher (modules can now add middleware);
+      route metadata + catalog; new asset registry with deterministic
+      ordering, cycle detection, and SHA-256 fingerprinting; template-name
+      mapping and 5 MiB template size cap in the theme engine; JSON 404
+      default service; dashboard assets now actually served
+- [x] JSON helpers and database query builder reviewed — query builder
+      skipped entirely (string-interpolated SQL, unbound placeholders,
+      must never replace Diesel); envelope kept exactly; adapted only error
+      classification (`From<serde_json::Error>`, new
+      `From<diesel::result::Error>`) in `src/core/error.rs`
+- [ ] Follow-ups from the review (not implemented): corrected absolute
+      max-age check for sessions; cookie-lifetime margin over the renew
+      window; flash survival across token rotation; cache stampede
+      protection; reconnect-on-error wrapper for the Redis adapter
+- [ ] `cargo check` / `cargo build` for this round (not run here: no
+      toolchain in this VM and crates.io is blocked; compilation is
+      unverified — see `docs/REVIEW.md` for the riskiest API surfaces)

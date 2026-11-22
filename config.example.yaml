@@ -65,9 +65,23 @@ app:
   auto_clean_memory_interval: "1H"
 
 # ----------------------------------------
+# Cache configuration
+# ----------------------------------------
+cache:
+  # Directory for the filesystem cache adapter (used when redis.enabled
+  # is false). Relative paths resolve against the working directory.
+  dir: "data/cache"
+  # Default time-to-live for cache entries in seconds. 0 means entries
+  # never expire unless a per-entry TTL is given.
+  default_ttl_secs: 3600
+
+# ----------------------------------------
 # Redis configuration
 # ----------------------------------------
 redis:
+  # Enable the Redis cache adapter. When false, the filesystem cache
+  # adapter is used instead.
+  enabled: false
   unix_socket: ""
   host: "localhost"
   port: 6379

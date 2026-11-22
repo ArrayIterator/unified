@@ -21,6 +21,7 @@ pub const DEFAULT_CONFIG_FILE: &str = "config.yaml";
 #[serde(default)]
 pub struct AppConfig {
     pub app: AppSection,
+    pub cache: CacheSection,
     pub redis: RedisSection,
     pub database: DatabaseSection,
     pub licenses: LicenseSection,
@@ -32,6 +33,7 @@ impl Default for AppConfig {
     fn default() -> Self {
         Self {
             app: AppSection::default(),
+            cache: CacheSection::default(),
             redis: RedisSection::default(),
             database: DatabaseSection::default(),
             licenses: LicenseSection::default(),
@@ -164,7 +166,30 @@ impl Default for DomainSsl {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
+pub struct CacheSection {
+    /// Directory for the filesystem cache adapter, used when Redis is
+    /// disabled. Relative paths resolve against the working directory.
+    pub dir: String,
+    /// Default time-to-live for cache entries in seconds. 0 means entries
+    /// never expire unless a per-entry TTL is given.
+    pub default_ttl_secs: u64,
+}
+
+impl Default for CacheSection {
+    fn default() -> Self {
+        Self {
+            dir: "data/cache".to_string(),
+            default_ttl_secs: 3600,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct RedisSection {
+    /// Enable the Redis cache adapter. When false, the filesystem cache
+    /// adapter is used instead.
+    pub enabled: bool,
     pub unix_socket: String,
     pub host: String,
     pub port: u16,
@@ -180,6 +205,7 @@ pub struct RedisSection {
 impl Default for RedisSection {
     fn default() -> Self {
         Self {
+            enabled: false,
             unix_socket: String::new(),
             host: "localhost".to_string(),
             port: 6379,
@@ -486,11 +512,18 @@ impl AppConfig {
                 ));
             }
         }
-        if self.redis.port == 0 && self.redis.unix_socket.is_empty() {
-            problems.push("redis.port must be set when no unix_socket is configured".to_string());
+        if self.cache.dir.trim().is_empty() {
+            problems.push("cache.dir must not be empty".to_string());
         }
-        if self.redis.max_pools == 0 {
-            problems.push("redis.max_pools must be at least 1".to_string());
+        if self.redis.enabled {
+            if self.redis.port == 0 && self.redis.unix_socket.is_empty() {
+                problems.push(
+                    "redis.port must be set when no unix_socket is configured".to_string(),
+                );
+            }
+            if self.redis.max_pools == 0 {
+                problems.push("redis.max_pools must be at least 1".to_string());
+            }
         }
         if self.geo.update_interval_hours == 0 {
             problems.push("geo.update_interval_hours must be at least 1".to_string());

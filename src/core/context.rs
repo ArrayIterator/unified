@@ -7,6 +7,7 @@
 // current request context, so any module can read Geo data without a new
 // lookup.
 
+use crate::core::cache::{build_cache, Cache};
 use crate::core::config::AppConfig;
 use crate::core::error::{UnifiedError, UnifiedResult};
 use crate::core::hooks::HookBus;
@@ -39,6 +40,9 @@ pub struct AppContext {
     pub config: Arc<RwLock<AppConfig>>,
     pub hooks: Arc<HookBus>,
     pub modules: Arc<ModuleRegistry>,
+    /// Shared cache (filesystem adapter by default, Redis when
+    /// `redis.enabled` is true). Built once from the configuration.
+    pub cache: Arc<Cache>,
     /// Global Geo information variable, updated by the Network / GEO
     /// module on every lookup.
     pub geo: Arc<RwLock<Option<GeoInfo>>>,
@@ -51,10 +55,12 @@ pub struct AppContext {
 
 impl AppContext {
     pub fn new(config: AppConfig, hooks: Arc<HookBus>, modules: Arc<ModuleRegistry>) -> Self {
+        let cache = build_cache(&config);
         Self {
             config: Arc::new(RwLock::new(config)),
             hooks,
             modules,
+            cache,
             geo: Arc::new(RwLock::new(None)),
             db: Arc::new(RwLock::new(None)),
             start_time: Instant::now(),

@@ -35,8 +35,12 @@ pub struct SslStorage {
     factory_key: Arc<(KeyPair, PrivateKeyDer<'static>)>,
     /// Certificates loaded from configuration, keyed by name and SAN.
     defaults: DashMap<String, Arc<CertifiedKey>>,
-    /// Certificates added at runtime (add / renew / auto-created).
+    /// Certificates added at runtime (add / renew).
     dynamic: DashMap<String, Arc<CertifiedKey>>,
+    /// Self-signed fallback certificates created on demand. Kept apart
+    /// from `dynamic` so cache eviction can never drop a configured or
+    /// renewed certificate, and so fallbacks lose to both in lookups.
+    auto_created: DashMap<String, Arc<CertifiedKey>>,
 }
 
 /// Lowercase a DNS name and convert Unicode labels to ASCII (punycode).
@@ -256,6 +260,7 @@ impl SslStorage {
             factory_key: Arc::new(Self::generate_factory_key()),
             defaults: DashMap::new(),
             dynamic: DashMap::new(),
+            auto_created: DashMap::new(),
         });
         let mut bad: Vec<String> = Vec::new();
         if ssl.cert.is_empty() != ssl.key.is_empty() {
@@ -319,11 +324,13 @@ impl SslStorage {
     }
 
     /// Look up a certificate by SNI name: exact match first (runtime
-    /// entries win over configured ones), then wildcard suffixes.
+    /// entries win over configured ones, self-signed fallbacks lose to
+    /// both), then wildcard suffixes walking up one label at a time.
     pub fn lookup(&self, name: &str) -> Option<Arc<CertifiedKey>> {
         let ascii = to_ascii_name(name);
         if let Some(cert) = map_get(&self.dynamic, &ascii)
             .or_else(|| map_get(&self.defaults, &ascii))
+            .or_else(|| map_get(&self.auto_created, &ascii))
         {
             return Some(cert);
         }
@@ -335,6 +342,7 @@ impl SslStorage {
             let wildcard = format!("*.{parent}");
             if let Some(cert) = map_get(&self.dynamic, &wildcard)
                 .or_else(|| map_get(&self.defaults, &wildcard))
+                .or_else(|| map_get(&self.auto_created, &wildcard))
             {
                 return Some(cert);
             }
@@ -353,6 +361,15 @@ impl SslStorage {
         let cert = self.lookup(name)?;
         let parsed = X509Certificate::from_der(cert.end_entity_cert().as_ref()).ok()?;
         Some(parsed.validity_not_after())
+    }
+
+    /// DNS and IP names on the stored leaf certificate for `name`, if
+    /// one is stored. Used by ACME renewal so a renewal re-requests
+    /// every name on the old certificate instead of only the domain
+    /// that triggered the renewal.
+    pub fn certificate_names(&self, name: &str) -> Option<Vec<String>> {
+        let cert = self.lookup(name)?;
+        cert_names(cert.end_entity_cert().as_ref()).ok()
     }
 
     pub fn is_auto_create(&self) -> bool {
@@ -386,10 +403,11 @@ impl SslStorage {
     }
 
     /// Remove a runtime certificate (configured defaults are untouched).
+    /// A self-signed fallback cached for the same name is removed too.
     pub fn remove(&self, name: &str) {
         let ascii = to_ascii_name(name);
         self.dynamic.remove(&ascii);
-        self.defaults.remove(&ascii);
+        self.auto_created.remove(&ascii);
     }
 
     /// Replace the certificate for `name` with new PEM data. The key must
@@ -413,25 +431,27 @@ impl SslStorage {
     }
 
     /// Generate a self-signed fallback certificate for `name` (covering
-    /// the name and its one-label wildcard) and cache it.
+    /// the name and its one-label wildcard) and cache it separately
+    /// from configured and renewed certificates, so evicting old
+    /// fallbacks can never drop a real certificate.
     fn create_fallback(&self, name: &str) -> Option<Arc<CertifiedKey>> {
         let ascii = to_ascii_name(name);
         let certified = Arc::new(self.generate_self_signed(&ascii).ok()?);
-        if self.dynamic.len() >= MAX_AUTO_CERTS {
+        if self.auto_created.len() >= MAX_AUTO_CERTS {
             let evict: Vec<String> = self
-                .dynamic
+                .auto_created
                 .iter()
                 .take(AUTO_EVICT)
                 .map(|entry| entry.key().clone())
                 .collect();
             for key in evict {
-                self.dynamic.remove(&key);
+                self.auto_created.remove(&key);
             }
         }
-        self.dynamic.insert(ascii.clone(), certified.clone());
+        self.auto_created.insert(ascii.clone(), certified.clone());
         if ascii.parse::<IpAddr>().is_err() {
             if let Some((_, parent)) = ascii.split_once('.') {
-                self.dynamic
+                self.auto_created
                     .insert(format!("*.{parent}"), certified.clone());
             }
         }

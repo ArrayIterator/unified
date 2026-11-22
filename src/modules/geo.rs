@@ -122,6 +122,268 @@ fn masked(ip: IpAddr, prefix: u8) -> IpAddr {
     }
 }
 
+fn broadcast(ip: IpAddr, prefix: u8) -> IpAddr {
+    match ip {
+        IpAddr::V4(addr) => {
+            let bits = u32::from(addr);
+            let mask: u32 = if prefix == 0 {
+                0
+            } else {
+                u32::MAX << (32 - prefix)
+            };
+            IpAddr::V4((bits | !mask).into())
+        }
+        IpAddr::V6(addr) => {
+            let bits = u128::from(addr);
+            let mask: u128 = if prefix == 0 {
+                0
+            } else {
+                u128::MAX << (128 - prefix)
+            };
+            IpAddr::V6((bits | !mask).into())
+        }
+    }
+}
+
+impl Cidr {
+    /// First and last address of the block (network and broadcast).
+    pub fn range(&self) -> (IpAddr, IpAddr) {
+        (self.network, broadcast(self.network, self.prefix))
+    }
+
+    /// Build the single CIDR block that covers exactly `start..=end`.
+    /// Ranges that are not one aligned block (for example `10.0.0.0`
+    /// to `10.0.0.5`) are rejected instead of being widened into a
+    /// block that covers addresses outside the range.
+    pub fn from_range(start: IpAddr, end: IpAddr) -> UnifiedResult<Self> {
+        let (start_num, end_num, max_prefix) = match (start, end) {
+            (IpAddr::V4(a), IpAddr::V4(b)) => {
+                (u32::from(a) as u128, u32::from(b) as u128, 32u8)
+            }
+            (IpAddr::V6(a), IpAddr::V6(b)) => (u128::from(a), u128::from(b), 128u8),
+            _ => {
+                return Err(UnifiedError::bad_request(
+                    "range start and end must be the same IP version",
+                ));
+            }
+        };
+        if start_num > end_num {
+            return Err(UnifiedError::bad_request(
+                "range start must not be greater than range end",
+            ));
+        }
+        let diff = start_num ^ end_num;
+        let prefix: u8 = if diff == 0 {
+            max_prefix
+        } else if max_prefix == 32 {
+            // Count leading zeros in 32-bit space: the values were
+            // widened to u128, whose leading zeros would over-count.
+            (diff as u32).leading_zeros() as u8
+        } else {
+            diff.leading_zeros() as u8
+        };
+        let candidate = Cidr {
+            network: masked(start, prefix),
+            prefix,
+        };
+        if candidate.network != start || broadcast(candidate.network, prefix) != end {
+            return Err(UnifiedError::bad_request(
+                "range is not exactly one CIDR block",
+            ));
+        }
+        Ok(candidate)
+    }
+}
+
+/// Numeric form of an IP address (IPv4 as the low 32 bits).
+pub fn ip_to_u128(ip: IpAddr) -> u128 {
+    match ip {
+        IpAddr::V4(addr) => u32::from(addr) as u128,
+        IpAddr::V6(addr) => u128::from(addr),
+    }
+}
+
+/// Inverse of `ip_to_u128`. `is_v6` selects the address family.
+pub fn u128_to_ip(value: u128, is_v6: bool) -> UnifiedResult<IpAddr> {
+    if is_v6 {
+        Ok(IpAddr::V6(value.into()))
+    } else if value <= u32::MAX as u128 {
+        Ok(IpAddr::V4((value as u32).into()))
+    } else {
+        Err(UnifiedError::bad_request(
+            "value does not fit in an IPv4 address",
+        ))
+    }
+}
+
+/// Normalise an IPv4 address written with leading zeros
+/// (`010.000.0.1` -> `10.0.0.1`). Rust's standard parser rejects
+/// leading zeros outright, so this handles the legacy form explicitly.
+pub fn normalize_ipv4(input: &str) -> UnifiedResult<String> {
+    let parts: Vec<&str> = input.trim().split('.').collect();
+    if parts.len() != 4 {
+        return Err(UnifiedError::bad_request(format!(
+            "Invalid IPv4 address \"{input}\""
+        )));
+    }
+    let mut out: Vec<String> = Vec::with_capacity(4);
+    for part in parts {
+        if part.is_empty() || !part.bytes().all(|b| b.is_ascii_digit()) {
+            return Err(UnifiedError::bad_request(format!(
+                "Invalid IPv4 address \"{input}\""
+            )));
+        }
+        let stripped = part.trim_start_matches('0');
+        let digits = if stripped.is_empty() { "0" } else { stripped };
+        let value: u16 = digits.parse().map_err(|_| {
+            UnifiedError::bad_request(format!("Invalid IPv4 address \"{input}\""))
+        })?;
+        if value > 255 {
+            return Err(UnifiedError::bad_request(format!(
+                "Invalid IPv4 address \"{input}\""
+            )));
+        }
+        out.push(value.to_string());
+    }
+    Ok(out.join("."))
+}
+
+/// Collapse an IPv4-mapped IPv6 address (`::ffff:8.8.8.8`) to its IPv4
+/// form so CIDR overrides and MaxMind lookups match it. Other
+/// addresses are returned unchanged.
+pub fn normalize_ip(ip: IpAddr) -> IpAddr {
+    match ip {
+        IpAddr::V6(addr) => match addr.to_ipv4_mapped() {
+            Some(v4) => IpAddr::V4(v4),
+            None => ip,
+        },
+        IpAddr::V4(_) => ip,
+    }
+}
+
+// ---------------------------------------------------------------------------
+// IP classification: which addresses are not publicly routable.
+// ---------------------------------------------------------------------------
+
+/// Address class. Anything other than `Public` is a bogon for Geo
+/// purposes: no MaxMind record exists for it, so lookups skip the
+/// database (settings overrides still apply).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IpClass {
+    Public,
+    Private,
+    Loopback,
+    LinkLocal,
+    Multicast,
+    Unspecified,
+    Broadcast,
+    Documentation,
+    Benchmarking,
+    Reserved,
+    Shared,
+    UniqueLocal,
+    Discard,
+    SiteLocal,
+}
+
+pub fn classify_ip(ip: IpAddr) -> IpClass {
+    match ip {
+        IpAddr::V4(addr) => {
+            let octets = addr.octets();
+            if octets == [0, 0, 0, 0] || octets[0] == 0 {
+                IpClass::Unspecified
+            } else if addr.is_loopback() {
+                IpClass::Loopback
+            } else if addr.is_private() {
+                IpClass::Private
+            } else if addr.is_link_local() {
+                IpClass::LinkLocal
+            } else if addr.is_multicast() {
+                IpClass::Multicast
+            } else if octets == [255, 255, 255, 255] {
+                IpClass::Broadcast
+            } else if (octets[0] == 192 && octets[1] == 0 && octets[2] == 2)
+                || (octets[0] == 198 && octets[1] == 51 && octets[2] == 100)
+                || (octets[0] == 203 && octets[1] == 0 && octets[2] == 113)
+            {
+                // TEST-NET-1/2/3 documentation ranges (RFC 5737).
+                IpClass::Documentation
+            } else if octets[0] == 198 && (18..=19).contains(&octets[1]) {
+                // Benchmarking range 198.18.0.0/15 (RFC 2544).
+                IpClass::Benchmarking
+            } else if octets[0] == 100 && (64..=127).contains(&octets[1]) {
+                // Shared address space / CGNAT 100.64.0.0/10 (RFC 6598).
+                IpClass::Shared
+            } else if octets[0] >= 240 {
+                IpClass::Reserved
+            } else {
+                IpClass::Public
+            }
+        }
+        IpAddr::V6(addr) => {
+            let segments = addr.segments();
+            if addr.is_unspecified() {
+                IpClass::Unspecified
+            } else if addr.is_loopback() {
+                IpClass::Loopback
+            } else if addr.is_multicast() {
+                IpClass::Multicast
+            } else if segments[0] & 0xfe00 == 0xfc00 {
+                // Unique-local addresses fc00::/7 (RFC 4193).
+                IpClass::UniqueLocal
+            } else if segments[0] & 0xffc0 == 0xfe80 {
+                // Link-local addresses fe80::/10 (RFC 4291).
+                IpClass::LinkLocal
+            } else if segments[0] == 0x2001 && segments[1] == 0x0db8 {
+                // Documentation range 2001:db8::/32 (RFC 3849).
+                IpClass::Documentation
+            } else if segments[0] == 0x2001 && segments[1] == 0x0002 && segments[2] == 0 {
+                // Benchmarking range 2001:2::/48 (RFC 5180).
+                IpClass::Benchmarking
+            } else if segments[0] == 0x0100 && segments[1] == 0 && segments[2] == 0 && segments[3] == 0 {
+                // Discard-only range 100::/64 (RFC 6666).
+                IpClass::Discard
+            } else if segments[0] & 0xffc0 == 0xfec0 {
+                // Deprecated site-local addresses fec0::/10 (RFC 3879).
+                IpClass::SiteLocal
+            } else {
+                IpClass::Public
+            }
+        }
+    }
+}
+
+/// `true` when the address is not publicly routable.
+pub fn is_bogon(ip: IpAddr) -> bool {
+    classify_ip(ip) != IpClass::Public
+}
+
+/// `true` when the address is publicly routable.
+pub fn is_public_ip(ip: IpAddr) -> bool {
+    classify_ip(ip) == IpClass::Public
+}
+
+/// Validate a MaxMind license-key string by shape: 40 characters in
+/// three underscore-separated parts, a 6-character alphanumeric prefix,
+/// an alphanumeric middle part, and the `mmk` suffix. This checks the
+/// format only; it does not verify the key against MaxMind.
+pub fn is_valid_maxmind_license_key(key: &str) -> bool {
+    let key = key.trim();
+    if key.len() != 40 {
+        return false;
+    }
+    let parts: Vec<&str> = key.split('_').collect();
+    if parts.len() != 3 {
+        return false;
+    }
+    let (prefix, middle, suffix) = (parts[0], parts[1], parts[2]);
+    prefix.len() == 6
+        && !middle.is_empty()
+        && suffix == "mmk"
+        && prefix.chars().all(|c| c.is_ascii_alphanumeric())
+        && middle.chars().all(|c| c.is_ascii_alphanumeric())
+}
+
 // ---------------------------------------------------------------------------
 // Lookup core: shared by the HTTP handler, the hook handler, and the
 // Network module (which delegates geo lookups through the `geo.lookup`
@@ -138,6 +400,8 @@ pub fn lookup_geo(ctx: &AppContext, ip_text: &str) -> UnifiedResult<GeoInfo> {
         .trim()
         .parse()
         .map_err(|_| UnifiedError::bad_request(format!("Invalid IP address \"{ip_text}\"")))?;
+    // IPv4-mapped IPv6 forms resolve as their IPv4 address.
+    let ip = normalize_ip(ip);
     let (database_path, settings_override) = {
         let config = ctx.config.read().expect("config lock poisoned");
         (
@@ -146,10 +410,20 @@ pub fn lookup_geo(ctx: &AppContext, ip_text: &str) -> UnifiedResult<GeoInfo> {
         )
     };
 
+    let unknown = || GeoInfo {
+        ip: ip.to_string(),
+        source: "unknown".to_string(),
+        ..GeoInfo::default()
+    };
     let override_hit = find_override(ip);
+    // Bogons have no MaxMind record: check overrides, then stop instead
+    // of opening the database for an address it cannot contain.
     if settings_override {
         if let Some(info) = override_hit.clone() {
             return Ok(info);
+        }
+        if is_bogon(ip) {
+            return Ok(unknown());
         }
         if let Some(info) = lookup_maxmind(&database_path, ip) {
             return Ok(info);
@@ -158,6 +432,12 @@ pub fn lookup_geo(ctx: &AppContext, ip_text: &str) -> UnifiedResult<GeoInfo> {
             return Ok(info);
         }
     } else {
+        if is_bogon(ip) {
+            if let Some(info) = override_hit {
+                return Ok(info);
+            }
+            return Ok(unknown());
+        }
         if let Some(info) = lookup_maxmind(&database_path, ip) {
             return Ok(info);
         }
@@ -165,15 +445,12 @@ pub fn lookup_geo(ctx: &AppContext, ip_text: &str) -> UnifiedResult<GeoInfo> {
             return Ok(info);
         }
     }
-    Ok(GeoInfo {
-        ip: ip.to_string(),
-        source: "unknown".to_string(),
-        ..GeoInfo::default()
-    })
+    Ok(unknown())
 }
 
 /// Longest-prefix active override match for an IP address.
 pub fn find_override(ip: IpAddr) -> Option<GeoInfo> {
+    let ip = normalize_ip(ip);
     let mut best: Option<(u8, GeoInfo)> = None;
     for entry in overrides_store().iter() {
         let row = entry.value();
@@ -239,10 +516,20 @@ pub fn lookup_maxmind(database_path: &str, ip: IpAddr) -> Option<GeoInfo> {
         .and_then(|list| list.first())
         .and_then(|sub| name_of(Some(sub)));
     let (latitude, longitude) = match record.get("location") {
-        Some(location) => (
-            location.get("latitude").and_then(Value::as_f64),
-            location.get("longitude").and_then(Value::as_f64),
-        ),
+        Some(location) => {
+            // Reject out-of-range coordinates instead of serving them:
+            // a corrupt or hand-edited database must not produce a
+            // latitude of 500 or a longitude of -999.
+            let latitude = location
+                .get("latitude")
+                .and_then(Value::as_f64)
+                .filter(|value| (-90.0..=90.0).contains(value));
+            let longitude = location
+                .get("longitude")
+                .and_then(Value::as_f64)
+                .filter(|value| (-180.0..=180.0).contains(value));
+            (latitude, longitude)
+        }
         None => (None, None),
     };
     Some(GeoInfo {
@@ -266,6 +553,7 @@ pub fn lookup_asn(ctx: &AppContext, ip_text: &str) -> UnifiedResult<Value> {
         .trim()
         .parse()
         .map_err(|_| UnifiedError::bad_request(format!("Invalid IP address \"{ip_text}\"")))?;
+    let ip = normalize_ip(ip);
     let database_path = {
         let config = ctx.config.read().expect("config lock poisoned");
         config.geo.database_path.clone()
@@ -374,6 +662,10 @@ struct GeoSettingsView {
     update_interval_hours: u64,
     settings_override: bool,
     maxmind_key_configured: bool,
+    /// Shape check only (40 characters, `xxxxxx_..._mmk`); a key can be
+    /// configured yet malformed, which is exactly the failure that
+    /// makes a database download fail later.
+    maxmind_key_valid: bool,
     overrides_count: usize,
 }
 
@@ -674,6 +966,7 @@ async fn settings_handler(ctx: web::Data<Arc<AppContext>>) -> HttpResponse {
             update_interval_hours: config.geo.update_interval_hours,
             settings_override: config.geo.settings_override,
             maxmind_key_configured: !config.licenses.maxmind.is_empty(),
+            maxmind_key_valid: is_valid_maxmind_license_key(&config.licenses.maxmind),
             overrides_count: overrides_store().len(),
         })
     })();

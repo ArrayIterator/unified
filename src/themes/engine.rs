@@ -18,19 +18,25 @@
 // traversal through a theme id impossible.
 
 use crate::core::error::{UnifiedError, UnifiedResult};
-use handlebars::Handlebars;
+use crate::themes::assets::resolve_asset_url;
+use handlebars::{Context, Handlebars, Helper, Output, RenderContext, RenderError, RenderErrorReason};
 use rust_embed::RustEmbed;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
 
 /// Id of the embedded default theme. It is always available.
 pub const DEFAULT_THEME_ID: &str = "default";
 
 /// Templates every complete theme must provide.
 pub const REQUIRED_TEMPLATES: &[&str] = &["layout", "dashboard", "home", "error"];
+
+/// Maximum size of one disk theme template or partial. Larger files
+/// are rejected at load time so a broken or hostile theme cannot make
+/// the engine read unbounded data into memory.
+pub const MAX_TEMPLATE_SIZE: u64 = 5 * 1024 * 1024;
 
 /// Templates embedded in the binary, from the `templates/` directory at
 /// the crate root. Paths are relative to that directory, for example
@@ -70,6 +76,14 @@ pub struct ThemeManifest {
     /// example `layout`, `dashboard`, `home`, `error`.
     #[serde(default)]
     pub templates: Vec<String>,
+    /// Optional mapping of logical template names to file stems inside
+    /// `templates/` (without the `.hbs` extension), for example
+    /// `layout: main` loads the `layout` template from
+    /// `templates/main.hbs`. A name without a mapping loads from
+    /// `templates/<name>.hbs`. Mapped stems follow the same naming
+    /// rules as template names (letters, digits, `-`, `_`).
+    #[serde(default)]
+    pub template_files: HashMap<String, String>,
 }
 
 /// Validate a theme id. Only letters, digits, `-` and `_` are allowed, so
@@ -142,7 +156,11 @@ fn embedded_default_meta() -> ThemeMeta {
 pub struct ThemeEngine {
     handlebars: RwLock<Handlebars<'static>>,
     themes_dir: PathBuf,
-    active_theme: RwLock<String>,
+    /// Directory global assets (`/assets/...`) are served from.
+    assets_dir: PathBuf,
+    /// Shared with the `asset_url` helper so it always resolves
+    /// `theme:` paths against the theme that is active at render time.
+    active_theme: Arc<RwLock<String>>,
     /// Names of the templates currently registered in the Handlebars
     /// registry. Tracked here so `render` can report a clean 404 for an
     /// unknown template instead of a generic render failure.
@@ -161,7 +179,8 @@ impl ThemeEngine {
         let engine = Self {
             handlebars: RwLock::new(Handlebars::new()),
             themes_dir: themes_dir.into(),
-            active_theme: RwLock::new(DEFAULT_THEME_ID.to_string()),
+            assets_dir: PathBuf::from("assets"),
+            active_theme: Arc::new(RwLock::new(DEFAULT_THEME_ID.to_string())),
             known_templates: RwLock::new(HashSet::new()),
             discovered: RwLock::new(HashMap::new()),
         };
@@ -172,9 +191,21 @@ impl ThemeEngine {
         engine
     }
 
+    /// Use a different directory for global assets (`/assets/...`).
+    /// The default is `assets`, relative to the working directory.
+    pub fn with_assets_dir(mut self, dir: impl Into<PathBuf>) -> Self {
+        self.assets_dir = dir.into();
+        self
+    }
+
     /// Directory disk themes are discovered from.
     pub fn themes_dir(&self) -> &Path {
         &self.themes_dir
+    }
+
+    /// Directory global assets are served from.
+    pub fn assets_dir(&self) -> &Path {
+        &self.assets_dir
     }
 
     /// Id of the currently active theme.
@@ -183,6 +214,23 @@ impl ThemeEngine {
             .read()
             .expect("active theme lock poisoned")
             .clone()
+    }
+
+    /// Resolve a public URL for an asset path, for templates and
+    /// handlers: `theme:<path>` resolves to the active theme's assets
+    /// directory, anything else to the global assets directory. The
+    /// URL carries a `?v=` content fingerprint when the file exists
+    /// on disk. Absolute URLs, absolute paths, fragments, and queries
+    /// pass through unchanged. Also available inside templates as the
+    /// `asset_url` helper, for example
+    /// `{{asset_url "css/dashboard.css"}}`.
+    pub fn asset_url(&self, path: &str) -> String {
+        resolve_asset_url(
+            &self.assets_dir,
+            &self.themes_dir,
+            &self.active_theme(),
+            path,
+        )
     }
 
     /// True when a theme with this id is known (embedded default or a
@@ -335,18 +383,29 @@ impl ThemeEngine {
         // Read every template file before touching the live registry.
         // The registry is then built fresh and swapped in as a whole, so
         // a broken theme cannot leave a half-registered set behind.
+        // A logical name may map to a different file stem through
+        // `template_files` in theme.yaml, for example `layout: main`.
         let mut rendered: Vec<(String, String)> = Vec::new();
         for name in &template_names {
             validate_template_name(name).map_err(|error| {
                 error.with_metadata("theme_id", Value::String(id.to_string()))
             })?;
-            let path = templates_dir.join(format!("{name}.hbs"));
+            let stem = manifest
+                .template_files
+                .get(name)
+                .map(String::as_str)
+                .unwrap_or(name);
+            validate_template_name(stem).map_err(|error| {
+                error.with_metadata("theme_id", Value::String(id.to_string()))
+            })?;
+            let path = templates_dir.join(format!("{stem}.hbs"));
             if !path.is_file() {
                 return Err(UnifiedError::bad_request(format!(
-                    "Theme \"{id}\" declares template \"{name}\" but templates/{name}.hbs is missing"
+                    "Theme \"{id}\" declares template \"{name}\" but templates/{stem}.hbs is missing"
                 ))
                 .with_metadata("theme_id", Value::String(id.to_string())));
             }
+            check_template_size(&path, id, name)?;
             let content = std::fs::read_to_string(&path).map_err(|error| {
                 UnifiedError::internal(format!(
                     "Cannot read template \"{name}\" of theme \"{id}\": {error}"
@@ -370,6 +429,7 @@ impl ThemeEngine {
                     }
                     if let Some(stem) = path.file_stem().and_then(|stem| stem.to_str()) {
                         if validate_template_name(stem).is_ok() {
+                            check_template_size(&path, id, stem)?;
                             if let Ok(content) = std::fs::read_to_string(&path) {
                                 rendered.push((stem.to_string(), content));
                             }
@@ -379,9 +439,11 @@ impl ThemeEngine {
             }
         }
 
-        let fresh = build_registry(&rendered, &format!("Theme \"{id}\"")).map_err(|error| {
-            error.with_metadata("theme_id", Value::String(id.to_string()))
-        })?;
+        let fresh = self
+            .build_registry(&rendered, &format!("Theme \"{id}\""))
+            .map_err(|error| {
+                error.with_metadata("theme_id", Value::String(id.to_string()))
+            })?;
         self.swap_registry(fresh, &rendered);
 
         let screenshot = match manifest.screenshot.as_deref() {
@@ -457,7 +519,7 @@ impl ThemeEngine {
                 )));
             }
         }
-        let fresh = build_registry(&rendered, "Embedded default theme")?;
+        let fresh = self.build_registry(&rendered, "Embedded default theme")?;
         self.swap_registry(fresh, &rendered);
         Ok(())
     }
@@ -536,25 +598,80 @@ impl ThemeEngine {
             known.insert(name.clone());
         }
     }
+
+    /// Register the template helpers on a fresh Handlebars registry:
+    /// `asset_url` resolves an asset path to its public, fingerprinted
+    /// URL (see `ThemeEngine::asset_url`). The helper reads the active
+    /// theme id at render time, so switching themes needs no
+    /// re-registration.
+    fn register_helpers(&self, handlebars: &mut Handlebars<'static>) {
+        let assets_dir = self.assets_dir.clone();
+        let themes_dir = self.themes_dir.clone();
+        let active_theme = Arc::clone(&self.active_theme);
+        handlebars.register_helper(
+            "asset_url",
+            Box::new(
+                move |helper: &Helper,
+                      _: &Handlebars,
+                      _: &Context,
+                      _: &mut RenderContext,
+                      out: &mut dyn Output|
+                      -> Result<(), RenderError> {
+                    let path = helper
+                        .param(0)
+                        .and_then(|value| value.value().as_str())
+                        .unwrap_or("");
+                    let active = active_theme
+                        .read()
+                        .expect("active theme lock poisoned")
+                        .clone();
+                    let url = resolve_asset_url(&assets_dir, &themes_dir, &active, path);
+                    out.write(&url).map_err(|error| {
+                        RenderErrorReason::Other(format!("Failed to write asset url: {error}"))
+                    })?;
+                    Ok(())
+                },
+            ),
+        );
+    }
+
+    /// Build a fresh Handlebars registry from `(name, source)` pairs
+    /// without touching the live registry, and register the template
+    /// helpers on it. `error_prefix` names the theme in compile
+    /// errors, for example `Theme "dark"` or `Embedded default theme`.
+    fn build_registry(
+        &self,
+        rendered: &[(String, String)],
+        error_prefix: &str,
+    ) -> UnifiedResult<Handlebars<'static>> {
+        let mut handlebars = Handlebars::new();
+        for (name, content) in rendered {
+            handlebars
+                .register_template_string(name, content)
+                .map_err(|error| {
+                    UnifiedError::internal(format!(
+                        "{error_prefix} template \"{name}\" failed to compile: {error}"
+                    ))
+                    .with_trace(format!("{error:?}"))
+                })?;
+        }
+        self.register_helpers(&mut handlebars);
+        Ok(handlebars)
+    }
 }
 
-/// Build a fresh Handlebars registry from `(name, source)` pairs without
-/// touching the live registry. `error_prefix` names the theme in compile
-/// errors, for example `Theme "dark"` or `Embedded default theme`.
-fn build_registry(
-    rendered: &[(String, String)],
-    error_prefix: &str,
-) -> UnifiedResult<Handlebars<'static>> {
-    let mut handlebars = Handlebars::new();
-    for (name, content) in rendered {
-        handlebars
-            .register_template_string(name, content)
-            .map_err(|error| {
-                UnifiedError::internal(format!(
-                    "{error_prefix} template \"{name}\" failed to compile: {error}"
-                ))
-                .with_trace(format!("{error:?}"))
-            })?;
+/// Reject a disk theme template or partial larger than
+/// `MAX_TEMPLATE_SIZE`. An unreadable file size does not fail the
+/// check — the read itself reports that error next.
+fn check_template_size(path: &Path, theme_id: &str, name: &str) -> UnifiedResult<()> {
+    if let Ok(metadata) = std::fs::metadata(path) {
+        if metadata.len() > MAX_TEMPLATE_SIZE {
+            return Err(UnifiedError::bad_request(format!(
+                "Theme \"{theme_id}\" template \"{name}\" is too large: {} bytes (maximum {MAX_TEMPLATE_SIZE})",
+                metadata.len()
+            ))
+            .with_metadata("theme_id", Value::String(theme_id.to_string())));
+        }
     }
-    Ok(handlebars)
+    Ok(())
 }

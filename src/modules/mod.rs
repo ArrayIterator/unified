@@ -15,6 +15,7 @@ pub mod app_sync;
 pub mod audit;
 pub mod auth_manager;
 pub mod billing;
+pub mod cache;
 pub mod chat;
 pub mod company;
 pub mod content;
@@ -51,6 +52,7 @@ use crate::core::modules::ModuleRegistry;
 pub fn register_all(registry: &ModuleRegistry) {
     // Foundation.
     settings::register(registry);
+    cache::register(registry);
     users::register(registry);
     roles::register(registry);
     security::register(registry);

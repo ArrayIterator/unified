@@ -108,7 +108,61 @@ impl From<serde_yaml::Error> for UnifiedError {
 
 impl From<serde_json::Error> for UnifiedError {
     fn from(error: serde_json::Error) -> Self {
-        Self::bad_request(format!("JSON error: {error}")).with_trace(format!("{error:?}"))
+        // Classify the failure instead of mapping every JSON error to 400:
+        // a truncated or malformed document is a client error, while an
+        // I/O failure while reading JSON is a server error. The category
+        // is also recorded in `metadata.kind` so callers can distinguish
+        // the cases without parsing the message.
+        use serde_json::error::Category;
+        let kind = match error.classify() {
+            Category::Io => "io",
+            Category::Syntax => "syntax",
+            Category::Data => "data",
+            Category::Eof => "eof",
+        };
+        let base = match error.classify() {
+            Category::Io => Self::internal(format!("JSON error: {error}")),
+            _ => Self::bad_request(format!("JSON error: {error}")),
+        };
+        base.with_metadata("kind", Value::String(kind.to_string()))
+            .with_trace(format!("{error:?}"))
+    }
+}
+
+impl From<diesel::result::Error> for UnifiedError {
+    fn from(error: diesel::result::Error) -> Self {
+        use diesel::result::{DatabaseErrorKind, Error as DieselError};
+        // Map Diesel failures to HTTP statuses without leaking database
+        // internals (constraint and table names) into the client-visible
+        // message; the full error stays in `trace`, rendered in debug
+        // mode only. The machine-readable kind is in `metadata.kind`.
+        let trace = format!("{error:?}");
+        let (message, code, kind): (&str, u16, &str) = match &error {
+            DieselError::NotFound => ("Record not found", 404, "not_found"),
+            DieselError::DatabaseError(DatabaseErrorKind::UniqueViolation, _) => (
+                "A record with the same unique value already exists",
+                409,
+                "unique_violation",
+            ),
+            DieselError::DatabaseError(DatabaseErrorKind::ForeignKeyViolation, _) => (
+                "The referenced record does not exist or is still in use",
+                422,
+                "foreign_key_violation",
+            ),
+            DieselError::DatabaseError(DatabaseErrorKind::CheckViolation, _) => (
+                "The record violates a database check constraint",
+                422,
+                "check_violation",
+            ),
+            DieselError::DatabaseError(DatabaseErrorKind::NotNullViolation, _) => {
+                ("A required field is missing", 422, "not_null_violation")
+            }
+            DieselError::DatabaseError(_, _) => ("Database error", 500, "database_error"),
+            _ => ("Database error", 500, "database_error"),
+        };
+        Self::new(message, code)
+            .with_metadata("kind", Value::String(kind.to_string()))
+            .with_trace(trace)
     }
 }
 

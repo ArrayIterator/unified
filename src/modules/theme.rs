@@ -10,7 +10,7 @@ use crate::core::context::AppContext;
 use crate::core::error::{UnifiedError, UnifiedResult};
 use crate::core::hooks::{HookBus, HookContext};
 use crate::core::json as api_json;
-use crate::core::modules::{Module, ModuleRegistry};
+use crate::core::modules::{Module, ModuleRegistry, RouteInfo};
 use actix_web::{web, HttpResponse};
 use regex::Regex;
 use semver::Version;
@@ -686,6 +686,35 @@ impl Module for ThemeModule {
                 .route("/themes/{id}/activate", web::post().to(activate_theme))
                 .route("/active", web::get().to(get_active_theme)),
         );
+    }
+
+    fn route_info(&self) -> Vec<RouteInfo> {
+        vec![
+            RouteInfo {
+                method: "GET",
+                path: "/api/v1/theme/themes",
+                owner: "theme",
+                description: "List all discovered themes",
+            },
+            RouteInfo {
+                method: "GET",
+                path: "/api/v1/theme/themes/{id}",
+                owner: "theme",
+                description: "Get one theme by id",
+            },
+            RouteInfo {
+                method: "POST",
+                path: "/api/v1/theme/themes/{id}/activate",
+                owner: "theme",
+                description: "Activate a theme",
+            },
+            RouteInfo {
+                method: "GET",
+                path: "/api/v1/theme/active",
+                owner: "theme",
+                description: "Get the active theme",
+            },
+        ]
     }
 }
 

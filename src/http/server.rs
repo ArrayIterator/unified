@@ -13,9 +13,11 @@ use crate::core::context::AppContext;
 use crate::core::error::{UnifiedError, UnifiedResult};
 use crate::core::hooks::{events, HookBus};
 use crate::core::json;
+use crate::core::middleware::MiddlewareManager;
 use crate::http::acme::AcmeClient;
 use crate::http::tls::SslStorage;
 use crate::modules::network::connection_stats;
+use crate::themes::assets::{serve_asset, serve_theme_asset, StaticAssetConfig};
 use actix_web::dev::Service;
 use actix_web::http::KeepAlive;
 use actix_web::{web, App, HttpResponse, HttpServer};
@@ -75,8 +77,21 @@ pub async fn run_server(ctx: Arc<AppContext>) -> UnifiedResult<()> {
         let counter = factory_counter.clone();
         let mw_ctx = ctx.clone();
         let mw_counter = counter.clone();
+        // Collect the middleware contributed by every module, ordered
+        // by priority (highest first) when the dispatcher is built.
+        // An empty pipeline passes requests through unchanged.
+        let mut middleware_manager = MiddlewareManager::new();
+        ctx.modules.register_all_middleware(&mut middleware_manager);
+        let dispatcher = middleware_manager.create_dispatcher();
+        let debug = ctx.is_debug();
         App::new()
             .app_data(web::Data::new(ctx.clone()))
+            // The dispatcher wraps the application inside the
+            // request-lifecycle middleware below, so pause /
+            // maintenance blocking and the request hooks always run
+            // first and module middleware never runs for a blocked
+            // request.
+            .wrap(dispatcher)
             .wrap_fn(move |req, srv| {
                 let ctx = mw_ctx.clone();
                 let counter = mw_counter.clone();
@@ -136,6 +151,22 @@ pub async fn run_server(ctx: Arc<AppContext>) -> UnifiedResult<()> {
                     web::get().to(acme_challenge),
                 );
                 cfg.route("/ws", web::get().to(crate::http::websocket::ws_handler));
+                // Static assets: the global `assets/` directory under
+                // `/assets/`, and one theme's `assets/` directory under
+                // `/theme/{id}/assets/`. Both serve fingerprinted URLs
+                // (`?v=<hash>`) with immutable cache headers.
+                cfg.app_data(web::Data::new(StaticAssetConfig {
+                    debug,
+                    ..StaticAssetConfig::default()
+                }));
+                cfg.route("/assets/{path:.*}", web::get().to(serve_asset));
+                cfg.route(
+                    "/theme/{id}/assets/{path:.*}",
+                    web::get().to(serve_theme_asset),
+                );
+                // Unmatched routes answer with the standard error
+                // envelope instead of Actix's default plain 404.
+                cfg.default_service(web::to(not_found));
                 ctx.modules.configure_all_routes(cfg);
             })
     });
@@ -299,6 +330,15 @@ async fn health(ctx: web::Data<Arc<AppContext>>) -> HttpResponse {
     json::success_response(
         serde_json::json!({ "status": "ok", "uptime_seconds": ctx.uptime_seconds() }),
         200,
+    )
+}
+
+/// Default service for unmatched routes: the standard error envelope
+/// with a 404, instead of Actix's default plain-text 404.
+async fn not_found(ctx: web::Data<Arc<AppContext>>) -> HttpResponse {
+    json::error_response(
+        &UnifiedError::not_found("Route not found"),
+        ctx.is_debug(),
     )
 }
 

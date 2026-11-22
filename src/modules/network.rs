@@ -33,7 +33,7 @@ use serde_json::Value;
 use std::net::IpAddr;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, OnceLock};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 // ---------------------------------------------------------------------------
 // Active-connection counters.
@@ -138,6 +138,12 @@ pub struct DomainSyntaxReport {
     pub domain: String,
     /// Punycode (IDNA / ASCII) form of the domain.
     pub punycode: Option<String>,
+    /// Unicode form, present only when the input contained non-ASCII
+    /// characters (the display form of an internationalised domain).
+    pub unicode: Option<String>,
+    /// `true` for `localhost` and special-use / local suffixes
+    /// (`test`, `example`, `invalid`, `local`, `internal`, `arpa`).
+    pub is_local: bool,
     pub issues: Vec<String>,
 }
 
@@ -157,6 +163,7 @@ pub struct DnsReport {
     pub syntax: DomainSyntaxReport,
     pub a: Vec<IpAddr>,
     pub aaaa: Vec<IpAddr>,
+    pub cname: Option<String>,
     pub mx: Vec<MxRecord>,
     pub txt: Vec<String>,
     pub spf: SpfReport,
@@ -165,18 +172,61 @@ pub struct DnsReport {
     pub health: DnsHealthReport,
 }
 
+/// Which address family a lookup prefers when both exist.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum IpChoice {
+    /// Try IPv4 first, fall back to IPv6.
+    #[default]
+    Ipv4Preferred,
+    /// Try IPv6 first, fall back to IPv4.
+    Ipv6Preferred,
+    Ipv4Only,
+    Ipv6Only,
+}
+
+/// Special-use and local suffixes (RFC 6761 and common local use).
+/// These resolve locally, if at all; they are never public domains.
+pub const LOCAL_SUFFIXES: &[&str] = &[
+    "localhost",
+    "localdomain",
+    "local",
+    "arpa",
+    "test",
+    "invalid",
+    "example",
+    "internal",
+];
+
 /// Full DNS verifier: A / AAAA / MX / TXT lookups plus SPF, DKIM, DMARC,
 /// domain-syntax (including IDNA / punycode), and resolver health checks.
 pub struct DnsVerifier {
     resolver: TokioResolver,
+    ip_choice: IpChoice,
 }
 
 impl DnsVerifier {
     pub fn new() -> Self {
+        Self::with_ip_choice(IpChoice::default())
+    }
+
+    pub fn with_ip_choice(ip_choice: IpChoice) -> Self {
+        let mut opts = ResolverOpts::default();
+        // Match the reference behaviour: fail fast instead of waiting on
+        // the resolver default, and retry once on a transient failure.
+        opts.timeout = Duration::from_secs(5);
+        opts.attempts = 2;
         Self {
-            resolver: TokioResolver::builder(ResolverConfig::default(), ResolverOpts::default())
-                .build(),
+            resolver: TokioResolver::builder(ResolverConfig::default(), opts).build(),
+            ip_choice,
         }
+    }
+
+    pub fn set_ip_choice(&mut self, ip_choice: IpChoice) {
+        self.ip_choice = ip_choice;
+    }
+
+    pub fn ip_choice(&self) -> IpChoice {
+        self.ip_choice
     }
 
     fn dns_name(domain: &str) -> UnifiedResult<Name> {
@@ -264,6 +314,85 @@ impl DnsVerifier {
         for record in records {
             if let RData::NS(ns) = record {
                 out.push(ns.to_string());
+            }
+        }
+        Ok(out)
+    }
+
+    /// Resolve A / AAAA records honouring the verifier's address-family
+    /// preference. Preferred families fall back to the other family when
+    /// the first lookup fails or returns no addresses.
+    pub async fn lookup_ip(&self, domain: &str) -> UnifiedResult<Vec<IpAddr>> {
+        self.lookup_ip_with(domain, self.ip_choice).await
+    }
+
+    pub async fn lookup_ip_with(
+        &self,
+        domain: &str,
+        choice: IpChoice,
+    ) -> UnifiedResult<Vec<IpAddr>> {
+        match choice {
+            IpChoice::Ipv4Only => self.lookup_a(domain).await,
+            IpChoice::Ipv6Only => self.lookup_aaaa(domain).await,
+            IpChoice::Ipv4Preferred => match self.lookup_a(domain).await {
+                Ok(addresses) if !addresses.is_empty() => Ok(addresses),
+                _ => self.lookup_aaaa(domain).await,
+            },
+            IpChoice::Ipv6Preferred => match self.lookup_aaaa(domain).await {
+                Ok(addresses) if !addresses.is_empty() => Ok(addresses),
+                _ => self.lookup_a(domain).await,
+            },
+        }
+    }
+
+    /// First CNAME target for a domain, if it has one. Returns `Ok(None)`
+    /// when the domain has no CNAME record.
+    pub async fn lookup_cname(&self, domain: &str) -> UnifiedResult<Option<String>> {
+        let records = match self.lookup_records(domain, RecordType::CNAME).await {
+            Ok(records) => records,
+            Err(_) => return Ok(None),
+        };
+        for record in records {
+            if let RData::CNAME(target) = record {
+                return Ok(Some(
+                    target.to_string().trim_end_matches('.').to_string(),
+                ));
+            }
+        }
+        Ok(None)
+    }
+
+    /// Reverse (PTR) lookup for an IP address, via the standard
+    /// `in-addr.arpa.` / `ip6.arpa.` names. Returns the PTR targets.
+    pub async fn lookup_ptr(&self, ip: IpAddr) -> UnifiedResult<Vec<String>> {
+        let name = match ip {
+            IpAddr::V4(addr) => {
+                let octets = addr.octets();
+                format!(
+                    "{}.{}.{}.{}.in-addr.arpa.",
+                    octets[3], octets[2], octets[1], octets[0]
+                )
+            }
+            IpAddr::V6(addr) => {
+                let nibbles: Vec<String> = addr
+                    .octets()
+                    .iter()
+                    .rev()
+                    .flat_map(|byte| {
+                        [
+                            format!("{:x}", byte & 0x0f),
+                            format!("{:x}", byte >> 4),
+                        ]
+                    })
+                    .collect();
+                format!("{}.ip6.arpa.", nibbles.join("."))
+            }
+        };
+        let records = self.lookup_records(&name, RecordType::PTR).await?;
+        let mut out = Vec::new();
+        for record in records {
+            if let RData::PTR(target) = record {
+                out.push(target.to_string().trim_end_matches('.').to_string());
             }
         }
         Ok(out)
@@ -464,14 +593,135 @@ impl DnsVerifier {
         report
     }
 
+    /// Normalise free-form domain input to its ASCII (IDNA / punycode)
+    /// form. Accepts a bare domain, a domain with a trailing dot or a
+    /// port, and a full URL (scheme, path, and query are stripped and
+    /// only the host is kept). Rejects empty input, IP literals, and
+    /// anything containing `@` (pass an email address to
+    /// `domain_from_email` instead).
+    pub fn normalize_domain_input(input: &str) -> UnifiedResult<String> {
+        let input = input.trim();
+        if input.is_empty() {
+            return Err(UnifiedError::bad_request("Domain is empty"));
+        }
+        if input.contains('@') {
+            return Err(UnifiedError::bad_request(
+                "Input looks like an email address; pass the domain part only",
+            ));
+        }
+        let host: String = if input.contains("://") || input.starts_with("//") {
+            let url_text = if input.starts_with("//") {
+                format!("https:{input}")
+            } else {
+                input.to_string()
+            };
+            let url = url::Url::parse(&url_text).map_err(|_| {
+                UnifiedError::bad_request(format!("Invalid URL \"{input}\""))
+            })?;
+            url.host_str()
+                .map(str::to_string)
+                .ok_or_else(|| UnifiedError::bad_request(format!("URL \"{input}\" has no host")))?
+        } else if input.contains('/') || input.contains('?') || input.contains('#') || input.contains(':') {
+            let url = url::Url::parse(&format!("https://{input}")).map_err(|_| {
+                UnifiedError::bad_request(format!("Invalid domain name \"{input}\""))
+            })?;
+            url.host_str()
+                .map(str::to_string)
+                .ok_or_else(|| {
+                    UnifiedError::bad_request(format!("Invalid domain name \"{input}\""))
+                })?
+        } else {
+            input.to_string()
+        };
+        let host = host.trim_end_matches('.');
+        if host.is_empty() {
+            return Err(UnifiedError::bad_request("Domain is empty"));
+        }
+        match url::Host::parse(host) {
+            Ok(url::Host::Domain(ascii)) => Ok(ascii),
+            Ok(_) => Err(UnifiedError::bad_request(
+                "Input is an IP address, not a domain name",
+            )),
+            Err(_) => Err(UnifiedError::bad_request(format!(
+                "Invalid domain name \"{input}\""
+            ))),
+        }
+    }
+
+    /// Extract the ASCII domain from an email address. Only the simple
+    /// unquoted local-part form is supported (at most 64 characters, no
+    /// leading/trailing or double dots, no whitespace or specials);
+    /// quoted-string local parts and comments are rejected rather than
+    /// half-parsed.
+    pub fn domain_from_email(email: &str) -> UnifiedResult<String> {
+        let email = email.trim();
+        let parts: Vec<&str> = email.split('@').collect();
+        if parts.len() != 2 {
+            return Err(UnifiedError::bad_request(
+                "Email address must contain exactly one \"@\"",
+            ));
+        }
+        let (local, domain) = (parts[0], parts[1]);
+        if local.is_empty() {
+            return Err(UnifiedError::bad_request(
+                "Email address has an empty local part",
+            ));
+        }
+        if local.len() > 64 {
+            return Err(UnifiedError::bad_request(
+                "Email local part exceeds 64 characters",
+            ));
+        }
+        if local.starts_with('.') || local.ends_with('.') || local.contains("..") {
+            return Err(UnifiedError::bad_request(
+                "Email local part must not start or end with a dot or contain double dots",
+            ));
+        }
+        if local.chars().any(|c| {
+            c.is_whitespace()
+                || matches!(
+                    c,
+                    '<' | '>' | '(' | ')' | ',' | ';' | ':' | '"' | '[' | ']' | '\\'
+                )
+        }) {
+            return Err(UnifiedError::bad_request(
+                "Email local part contains an invalid character",
+            ));
+        }
+        Self::normalize_domain_input(domain)
+    }
+
     /// Domain syntax validation: labels, total length, TLD, and IDNA /
     /// punycode conversion (via the `url` crate, which applies IDNA).
     pub fn check_domain_syntax(domain: &str) -> DomainSyntaxReport {
         let mut issues = Vec::new();
-        let domain = domain.trim().trim_end_matches('.').to_lowercase();
+        let raw = domain.trim();
+        if raw.starts_with('.') {
+            issues.push("Domain must not start with a dot".to_string());
+        }
+        let domain = raw.trim_end_matches('.').to_lowercase();
+        let unicode = if raw.chars().any(|c| !c.is_ascii()) {
+            Some(domain.clone())
+        } else {
+            None
+        };
+        // Fast path for localhost: a valid local name with no TLD.
+        if domain == "localhost" {
+            return DomainSyntaxReport {
+                valid: issues.is_empty(),
+                domain,
+                punycode: Some("localhost".to_string()),
+                unicode,
+                is_local: true,
+                issues,
+            };
+        }
         let punycode = match url::Host::parse(&domain) {
             Ok(url::Host::Domain(ascii)) => Some(ascii),
-            Ok(_) => None,
+            Ok(_) => {
+                issues.push("Domain is an IP address, not a hostname".to_string());
+                None
+            }
             Err(_) => {
                 issues.push("Domain is not a valid hostname".to_string());
                 None
@@ -502,7 +752,9 @@ impl DnsVerifier {
                 issues.push(format!("Label \"{label}\" contains invalid characters"));
             }
         }
+        let mut is_local = false;
         if let Some(tld) = labels.last() {
+            is_local = LOCAL_SUFFIXES.contains(tld);
             let tld_ok = (tld.len() >= 2
                 && tld.chars().all(|c| c.is_ascii_alphabetic()))
                 || tld.starts_with("xn--");
@@ -514,6 +766,8 @@ impl DnsVerifier {
             valid: issues.is_empty(),
             domain: domain.clone(),
             punycode,
+            unicode,
+            is_local,
             issues,
         }
     }
@@ -564,26 +818,27 @@ impl DnsVerifier {
         report
     }
 
-    /// Full report for a domain: syntax, A / AAAA / MX / TXT, SPF, DKIM,
-    /// DMARC, and resolver health. Individual lookup failures are recorded
-    /// in the report instead of failing the whole request.
+    /// Full report for a domain: syntax, A / AAAA / CNAME / MX / TXT,
+    /// SPF, DKIM, DMARC, and resolver health. The input may be a bare
+    /// domain or a URL; it is normalised to its ASCII form first.
+    /// Individual lookup failures are recorded in the report instead of
+    /// failing the whole request.
     pub async fn check_domain_full(
         &self,
         domain: &str,
         selector: Option<&str>,
-    ) -> UnifiedResult<DnsReport> {        let syntax = Self::check_domain_syntax(domain);
+    ) -> UnifiedResult<DnsReport> {
+        let canonical = Self::normalize_domain_input(domain)?;
+        let syntax = Self::check_domain_syntax(&canonical);
         if !syntax.valid {
             return Err(UnifiedError::bad_request(format!(
                 "Invalid domain \"{domain}\": {}",
                 syntax.issues.join("; ")
             )));
         }
-        let canonical = syntax
-            .punycode
-            .clone()
-            .unwrap_or_else(|| domain.to_string());
         let a = self.lookup_a(&canonical).await.unwrap_or_default();
         let aaaa = self.lookup_aaaa(&canonical).await.unwrap_or_default();
+        let cname = self.lookup_cname(&canonical).await.unwrap_or(None);
         let mx = self.lookup_mx(&canonical).await.unwrap_or_default();
         let txt = self.lookup_txt(&canonical).await.unwrap_or_default();
         let spf = self.check_spf(&canonical).await;
@@ -595,6 +850,7 @@ impl DnsVerifier {
             syntax,
             a,
             aaaa,
+            cname,
             mx,
             txt,
             spf,
@@ -868,7 +1124,7 @@ impl Module for NetworkModule {
     }
 
     fn description(&self) -> &'static str {
-        "Network information, active connections, Geo lookups, and the DNS verifier library (A/AAAA/MX/TXT, SPF, DKIM, DMARC, domain syntax, resolver health)."
+        "Network information, active connections, Geo lookups, and the DNS verifier library (A/AAAA/CNAME/PTR/MX/TXT, SPF, DKIM, DMARC, domain syntax with IDNA, IPv4/IPv6 preference, resolver health)."
     }
 
     fn dependencies(&self) -> Vec<&'static str> {
