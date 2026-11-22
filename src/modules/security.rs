@@ -7,14 +7,19 @@
 
 use crate::core::context::AppContext;
 use crate::core::error::{UnifiedError, UnifiedResult};
+use crate::core::hardening::{
+    shared_state, FailedAuthCluster, HeadersUpdate, IpListEntry, LockoutStatus, RateLimitEntry,
+    ReputationEntry, SecuritySettingsUpdate,
+};
 use crate::core::hooks::{events, HookBus};
 use crate::core::json::{error_response, success_response};
-use crate::core::modules::{Module, ModuleRegistry};
+use crate::core::modules::{Module, ModuleRegistry, RouteInfo};
 use crate::core::pagination::{PageResult, PaginationParams};
 use actix_web::{web, HttpResponse};
 use dashmap::DashMap;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use std::net::{TcpStream, ToSocketAddrs};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -566,17 +571,72 @@ impl Module for SecurityModule {
     }
 
     fn description(&self) -> &'static str {
-        "Runs security checks, exposes the password policy, and scans targets for TLS presence."
+        "Runs security checks, exposes the password policy, scans targets for TLS presence, and serves the hardening surface: brute-force status and unlock, rate-limit status, IP allow/block lists, security headers, and failed-auth alerts."
     }
 
     fn register_hooks(&self, bus: &HookBus) {
         let failed_logins = self.failed_logins.clone();
         bus.register(events::AUTH_FAILED, "security", Arc::new(move |context| {
-            if let Some(ip) = context.get("ip").and_then(|value| value.as_str()) {
-                let mut count = failed_logins.entry(ip.to_string()).or_insert(0);
+            // The auth manager emits `auth.failed` without an IP on the
+            // token-verification path and with `ip` / `user_id` on the
+            // login paths; feed the hardening engine with whatever the
+            // payload carries so repeated failures still cluster.
+            let ip = context
+                .get("ip")
+                .and_then(|value| value.as_str())
+                .map(str::to_string);
+            let account = context
+                .get("user_id")
+                .or_else(|| context.get("account_id"))
+                .or_else(|| context.get("email"))
+                .and_then(|value| value.as_str())
+                .map(str::to_string);
+            if let Some(ip) = &ip {
+                let mut count = failed_logins.entry(ip.clone()).or_insert(0);
                 *count += 1;
             }
+            shared_state().record_login_failure(ip.as_deref(), account.as_deref());
         }));
+        // A successful login resets the brute-force counters for the IP
+        // and the account, so earlier failures never lock out a
+        // legitimate user. The auth manager emits `auth.login` with
+        // `user_id` on both the JWT issue path and the Google SSO path.
+        bus.register(events::AUTH_LOGIN, "security", Arc::new(move |context| {
+            let ip = context
+                .get("ip")
+                .and_then(|value| value.as_str())
+                .map(str::to_string);
+            let account = context
+                .get("user_id")
+                .or_else(|| context.get("account_id"))
+                .or_else(|| context.get("email"))
+                .and_then(|value| value.as_str())
+                .map(str::to_string);
+            shared_state().record_login_success(ip.as_deref(), account.as_deref());
+        }));
+    }
+
+    fn route_info(&self) -> Vec<RouteInfo> {
+        vec![
+            RouteInfo { method: "GET", path: "/api/v1/security/checks", owner: "security", description: "Checks" },
+            RouteInfo { method: "GET", path: "/api/v1/security/policy", owner: "security", description: "Policy" },
+            RouteInfo { method: "POST", path: "/api/v1/security/scan", owner: "security", description: "Scan" },
+            RouteInfo { method: "GET", path: "/api/v1/security/failed-logins", owner: "security", description: "Failed logins" },
+            RouteInfo { method: "GET", path: "/api/v1/security/hardening/settings", owner: "security", description: "`GET /api/v1/security/hardening/settings`: the live hardening settings plus live counts (list sizes, current lockouts, flagged IPs, failed-auth clusters)." },
+            RouteInfo { method: "PUT", path: "/api/v1/security/hardening/settings", owner: "security", description: "`PUT /api/v1/security/hardening/settings`: partial settings update." },
+            RouteInfo { method: "GET", path: "/api/v1/security/hardening/brute-force", owner: "security", description: "`GET /api/v1/security/hardening/brute-force`: paginated lockout / attempt status per IP and per account." },
+            RouteInfo { method: "POST", path: "/api/v1/security/hardening/brute-force/unlock", owner: "security", description: "`POST /api/v1/security/hardening/brute-force/unlock`: manually clear a lockout / attempt record for one IP (`kind: \"ip\"`) or one account (`kind: \"account\"`)." },
+            RouteInfo { method: "GET", path: "/api/v1/security/hardening/rate-limit", owner: "security", description: "`GET /api/v1/security/hardening/rate-limit`: paginated tracked rate-limit windows." },
+            RouteInfo { method: "GET", path: "/api/v1/security/hardening/ip-lists", owner: "security", description: "`GET /api/v1/security/hardening/ip-lists`: paginated allow/block list entries." },
+            RouteInfo { method: "POST", path: "/api/v1/security/hardening/ip-lists", owner: "security", description: "`POST /api/v1/security/hardening/ip-lists`: add one CIDR range or bare IP to the allowlist or the blocklist." },
+            RouteInfo { method: "DELETE", path: "/api/v1/security/hardening/ip-lists", owner: "security", description: "`DELETE /api/v1/security/hardening/ip-lists?list=allow&cidr=...`: remove one entry from the allowlist or the blocklist." },
+            RouteInfo { method: "GET", path: "/api/v1/security/hardening/headers", owner: "security", description: "`GET /api/v1/security/hardening/headers`: the configured security header values (empty means that header is disabled)." },
+            RouteInfo { method: "PUT", path: "/api/v1/security/hardening/headers", owner: "security", description: "`PUT /api/v1/security/hardening/headers`: partial header update." },
+            RouteInfo { method: "GET", path: "/api/v1/security/hardening/failed-auth-alerts", owner: "security", description: "`GET /api/v1/security/hardening/failed-auth-alerts`: paginated failed-auth clusters (repeated failures grouped by IP + account), most recently active first." },
+            RouteInfo { method: "GET", path: "/api/v1/security/hardening/reputation", owner: "security", description: "`GET /api/v1/security/hardening/reputation`: paginated IP reputation records, highest score first." },
+            RouteInfo { method: "POST", path: "/api/v1/security/hardening/reputation/flag", owner: "security", description: "`POST /api/v1/security/hardening/reputation/flag`: manually flag an IP with a reason." },
+            RouteInfo { method: "POST", path: "/api/v1/security/hardening/reputation/unflag", owner: "security", description: "`POST /api/v1/security/hardening/reputation/unflag`: manually unflag an IP and reset its score." },
+        ]
     }
 
     fn configure_routes(&self, cfg: &mut web::ServiceConfig) {
@@ -586,7 +646,363 @@ impl Module for SecurityModule {
                 .route("/checks", web::get().to(checks))
                 .route("/policy", web::get().to(policy))
                 .route("/scan", web::post().to(scan))
-                .route("/failed-logins", web::get().to(failed_logins)),
+                .route("/failed-logins", web::get().to(failed_logins))
+                .route("/hardening/settings", web::get().to(get_hardening_settings))
+                .route(
+                    "/hardening/settings",
+                    web::put().to(update_hardening_settings),
+                )
+                .route(
+                    "/hardening/brute-force",
+                    web::get().to(list_brute_force_status),
+                )
+                .route(
+                    "/hardening/brute-force/unlock",
+                    web::post().to(unlock_brute_force),
+                )
+                .route(
+                    "/hardening/rate-limit",
+                    web::get().to(list_rate_limit_status),
+                )
+                .route("/hardening/ip-lists", web::get().to(list_ip_entries))
+                .route("/hardening/ip-lists", web::post().to(add_ip_entry))
+                .route(
+                    "/hardening/ip-lists",
+                    web::delete().to(remove_ip_entry),
+                )
+                .route("/hardening/headers", web::get().to(get_headers_config))
+                .route("/hardening/headers", web::put().to(update_headers_config))
+                .route(
+                    "/hardening/failed-auth-alerts",
+                    web::get().to(list_failed_auth_alerts),
+                )
+                .route("/hardening/reputation", web::get().to(list_reputation))
+                .route(
+                    "/hardening/reputation/flag",
+                    web::post().to(flag_reputation),
+                )
+                .route(
+                    "/hardening/reputation/unflag",
+                    web::post().to(unflag_reputation),
+                ),
         );
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Hardening HTTP surface
+//
+// Every handler below reads the shared `HardeningState` (the same
+// instance the middleware enforces), so a settings change or an
+// unlock takes effect immediately. All list endpoints use the shared
+// pagination parameters (`page`, `per_page`, `sort`, `order`,
+// `search`, plus exact-match filters) and return
+// `PageResult::to_json()` inside the standard success envelope.
+// ---------------------------------------------------------------------------
+
+/// Paginate an already-collected, already-sorted item list.
+fn paginate_items<T: Serialize + Clone>(
+    items: Vec<T>,
+    params: &PaginationParams,
+) -> serde_json::Value {
+    let pagination = params.normalized();
+    let total = items.len() as u64;
+    let start = ((pagination.page - 1) * pagination.per_page) as usize;
+    let end = (start + pagination.per_page as usize).min(items.len());
+    let page_items = if start >= items.len() {
+        Vec::new()
+    } else {
+        items[start..end].to_vec()
+    };
+    PageResult::new(page_items, total, &pagination).to_json()
+}
+
+fn matches_search(haystack: &str, search: &Option<String>) -> bool {
+    match search {
+        Some(needle) => haystack
+            .to_lowercase()
+            .contains(&needle.to_lowercase()),
+        None => true,
+    }
+}
+
+/// `GET /api/v1/security/hardening/settings`: the live hardening
+/// settings plus live counts (list sizes, current lockouts, flagged
+/// IPs, failed-auth clusters).
+async fn get_hardening_settings() -> HttpResponse {
+    let state = shared_state();
+    let settings = state.settings();
+    let counts = state.overview_counts();
+    success_response(
+        json!({ "settings": settings, "counts": counts }),
+        200,
+    )
+}
+
+/// `PUT /api/v1/security/hardening/settings`: partial settings
+/// update. Only the fields present are changed; the merged settings
+/// are validated and nothing changes on failure. Updates the runtime
+/// copy only and does not rewrite the configuration file.
+async fn update_hardening_settings(
+    ctx: web::Data<Arc<AppContext>>,
+    body: web::Json<SecuritySettingsUpdate>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let state = shared_state();
+    match state.update_settings(body.into_inner()) {
+        Ok(settings) => success_response(
+            json!({ "settings": settings, "counts": state.overview_counts() }),
+            200,
+        ),
+        Err(message) => error_response(&UnifiedError::bad_request(message), debug),
+    }
+}
+
+/// `GET /api/v1/security/hardening/brute-force`: paginated lockout /
+/// attempt status per IP and per account. Filters: `kind` (`ip` or
+/// `account`), `locked` (`true` / `false`); `search` matches the key.
+async fn list_brute_force_status(query: web::Query<PaginationParams>) -> HttpResponse {
+    let pagination = query.normalized();
+    let mut statuses: Vec<LockoutStatus> = shared_state().lockout_statuses();
+    if let Some(kind) = pagination.filters.get("kind") {
+        statuses.retain(|entry| &entry.kind == kind);
+    }
+    if let Some(locked) = pagination.filters.get("locked") {
+        let want = locked == "true";
+        statuses.retain(|entry| entry.locked == want);
+    }
+    statuses.retain(|entry| matches_search(&entry.key, &pagination.search));
+    success_response(paginate_items(statuses, &query), 200)
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct UnlockRequest {
+    pub target: String,
+    pub kind: String,
+}
+
+/// `POST /api/v1/security/hardening/brute-force/unlock`: manually
+/// clear a lockout / attempt record for one IP (`kind: "ip"`) or one
+/// account (`kind: "account"`). Emits `security.bruteforce.unlocked`.
+async fn unlock_brute_force(
+    ctx: web::Data<Arc<AppContext>>,
+    body: web::Json<UnlockRequest>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let kind = body.kind.trim();
+    if kind != "ip" && kind != "account" {
+        return error_response(
+            &UnifiedError::bad_request("kind must be \"ip\" or \"account\""),
+            debug,
+        );
+    }
+    let target = body.target.trim();
+    if target.is_empty() {
+        return error_response(&UnifiedError::bad_request("target must not be empty"), debug);
+    }
+    if shared_state().unlock(kind, target) {
+        success_response(
+            json!({ "unlocked": true, "kind": kind, "key": target }),
+            200,
+        )
+    } else {
+        error_response(
+            &UnifiedError::not_found(format!(
+                "No brute-force record found for {kind} \"{target}\""
+            )),
+            debug,
+        )
+    }
+}
+
+/// `GET /api/v1/security/hardening/rate-limit`: paginated tracked
+/// rate-limit windows. Filters: `scope` (`ip`, `user`, or
+/// `endpoint`); `search` matches the window key.
+async fn list_rate_limit_status(query: web::Query<PaginationParams>) -> HttpResponse {
+    let pagination = query.normalized();
+    let mut entries: Vec<RateLimitEntry> = shared_state().rate_limit_entries();
+    if let Some(scope) = pagination.filters.get("scope") {
+        entries.retain(|entry| &entry.scope == scope);
+    }
+    entries.retain(|entry| matches_search(&entry.key, &pagination.search));
+    success_response(paginate_items(entries, &query), 200)
+}
+
+/// `GET /api/v1/security/hardening/ip-lists`: paginated allow/block
+/// list entries. Filter: `list` (`allow` or `block`); `search`
+/// matches the CIDR text.
+async fn list_ip_entries(query: web::Query<PaginationParams>) -> HttpResponse {
+    let pagination = query.normalized();
+    let state = shared_state();
+    let mut entries: Vec<IpListEntry> = Vec::new();
+    match pagination.filters.get("list").map(String::as_str) {
+        Some("allow") => entries.extend(state.ip_list_entries("allow")),
+        Some("block") => entries.extend(state.ip_list_entries("block")),
+        _ => {
+            entries.extend(state.ip_list_entries("allow"));
+            entries.extend(state.ip_list_entries("block"));
+            entries.sort_by(|a, b| a.cidr.cmp(&b.cidr));
+        }
+    }
+    entries.retain(|entry| matches_search(&entry.cidr, &pagination.search));
+    success_response(paginate_items(entries, &query), 200)
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct IpListAddRequest {
+    pub list: String,
+    pub cidr: String,
+}
+
+/// `POST /api/v1/security/hardening/ip-lists`: add one CIDR range or
+/// bare IP to the allowlist or the blocklist. CIDR notation is
+/// validated for IPv4 and IPv6; a bare IP becomes a host route.
+async fn add_ip_entry(
+    ctx: web::Data<Arc<AppContext>>,
+    body: web::Json<IpListAddRequest>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    match shared_state().add_ip_entry(body.list.trim(), body.cidr.trim()) {
+        Ok(entry) => success_response(entry, 201),
+        Err(message) => error_response(&UnifiedError::bad_request(message), debug),
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct IpListRemoveQuery {
+    pub list: Option<String>,
+    pub cidr: Option<String>,
+}
+
+/// `DELETE /api/v1/security/hardening/ip-lists?list=allow&cidr=...`:
+/// remove one entry from the allowlist or the blocklist. Removing a
+/// missing entry is a 404.
+async fn remove_ip_entry(
+    ctx: web::Data<Arc<AppContext>>,
+    query: web::Query<IpListRemoveQuery>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let (Some(list), Some(cidr)) = (query.list.clone(), query.cidr.clone()) else {
+        return error_response(
+            &UnifiedError::bad_request("query parameters \"list\" and \"cidr\" are required"),
+            debug,
+        );
+    };
+    match shared_state().remove_ip_entry(list.trim(), cidr.trim()) {
+        Ok(true) => success_response(
+            json!({ "removed": true, "list": list, "cidr": cidr }),
+            200,
+        ),
+        Ok(false) => error_response(
+            &UnifiedError::not_found(format!(
+                "No \"{list}\" list entry found for \"{cidr}\""
+            )),
+            debug,
+        ),
+        Err(message) => error_response(&UnifiedError::bad_request(message), debug),
+    }
+}
+
+/// `GET /api/v1/security/hardening/headers`: the configured security
+/// header values (empty means that header is disabled).
+async fn get_headers_config() -> HttpResponse {
+    let settings = shared_state().settings();
+    success_response(
+        json!({
+            "strict_transport_security": settings.headers_hsts,
+            "content_type_options": settings.headers_content_type_options,
+            "frame_options": settings.headers_frame_options,
+            "referrer_policy": settings.headers_referrer_policy,
+            "content_security_policy": settings.headers_content_security_policy,
+            "permissions_policy": settings.headers_permissions_policy,
+        }),
+        200,
+    )
+}
+
+/// `PUT /api/v1/security/hardening/headers`: partial header update.
+/// Only the fields present are changed; an empty string disables
+/// that header.
+async fn update_headers_config(body: web::Json<HeadersUpdate>) -> HttpResponse {
+    let settings = shared_state().update_headers(body.into_inner());
+    success_response(
+        json!({
+            "strict_transport_security": settings.headers_hsts,
+            "content_type_options": settings.headers_content_type_options,
+            "frame_options": settings.headers_frame_options,
+            "referrer_policy": settings.headers_referrer_policy,
+            "content_security_policy": settings.headers_content_security_policy,
+            "permissions_policy": settings.headers_permissions_policy,
+        }),
+        200,
+    )
+}
+
+/// `GET /api/v1/security/hardening/failed-auth-alerts`: paginated
+/// failed-auth clusters (repeated failures grouped by IP + account),
+/// most recently active first. `search` matches the IP or account.
+async fn list_failed_auth_alerts(query: web::Query<PaginationParams>) -> HttpResponse {
+    let pagination = query.normalized();
+    let mut clusters: Vec<FailedAuthCluster> = shared_state().failed_auth_clusters();
+    clusters.retain(|cluster| {
+        let haystack = format!(
+            "{} {} {}",
+            cluster.key,
+            cluster.ip.clone().unwrap_or_default(),
+            cluster.account.clone().unwrap_or_default()
+        );
+        matches_search(&haystack, &pagination.search)
+    });
+    success_response(paginate_items(clusters, &query), 200)
+}
+
+/// `GET /api/v1/security/hardening/reputation`: paginated IP
+/// reputation records, highest score first. Filter: `flagged`
+/// (`true` / `false`); `search` matches the IP.
+async fn list_reputation(query: web::Query<PaginationParams>) -> HttpResponse {
+    let pagination = query.normalized();
+    let mut entries: Vec<ReputationEntry> = shared_state().reputation_entries();
+    if let Some(flagged) = pagination.filters.get("flagged") {
+        let want = flagged == "true";
+        entries.retain(|entry| entry.flagged == want);
+    }
+    entries.retain(|entry| matches_search(&entry.ip, &pagination.search));
+    success_response(paginate_items(entries, &query), 200)
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct ReputationFlagRequest {
+    pub ip: String,
+    pub reason: Option<String>,
+}
+
+/// `POST /api/v1/security/hardening/reputation/flag`: manually flag
+/// an IP with a reason. Emits `security.ip.flagged`.
+async fn flag_reputation(
+    ctx: web::Data<Arc<AppContext>>,
+    body: web::Json<ReputationFlagRequest>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    match shared_state().flag_ip(body.ip.trim(), body.reason.clone()) {
+        Ok(entry) => success_response(entry, 200),
+        Err(message) => error_response(&UnifiedError::bad_request(message), debug),
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct ReputationUnflagRequest {
+    pub ip: String,
+}
+
+/// `POST /api/v1/security/hardening/reputation/unflag`: manually
+/// unflag an IP and reset its score. Emits `security.ip.unflagged`.
+async fn unflag_reputation(
+    ctx: web::Data<Arc<AppContext>>,
+    body: web::Json<ReputationUnflagRequest>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    match shared_state().unflag_ip(body.ip.trim()) {
+        Ok(entry) => success_response(entry, 200),
+        Err(message) => error_response(&UnifiedError::bad_request(message), debug),
     }
 }

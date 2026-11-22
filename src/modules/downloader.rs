@@ -22,7 +22,7 @@ use crate::core::context::AppContext;
 use crate::core::error::{UnifiedError, UnifiedResult};
 use crate::core::hooks::events;
 use crate::core::json;
-use crate::core::modules::{Module, ModuleRegistry};
+use crate::core::modules::{Module, ModuleRegistry, RouteInfo};
 use crate::core::pagination::{PageResult, PaginationParams};
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Utc};
@@ -1180,6 +1180,18 @@ impl Module for DownloaderModule {
 
     fn description(&self) -> &'static str {
         "Streaming file downloads with progress and ETA, pause/resume via HTTP Range with ETag validation, retry with backoff, cancellation, and checksum verification."
+    }
+
+    fn route_info(&self) -> Vec<RouteInfo> {
+        vec![
+            RouteInfo { method: "GET", path: "/api/v1/downloader/jobs", owner: "downloader", description: "List jobs" },
+            RouteInfo { method: "POST", path: "/api/v1/downloader/jobs", owner: "downloader", description: "Create job" },
+            RouteInfo { method: "GET", path: "/api/v1/downloader/jobs/{id}", owner: "downloader", description: "Get job" },
+            RouteInfo { method: "POST", path: "/api/v1/downloader/jobs/{id}/pause", owner: "downloader", description: "Pause job" },
+            RouteInfo { method: "POST", path: "/api/v1/downloader/jobs/{id}/resume", owner: "downloader", description: "Resume job" },
+            RouteInfo { method: "POST", path: "/api/v1/downloader/jobs/{id}/cancel", owner: "downloader", description: "Cancel job" },
+            RouteInfo { method: "POST", path: "/api/v1/downloader/jobs/{id}/retry", owner: "downloader", description: "Retry job" },
+        ]
     }
 
     fn configure_routes(&self, cfg: &mut actix_web::web::ServiceConfig) {

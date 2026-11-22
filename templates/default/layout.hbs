@@ -13,9 +13,11 @@
   {{/if}}
 </head>
 <body>
+  <a class="skip-link" href="#layout-content">Skip to content</a>
+  {{> icons}}
   {{> header}}
 
-  <main class="layout-main">
+  <main class="layout-main" id="layout-content">
     {{#if flash}}
     <div class="flash flash-{{flash.type}}" role="alert" data-flash>{{flash.message}}</div>
     {{/if}}
@@ -23,6 +25,8 @@
   </main>
 
   {{> footer}}
+
+  {{> palette}}
 
   <script src="{{asset_url "js/dashboard.js"}}" defer></script>
   {{#if scripts}}

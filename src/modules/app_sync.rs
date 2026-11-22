@@ -13,7 +13,7 @@ use crate::core::context::AppContext;
 use crate::core::error::{UnifiedError, UnifiedResult};
 use crate::core::hooks::events;
 use crate::core::json;
-use crate::core::modules::{Module, ModuleRegistry};
+use crate::core::modules::{Module, ModuleRegistry, RouteInfo};
 use crate::core::pagination::{PageResult, PaginationParams};
 use actix_web::{web, HttpResponse};
 use base64::Engine;
@@ -403,6 +403,17 @@ impl Module for AppSyncModule {
 
     fn description(&self) -> &'static str {
         "Desktop-app integration: HMAC-signed device tokens and versioned push/pull sync per device."
+    }
+
+    fn route_info(&self) -> Vec<RouteInfo> {
+        vec![
+            RouteInfo { method: "POST", path: "/api/v1/app-sync/devices/register", owner: "app-sync", description: "Register device" },
+            RouteInfo { method: "GET", path: "/api/v1/app-sync/devices", owner: "app-sync", description: "List devices" },
+            RouteInfo { method: "GET", path: "/api/v1/app-sync/devices/{id}", owner: "app-sync", description: "Get device" },
+            RouteInfo { method: "POST", path: "/api/v1/app-sync/devices/{id}/revoke", owner: "app-sync", description: "Revoke device" },
+            RouteInfo { method: "POST", path: "/api/v1/app-sync/sync/push", owner: "app-sync", description: "Sync push" },
+            RouteInfo { method: "POST", path: "/api/v1/app-sync/sync/pull", owner: "app-sync", description: "Sync pull" },
+        ]
     }
 
     fn configure_routes(&self, cfg: &mut actix_web::web::ServiceConfig) {

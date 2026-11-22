@@ -11,6 +11,10 @@
 use crate::cli::daemon::update_status_file;
 use crate::core::context::AppContext;
 use crate::core::error::{UnifiedError, UnifiedResult};
+use crate::core::hardening::{
+    HardeningState, IpFilterMiddleware, RateLimitMiddleware, RequestSizeMiddleware,
+    SecurityHeadersMiddleware, SecuritySettings,
+};
 use crate::core::hooks::{events, HookBus};
 use crate::core::json;
 use crate::core::middleware::MiddlewareManager;
@@ -19,8 +23,8 @@ use crate::http::tls::SslStorage;
 use crate::modules::network::connection_stats;
 use crate::themes::assets::{serve_asset, serve_theme_asset, StaticAssetConfig};
 use actix_web::dev::Service;
-use actix_web::http::KeepAlive;
-use actix_web::{web, App, HttpResponse, HttpServer};
+use actix_web::http::{header, KeepAlive};
+use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -49,6 +53,23 @@ pub async fn run_server(ctx: Arc<AppContext>) -> UnifiedResult<()> {
         ));
     }
 
+    // Security hardening: build the shared enforcement state from the
+    // `security` config section (defaults apply when the section is
+    // absent) and install it, so the hardening middleware built in the
+    // factory below and the Security module handlers share one state:
+    // settings updates, lockouts, and IP lists are visible on both
+    // sides immediately.
+    {
+        let settings = {
+            let config = ctx.config.read().expect("config lock poisoned");
+            SecuritySettings::from_app_config(&config)
+        };
+        crate::core::hardening::install_shared_state(Arc::new(HardeningState::new(
+            settings,
+            ctx.hooks.clone(),
+        )));
+    }
+
     // Build the TLS configuration once, before binding, so a bad
     // certificate fails startup instead of failing a single listener.
     // The storage itself is kept in an `Arc` alongside the config: the
@@ -70,6 +91,23 @@ pub async fn run_server(ctx: Arc<AppContext>) -> UnifiedResult<()> {
         (Some(config), Some(storage))
     };
 
+    // Attach the one TLS storage to the application context (and to
+    // the gateway's process-wide state when the gateway feature is
+    // compiled in) so the HTTPS listener, the load balancer TLS
+    // endpoint, and the gateway all resolve certificates through this
+    // same storage. Renewals swap certificates into this storage and
+    // take effect live. The certificates module still builds its own
+    // storage in `seed_from_config` until that function is changed to
+    // take this shared handle (its file is owned by another builder);
+    // until then the load balancer endpoint must also switch from its
+    // config-only lookup to `ctx.tls` (same owner) before the
+    // unification is complete.
+    if let Some(storage) = &tls_storage {
+        ctx.set_tls(storage.clone());
+        #[cfg(feature = "gateway")]
+        crate::gateway::set_tls_storage(storage.clone());
+    }
+
     let factory_ctx = ctx.clone();
     let factory_counter = total_requests.clone();
     let mut server = HttpServer::new(move || {
@@ -82,6 +120,23 @@ pub async fn run_server(ctx: Arc<AppContext>) -> UnifiedResult<()> {
         // An empty pipeline passes requests through unchanged.
         let mut middleware_manager = MiddlewareManager::new();
         ctx.modules.register_all_middleware(&mut middleware_manager);
+        // Security hardening middleware, ordered by priority (highest
+        // first): security headers (1000) -> IP blocklist (900) ->
+        // rate limiting (800) -> request-size guard (700) -> module
+        // middleware. The dispatcher sorts by priority, so this order
+        // holds regardless of registration order.
+        // The ACME HTTP-01 challenge route is exempt from the
+        // blocklist and rate limiting inside the middleware: a blocked
+        // or throttled challenge would break certificate issuance and
+        // renewal, which must succeed even while the daemon is under
+        // attack or in maintenance; the challenge token itself is
+        // unguessable and single-use, so the exemption does not open
+        // an abuse vector.
+        let hardening = crate::core::hardening::shared_state();
+        middleware_manager.register(SecurityHeadersMiddleware::new(hardening.clone()));
+        middleware_manager.register(IpFilterMiddleware::new(hardening.clone()));
+        middleware_manager.register(RateLimitMiddleware::new(hardening.clone()));
+        middleware_manager.register(RequestSizeMiddleware::new(hardening.clone()));
         let dispatcher = middleware_manager.create_dispatcher();
         let debug = ctx.is_debug();
         App::new()
@@ -100,6 +155,7 @@ pub async fn run_server(ctx: Arc<AppContext>) -> UnifiedResult<()> {
                 let debug = ctx.is_debug();
                 let blocked = path != "/health"
                     && !path.starts_with("/.well-known/acme-challenge/")
+                    && !is_status_exempt(&path)
                     && (ctx.is_paused() || ctx.is_maintenance());
                 let maintenance = ctx.is_maintenance();
                 let started = Instant::now();
@@ -324,6 +380,21 @@ pub async fn run_server(ctx: Arc<AppContext>) -> UnifiedResult<()> {
     Ok(())
 }
 
+/// Paths that stay available while the daemon is paused or in
+/// maintenance mode: the public status page (`/status`) and the
+/// public statuspage API (`/api/v1/statuspage` and everything under
+/// it). The status page is the channel that tells operators and
+/// visitors the service is down; blocking it during maintenance
+/// would hide exactly the information it exists to publish. The
+/// exemption covers pause as well as maintenance, the same as the
+/// `/health` probe and the ACME challenge above it.
+fn is_status_exempt(path: &str) -> bool {
+    path == "/status"
+        || path.starts_with("/status/")
+        || path == "/api/v1/statuspage"
+        || path.starts_with("/api/v1/statuspage/")
+}
+
 /// `GET /health`: public liveness probe. Always available, even while
 /// the daemon is paused or in maintenance mode.
 async fn health(ctx: web::Data<Arc<AppContext>>) -> HttpResponse {
@@ -334,8 +405,18 @@ async fn health(ctx: web::Data<Arc<AppContext>>) -> HttpResponse {
 }
 
 /// Default service for unmatched routes: the standard error envelope
-/// with a 404, instead of Actix's default plain-text 404.
-async fn not_found(ctx: web::Data<Arc<AppContext>>) -> HttpResponse {
+/// with a 404, instead of Actix's default plain-text 404. When the
+/// path is a recorded old path of a renamed named route, answer with
+/// a permanent (301) redirect to the route's current effective path
+/// instead: the route registry keeps at most one redirect per route
+/// (latest-only), so a redirect target is always current and
+/// redirects never chain.
+async fn not_found(ctx: web::Data<Arc<AppContext>>, req: HttpRequest) -> HttpResponse {
+    if let Some(target) = ctx.routes.resolve_redirect(req.path()) {
+        return HttpResponse::MovedPermanently()
+            .insert_header((header::LOCATION, target))
+            .finish();
+    }
     json::error_response(
         &UnifiedError::not_found("Route not found"),
         ctx.is_debug(),

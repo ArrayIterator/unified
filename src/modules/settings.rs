@@ -9,9 +9,9 @@
 
 use crate::core::context::AppContext;
 use crate::core::error::{UnifiedError, UnifiedResult};
-use crate::core::hooks::events;
+use crate::core::hooks::{events, HookBus, HookContext};
 use crate::core::json::{error_response, success_response};
-use crate::core::modules::{Module, ModuleRegistry};
+use crate::core::modules::{Module, ModuleRegistry, RouteInfo};
 use crate::core::pagination::{PageResult, PaginationParams};
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Utc};
@@ -90,6 +90,57 @@ fn type_matches(value_type: &str, value: &Value) -> bool {
         "json" => true,
         _ => false,
     }
+}
+
+/// Merge settings contributed by another module into the settings
+/// store (`settings.merge`, payload
+/// `{ "namespace": "vcs.github", "settings": { "token_configured": true, ... } }`).
+/// Only `vcs.*` namespaces are accepted, and only flag values are
+/// stored: the VCS module never puts a credential in the merge
+/// payload, so tokens and webhook secrets stay in the VCS module's
+/// own write-only store and are never written here. Merged values are
+/// trusted internal flags, so they are stored without going through
+/// the `config.validate` hook (that hook needs an `AppContext`, which
+/// a synchronous hook handler does not have).
+fn on_settings_merge(store: SettingsStore, ctx: &mut HookContext) {
+    let namespace = ctx
+        .get("namespace")
+        .and_then(|value| value.as_str())
+        .map(str::to_string)
+        .unwrap_or_default();
+    if !namespace.starts_with("vcs.") {
+        ctx.add_result(json!({
+            "merged": 0,
+            "reason": "only vcs.* namespaces can be merged",
+        }));
+        return;
+    }
+    let Some(settings) = ctx.get("settings").and_then(|value| value.as_object()) else {
+        ctx.add_result(json!({
+            "merged": 0,
+            "reason": "settings must be an object",
+        }));
+        return;
+    };
+    let mut merged = 0usize;
+    for (key, value) in settings {
+        if !valid_name(key) {
+            continue;
+        }
+        let record = SettingRecord {
+            namespace: namespace.clone(),
+            key: key.clone(),
+            value_type: infer_type(value).to_string(),
+            value: value.clone(),
+            updated_at: Utc::now(),
+        };
+        store.insert((namespace.clone(), key.clone()), record);
+        merged += 1;
+    }
+    ctx.add_result(json!({
+        "merged": merged,
+        "namespace": namespace,
+    }));
 }
 
 /// Ask the hook bus whether a setting value is acceptable. Returns an
@@ -281,6 +332,26 @@ impl Module for SettingsModule {
 
     fn description(&self) -> &'static str {
         "Namespaced key-value settings with typed values, validated through the config.validate hook."
+    }
+
+    fn register_hooks(&self, bus: &HookBus) {
+        let store = self.store.clone();
+        bus.register(
+            "settings.merge",
+            "settings",
+            Arc::new(move |ctx: &mut HookContext| {
+                on_settings_merge(store.clone(), ctx)
+            }),
+        );
+    }
+
+    fn route_info(&self) -> Vec<RouteInfo> {
+        vec![
+            RouteInfo { method: "GET", path: "/api/v1/settings", owner: "settings", description: "List settings" },
+            RouteInfo { method: "GET", path: "/api/v1/settings/{namespace}/{key}", owner: "settings", description: "Get setting" },
+            RouteInfo { method: "PUT", path: "/api/v1/settings/{namespace}/{key}", owner: "settings", description: "Put setting" },
+            RouteInfo { method: "DELETE", path: "/api/v1/settings/{namespace}/{key}", owner: "settings", description: "Delete setting" },
+        ]
     }
 
     fn configure_routes(&self, cfg: &mut web::ServiceConfig) {

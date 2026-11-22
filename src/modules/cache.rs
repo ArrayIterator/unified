@@ -17,7 +17,7 @@ use crate::core::cache::CacheValue;
 use crate::core::context::AppContext;
 use crate::core::error::{UnifiedError, UnifiedResult};
 use crate::core::json;
-use crate::core::modules::{Module, ModuleRegistry};
+use crate::core::modules::{Module, ModuleRegistry, RouteInfo};
 use actix_web::{web, HttpResponse};
 use base64::Engine;
 use serde::{Deserialize, Serialize};
@@ -176,6 +176,16 @@ impl Module for CacheModule {
 
     fn description(&self) -> &'static str {
         "Shared application cache: filesystem adapter by default, Redis when redis.enabled is true."
+    }
+
+    fn route_info(&self) -> Vec<RouteInfo> {
+        vec![
+            RouteInfo { method: "GET", path: "/api/v1/cache", owner: "cache", description: "Get status" },
+            RouteInfo { method: "POST", path: "/api/v1/cache", owner: "cache", description: "Set entry" },
+            RouteInfo { method: "POST", path: "/api/v1/cache/clear", owner: "cache", description: "Clear cache" },
+            RouteInfo { method: "GET", path: "/api/v1/cache/{key}", owner: "cache", description: "Get entry" },
+            RouteInfo { method: "DELETE", path: "/api/v1/cache/{key}", owner: "cache", description: "Delete entry" },
+        ]
     }
 
     fn configure_routes(&self, cfg: &mut actix_web::web::ServiceConfig) {

@@ -8,7 +8,7 @@
 use crate::core::context::AppContext;
 use crate::core::error::UnifiedError;
 use crate::core::json as api_json;
-use crate::core::modules::{Module, ModuleRegistry};
+use crate::core::modules::{Module, ModuleRegistry, RouteInfo};
 use crate::core::pagination::{PageResult, PaginationParams};
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Utc};
@@ -1020,6 +1020,30 @@ impl Module for ContentModule {
 
     fn description(&self) -> &'static str {
         "Posts, categories, and pages with slug handling, publishing, and excerpts."
+    }
+
+    fn route_info(&self) -> Vec<RouteInfo> {
+        vec![
+            RouteInfo { method: "GET", path: "/api/v1/content/posts", owner: "content", description: "List posts" },
+            RouteInfo { method: "POST", path: "/api/v1/content/posts", owner: "content", description: "Create post" },
+            RouteInfo { method: "GET", path: "/api/v1/content/posts/{id}", owner: "content", description: "Get post" },
+            RouteInfo { method: "PUT", path: "/api/v1/content/posts/{id}", owner: "content", description: "Update post" },
+            RouteInfo { method: "DELETE", path: "/api/v1/content/posts/{id}", owner: "content", description: "Delete post" },
+            RouteInfo { method: "POST", path: "/api/v1/content/posts/{id}/publish", owner: "content", description: "Publish post" },
+            RouteInfo { method: "POST", path: "/api/v1/content/posts/{id}/unpublish", owner: "content", description: "Unpublish post" },
+            RouteInfo { method: "GET", path: "/api/v1/content/categories", owner: "content", description: "List categories" },
+            RouteInfo { method: "POST", path: "/api/v1/content/categories", owner: "content", description: "Create category" },
+            RouteInfo { method: "GET", path: "/api/v1/content/categories/{id}", owner: "content", description: "Get category" },
+            RouteInfo { method: "PUT", path: "/api/v1/content/categories/{id}", owner: "content", description: "Update category" },
+            RouteInfo { method: "DELETE", path: "/api/v1/content/categories/{id}", owner: "content", description: "Delete category" },
+            RouteInfo { method: "GET", path: "/api/v1/content/pages", owner: "content", description: "List pages" },
+            RouteInfo { method: "POST", path: "/api/v1/content/pages", owner: "content", description: "Create page" },
+            RouteInfo { method: "GET", path: "/api/v1/content/pages/{id}", owner: "content", description: "Get page" },
+            RouteInfo { method: "PUT", path: "/api/v1/content/pages/{id}", owner: "content", description: "Update page" },
+            RouteInfo { method: "DELETE", path: "/api/v1/content/pages/{id}", owner: "content", description: "Delete page" },
+            RouteInfo { method: "POST", path: "/api/v1/content/pages/{id}/publish", owner: "content", description: "Publish page" },
+            RouteInfo { method: "POST", path: "/api/v1/content/pages/{id}/unpublish", owner: "content", description: "Unpublish page" },
+        ]
     }
 
     fn configure_routes(&self, cfg: &mut web::ServiceConfig) {

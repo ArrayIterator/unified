@@ -11,6 +11,15 @@ publish = false
 name = "unified"
 path = "src/main.rs"
 
+[features]
+# Pingora reverse-proxy gateway. The gateway module is only compiled
+# with this feature: with it off, `crate::gateway` does not exist and
+# the default build links no Pingora code. The gateway's non-proxy
+# parts (state, routing, health, management API) compile without the
+# feature, but they reference the load balancer module, which must be
+# declared in `src/modules/mod.rs` before the feature build resolves.
+gateway = ["dep:pingora"]
+
 [dependencies]
 # Web and async
 actix-web = { version = "4", features = ["rustls-0_23", "secure-cookies"] }
@@ -47,6 +56,16 @@ base32 = "0.5"
 
 # Network, TLS, and downloads
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls", "stream", "multipart"] }
+# Pingora reverse proxy (optional: only with the `gateway` feature).
+# Version pin is unverified (no toolchain or registry access here):
+# 0.4 matches the API shape the gateway proxy code is written
+# against (`Server::new`, `http_proxy_service`, `ProxyHttp`,
+# `HttpPeer`, `TlsSettings`), but newer lines exist (0.8.1 fixes a
+# Pingora HTTP/2 denial-of-service, 0.9.0 is current) — confirm the
+# pin against the resolved Pingora API, including the 11 UNCERTAIN
+# (pingora-N) points marked in `src/gateway/proxy.rs`, before
+# enabling the feature in a release build.
+pingora = { version = "0.4", optional = true }
 rustls = { version = "0.23", features = ["aws-lc-rs", "std"] }
 rustls-pemfile = "2.2"
 rustls-pki-types = "1.12"

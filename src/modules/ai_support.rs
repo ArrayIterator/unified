@@ -29,7 +29,7 @@ use crate::core::context::AppContext;
 use crate::core::error::{UnifiedError, UnifiedResult};
 use crate::core::hooks::HookBus;
 use crate::core::json;
-use crate::core::modules::{Module, ModuleRegistry};
+use crate::core::modules::{Module, ModuleRegistry, RouteInfo};
 use crate::core::pagination::{PageResult, PaginationParams};
 use actix_web::{web, HttpRequest, HttpResponse};
 use chrono::{DateTime, Utc};
@@ -426,6 +426,23 @@ impl Module for AiSupportModule {
     fn init(&self, ctx: &AppContext) -> UnifiedResult<()> {
         *self.state.hooks.write().expect("hooks lock poisoned") = Some(Arc::clone(&ctx.hooks));
         Ok(())
+    }
+
+    fn route_info(&self) -> Vec<RouteInfo> {
+        vec![
+            RouteInfo { method: "POST", path: "/api/v1/ai-support/ask", owner: "ai-support", description: "Ask" },
+            RouteInfo { method: "GET", path: "/api/v1/ai-support/conversations", owner: "ai-support", description: "List conversations" },
+            RouteInfo { method: "GET", path: "/api/v1/ai-support/conversations/{id}", owner: "ai-support", description: "Get conversation" },
+            RouteInfo { method: "PATCH", path: "/api/v1/ai-support/conversations/{id}", owner: "ai-support", description: "Update conversation" },
+            RouteInfo { method: "DELETE", path: "/api/v1/ai-support/conversations/{id}", owner: "ai-support", description: "Delete conversation" },
+            RouteInfo { method: "POST", path: "/api/v1/ai-support/handoff", owner: "ai-support", description: "Handoff" },
+            RouteInfo { method: "POST", path: "/api/v1/ai-support/tickets", owner: "ai-support", description: "Create ticket" },
+            RouteInfo { method: "GET", path: "/api/v1/ai-support/connectors", owner: "ai-support", description: "List connectors" },
+            RouteInfo { method: "POST", path: "/api/v1/ai-support/connectors", owner: "ai-support", description: "Create connector" },
+            RouteInfo { method: "GET", path: "/api/v1/ai-support/connectors/{id}", owner: "ai-support", description: "Get connector" },
+            RouteInfo { method: "PATCH", path: "/api/v1/ai-support/connectors/{id}", owner: "ai-support", description: "Update connector" },
+            RouteInfo { method: "DELETE", path: "/api/v1/ai-support/connectors/{id}", owner: "ai-support", description: "Delete connector" },
+        ]
     }
 
     fn configure_routes(&self, cfg: &mut web::ServiceConfig) {

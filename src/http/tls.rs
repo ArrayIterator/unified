@@ -14,6 +14,8 @@ use rustls::server::{ClientHello, ParsedCertificate, ResolvesServerCert};
 use rustls::sign::CertifiedKey;
 use rustls::{Error as RustlsError, ServerConfig};
 use rustls_pki_types::{CertificateDer, DnsName, PrivateKeyDer, ServerName};
+use serde::Serialize;
+use sha2::{Digest, Sha256};
 use std::collections::HashSet;
 use std::io::BufReader;
 use std::net::IpAddr;
@@ -41,6 +43,10 @@ pub struct SslStorage {
     /// from `dynamic` so cache eviction can never drop a configured or
     /// renewed certificate, and so fallbacks lose to both in lookups.
     auto_created: DashMap<String, Arc<CertifiedKey>>,
+    /// Previous live certificate per name, saved by `swap_certificate`
+    /// before a replacement goes live, so `rollback_certificate` can
+    /// restore it when a swap turns out to be bad.
+    previous: DashMap<String, Arc<CertifiedKey>>,
 }
 
 /// Lowercase a DNS name and convert Unicode labels to ASCII (punycode).
@@ -261,6 +267,7 @@ impl SslStorage {
             defaults: DashMap::new(),
             dynamic: DashMap::new(),
             auto_created: DashMap::new(),
+            previous: DashMap::new(),
         });
         let mut bad: Vec<String> = Vec::new();
         if ssl.cert.is_empty() != ssl.key.is_empty() {
@@ -505,4 +512,582 @@ pub fn server_config(storage: &Arc<SslStorage>) -> UnifiedResult<ServerConfig> {
         .with_cert_resolver(Arc::clone(storage));
     config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
     Ok(config)
+}
+
+// ---------------------------------------------------------------------------
+// Advanced certificate management: inspection, config validation,
+// swap with rollback, and revocation.
+//
+// These helpers extend the storage above without changing any of its
+// original behaviour: `from_config` still fails startup on a bad
+// configured certificate, while `from_config_lenient` loads every valid
+// entry, reports every invalid one with per-domain reasons, and lets
+// the server keep running on the self-signed fallback for the bad
+// domains. Private keys are never included in any value returned here:
+// callers only ever see fingerprints and metadata.
+// ---------------------------------------------------------------------------
+
+/// Days before expiry at which a certificate counts as `expiring`.
+pub const CERT_EXPIRING_DAYS: i64 = 30;
+
+/// Status of one certificate: `valid`, `expiring`, `expired`,
+/// `invalid`, or `self-signed`.
+pub fn status_for(days_remaining: i64, self_signed: bool) -> &'static str {
+    if days_remaining < 0 {
+        "expired"
+    } else if self_signed {
+        "self-signed"
+    } else if days_remaining <= CERT_EXPIRING_DAYS {
+        "expiring"
+    } else {
+        "valid"
+    }
+}
+
+/// SHA-256 fingerprint of one DER certificate, lowercase hex.
+pub fn fingerprint_sha256(der: &[u8]) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(der);
+    let digest = hasher.finalize();
+    let mut out = String::with_capacity(digest.len() * 2);
+    for byte in digest {
+        out.push_str(&format!("{byte:02x}"));
+    }
+    out
+}
+
+/// Public metadata of one certificate. No private key material is ever
+/// present here: only the fingerprint and the certificate metadata.
+#[derive(Debug, Clone, Serialize)]
+pub struct CertificateInfo {
+    pub domain: String,
+    pub subject: String,
+    pub issuer: String,
+    /// Common name plus every DNS / IP subject alternative name.
+    pub sans: Vec<String>,
+    pub not_before: String,
+    pub not_after: String,
+    pub days_remaining: i64,
+    pub fingerprint_sha256: String,
+    pub self_signed: bool,
+    pub chain_length: usize,
+    pub chain_complete: bool,
+    /// `Some(true/false)` when a private key was checked against the
+    /// leaf, `None` when no key was available (stored certificates).
+    pub key_matches: Option<bool>,
+    pub status: String,
+    /// `configured`, `dynamic`, `fallback`, or `custom`.
+    pub source: String,
+}
+
+/// Validation report for one configured or uploaded certificate.
+#[derive(Debug, Clone, Serialize)]
+pub struct CertificateValidation {
+    pub domain: String,
+    pub valid: bool,
+    pub reasons: Vec<String>,
+    pub info: Option<CertificateInfo>,
+}
+
+/// Check one parsed chain: every certificate must parse, and the chain
+/// is complete when the leaf is self-signed or when at least one
+/// intermediate is present and the certificates are ordered (the
+/// issuer common name of each certificate matches the subject common
+/// name of the next one). The common-name comparison is a heuristic:
+/// authorities that omit the common name fall back to "ordered" when
+/// both names are absent. Returns `(complete, reasons)`.
+pub fn check_chain(certs: &[CertificateDer<'static>]) -> (bool, Vec<String>) {
+    let mut reasons: Vec<String> = Vec::new();
+    if certs.is_empty() {
+        return (false, vec!["no certificates found".to_string()]);
+    }
+    let mut parsed: Vec<X509Certificate> = Vec::with_capacity(certs.len());
+    for (index, der) in certs.iter().enumerate() {
+        match X509Certificate::from_der(der.as_ref()) {
+            Ok(cert) => parsed.push(cert),
+            Err(error) => reasons.push(format!(
+                "certificate {index} in the chain cannot be parsed: {error}"
+            )),
+        }
+    }
+    if !reasons.is_empty() {
+        return (false, reasons);
+    }
+    let leaf = &parsed[0];
+    let leaf_subject = leaf.subject_common_name();
+    let leaf_issuer = leaf.issuer_common_name();
+    let leaf_self_signed = leaf_subject.is_some()
+        && leaf_subject == leaf_issuer;
+    if parsed.len() == 1 {
+        if leaf_self_signed {
+            return (true, Vec::new());
+        }
+        return (
+            false,
+            vec![
+                "chain is incomplete: the leaf certificate has no intermediate certificate bundled"
+                    .to_string(),
+            ],
+        );
+    }
+    for index in 0..parsed.len() - 1 {
+        let issuer = parsed[index].issuer_common_name();
+        let subject = parsed[index + 1].subject_common_name();
+        if let (Some(issuer), Some(subject)) = (issuer, subject) {
+            if issuer != subject {
+                reasons.push(format!(
+                    "chain order problem: certificate {index} was issued by \"{issuer}\" but certificate {} belongs to \"{subject}\"",
+                    index + 1
+                ));
+            }
+        }
+    }
+    (reasons.is_empty(), reasons)
+}
+
+/// Build the public metadata of one leaf certificate.
+fn info_from_leaf(
+    domain: &str,
+    der: &[u8],
+    chain_length: usize,
+    chain_complete: bool,
+    key_matches: Option<bool>,
+    source: &str,
+) -> Result<CertificateInfo, String> {
+    let cert = X509Certificate::from_der(der).map_err(|e| format!("invalid certificate: {e}"))?;
+    let subject = cert.subject_common_name().unwrap_or_default();
+    let issuer = cert.issuer_common_name().unwrap_or_default();
+    let not_before = cert.validity_not_before();
+    let not_after = cert.validity_not_after();
+    let days_remaining = not_after.signed_duration_since(Utc::now()).num_days();
+    let self_signed = !subject.is_empty() && subject == issuer;
+    Ok(CertificateInfo {
+        domain: to_ascii_name(domain),
+        subject,
+        issuer,
+        sans: cert_names(der).unwrap_or_default(),
+        not_before: not_before.to_rfc3339(),
+        not_after: not_after.to_rfc3339(),
+        days_remaining,
+        fingerprint_sha256: fingerprint_sha256(der),
+        self_signed,
+        chain_length,
+        chain_complete,
+        key_matches,
+        status: status_for(days_remaining, self_signed).to_string(),
+        source: source.to_string(),
+    })
+}
+
+/// Validate one certificate/key PEM pair for `expected_domain`.
+/// Collects every problem instead of failing on the first: key
+/// mismatch, expiry, not-yet-valid, SANs not covering the domain, and
+/// an incomplete or mis-ordered chain.
+pub fn validate_pem_pair(
+    cert_pem: &[u8],
+    key_pem: &[u8],
+    expected_domain: Option<&str>,
+) -> CertificateValidation {
+    let domain = expected_domain.unwrap_or("").to_string();
+    let mut reasons: Vec<String> = Vec::new();
+    let certs = match load_pem_certs(cert_pem) {
+        Ok(certs) => certs,
+        Err(error) => {
+            return CertificateValidation {
+                domain,
+                valid: false,
+                reasons: vec![format!("invalid certificate PEM: {error}")],
+                info: None,
+            }
+        }
+    };
+    let key = match load_key_pair(key_pem) {
+        Ok(key) => key,
+        Err(error) => {
+            return CertificateValidation {
+                domain,
+                valid: false,
+                reasons: vec![format!("invalid private key: {error}")],
+                info: None,
+            }
+        }
+    };
+    let (chain_complete, mut chain_reasons) = check_chain(&certs);
+    reasons.append(&mut chain_reasons);
+    let names = match cert_names(certs[0].as_ref()) {
+        Ok(names) => names,
+        Err(error) => {
+            reasons.push(error);
+            Vec::new()
+        }
+    };
+    if names.is_empty() {
+        reasons.push(
+            "certificate has no common name or subject alternative name".to_string(),
+        );
+    }
+    let matches = key_matches(&key, certs[0].as_ref());
+    if !matches {
+        reasons.push("private key does not match the certificate".to_string());
+    }
+    if let Some(expected) = expected_domain {
+        let ascii = to_ascii_name(expected);
+        if !names.is_empty() && !cert_covers(&names, &ascii) {
+            reasons.push(format!(
+                "certificate subject alternative names ({}) do not cover {expected}",
+                names.join(", ")
+            ));
+        }
+    }
+    let info = info_from_leaf(
+        &domain,
+        certs[0].as_ref(),
+        certs.len(),
+        chain_complete,
+        Some(matches),
+        "custom",
+    )
+    .ok();
+    if let Some(info) = &info {
+        if info.days_remaining < 0 {
+            reasons.push(format!("certificate expired on {}", info.not_after));
+        }
+        if let Ok(not_before) = DateTime::parse_from_rfc3339(&info.not_before) {
+            if not_before > Utc::now().into() {
+                reasons.push(format!(
+                    "certificate is not yet valid (valid from {})",
+                    info.not_before
+                ));
+            }
+        }
+    }
+    let valid = reasons.is_empty();
+    CertificateValidation {
+        domain,
+        valid,
+        reasons,
+        info,
+    }
+}
+
+/// Validate one certificate PEM without a private key (key-match is
+/// reported as unknown).
+pub fn validate_cert_pem(
+    cert_pem: &[u8],
+    expected_domain: Option<&str>,
+) -> CertificateValidation {
+    let domain = expected_domain.unwrap_or("").to_string();
+    let certs = match load_pem_certs(cert_pem) {
+        Ok(certs) => certs,
+        Err(error) => {
+            return CertificateValidation {
+                domain,
+                valid: false,
+                reasons: vec![format!("invalid certificate PEM: {error}")],
+                info: None,
+            }
+        }
+    };
+    let mut reasons: Vec<String> = Vec::new();
+    let (chain_complete, mut chain_reasons) = check_chain(&certs);
+    reasons.append(&mut chain_reasons);
+    let names = cert_names(certs[0].as_ref()).unwrap_or_default();
+    if names.is_empty() {
+        reasons.push(
+            "certificate has no common name or subject alternative name".to_string(),
+        );
+    }
+    if let Some(expected) = expected_domain {
+        let ascii = to_ascii_name(expected);
+        if !names.is_empty() && !cert_covers(&names, &ascii) {
+            reasons.push(format!(
+                "certificate subject alternative names ({}) do not cover {expected}",
+                names.join(", ")
+            ));
+        }
+    }
+    let info = info_from_leaf(
+        &domain,
+        certs[0].as_ref(),
+        certs.len(),
+        chain_complete,
+        None,
+        "custom",
+    )
+    .ok();
+    if let Some(info) = &info {
+        if info.days_remaining < 0 {
+            reasons.push(format!("certificate expired on {}", info.not_after));
+        }
+    }
+    let valid = reasons.is_empty();
+    CertificateValidation {
+        domain,
+        valid,
+        reasons,
+        info,
+    }
+}
+
+/// Validate one configured cert/key file pair for `domain`.
+pub fn validate_config_entry(domain: &str, cert_path: &str, key_path: &str) -> CertificateValidation {
+    let cert_pem = match read_capped(cert_path, MAX_CERT_BYTES) {
+        Ok(pem) => pem,
+        Err(message) => {
+            return CertificateValidation {
+                domain: domain.to_string(),
+                valid: false,
+                reasons: vec![message],
+                info: None,
+            }
+        }
+    };
+    let key_pem = match read_capped(key_path, MAX_KEY_BYTES) {
+        Ok(pem) => pem,
+        Err(message) => {
+            return CertificateValidation {
+                domain: domain.to_string(),
+                valid: false,
+                reasons: vec![message],
+                info: None,
+            }
+        }
+    };
+    validate_pem_pair(&cert_pem, &key_pem, Some(domain))
+}
+
+/// Validate every configured certificate: the default pair (reported
+/// under the domain `default`) and every per-domain entry. Entries
+/// with only one of cert/key set are reported, not skipped. The
+/// result is sorted by domain so reports are deterministic.
+pub fn validate_ssl_config(ssl: &SslSection) -> Vec<CertificateValidation> {
+    let mut reports: Vec<CertificateValidation> = Vec::new();
+    if ssl.cert.is_empty() != ssl.key.is_empty() {
+        reports.push(CertificateValidation {
+            domain: "default".to_string(),
+            valid: false,
+            reasons: vec!["default certificate: cert and key must be set together".to_string()],
+            info: None,
+        });
+    } else if !ssl.cert.is_empty() {
+        reports.push(validate_config_entry("default", &ssl.cert, &ssl.key));
+    }
+    let mut domains: Vec<(&String, &crate::core::config::DomainSsl)> =
+        ssl.domains.iter().collect();
+    domains.sort_by(|a, b| a.0.cmp(b.0));
+    for (domain, entry) in domains {
+        if entry.cert.is_empty() && entry.key.is_empty() {
+            continue;
+        }
+        if entry.cert.is_empty() || entry.key.is_empty() {
+            reports.push(CertificateValidation {
+                domain: domain.clone(),
+                valid: false,
+                reasons: vec![format!("{domain}: cert and key must be set together")],
+                info: None,
+            });
+        } else {
+            reports.push(validate_config_entry(domain, &entry.cert, &entry.key));
+        }
+    }
+    reports
+}
+
+impl SslStorage {
+    /// Lenient loader: loads every valid configured certificate and
+    /// returns the storage together with the validation report for
+    /// every configured entry. Invalid entries are reported, never
+    /// loaded, and never fail startup: SNI lookups for those domains
+    /// fall back to the self-signed certificate when `auto_create`
+    /// is enabled (see `create_fallback`), exactly as for a domain
+    /// with no certificate at all.
+    pub fn from_config_lenient(ssl: &SslSection) -> (Arc<Self>, Vec<CertificateValidation>) {
+        let storage = Arc::new(Self {
+            auto_create: ssl.auto_create,
+            factory_key: Arc::new(Self::generate_factory_key()),
+            defaults: DashMap::new(),
+            dynamic: DashMap::new(),
+            auto_created: DashMap::new(),
+            previous: DashMap::new(),
+        });
+        let reports = validate_ssl_config(ssl);
+        let valid: std::collections::HashSet<String> = reports
+            .iter()
+            .filter(|report| report.valid)
+            .map(|report| report.domain.clone())
+            .collect();
+        if valid.contains("default") && !ssl.cert.is_empty() {
+            let _ = storage.load_file_pair(&ssl.cert, &ssl.key, None);
+        }
+        for (domain, entry) in &ssl.domains {
+            if valid.contains(domain) {
+                let _ = storage.load_file_pair(&entry.cert, &entry.key, Some(domain));
+            }
+        }
+        (storage, reports)
+    }
+
+    /// Public metadata of the live certificate for `name`, if one is
+    /// stored (configured, dynamic, or self-signed fallback).
+    pub fn certificate_info(&self, name: &str) -> Option<CertificateInfo> {
+        let ascii = to_ascii_name(name);
+        let source = if self.dynamic.contains_key(&ascii) {
+            "dynamic"
+        } else if self.defaults.contains_key(&ascii) {
+            "configured"
+        } else if self.auto_created.contains_key(&ascii) {
+            "fallback"
+        } else {
+            // Wildcard lookup may have matched a parent entry.
+            "dynamic"
+        };
+        let cert = self.lookup(name)?;
+        let leaf = cert.end_entity_cert();
+        let chain_length = cert.cert.len();
+        let info = info_from_leaf(
+            name,
+            leaf.as_ref(),
+            chain_length,
+            chain_length > 1,
+            None,
+            source,
+        )
+        .ok()?;
+        Some(CertificateInfo {
+            chain_complete: chain_length > 1 || info.self_signed,
+            ..info
+        })
+    }
+
+    /// Public metadata of every stored certificate, de-duplicated by
+    /// name. Runtime entries win over configured ones, and both win
+    /// over self-signed fallbacks (the same precedence as `lookup`).
+    pub fn list_certificates(&self) -> Vec<CertificateInfo> {
+        let mut names: std::collections::HashSet<String> = std::collections::HashSet::new();
+        for map in [&self.dynamic, &self.defaults, &self.auto_created] {
+            for entry in map.iter() {
+                names.insert(entry.key().clone());
+            }
+        }
+        let mut out: Vec<CertificateInfo> = names
+            .iter()
+            .filter_map(|name| self.certificate_info(name))
+            .collect();
+        out.sort_by(|a, b| a.domain.cmp(&b.domain));
+        out
+    }
+
+    /// Days until the stored certificate for `name` expires, if one
+    /// is stored. Negative when already expired.
+    pub fn days_until_expiry(&self, name: &str) -> Option<i64> {
+        self.certificate_info(name).map(|info| info.days_remaining)
+    }
+
+    /// Public metadata of the previous live certificate for `name`,
+    /// saved by the last swap, if one exists.
+    pub fn previous_info(&self, name: &str) -> Option<CertificateInfo> {
+        let ascii = to_ascii_name(name);
+        let previous = self.previous.get(&ascii).map(|entry| entry.value().clone())?;
+        let leaf = previous.end_entity_cert();
+        info_from_leaf(
+            name,
+            leaf.as_ref(),
+            previous.cert.len(),
+            previous.cert.len() > 1,
+            None,
+            "previous",
+        )
+        .ok()
+    }
+
+    /// Replace the live certificate for `name` with new PEM data. The
+    /// replacement is fully validated first (key matches, covers the
+    /// name, parses); only then is the current live certificate saved
+    /// as the rollback target and the new one installed. A validation
+    /// failure leaves the live certificate untouched.
+    pub fn swap_certificate(
+        &self,
+        name: &str,
+        cert_pem: &[u8],
+        key_pem: &[u8],
+    ) -> UnifiedResult<()> {
+        let certs = load_pem_certs(cert_pem)
+            .map_err(|e| UnifiedError::bad_request(format!("invalid certificate: {e}")))?;
+        let key = load_key_pair(key_pem)
+            .map_err(|e| UnifiedError::bad_request(format!("invalid private key: {e}")))?;
+        let names = validate_pair(&certs, &key).map_err(UnifiedError::bad_request)?;
+        let ascii = to_ascii_name(name);
+        if !cert_covers(&names, &ascii) {
+            return Err(UnifiedError::bad_request(format!(
+                "new certificate does not cover {name}"
+            )));
+        }
+        let certified = certified_key(certs, &key)
+            .map_err(|e| UnifiedError::internal(format!("cannot use private key: {e}")))?;
+        let certified = Arc::new(certified);
+        if let Some(current) = self.lookup(name) {
+            self.previous.insert(ascii.clone(), current);
+        }
+        self.dynamic.insert(ascii, certified);
+        Ok(())
+    }
+
+    /// Restore the previous live certificate for `name`, saved by the
+    /// last `swap_certificate`. Fails honestly when no previous
+    /// certificate exists.
+    pub fn rollback_certificate(&self, name: &str) -> UnifiedResult<()> {
+        let ascii = to_ascii_name(name);
+        let previous = self
+            .previous
+            .get(&ascii)
+            .map(|entry| entry.value().clone())
+            .ok_or_else(|| {
+                UnifiedError::not_found(format!(
+                    "no previous certificate stored for {name}; nothing to roll back to"
+                ))
+            })?;
+        self.dynamic.insert(ascii, previous);
+        Ok(())
+    }
+
+    /// Revoke the live certificate for `name`: stop serving it and
+    /// return its metadata for the revocation record. Runtime and
+    /// fallback certificates are removed; a certificate that only
+    /// exists because it is configured in `app.ssl.domains` is
+    /// config-owned, so revoking it requires removing it from the
+    /// configuration instead of silently dropping the live entry.
+    /// After revocation, SNI for the domain falls back to the
+    /// self-signed certificate when `auto_create` is enabled, so the
+    /// server keeps serving the domain.
+    pub fn revoke_live(&self, name: &str) -> UnifiedResult<CertificateInfo> {
+        let ascii = to_ascii_name(name);
+        let info = self.certificate_info(name).ok_or_else(|| {
+            UnifiedError::not_found(format!("no certificate stored for {name}"))
+        })?;
+        let in_dynamic = self.dynamic.contains_key(&ascii)
+            || self.dynamic.iter().any(|entry| {
+                cert_names_from_key(entry.value())
+                    .map(|names| names.iter().any(|n| n == &ascii))
+                    .unwrap_or(false)
+            });
+        let in_fallback = self.auto_created.contains_key(&ascii);
+        if in_dynamic || in_fallback {
+            self.dynamic.remove(&ascii);
+            self.auto_created.remove(&ascii);
+            return Ok(info);
+        }
+        if self.defaults.contains_key(&ascii) {
+            return Err(UnifiedError::conflict(format!(
+                "certificate for {name} is configured in app.ssl.domains; remove it from the configuration to revoke it"
+            )));
+        }
+        Err(UnifiedError::not_found(format!(
+            "no revocable certificate stored for {name}"
+        )))
+    }
+}
+
+/// Names on the leaf of an already-parsed certified key.
+fn cert_names_from_key(key: &CertifiedKey) -> Option<Vec<String>> {
+    cert_names(key.end_entity_cert().as_ref()).ok()
 }

@@ -32,7 +32,7 @@ use crate::core::context::AppContext;
 use crate::core::error::{UnifiedError, UnifiedResult};
 use crate::core::hooks::{events, HookBus};
 use crate::core::json as api_json;
-use crate::core::modules::{Module, ModuleRegistry};
+use crate::core::modules::{Module, ModuleRegistry, RouteInfo};
 use crate::core::pagination::{PageResult, PaginationParams};
 use actix_web::{web, HttpResponse};
 use chrono::Utc;
@@ -644,6 +644,20 @@ impl Module for SaasModule {
     }
 
     fn register_hooks(&self, _bus: &HookBus) {}
+
+    fn route_info(&self) -> Vec<RouteInfo> {
+        vec![
+            RouteInfo { method: "GET", path: "/api/v1/saas/sites", owner: "saas", description: "List sites" },
+            RouteInfo { method: "POST", path: "/api/v1/saas/sites", owner: "saas", description: "Create site" },
+            RouteInfo { method: "GET", path: "/api/v1/saas/sites/{id}", owner: "saas", description: "Get site" },
+            RouteInfo { method: "PUT", path: "/api/v1/saas/sites/{id}", owner: "saas", description: "Update site" },
+            RouteInfo { method: "DELETE", path: "/api/v1/saas/sites/{id}", owner: "saas", description: "Delete site" },
+            RouteInfo { method: "POST", path: "/api/v1/saas/sites/{id}/suspend", owner: "saas", description: "Suspend site" },
+            RouteInfo { method: "POST", path: "/api/v1/saas/sites/{id}/activate", owner: "saas", description: "Activate site" },
+            RouteInfo { method: "GET", path: "/api/v1/saas/sites/{id}/settings", owner: "saas", description: "Get site settings" },
+            RouteInfo { method: "PUT", path: "/api/v1/saas/sites/{id}/settings", owner: "saas", description: "Update site settings" },
+        ]
+    }
 
     fn configure_routes(&self, cfg: &mut actix_web::web::ServiceConfig) {
         let state = self.state.clone();

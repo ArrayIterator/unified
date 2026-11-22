@@ -32,7 +32,7 @@ use crate::core::context::AppContext;
 use crate::core::error::{UnifiedError, UnifiedResult};
 use crate::core::hooks::HookBus;
 use crate::core::json as api_json;
-use crate::core::modules::{Module, ModuleRegistry};
+use crate::core::modules::{Module, ModuleRegistry, RouteInfo};
 use crate::core::pagination::{PageResult, PaginationParams};
 use actix_web::{web, HttpResponse};
 use base64::Engine;
@@ -1002,6 +1002,17 @@ impl Module for MailModule {
                 }
             }),
         );
+    }
+
+    fn route_info(&self) -> Vec<RouteInfo> {
+        vec![
+            RouteInfo { method: "GET", path: "/api/v1/mail/settings", owner: "mail", description: "Get settings" },
+            RouteInfo { method: "PUT", path: "/api/v1/mail/settings", owner: "mail", description: "Update settings" },
+            RouteInfo { method: "POST", path: "/api/v1/mail/send", owner: "mail", description: "Send mail" },
+            RouteInfo { method: "POST", path: "/api/v1/mail/test", owner: "mail", description: "Test mail" },
+            RouteInfo { method: "GET", path: "/api/v1/mail/log", owner: "mail", description: "List log" },
+            RouteInfo { method: "GET", path: "/api/v1/mail/connectors", owner: "mail", description: "List connectors" },
+        ]
     }
 
     fn configure_routes(&self, cfg: &mut actix_web::web::ServiceConfig) {

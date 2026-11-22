@@ -9,7 +9,7 @@ use crate::core::context::AppContext;
 use crate::core::error::{UnifiedError, UnifiedResult};
 use crate::core::hooks::{events, HookBus, HookContext, HookHandler};
 use crate::core::json;
-use crate::core::modules::{Module, ModuleRegistry};
+use crate::core::modules::{Module, ModuleRegistry, RouteInfo};
 use crate::core::pagination::{PageResult, PaginationParams};
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Utc};
@@ -56,8 +56,63 @@ const AUDITED_EVENTS: &[&str] = &[
     "order.created",
     "invoice.paid",
     events::SSL_RENEW,
+    events::SSL_SWAP,
     events::AUTH_FAILED,
     events::GEO_LOOKUP,
+    "cloudflare.dns.changed",
+    "cloudflare.cache.purged",
+    "cloudflare.connected",
+    "google.sso.completed",
+    "google.drive.link",
+    "google.drive.unlink",
+    // Named page routes (routes module): an override was set or cleared.
+    "route.changed",
+    // Admin view-as sessions (dashboards module).
+    "admin.view_as.started",
+    "admin.view_as.ended",
+    "admin.view_as.expired",
+    // Reseller-to-client links (dashboards module).
+    "reseller.client.linked",
+    "reseller.client.unlinked",
+    // Certificate lifecycle (certificates module).
+    "ssl.expiring",
+    "ssl.installed",
+    "ssl.renew_failed",
+    "ssl.renewed",
+    "ssl.revoked",
+    "ssl.swapped",
+    // Cloud provider connections, servers, and sync (providers module).
+    "provider.connected",
+    "provider.connection.created",
+    "provider.connection.deleted",
+    "provider.server.created",
+    "provider.server.deleted",
+    "provider.server.scaled",
+    "provider.sync.completed",
+    "provider.sync.failed",
+    // Hosting panel connections and sync (panels module).
+    "panel.client.synced",
+    "panel.connected",
+    "panel.connection.created",
+    "panel.connection.deleted",
+    "panel.service.synced",
+    "panel.sync.completed",
+    "panel.sync.conflict",
+    "panel.sync.failed",
+    // Ticket lifecycle (tickets module).
+    "ticket.created",
+    "ticket.deleted",
+    "ticket.escalated",
+    "ticket.sla.breached",
+    "ticket.updated",
+    // AI calls, drafts, and provider connections (ai module).
+    "ai.call.completed",
+    "ai.call.failed",
+    "ai.draft.approved",
+    "ai.draft.created",
+    "ai.draft.rejected",
+    "ai.provider.created",
+    "ai.provider.deleted",
 ];
 
 pub struct AuditState {
@@ -247,6 +302,13 @@ impl Module for AuditModule {
             });
             bus.register(event, "audit", handler);
         }
+    }
+
+    fn route_info(&self) -> Vec<RouteInfo> {
+        vec![
+            RouteInfo { method: "GET", path: "/api/v1/audit/entries", owner: "audit", description: "List entries" },
+            RouteInfo { method: "GET", path: "/api/v1/audit/entries/{id}", owner: "audit", description: "Get entry" },
+        ]
     }
 
     fn configure_routes(&self, cfg: &mut web::ServiceConfig) {

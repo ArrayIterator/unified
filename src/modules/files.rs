@@ -11,7 +11,7 @@ use crate::core::context::AppContext;
 use crate::core::error::{UnifiedError, UnifiedResult};
 use crate::core::hooks::{HookBus, HookContext, HookHandler};
 use crate::core::json;
-use crate::core::modules::{Module, ModuleRegistry};
+use crate::core::modules::{Module, ModuleRegistry, RouteInfo};
 use crate::core::pagination::{PageResult, PaginationParams};
 use actix_multipart::Multipart;
 use actix_web::{web, HttpResponse};
@@ -674,6 +674,18 @@ impl Module for FilesModule {
         let handler: HookHandler =
             Arc::new(move |ctx: &mut HookContext| on_file_shared(state.clone(), ctx));
         bus.register("file.shared", "files", handler);
+    }
+
+    fn route_info(&self) -> Vec<RouteInfo> {
+        vec![
+            RouteInfo { method: "GET", path: "/api/v1/files", owner: "files", description: "List files" },
+            RouteInfo { method: "POST", path: "/api/v1/files", owner: "files", description: "Create folder" },
+            RouteInfo { method: "POST", path: "/api/v1/files/upload", owner: "files", description: "Upload file" },
+            RouteInfo { method: "GET", path: "/api/v1/files/{id}", owner: "files", description: "Get file" },
+            RouteInfo { method: "DELETE", path: "/api/v1/files/{id}", owner: "files", description: "Delete file" },
+            RouteInfo { method: "GET", path: "/api/v1/files/{id}/download", owner: "files", description: "Download file" },
+            RouteInfo { method: "POST", path: "/api/v1/files/{id}/move", owner: "files", description: "Move file" },
+        ]
     }
 
     fn configure_routes(&self, cfg: &mut web::ServiceConfig) {

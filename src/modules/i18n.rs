@@ -8,7 +8,7 @@
 use crate::core::context::AppContext;
 use crate::core::error::{UnifiedError, UnifiedResult};
 use crate::core::json as api_json;
-use crate::core::modules::{Module, ModuleRegistry};
+use crate::core::modules::{Module, ModuleRegistry, RouteInfo};
 use crate::core::pagination::{PageResult, PaginationParams};
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Utc};
@@ -1320,6 +1320,21 @@ impl Module for I18nModule {
         // Load persisted overrides; a failure here must not stop startup,
         // but a corrupt file is reported instead of silently ignored.
         self.state.load_from_disk()
+    }
+
+    fn route_info(&self) -> Vec<RouteInfo> {
+        vec![
+            RouteInfo { method: "GET", path: "/api/v1/i18n/languages", owner: "i18n", description: "List languages" },
+            RouteInfo { method: "GET", path: "/api/v1/i18n/languages/negotiate", owner: "i18n", description: "Negotiate language handler" },
+            RouteInfo { method: "GET", path: "/api/v1/i18n/currencies", owner: "i18n", description: "List currencies" },
+            RouteInfo { method: "GET", path: "/api/v1/i18n/currencies/{code}", owner: "i18n", description: "Get currency" },
+            RouteInfo { method: "GET", path: "/api/v1/i18n/translations", owner: "i18n", description: "List translations" },
+            RouteInfo { method: "POST", path: "/api/v1/i18n/translations", owner: "i18n", description: "Upsert translation" },
+            RouteInfo { method: "POST", path: "/api/v1/i18n/translate", owner: "i18n", description: "Translate" },
+            RouteInfo { method: "POST", path: "/api/v1/i18n/translate-plural", owner: "i18n", description: "Translate plural handler" },
+            RouteInfo { method: "POST", path: "/api/v1/i18n/catalog/po", owner: "i18n", description: "Load po catalog handler" },
+            RouteInfo { method: "DELETE", path: "/api/v1/i18n/translations/{lang}/{key}", owner: "i18n", description: "Delete translation" },
+        ]
     }
 
     fn configure_routes(&self, cfg: &mut web::ServiceConfig) {

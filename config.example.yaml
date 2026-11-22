@@ -147,3 +147,174 @@ acme:
   directory_url: "https://acme-v02.api.letsencrypt.org/directory"
   # Contact addresses for the ACME account.
   contacts: []
+
+# ----------------------------------------
+# Store configuration
+# ----------------------------------------
+store:
+  # Secret key that signs expiring download links (HMAC-SHA256).
+  # When set (at least 32 characters), signed links survive restarts
+  # because the same key is used on every start. When empty, the store
+  # generates a random per-process secret and logs a warning; links
+  # signed before a restart then stop verifying. Changing the value
+  # invalidates previously signed links and requires a restart to
+  # take effect.
+  download_signing_secret: ""
+
+# ----------------------------------------
+# Security hardening configuration
+# ----------------------------------------
+security:
+  # Master switch for the whole hardening pipeline. Default: true.
+  enabled: true
+  # Brute-force protection.
+  brute_force_enabled: true
+  brute_force_max_failures: 5
+  brute_force_account_max_failures: 5
+  brute_force_window_secs: 900
+  brute_force_base_lockout_secs: 300
+  brute_force_lockout_multiplier: 2
+  brute_force_max_lockout_secs: 3600
+  # Rate limiting.
+  rate_limit_enabled: true
+  rate_limit_per_ip_requests: 300
+  rate_limit_per_ip_window_secs: 60
+  rate_limit_per_user_requests: 600
+  rate_limit_per_user_window_secs: 60
+  rate_limit_per_endpoint_requests: 120
+  rate_limit_per_endpoint_window_secs: 60
+  # Path prefixes exempt from rate limiting and the blocklist. The
+  # ACME HTTP-01 challenge prefix must stay here: a blocked or
+  # throttled challenge would break certificate issuance and renewal.
+  rate_limit_exempt_paths:
+    - "/health"
+    - "/.well-known/acme-challenge/"
+  # Flood (burst) detection and per-IP concurrency.
+  flood_burst_threshold: 100
+  flood_burst_window_secs: 10
+  max_concurrent_per_ip: 50
+  # Request body limits in bytes.
+  max_body_bytes_default: 1048576
+  max_body_bytes_upload: 104857600
+  upload_path_prefixes:
+    - "/api/v1/files"
+    - "/api/v1/storage"
+  # Response headers. An empty value disables that header.
+  headers_hsts: "max-age=31536000; includeSubDomains"
+  headers_content_type_options: "nosniff"
+  headers_frame_options: "DENY"
+  headers_referrer_policy: "strict-origin-when-cross-origin"
+  headers_content_security_policy: "default-src 'self'; frame-ancestors 'none'"
+  headers_permissions_policy: "camera=(), microphone=(), geolocation=()"
+  # Failed-auth alert clustering and IP reputation.
+  failed_auth_alert_threshold: 5
+  failed_auth_alert_window_secs: 900
+  ip_reputation_flag_threshold: 100
+  ip_reputation_burst_penalty: 25
+  # CIDR ranges or bare IPs that bypass rate limiting / are rejected
+  # with 403. Empty by default.
+  allowlist: []
+  blocklist: []
+
+# ----------------------------------------
+# Public API configuration
+# ----------------------------------------
+api:
+  # Segment placed before the version in public URLs: "v" produces
+  # /v1/..., /v2/... Default: v.
+  prefix: "v"
+  # When true, the deployment intends to also remount the internal
+  # /api/v1/<module> routes under the new prefix on the next startup.
+  # A flag only: the remount itself happens in the server factory.
+  migrate_internal: false
+  # Version served when a caller asks for no version explicitly.
+  # Default: v1.
+  default_version: "v1"
+  # Default per-version rate limit, requests per minute. Default: 1000.
+  default_rate_limit_per_minute: 1000
+  # Whether callers must authenticate for a version by default.
+  default_auth_required: true
+
+# ----------------------------------------
+# Named page routes
+# ----------------------------------------
+# Override the built-in path of a named page. Every field is optional;
+# an absent field leaves the default in place. The previous path keeps
+# working as a permanent (301) redirect to the new path (latest-only:
+# at most one redirect per route). Paths must start with "/", must not
+# fall under /api/, /.well-known/, /assets/ or /theme/, and must not
+# conflict with another route's path. The legacy app.dashboard_path
+# value is honoured as the user_dashboard override when this section
+# does not set it.
+routes:
+  login: "/login"
+  register: "/register"
+  forgot_password: "/forgot-password"
+  reset_password: "/reset-password"
+  logout: "/logout"
+  user_dashboard: "/dashboard"
+  admin_dashboard: "/admin"
+  status_page: "/status"
+
+# ----------------------------------------
+# Storage configuration
+# ----------------------------------------
+storage:
+  # Name of the default target, when one is configured.
+  default_target: null
+  # Extra allowed endpoint hosts, for self-hosted S3-compatible
+  # endpoints (exact hostnames, for example minio.example.com).
+  allowed_hosts: []
+  # Targets registered at startup. A target that fails validation is
+  # skipped with a warning, so one bad target never prevents startup.
+  targets:
+    - name: "local"
+      kind: "local"
+      base_dir: "data/storage"
+
+# ----------------------------------------
+# Load balancer configuration
+# ----------------------------------------
+load_balancer:
+  # Default health-check interval in seconds (5..3600). Default: 30.
+  health_check_interval_secs: 30
+  # Default health-check timeout in seconds (1..60). Default: 5.
+  health_check_timeout_secs: 5
+  # Default health-check path for HTTP checks. Default: /health.
+  health_check_path: "/health"
+  # Default strategy: round_robin | least_connections | weighted |
+  # ip_hash. Default: round_robin.
+  default_strategy: "round_robin"
+  # Maximum backends per balancer (1..1000). Default: 100.
+  max_backends_per_balancer: 100
+
+# ----------------------------------------
+# Pingora gateway configuration
+# ----------------------------------------
+# The gateway only listens when enabled is true AND the binary was
+# built with the `gateway` Cargo feature. Until then the gateway runs
+# disabled and rules are managed through the management API only.
+gateway:
+  enabled: false
+  listen:
+    - "127.0.0.1:8081"
+  tls_listen:
+    - "127.0.0.1:8444"
+  # Default upstream when no routing rule matches: a load balancer id
+  # (UUID) or a plain host:port address. Empty means unmatched
+  # requests are rejected.
+  default_upstream: null
+  # Request-log ring buffer capacity (1..10000). Default: 500.
+  request_log_capacity: 500
+  # Health-check sweep interval in seconds (5..3600). Default: 30.
+  health_check_interval_secs: 30
+  # Upstream connect timeout in seconds (1..60). Default: 5.
+  connect_timeout_secs: 5
+
+# ----------------------------------------
+# System records configuration
+# ----------------------------------------
+records:
+  # Default retention in days. Records older than this are removed
+  # only by the explicit, confirmed retention purge. Default: 365.
+  retention_days: 365

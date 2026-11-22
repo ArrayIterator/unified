@@ -20,7 +20,7 @@ use crate::core::context::AppContext;
 use crate::core::error::{UnifiedError, UnifiedResult};
 use crate::core::hooks::{events, HookBus, HookContext};
 use crate::core::json::{error_response, success_response};
-use crate::core::modules::{Module, ModuleRegistry};
+use crate::core::modules::{Module, ModuleRegistry, RouteInfo};
 use crate::core::pagination::{PageResult, PaginationParams};
 use crate::db::models::{NewUser, User};
 use crate::db::DbPool;
@@ -1226,6 +1226,18 @@ impl Module for UsersModule {
                 on_user_create_requested(store.clone(), ctx)
             }),
         );
+    }
+
+    fn route_info(&self) -> Vec<RouteInfo> {
+        vec![
+            RouteInfo { method: "GET", path: "/api/v1/users", owner: "users", description: "List users" },
+            RouteInfo { method: "GET", path: "/api/v1/users/{id}", owner: "users", description: "Get user" },
+            RouteInfo { method: "PUT", path: "/api/v1/users/{id}", owner: "users", description: "Update user" },
+            RouteInfo { method: "DELETE", path: "/api/v1/users/{id}", owner: "users", description: "Delete user" },
+            RouteInfo { method: "GET", path: "/api/v1/users/{id}/roles", owner: "users", description: "List user roles" },
+            RouteInfo { method: "POST", path: "/api/v1/users/{id}/roles", owner: "users", description: "Assign user role" },
+            RouteInfo { method: "POST", path: "/api/v1/users", owner: "users", description: "Create user" },
+        ]
     }
 
     fn configure_routes(&self, cfg: &mut web::ServiceConfig) {

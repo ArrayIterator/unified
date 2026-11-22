@@ -18,6 +18,7 @@
 // traversal through a theme id impossible.
 
 use crate::core::error::{UnifiedError, UnifiedResult};
+use crate::core::routes::RouteRegistry;
 use crate::themes::assets::resolve_asset_url;
 use handlebars::{Context, Handlebars, Helper, Output, RenderContext, RenderError, RenderErrorReason};
 use rust_embed::RustEmbed;
@@ -167,6 +168,13 @@ pub struct ThemeEngine {
     known_templates: RwLock<HashSet<String>>,
     /// Metadata of disk themes discovered in `themes_dir`, keyed by id.
     discovered: RwLock<HashMap<String, ThemeMeta>>,
+    /// Shared named-route registry the `route_url` helper resolves
+    /// through. Defaults to a fresh registry (built-in default paths)
+    /// until the application attaches the shared instance from
+    /// `AppContext` with `set_route_registry`; the helper reads the
+    /// current registry at render time, so attaching later takes
+    /// effect without re-registering any template.
+    routes: Arc<RwLock<Arc<RouteRegistry>>>,
 }
 
 impl ThemeEngine {
@@ -183,6 +191,7 @@ impl ThemeEngine {
             active_theme: Arc::new(RwLock::new(DEFAULT_THEME_ID.to_string())),
             known_templates: RwLock::new(HashSet::new()),
             discovered: RwLock::new(HashMap::new()),
+            routes: Arc::new(RwLock::new(Arc::new(RouteRegistry::new()))),
         };
         if let Err(error) = engine.register_embedded_default() {
             tracing::warn!("Failed to register embedded default theme: {error}");
@@ -196,6 +205,31 @@ impl ThemeEngine {
     pub fn with_assets_dir(mut self, dir: impl Into<PathBuf>) -> Self {
         self.assets_dir = dir.into();
         self
+    }
+
+    /// Attach the shared named-route registry (the same instance the
+    /// application keeps on `AppContext`) so the `route_url` helper
+    /// resolves config and settings overrides instead of the built-in
+    /// defaults. Until this is called the helper resolves through a
+    /// fresh default registry, so templates still render.
+    pub fn set_route_registry(&self, registry: Arc<RouteRegistry>) {
+        *self.routes.write().expect("route registry lock poisoned") = registry;
+    }
+
+    /// Builder form of `set_route_registry`.
+    pub fn with_route_registry(self, registry: Arc<RouteRegistry>) -> Self {
+        self.set_route_registry(registry);
+        self
+    }
+
+    /// Resolve the effective path of a named route through the
+    /// attached registry (or the built-in default when no registry
+    /// is attached). An unknown name resolves to `/`.
+    pub fn route_url(&self, name: &str) -> String {
+        self.routes
+            .read()
+            .expect("route registry lock poisoned")
+            .route_url(name)
     }
 
     /// Directory disk themes are discovered from.
@@ -603,11 +637,55 @@ impl ThemeEngine {
     /// `asset_url` resolves an asset path to its public, fingerprinted
     /// URL (see `ThemeEngine::asset_url`). The helper reads the active
     /// theme id at render time, so switching themes needs no
-    /// re-registration.
+    /// re-registration. `route_url` resolves a named page route
+    /// (`login`, `user_dashboard`, `admin_dashboard`, `status_page`,
+    /// ...) through the shared route registry, so templates never
+    /// hardcode a dashboard or auth path: `{{route_url
+    /// "user_dashboard"}}` renders the route's effective path, and an
+    /// optional second argument appends a sub-path, for example
+    /// `{{route_url "user_dashboard" "/tasks"}}`. Unknown names fall
+    /// back to `/`. The helper reads the attached registry at render
+    /// time, so a registry attached after construction still applies.
     fn register_helpers(&self, handlebars: &mut Handlebars<'static>) {
         let assets_dir = self.assets_dir.clone();
         let themes_dir = self.themes_dir.clone();
         let active_theme = Arc::clone(&self.active_theme);
+        let routes = Arc::clone(&self.routes);
+        handlebars.register_helper(
+            "route_url",
+            Box::new(
+                move |helper: &Helper,
+                      _: &Handlebars,
+                      _: &Context,
+                      _: &mut RenderContext,
+                      out: &mut dyn Output|
+                      -> Result<(), RenderError> {
+                    let name = helper
+                        .param(0)
+                        .and_then(|value| value.value().as_str())
+                        .unwrap_or("");
+                    let suffix = helper
+                        .param(1)
+                        .and_then(|value| value.value().as_str())
+                        .unwrap_or("");
+                    let base = routes
+                        .read()
+                        .expect("route registry lock poisoned")
+                        .route_url(name);
+                    let url = if suffix.is_empty() {
+                        base
+                    } else if let Some(rest) = suffix.strip_prefix('/') {
+                        format!("{base}/{rest}")
+                    } else {
+                        format!("{base}/{suffix}")
+                    };
+                    out.write(&url).map_err(|error| {
+                        RenderErrorReason::Other(format!("Failed to write route url: {error}"))
+                    })?;
+                    Ok(())
+                },
+            ),
+        );
         handlebars.register_helper(
             "asset_url",
             Box::new(

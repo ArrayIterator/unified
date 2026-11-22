@@ -10,7 +10,7 @@ use crate::core::context::AppContext;
 use crate::core::error::{UnifiedError, UnifiedResult};
 use crate::core::hooks::{events, HookBus, HookContext};
 use crate::core::json;
-use crate::core::modules::{Module, ModuleRegistry};
+use crate::core::modules::{Module, ModuleRegistry, RouteInfo};
 use crate::core::pagination::{PageResult, PaginationParams};
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Utc};
@@ -29,7 +29,12 @@ use uuid::Uuid;
 pub struct Job {
     pub id: String,
     pub name: String,
-    /// `mail.send`, `geo.update`, `ssl.renew`, `cleanup`.
+    /// `mail.send`, `geo.update`, `ssl.renew`, `cleanup`,
+    /// `backup.run`, `cluster.health`, `cluster.sync`,
+    /// `payment.subscription.renew`, `report.generate`,
+    /// `newsletter.send`, `notification.digest`,
+    /// `notification.digest.send`, `meeting.start`,
+    /// `announcement.publish_due`, `ticket.sla.check`.
     pub kind: String,
     /// Interval in seconds (`"300"`) or a cron-like expression
     /// (`"*/5 * * * *"`).
@@ -99,6 +104,9 @@ pub struct SchedulerState {
     jobs: DashMap<String, Job>,
     runs: DashMap<String, JobRun>,
     queue: DashMap<String, QueueItem>,
+    /// Last dispatch time per subscription for the
+    /// `payment.subscription.renew` loop guard (see `dispatch`).
+    renew_guard: DashMap<String, std::time::Instant>,
 }
 
 impl SchedulerState {
@@ -108,6 +116,7 @@ impl SchedulerState {
             jobs: DashMap::new(),
             runs: DashMap::new(),
             queue: DashMap::new(),
+            renew_guard: DashMap::new(),
         }
     }
 
@@ -154,8 +163,31 @@ fn matches_search(haystack: &str, params: &PaginationParams) -> bool {
 }
 
 /// Known job kinds. Anything else is rejected with 422 when it is run.
+const KNOWN_KINDS: &[&str] = &[
+    "mail.send",
+    "geo.update",
+    "ssl.renew",
+    "cleanup",
+    "backup.run",
+    "cluster.health",
+    "cluster.sync",
+    "payment.subscription.renew",
+    "report.generate",
+    "newsletter.send",
+    "notification.digest",
+    "notification.digest.send",
+    "meeting.start",
+    "announcement.publish_due",
+    "ticket.sla.check",
+];
+
+/// Known job kinds as a comma-separated list for error messages.
+fn known_kinds_list() -> String {
+    KNOWN_KINDS.join(", ")
+}
+
 fn valid_kind(kind: &str) -> bool {
-    matches!(kind, "mail.send" | "geo.update" | "ssl.renew" | "cleanup")
+    KNOWN_KINDS.contains(&kind)
 }
 
 /// A schedule is either an interval in seconds or five cron-like fields
@@ -235,8 +267,128 @@ fn dispatch(state: &Arc<SchedulerState>, kind: &str, payload: &Value) -> Unified
             state.emit("cleanup.requested", payload.clone());
             Ok(json!({ "dispatched": true, "event": "cleanup.requested", "removed_queue_items": removed }))
         }
+        "backup.run" => {
+            // The Backup module listens to `backup.run_requested` and
+            // runs the job named by `backup_job_id` (or `job_id`) in
+            // the payload. The payload is forwarded unchanged.
+            state.emit("backup.run_requested", payload.clone());
+            Ok(json!({ "dispatched": true, "event": "backup.run_requested" }))
+        }
+        "cluster.health" => {
+            // The Clusters module listens to
+            // `cluster.health.check_requested` and probes the node
+            // named by `node_id` in the payload.
+            state.emit("cluster.health.check_requested", payload.clone());
+            Ok(json!({ "dispatched": true, "event": "cluster.health.check_requested" }))
+        }
+        "cluster.sync" => {
+            // The Clusters module listens to `cluster.sync.requested`
+            // and runs the sync plan named by `plan_id` in the
+            // payload (`dry_run` selects a preview run).
+            state.emit("cluster.sync.requested", payload.clone());
+            Ok(json!({ "dispatched": true, "event": "cluster.sync.requested" }))
+        }
+        "payment.subscription.renew" => {
+            // The Payments module listens to
+            // `payment.subscription.renew_requested` and charges the
+            // subscription named by `subscription_id` in the payload.
+            //
+            // Loop guard: that handler answers a renewal request by
+            // asking the scheduler to run it again (it re-emits
+            // `scheduler.enqueue` with this same kind), so emitting
+            // the event unconditionally would spawn an unbounded
+            // chain of queue items — one per dispatch, forever — and
+            // never charge anything. Two guards break the chain:
+            // the emitted event carries `via_scheduler: true` so the
+            // handler can tell a scheduler-dispatched request apart
+            // from an operator request (the handler must check it
+            // before re-enqueuing), and this scheduler suppresses a
+            // repeat dispatch for the same subscription within 30
+            // seconds. Legitimate renewals are one period apart, far
+            // outside the window; the guard can be removed once the
+            // Payments module checks `via_scheduler`.
+            let subscription_id = payload
+                .get("subscription_id")
+                .and_then(|value| value.as_str())
+                .unwrap_or("")
+                .to_string();
+            if let Some(last) = state.renew_guard.get(&subscription_id) {
+                if last.elapsed() < Duration::from_secs(30) {
+                    return Ok(json!({
+                        "dispatched": false,
+                        "event": "payment.subscription.renew_requested",
+                        "reason": "Duplicate renewal suppressed: a renewal for this subscription was dispatched less than 30 seconds ago",
+                    }));
+                }
+            }
+            state
+                .renew_guard
+                .insert(subscription_id, std::time::Instant::now());
+            let mut event_payload = payload.clone();
+            if let Value::Object(map) = &mut event_payload {
+                map.insert("via_scheduler".to_string(), Value::Bool(true));
+            }
+            state.emit("payment.subscription.renew_requested", event_payload);
+            Ok(json!({ "dispatched": true, "event": "payment.subscription.renew_requested" }))
+        }
+        "report.generate" => {
+            // The Analytics module listens to
+            // `analytics.report.run_requested` and runs the report
+            // named by `definition_id` in the payload.
+            state.emit("analytics.report.run_requested", payload.clone());
+            Ok(json!({ "dispatched": true, "event": "analytics.report.run_requested" }))
+        }
+        "newsletter.send" => {
+            // The Newsletter module listens to
+            // `newsletter.campaign.send` and sends the campaign named
+            // by `campaign_id` in the payload.
+            state.emit("newsletter.campaign.send", payload.clone());
+            Ok(json!({ "dispatched": true, "event": "newsletter.campaign.send" }))
+        }
+        "notification.digest" | "notification.digest.send" => {
+            // The Notifications module listens to
+            // `notification.digest.send` and sends one digest email
+            // for the user named by `user_id` in the payload
+            // (`email` overrides the user's address when present).
+            // Both kind spellings dispatch to the same event:
+            // `notification.digest` is the short kind, matching the
+            // `newsletter.send` pattern, and
+            // `notification.digest.send` is the alias that spells the
+            // event name out. The payload is forwarded unchanged.
+            // Note: `notification.digest.requested` is a different
+            // event — the module emits it when a user saves a
+            // non-immediate digest preference, and nothing listens to
+            // it — so this arm never emits it.
+            state.emit("notification.digest.send", payload.clone());
+            Ok(json!({ "dispatched": true, "event": "notification.digest.send" }))
+        }
+        "meeting.start" => {
+            // The Meetings module listens to
+            // `meeting.start_requested` and starts the room named by
+            // `room_id` in the payload. The payload is forwarded
+            // unchanged.
+            state.emit("meeting.start_requested", payload.clone());
+            Ok(json!({ "dispatched": true, "event": "meeting.start_requested" }))
+        }
+        "announcement.publish_due" => {
+            // The Announcements module listens to
+            // `announcement.publish_due` and publishes every
+            // announcement whose publish time has arrived. The
+            // payload is forwarded unchanged.
+            state.emit("announcement.publish_due", payload.clone());
+            Ok(json!({ "dispatched": true, "event": "announcement.publish_due" }))
+        }
+        "ticket.sla.check" => {
+            // The Tickets module listens to
+            // `ticket.sla.check_requested` and scans for SLA
+            // breaches, emitting `ticket.sla.breached` for each one
+            // it finds. The payload is forwarded unchanged.
+            state.emit("ticket.sla.check_requested", payload.clone());
+            Ok(json!({ "dispatched": true, "event": "ticket.sla.check_requested" }))
+        }
         other => Err(UnifiedError::unprocessable(format!(
-            "Unknown job kind: {other}. Known kinds: mail.send, geo.update, ssl.renew, cleanup"
+            "Unknown job kind: {other}. Known kinds: {}",
+            known_kinds_list()
         ))),
     }
 }
@@ -332,6 +484,18 @@ fn on_scheduler_enqueue(state: Arc<SchedulerState>, ctx: &mut HookContext) {
                     "geo.update_requested" => "geo.update".to_string(),
                     "ssl.renew" => "ssl.renew".to_string(),
                     "cleanup.requested" => "cleanup".to_string(),
+                    "backup.run_requested" => "backup.run".to_string(),
+                    "cluster.health.check_requested" => "cluster.health".to_string(),
+                    "cluster.sync.requested" => "cluster.sync".to_string(),
+                    "payment.subscription.renew_requested" => {
+                        "payment.subscription.renew".to_string()
+                    }
+                    "analytics.report.run_requested" => "report.generate".to_string(),
+                    "newsletter.campaign.send" => "newsletter.send".to_string(),
+                    "notification.digest.send" => "notification.digest.send".to_string(),
+                    "meeting.start_requested" => "meeting.start".to_string(),
+                    "announcement.publish_due" => "announcement.publish_due".to_string(),
+                    "ticket.sla.check_requested" => "ticket.sla.check".to_string(),
                     other => other.to_string(),
                 })
         })
@@ -426,8 +590,9 @@ async fn create_job(
         }
         if !valid_kind(&input.kind) {
             return Err(UnifiedError::unprocessable(format!(
-                "Unknown job kind: {}. Known kinds: mail.send, geo.update, ssl.renew, cleanup",
-                input.kind
+                "Unknown job kind: {}. Known kinds: {}",
+                input.kind,
+                known_kinds_list()
             )));
         }
         if !valid_schedule(&input.schedule) {
@@ -483,7 +648,8 @@ async fn update_job(
         if let Some(kind) = input.kind {
             if !valid_kind(&kind) {
                 return Err(UnifiedError::unprocessable(format!(
-                    "Unknown job kind: {kind}. Known kinds: mail.send, geo.update, ssl.renew, cleanup"
+                    "Unknown job kind: {kind}. Known kinds: {}",
+                    known_kinds_list()
                 )));
             }
             job.kind = kind;
@@ -633,8 +799,9 @@ async fn enqueue(
         let input = body.into_inner();
         if !valid_kind(&input.kind) {
             return Err(UnifiedError::unprocessable(format!(
-                "Unknown job kind: {}. Known kinds: mail.send, geo.update, ssl.renew, cleanup",
-                input.kind
+                "Unknown job kind: {}. Known kinds: {}",
+                input.kind,
+                known_kinds_list()
             )));
         }
         let item = QueueItem {
@@ -712,6 +879,20 @@ impl Module for SchedulerModule {
                 on_scheduler_enqueue(state.clone(), ctx)
             }),
         );
+    }
+
+    fn route_info(&self) -> Vec<RouteInfo> {
+        vec![
+            RouteInfo { method: "GET", path: "/api/v1/scheduler/jobs", owner: "scheduler", description: "List jobs" },
+            RouteInfo { method: "POST", path: "/api/v1/scheduler/jobs", owner: "scheduler", description: "Create job" },
+            RouteInfo { method: "GET", path: "/api/v1/scheduler/jobs/{id}", owner: "scheduler", description: "Get job" },
+            RouteInfo { method: "PUT", path: "/api/v1/scheduler/jobs/{id}", owner: "scheduler", description: "Update job" },
+            RouteInfo { method: "DELETE", path: "/api/v1/scheduler/jobs/{id}", owner: "scheduler", description: "Delete job" },
+            RouteInfo { method: "POST", path: "/api/v1/scheduler/jobs/{id}/run", owner: "scheduler", description: "Run job" },
+            RouteInfo { method: "GET", path: "/api/v1/scheduler/jobs/{id}/runs", owner: "scheduler", description: "List runs" },
+            RouteInfo { method: "GET", path: "/api/v1/scheduler/queue", owner: "scheduler", description: "List queue" },
+            RouteInfo { method: "POST", path: "/api/v1/scheduler/queue", owner: "scheduler", description: "Enqueue" },
+        ]
     }
 
     fn configure_routes(&self, cfg: &mut web::ServiceConfig) {

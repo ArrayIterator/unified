@@ -31,7 +31,7 @@ use crate::core::context::AppContext;
 use crate::core::error::{UnifiedError, UnifiedResult};
 use crate::core::hooks::HookBus;
 use crate::core::json as api_json;
-use crate::core::modules::{Module, ModuleRegistry};
+use crate::core::modules::{Module, ModuleRegistry, RouteInfo};
 use crate::core::pagination::{PageResult, PaginationParams};
 use actix_web::{web, HttpResponse};
 use chrono::Utc;
@@ -720,6 +720,22 @@ impl Module for EmailTemplatesModule {
                 }
             }),
         );
+    }
+
+    fn route_info(&self) -> Vec<RouteInfo> {
+        vec![
+            RouteInfo { method: "GET", path: "/api/v1/email-templates/by-category/{category}", owner: "email-templates", description: "List by category" },
+            RouteInfo { method: "GET", path: "/api/v1/email-templates", owner: "email-templates", description: "List templates" },
+            RouteInfo { method: "POST", path: "/api/v1/email-templates", owner: "email-templates", description: "Create template" },
+            RouteInfo { method: "GET", path: "/api/v1/email-templates/{id}", owner: "email-templates", description: "Get template" },
+            RouteInfo { method: "PUT", path: "/api/v1/email-templates/{id}", owner: "email-templates", description: "Update template" },
+            RouteInfo { method: "DELETE", path: "/api/v1/email-templates/{id}", owner: "email-templates", description: "Delete template" },
+            RouteInfo { method: "GET", path: "/api/v1/email-templates/{id}/versions", owner: "email-templates", description: "List versions" },
+            RouteInfo { method: "POST", path: "/api/v1/email-templates/{id}/restore/{version}", owner: "email-templates", description: "Restore version" },
+            RouteInfo { method: "POST", path: "/api/v1/email-templates/{id}/variables", owner: "email-templates", description: "List variables" },
+            RouteInfo { method: "POST", path: "/api/v1/email-templates/{id}/preview", owner: "email-templates", description: "Preview template" },
+            RouteInfo { method: "POST", path: "/api/v1/email-templates/{id}/test-send", owner: "email-templates", description: "Test send template" },
+        ]
     }
 
     fn configure_routes(&self, cfg: &mut actix_web::web::ServiceConfig) {

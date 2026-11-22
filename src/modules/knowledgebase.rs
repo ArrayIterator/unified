@@ -24,7 +24,7 @@ use crate::core::context::AppContext;
 use crate::core::error::{UnifiedError, UnifiedResult};
 use crate::core::hooks::HookBus;
 use crate::core::json;
-use crate::core::modules::{Module, ModuleRegistry};
+use crate::core::modules::{Module, ModuleRegistry, RouteInfo};
 use crate::core::pagination::{PageResult, PaginationParams};
 use actix_web::{web, HttpRequest, HttpResponse};
 use chrono::{DateTime, Utc};
@@ -463,6 +463,27 @@ impl Module for KnowledgebaseModule {
                 ctx.add_result(json!({ "articles": articles }));
             }),
         );
+    }
+
+    fn route_info(&self) -> Vec<RouteInfo> {
+        vec![
+            RouteInfo { method: "GET", path: "/api/v1/knowledgebase/articles", owner: "knowledgebase", description: "List articles" },
+            RouteInfo { method: "POST", path: "/api/v1/knowledgebase/articles", owner: "knowledgebase", description: "Create article" },
+            RouteInfo { method: "GET", path: "/api/v1/knowledgebase/articles/{id}", owner: "knowledgebase", description: "Get article" },
+            RouteInfo { method: "PATCH", path: "/api/v1/knowledgebase/articles/{id}", owner: "knowledgebase", description: "Update article" },
+            RouteInfo { method: "DELETE", path: "/api/v1/knowledgebase/articles/{id}", owner: "knowledgebase", description: "Delete article" },
+            RouteInfo { method: "GET", path: "/api/v1/knowledgebase/articles/{id}/versions", owner: "knowledgebase", description: "List versions" },
+            RouteInfo { method: "GET", path: "/api/v1/knowledgebase/articles/{id}/versions/{version}", owner: "knowledgebase", description: "Get version" },
+            RouteInfo { method: "POST", path: "/api/v1/knowledgebase/articles/{id}/link-ticket", owner: "knowledgebase", description: "Link ticket" },
+            RouteInfo { method: "GET", path: "/api/v1/knowledgebase/articles/{id}/tickets", owner: "knowledgebase", description: "List article tickets" },
+            RouteInfo { method: "DELETE", path: "/api/v1/knowledgebase/articles/{id}/tickets/{ticket_id}", owner: "knowledgebase", description: "Unlink ticket" },
+            RouteInfo { method: "GET", path: "/api/v1/knowledgebase/categories", owner: "knowledgebase", description: "List categories" },
+            RouteInfo { method: "POST", path: "/api/v1/knowledgebase/categories", owner: "knowledgebase", description: "Create category" },
+            RouteInfo { method: "GET", path: "/api/v1/knowledgebase/categories/{id}", owner: "knowledgebase", description: "Get category" },
+            RouteInfo { method: "PATCH", path: "/api/v1/knowledgebase/categories/{id}", owner: "knowledgebase", description: "Update category" },
+            RouteInfo { method: "DELETE", path: "/api/v1/knowledgebase/categories/{id}", owner: "knowledgebase", description: "Delete category" },
+            RouteInfo { method: "GET", path: "/api/v1/knowledgebase/search", owner: "knowledgebase", description: "Search endpoint" },
+        ]
     }
 
     fn configure_routes(&self, cfg: &mut web::ServiceConfig) {

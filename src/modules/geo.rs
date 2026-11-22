@@ -13,7 +13,7 @@ use crate::core::context::{AppContext, GeoInfo};
 use crate::core::error::{UnifiedError, UnifiedResult};
 use crate::core::hooks::events;
 use crate::core::json;
-use crate::core::modules::{Module, ModuleRegistry};
+use crate::core::modules::{Module, ModuleRegistry, RouteInfo};
 use crate::core::pagination::{PageResult, PaginationParams};
 use crate::db::models::{GeoOverride, NewGeoOverride};
 use actix_web::{web, HttpResponse};
@@ -1215,6 +1215,20 @@ impl Module for GeoModule {
                 context.add_result(serde_json::json!({ "started": true }));
             }),
         );
+    }
+
+    fn route_info(&self) -> Vec<RouteInfo> {
+        vec![
+            RouteInfo { method: "GET", path: "/api/v1/geo/lookup", owner: "geo", description: "Lookup handler" },
+            RouteInfo { method: "GET", path: "/api/v1/geo/overrides", owner: "geo", description: "List overrides" },
+            RouteInfo { method: "POST", path: "/api/v1/geo/overrides", owner: "geo", description: "Create override" },
+            RouteInfo { method: "GET", path: "/api/v1/geo/overrides/{id}", owner: "geo", description: "Get override" },
+            RouteInfo { method: "PUT", path: "/api/v1/geo/overrides/{id}", owner: "geo", description: "Update override" },
+            RouteInfo { method: "DELETE", path: "/api/v1/geo/overrides/{id}", owner: "geo", description: "Delete override" },
+            RouteInfo { method: "POST", path: "/api/v1/geo/asn-check", owner: "geo", description: "Asn check handler" },
+            RouteInfo { method: "POST", path: "/api/v1/geo/download", owner: "geo", description: "Download handler" },
+            RouteInfo { method: "GET", path: "/api/v1/geo/settings", owner: "geo", description: "Settings handler" },
+        ]
     }
 
     fn configure_routes(&self, cfg: &mut actix_web::web::ServiceConfig) {

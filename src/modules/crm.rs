@@ -9,7 +9,7 @@ use crate::core::context::AppContext;
 use crate::core::error::{UnifiedError, UnifiedResult};
 use crate::core::hooks::HookBus;
 use crate::core::json;
-use crate::core::modules::{Module, ModuleRegistry};
+use crate::core::modules::{Module, ModuleRegistry, RouteInfo};
 use crate::core::pagination::{PageResult, PaginationParams};
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Utc};
@@ -659,6 +659,25 @@ impl Module for CrmModule {
             .write()
             .expect("hooks lock poisoned") = ctx.hooks.clone();
         Ok(())
+    }
+
+    fn route_info(&self) -> Vec<RouteInfo> {
+        vec![
+            RouteInfo { method: "GET", path: "/api/v1/crm/contacts", owner: "crm", description: "List contacts" },
+            RouteInfo { method: "POST", path: "/api/v1/crm/contacts", owner: "crm", description: "Create contact" },
+            RouteInfo { method: "GET", path: "/api/v1/crm/contacts/{id}", owner: "crm", description: "Get contact" },
+            RouteInfo { method: "PUT", path: "/api/v1/crm/contacts/{id}", owner: "crm", description: "Update contact" },
+            RouteInfo { method: "DELETE", path: "/api/v1/crm/contacts/{id}", owner: "crm", description: "Delete contact" },
+            RouteInfo { method: "GET", path: "/api/v1/crm/leads", owner: "crm", description: "List leads" },
+            RouteInfo { method: "POST", path: "/api/v1/crm/leads", owner: "crm", description: "Create lead" },
+            RouteInfo { method: "GET", path: "/api/v1/crm/leads/{id}", owner: "crm", description: "Get lead" },
+            RouteInfo { method: "PUT", path: "/api/v1/crm/leads/{id}", owner: "crm", description: "Update lead" },
+            RouteInfo { method: "DELETE", path: "/api/v1/crm/leads/{id}", owner: "crm", description: "Delete lead" },
+            RouteInfo { method: "POST", path: "/api/v1/crm/leads/{id}/convert", owner: "crm", description: "Convert lead" },
+            RouteInfo { method: "GET", path: "/api/v1/crm/pipeline", owner: "crm", description: "Get pipeline" },
+            RouteInfo { method: "GET", path: "/api/v1/crm/{type}/{id}/activities", owner: "crm", description: "List activities" },
+            RouteInfo { method: "POST", path: "/api/v1/crm/{type}/{id}/activities", owner: "crm", description: "Add activity" },
+        ]
     }
 
     fn configure_routes(&self, cfg: &mut web::ServiceConfig) {

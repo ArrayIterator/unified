@@ -11,18 +11,23 @@
       {{/each}}
       {{else}}
       <a class="nav-link" href="/">Home</a>
-      <a class="nav-link" href="/dashboard">Dashboard</a>
+      <a class="nav-link" href="{{route_url "user_dashboard"}}">Dashboard</a>
       {{/if}}
     </nav>
     <div class="site-header-actions">
+      <button type="button" class="icon-button" data-palette-open aria-label="Search and commands (Ctrl K)" title="Search and commands (Ctrl K)">
+        <svg class="icon" aria-hidden="true"><use href="#icon-search"></use></svg>
+      </button>
       <button type="button" class="theme-toggle" data-theme-toggle aria-label="Toggle dark or light theme">
-        <span class="theme-toggle-icon" aria-hidden="true">&#9788;</span>
-        <span class="theme-toggle-label">Theme</span>
+        <span class="theme-toggle-icon" data-theme-icon aria-hidden="true">
+          <svg class="icon" aria-hidden="true"><use href="#icon-moon"></use></svg>
+        </span>
+        <span class="theme-toggle-label">Dark</span>
       </button>
       {{#if user}}
-      <span class="user-chip">{{user.name}}</span>
+      <span class="user-chip"><span class="user-chip-name">{{user.name}}</span></span>
       {{else}}
-      <a class="button button-small" href="/login">Sign in</a>
+      <a class="button button-small" href="{{route_url "login"}}">Sign in</a>
       {{/if}}
     </div>
   </div>

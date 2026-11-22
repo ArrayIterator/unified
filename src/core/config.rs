@@ -7,10 +7,14 @@
 // `unified -t -f /path/to/config.yaml`.
 
 use crate::core::error::{UnifiedError, UnifiedResult};
+use crate::core::hardening::SecuritySettings;
+use crate::core::routes::RoutesSection;
+use crate::core::storage::StorageSection;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
+use uuid::Uuid;
 
 /// Environment variable that overrides the default config path.
 pub const CONFIG_ENV: &str = "UNIFIED_CONFIG_FILE";
@@ -27,6 +31,25 @@ pub struct AppConfig {
     pub licenses: LicenseSection,
     pub geo: GeoSection,
     pub acme: AcmeSection,
+    pub store: StoreSection,
+    /// Security hardening settings (brute-force protection, rate
+    /// limiting, anti-DDoS, IP lists, response headers). See
+    /// `crate::core::hardening::SecuritySettings`.
+    pub security: SecuritySettings,
+    /// Public API settings: global prefix and versioning defaults.
+    pub api: ApiSection,
+    /// Named page-route overrides (`login`, `dashboard`, ...). See
+    /// `crate::core::routes::RoutesSection`.
+    pub routes: RoutesSection,
+    /// Storage targets registered at startup. See
+    /// `crate::core::storage::StorageSection`.
+    pub storage: StorageSection,
+    /// Load balancer defaults (health checks, strategy, limits).
+    pub load_balancer: LoadBalancerSection,
+    /// Pingora gateway listener and runtime settings.
+    pub gateway: GatewaySection,
+    /// System-records retention.
+    pub records: RecordsSection,
 }
 
 impl Default for AppConfig {
@@ -39,6 +62,14 @@ impl Default for AppConfig {
             licenses: LicenseSection::default(),
             geo: GeoSection::default(),
             acme: AcmeSection::default(),
+            store: StoreSection::default(),
+            security: SecuritySettings::default(),
+            api: ApiSection::default(),
+            routes: RoutesSection::default(),
+            storage: StorageSection::default(),
+            load_balancer: LoadBalancerSection::default(),
+            gateway: GatewaySection::default(),
+            records: RecordsSection::default(),
         }
     }
 }
@@ -336,6 +367,203 @@ impl Default for AcmeSection {
     }
 }
 
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct StoreSection {
+    /// Secret key that signs expiring download links (HMAC-SHA256).
+    /// When set, signed links survive restarts because the same key is
+    /// used on every start. When empty, the store generates a random
+    /// per-process secret and logs a warning; links signed before a
+    /// restart then stop verifying. Use a long random string (at
+    /// least 32 characters). Changing the value invalidates links
+    /// signed with the previous value and requires a restart to take
+    /// effect.
+    pub download_signing_secret: String,
+}
+
+/// Public API settings: the global prefix and the versioning
+/// defaults. Mirrors the runtime shapes in the API Manager module
+/// (`ApiPrefixSettings` for the prefix, `ApiVersion` seed defaults
+/// for the per-version settings: v1 and v2 enabled, v3 reserved and
+/// disabled, 1000 requests per minute, authentication required).
+/// The module keeps its own runtime copy; these values are the
+/// file-backed defaults it seeds from.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct ApiSection {
+    /// Segment placed before the version in public URLs: `"v"`
+    /// produces `/v1/...`, `/v2/...`. One or more segments of
+    /// letters, digits, `-` or `_`, joined by `/`, with no leading or
+    /// trailing slash and no whitespace (for example `"v"`, `"api"`,
+    /// `"api/v2"`).
+    pub prefix: String,
+    /// When true, the deployment intends to also remount the internal
+    /// `/api/v1/<module>` routes under the new prefix on the next
+    /// startup. A flag only: the remount itself happens in the server
+    /// factory, and an in-memory setting alone cannot move routes
+    /// Actix already registered.
+    pub migrate_internal: bool,
+    /// Version served when a caller asks for no version explicitly
+    /// (`v` followed by a positive number, for example `"v1"`).
+    pub default_version: String,
+    /// Default per-version rate limit, requests per minute. An
+    /// endpoint without its own limit falls back to its version's
+    /// limit, which defaults to this value.
+    pub default_rate_limit_per_minute: u32,
+    /// Whether callers must authenticate for a version by default.
+    pub default_auth_required: bool,
+}
+
+impl Default for ApiSection {
+    fn default() -> Self {
+        Self {
+            prefix: "v".to_string(),
+            migrate_internal: false,
+            default_version: "v1".to_string(),
+            default_rate_limit_per_minute: 1000,
+            default_auth_required: true,
+        }
+    }
+}
+
+/// Load balancer defaults. Every field has a default; balancers also
+/// carry per-balancer overrides.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct LoadBalancerSection {
+    /// Default health-check interval in seconds (5..=3600).
+    pub health_check_interval_secs: u64,
+    /// Default health-check timeout in seconds (1..=60).
+    pub health_check_timeout_secs: u64,
+    /// Default health-check path for HTTP checks.
+    pub health_check_path: String,
+    /// Default strategy: round_robin | least_connections |
+    /// weighted | ip_hash.
+    pub default_strategy: String,
+    /// Maximum backends per balancer (1..=1000).
+    pub max_backends_per_balancer: usize,
+}
+
+impl Default for LoadBalancerSection {
+    fn default() -> Self {
+        Self {
+            health_check_interval_secs: 30,
+            health_check_timeout_secs: 5,
+            health_check_path: "/health".to_string(),
+            default_strategy: "round_robin".to_string(),
+            max_backends_per_balancer: 100,
+        }
+    }
+}
+
+/// Pingora gateway settings. This is the durable YAML section; the
+/// gateway module keeps its own runtime copy (`GatewayConfig`) with
+/// the same fields and defaults, and reads this section at startup.
+/// The gateway only listens when `enabled` is true and the binary
+/// was built with the `gateway` Cargo feature.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct GatewaySection {
+    /// Master switch. The proxy listener only starts when this is
+    /// true and the `gateway` feature is compiled in.
+    pub enabled: bool,
+    /// Plain-HTTP listen addresses, for example `0.0.0.0:8081`.
+    pub listen: Vec<String>,
+    /// TLS listen addresses, for example `0.0.0.0:8444`. Empty means
+    /// no TLS listener is bound.
+    pub tls_listen: Vec<String>,
+    /// Default upstream used when no routing rule matches: a load
+    /// balancer id (UUID) or a plain `host:port` address. `None`
+    /// means unmatched requests are rejected.
+    pub default_upstream: Option<String>,
+    /// Request-log ring buffer capacity (1..=10000).
+    pub request_log_capacity: usize,
+    /// Health-check sweep interval in seconds (5..=3600).
+    pub health_check_interval_secs: u64,
+    /// Upstream connect timeout in seconds (1..=60).
+    pub connect_timeout_secs: u64,
+}
+
+impl Default for GatewaySection {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            listen: vec!["127.0.0.1:8081".to_string()],
+            tls_listen: vec!["127.0.0.1:8444".to_string()],
+            default_upstream: None,
+            request_log_capacity: 500,
+            health_check_interval_secs: 30,
+            connect_timeout_secs: 5,
+        }
+    }
+}
+
+impl GatewaySection {
+    /// Validate the section. Returns a list of problems; an empty
+    /// list means the section is valid. Mirrors
+    /// `GatewayConfig::validate` in the gateway module, except the
+    /// default-upstream check is done locally: the gateway validates
+    /// it through the load balancer's host parser, which the config
+    /// module must not depend on.
+    pub fn validate(&self) -> Vec<String> {
+        let mut problems = Vec::new();
+        if self.listen.is_empty() && self.tls_listen.is_empty() {
+            problems.push(
+                "gateway.listen and gateway.tls_listen must not both be empty".to_string(),
+            );
+        }
+        for address in self.listen.iter().chain(self.tls_listen.iter()) {
+            if let Err(message) = validate_listen_address(address, "gateway") {
+                problems.push(message);
+            }
+        }
+        if !(1..=10_000).contains(&self.request_log_capacity) {
+            problems.push(format!(
+                "gateway.request_log_capacity must be between 1 and 10000, got {}",
+                self.request_log_capacity
+            ));
+        }
+        if !(5..=3600).contains(&self.health_check_interval_secs) {
+            problems.push(format!(
+                "gateway.health_check_interval_secs must be between 5 and 3600, got {}",
+                self.health_check_interval_secs
+            ));
+        }
+        if !(1..=60).contains(&self.connect_timeout_secs) {
+            problems.push(format!(
+                "gateway.connect_timeout_secs must be between 1 and 60, got {}",
+                self.connect_timeout_secs
+            ));
+        }
+        if let Some(upstream) = &self.default_upstream {
+            let trimmed = upstream.trim();
+            if trimmed.is_empty() {
+                problems.push("gateway.default_upstream must not be empty".to_string());
+            } else if !valid_gateway_upstream(trimmed) {
+                problems.push(format!(
+                    "gateway.default_upstream must be a load balancer UUID or a \"host:port\" address, got \"{trimmed}\""
+                ));
+            }
+        }
+        problems
+    }
+}
+
+/// System-records retention: records older than this many days are
+/// removed only by the explicit, confirmed retention purge.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct RecordsSection {
+    /// Default retention in days (at least 1).
+    pub retention_days: u32,
+}
+
+impl Default for RecordsSection {
+    fn default() -> Self {
+        Self { retention_days: 365 }
+    }
+}
+
 impl AppConfig {
     /// Resolve the default config path: `$UNIFIED_CONFIG_FILE` when set,
     /// otherwise `config.yaml` in the working directory.
@@ -528,6 +756,14 @@ impl AppConfig {
         if self.geo.update_interval_hours == 0 {
             problems.push("geo.update_interval_hours must be at least 1".to_string());
         }
+        if !self.store.download_signing_secret.is_empty()
+            && self.store.download_signing_secret.len() < 32
+        {
+            problems.push(
+                "store.download_signing_secret must be at least 32 characters when set"
+                    .to_string(),
+            );
+        }
         if self.acme.enabled {
             if self.acme.directory_url.trim().is_empty()
                 || !(self.acme.directory_url.starts_with("http://")
@@ -544,6 +780,85 @@ impl AppConfig {
                         .to_string(),
                 );
             }
+        }
+        problems.extend(self.security.validate());
+        if let Err(message) = validate_api_prefix(&self.api.prefix) {
+            problems.push(format!("api.prefix: {message}"));
+        }
+        if !self
+            .api
+            .default_version
+            .strip_prefix('v')
+            .is_some_and(|number| !number.is_empty() && number.parse::<u32>().is_ok_and(|n| n > 0))
+        {
+            problems.push(format!(
+                "api.default_version must look like \"v1\", \"v2\" or \"v10\" (\"v\" followed by a positive number), got \"{}\"",
+                self.api.default_version
+            ));
+        }
+        if self.api.default_rate_limit_per_minute == 0 {
+            problems.push(
+                "api.default_rate_limit_per_minute must be at least 1".to_string(),
+            );
+        }
+        problems.extend(self.routes.validate());
+        for target in &self.storage.targets {
+            if let Err(error) = target.validate() {
+                problems.push(format!(
+                    "storage.targets[\"{}\"]: {}",
+                    target.name, error.message
+                ));
+            }
+        }
+        if let Some(default_target) = &self.storage.default_target {
+            if !default_target.trim().is_empty()
+                && !self
+                    .storage
+                    .targets
+                    .iter()
+                    .any(|target| target.name == *default_target)
+            {
+                problems.push(format!(
+                    "storage.default_target \"{default_target}\" does not match any configured storage target"
+                ));
+            }
+        }
+        let lb = &self.load_balancer;
+        if !(5..=3600).contains(&lb.health_check_interval_secs) {
+            problems.push(format!(
+                "load_balancer.health_check_interval_secs must be between 5 and 3600, got {}",
+                lb.health_check_interval_secs
+            ));
+        }
+        if !(1..=60).contains(&lb.health_check_timeout_secs) {
+            problems.push(format!(
+                "load_balancer.health_check_timeout_secs must be between 1 and 60, got {}",
+                lb.health_check_timeout_secs
+            ));
+        }
+        if !lb.health_check_path.starts_with('/') {
+            problems.push(
+                "load_balancer.health_check_path must start with '/'".to_string(),
+            );
+        }
+        if !matches!(
+            lb.default_strategy.as_str(),
+            "round_robin" | "least_connections" | "weighted" | "ip_hash"
+        ) {
+            problems.push(format!(
+                "load_balancer.default_strategy must be round_robin, least_connections, weighted or ip_hash, got \"{}\"",
+                lb.default_strategy
+            ));
+        }
+        if !(1..=1000).contains(&lb.max_backends_per_balancer) {
+            problems.push(format!(
+                "load_balancer.max_backends_per_balancer must be between 1 and 1000, got {}",
+                lb.max_backends_per_balancer
+            ));
+        }
+        problems.extend(self.gateway.validate());
+        if self.records.retention_days == 0 {
+            problems.push("records.retention_days must be at least 1".to_string());
         }
 
         problems
@@ -580,6 +895,55 @@ impl AppConfig {
             ))),
         }
     }
+}
+
+/// Validate the global public API prefix: one or more segments of
+/// letters, digits, `-` or `_`, joined by `/`, with no leading or
+/// trailing slash and no whitespace. Examples: `"v"`, `"api"`,
+/// `"api/v2"`. An empty prefix is rejected: it would produce
+/// ambiguous `//v1/...` URLs. Mirrors the API Manager module's
+/// `validate_prefix` (private there, so the check is repeated here).
+fn validate_api_prefix(prefix: &str) -> Result<(), String> {
+    let prefix = prefix.trim();
+    if prefix.is_empty() {
+        return Err("prefix must not be empty".to_string());
+    }
+    if prefix.starts_with('/') || prefix.ends_with('/') {
+        return Err("prefix must not start or end with '/'".to_string());
+    }
+    if prefix.contains(char::is_whitespace) {
+        return Err("prefix must not contain whitespace".to_string());
+    }
+    if prefix.chars().count() > 100 {
+        return Err("prefix must be at most 100 characters".to_string());
+    }
+    for segment in prefix.split('/') {
+        if segment.is_empty()
+            || !segment
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+        {
+            return Err(format!(
+                "prefix segment \"{segment}\" is invalid: use only letters, digits, '-' or '_'"
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// True when a gateway default upstream is a load balancer UUID or a
+/// `host:port` address.
+fn valid_gateway_upstream(value: &str) -> bool {
+    if Uuid::parse_str(value).is_ok() {
+        return true;
+    }
+    let Some((host, port)) = value.rsplit_once(':') else {
+        return false;
+    };
+    !host.trim().is_empty()
+        && !host.contains(char::is_whitespace)
+        && !host.contains('/')
+        && port.parse::<u16>().is_ok_and(|p| p != 0)
 }
 
 /// Validate one listen address (`host:port`). Only localhost names and IP

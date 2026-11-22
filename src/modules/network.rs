@@ -24,7 +24,7 @@ use crate::core::context::{AppContext, GeoInfo};
 use crate::core::error::{UnifiedError, UnifiedResult};
 use crate::core::hooks::{events, HookBus, HookContext};
 use crate::core::json;
-use crate::core::modules::{Module, ModuleRegistry};
+use crate::core::modules::{Module, ModuleRegistry, RouteInfo};
 use actix_web::{web, HttpResponse};
 use hickory_proto::rr::{Name, RData, RecordType};
 use hickory_resolver::{ResolverConfig, ResolverOpts, TokioResolver};
@@ -1133,6 +1133,15 @@ impl Module for NetworkModule {
 
     fn register_hooks(&self, bus: &HookBus) {
         bus.register("dns.verify", "network", Arc::new(on_dns_verify));
+    }
+
+    fn route_info(&self) -> Vec<RouteInfo> {
+        vec![
+            RouteInfo { method: "GET", path: "/api/v1/network/info", owner: "network", description: "Network info" },
+            RouteInfo { method: "POST", path: "/api/v1/network/geo-lookup", owner: "network", description: "Geo lookup handler" },
+            RouteInfo { method: "GET", path: "/api/v1/network/connections", owner: "network", description: "Connections handler" },
+            RouteInfo { method: "POST", path: "/api/v1/network/dns/check", owner: "network", description: "Dns check handler" },
+        ]
     }
 
     fn configure_routes(&self, cfg: &mut actix_web::web::ServiceConfig) {

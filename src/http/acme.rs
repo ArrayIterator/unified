@@ -10,6 +10,7 @@
 // directory URLs); providers that require External Account Binding pass
 // their EAB credentials at account creation.
 
+use crate::core::config::AppConfig;
 use crate::core::error::{UnifiedError, UnifiedResult};
 use crate::http::tls::{to_ascii_name, SslStorage};
 use chrono::{Duration, Utc};
@@ -18,8 +19,13 @@ use instant_acme::{
     Account, AuthorizationHandle, AuthorizationStatus, ChallengeStatus, ChallengeType,
     ExternalAccountKey, Identifier, Key, NewAccount, NewOrder, OrderStatus, RetryPolicy,
 };
-use rcgen::{CertificateParams, DistinguishedName, KeyPair, PKCS_ECDSA_P256_SHA256};
+use rcgen::{
+    CertificateParams, DistinguishedName, KeyPair, PKCS_ECDSA_P256_SHA256,
+    PKCS_ECDSA_P384_SHA384, PKCS_RSA_SHA256,
+};
 use rustls_pki_types::{PrivateKeyDer, PrivatePkcs8KeyDer};
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, OnceLock, RwLock};
@@ -537,4 +543,560 @@ fn renewal_domains(storage: &SslStorage, domain: &str) -> Vec<String> {
         }
     }
     domains
+}
+
+// ---------------------------------------------------------------------------
+// Advanced certificate management: challenge support matrix, key types,
+// and the config-first ACME configuration.
+//
+// Challenge support, per provider, at the certificate-authority level:
+// every built-in provider offers both HTTP-01 and DNS-01, and all of
+// them issue wildcard certificates, but only over DNS-01. This client
+// performs HTTP-01 only: there is no DNS provider integration in this
+// codebase, so a DNS-01 order is rejected with a clear error instead of
+// failing halfway through, and wildcard orders are rejected for the
+// same reason (see `order_certificate` above). A certificate issued
+// with DNS-01 elsewhere can still be installed through the
+// certificates module, which validates it before it goes live.
+// ---------------------------------------------------------------------------
+
+/// Default expiry-alert thresholds, in days before expiry.
+pub const DEFAULT_ALERT_THRESHOLDS: &[i64] = &[30, 14, 7, 1];
+
+/// An ACME challenge type.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ChallengeKind {
+    #[serde(rename = "http-01")]
+    Http01,
+    #[serde(rename = "dns-01")]
+    Dns01,
+}
+
+impl ChallengeKind {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Http01 => "http-01",
+            Self::Dns01 => "dns-01",
+        }
+    }
+
+    pub fn from_str(value: &str) -> Option<Self> {
+        match value {
+            "http-01" | "http01" => Some(Self::Http01),
+            "dns-01" | "dns01" => Some(Self::Dns01),
+            _ => None,
+        }
+    }
+}
+
+/// Challenge types the certificate authority offers, per provider.
+/// All listed providers offer both challenge types at the CA level.
+pub fn supported_challenges(provider: &AcmeProvider) -> &'static [ChallengeKind] {
+    match provider {
+        AcmeProvider::LetsEncrypt
+        | AcmeProvider::Google
+        | AcmeProvider::ZeroSsl
+        | AcmeProvider::BuyPass
+        | AcmeProvider::Custom(_) => &[ChallengeKind::Http01, ChallengeKind::Dns01],
+    }
+}
+
+/// Challenge types this client actually performs. HTTP-01 only: DNS-01
+/// needs a DNS provider integration, which this codebase does not have.
+pub const CLIENT_SUPPORTED_CHALLENGES: &[ChallengeKind] = &[ChallengeKind::Http01];
+
+/// True when this client can perform the challenge type.
+pub fn client_supports_challenge(kind: ChallengeKind) -> bool {
+    CLIENT_SUPPORTED_CHALLENGES.contains(&kind)
+}
+
+/// Private key algorithm for newly issued certificates.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum KeyType {
+    Rsa,
+    Ecdsa,
+}
+
+/// Generate a private key for the requested algorithm. RSA keys are
+/// generated at 2048 bits: that is what the bundled generator
+/// produces, so `AcmeConfig::validate` rejects any other RSA size
+/// instead of silently issuing a different size than configured.
+/// ECDSA uses the requested curve (`P-256` or `P-384`).
+pub fn generate_key_pair(key_type: KeyType, curve: &str) -> UnifiedResult<KeyPair> {
+    match key_type {
+        KeyType::Rsa => KeyPair::generate_for(&PKCS_RSA_SHA256).map_err(rcgen_err),
+        KeyType::Ecdsa => match curve {
+            "P-384" => KeyPair::generate_for(&PKCS_ECDSA_P384_SHA384).map_err(rcgen_err),
+            "P-256" => KeyPair::generate_for(&PKCS_ECDSA_P256_SHA256).map_err(rcgen_err),
+            other => Err(UnifiedError::bad_request(format!(
+                "unsupported ECDSA curve: {other} (expected P-256 or P-384)"
+            ))),
+        },
+    }
+}
+
+/// Public description of one ACME provider for the API / dashboard.
+#[derive(Debug, Clone, Serialize)]
+pub struct ProviderInfo {
+    pub key: &'static str,
+    pub name: String,
+    pub directory_url: String,
+    pub staging_url: Option<String>,
+    pub staging_available: bool,
+    pub requires_eab: bool,
+    pub supports_wildcard: bool,
+    pub supports_ip: bool,
+    pub challenges: Vec<&'static str>,
+}
+
+/// Support matrix for every built-in provider, plus the custom slot.
+pub fn provider_matrix() -> Vec<ProviderInfo> {
+    let mut out = Vec::new();
+    for provider in [
+        AcmeProvider::LetsEncrypt,
+        AcmeProvider::Google,
+        AcmeProvider::ZeroSsl,
+        AcmeProvider::BuyPass,
+    ] {
+        let staging_url = provider.directory_url(true).ok();
+        out.push(ProviderInfo {
+            key: match &provider {
+                AcmeProvider::LetsEncrypt => "letsencrypt",
+                AcmeProvider::Google => "google",
+                AcmeProvider::ZeroSsl => "zerossl",
+                AcmeProvider::BuyPass => "buypass",
+                AcmeProvider::Custom(_) => "custom",
+            },
+            name: provider.name().to_string(),
+            directory_url: provider
+                .directory_url(false)
+                .unwrap_or_default(),
+            staging_available: staging_url.is_some(),
+            staging_url,
+            requires_eab: provider.requires_eab(),
+            supports_wildcard: provider.supports_wildcard(),
+            supports_ip: provider.supports_ip(),
+            challenges: supported_challenges(&provider)
+                .iter()
+                .map(ChallengeKind::as_str)
+                .collect(),
+        });
+    }
+    out.push(ProviderInfo {
+        key: "custom",
+        name: "custom ACME provider".to_string(),
+        directory_url: String::new(),
+        staging_url: None,
+        staging_available: false,
+        requires_eab: false,
+        supports_wildcard: true,
+        supports_ip: false,
+        challenges: vec!["http-01", "dns-01"],
+    });
+    out
+}
+
+/// Config-first ACME configuration.
+///
+/// This is the configuration the certificates module reads and the
+/// shape the `acme` section of the config file should take (see the
+/// coordinator report for the exact `AppConfig` snippet: the section
+/// lives in `AcmeSection` there, and this struct is the in-memory view
+/// built from it). Secrets (`eab_key_id`, `eab_hmac_key`) are only
+/// ever held here and passed to account creation; `redacted()` is the
+/// only JSON view of this struct, and it never contains them.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct AcmeConfig {
+    /// Provider key: `letsencrypt`, `google`, `zerossl`, `buypass`,
+    /// or `custom`.
+    pub provider: String,
+    /// Explicit directory URL. Empty means the provider default
+    /// (or the staging directory when `staging` is true).
+    pub directory_url: String,
+    /// Use the provider staging directory. Providers without a
+    /// staging directory (ZeroSSL, custom) reject staging.
+    pub staging: bool,
+    /// Contact addresses for the ACME account (`mailto:` is added
+    /// when missing).
+    pub contacts: Vec<String>,
+    /// External Account Binding key id (ZeroSSL). Secret: never
+    /// logged, never returned by any API response.
+    pub eab_key_id: String,
+    /// External Account Binding HMAC key. Secret: never logged,
+    /// never returned by any API response.
+    pub eab_hmac_key: String,
+    /// Renew when the certificate expires within this many days.
+    pub renew_days_before_expiry: i64,
+    /// Key algorithm for new certificates: `rsa` or `ecdsa`.
+    pub key_type: KeyType,
+    /// RSA key size in bits. The bundled generator produces
+    /// 2048-bit RSA keys, so only 2048 validates.
+    pub key_size: u32,
+    /// ECDSA curve: `P-256` or `P-384`. Ignored for RSA keys.
+    pub curve: String,
+    /// Challenge type for issuance: `http-01` or `dns-01`. DNS-01 is
+    /// accepted in configuration but ordering with it is rejected
+    /// by this client (no DNS provider integration).
+    pub challenge: ChallengeKind,
+    /// Days before expiry at which expiry alerts fire, for example
+    /// `[30, 14, 7, 1]`.
+    pub alert_thresholds_days: Vec<i64>,
+}
+
+impl Default for AcmeConfig {
+    fn default() -> Self {
+        Self {
+            provider: "letsencrypt".to_string(),
+            directory_url: String::new(),
+            staging: false,
+            contacts: Vec::new(),
+            eab_key_id: String::new(),
+            eab_hmac_key: String::new(),
+            renew_days_before_expiry: DEFAULT_RENEW_DAYS,
+            key_type: KeyType::Rsa,
+            key_size: 2048,
+            curve: "P-256".to_string(),
+            challenge: ChallengeKind::Http01,
+            alert_thresholds_days: DEFAULT_ALERT_THRESHOLDS.to_vec(),
+        }
+    }
+}
+
+impl AcmeConfig {
+    /// Build the view from the existing `acme` config section: the
+    /// provider is detected from the directory URL, and staging from
+    /// the staging host in the URL. Extended keys (provider name,
+    /// EAB, key type, challenge, thresholds) default here until the
+    /// config section is extended with them.
+    pub fn from_app_config(config: &AppConfig) -> Self {
+        let url = config.acme.directory_url.clone();
+        let (provider, staging) = if url.contains("letsencrypt") {
+            ("letsencrypt", url.contains("staging"))
+        } else if url.contains("pki.goog") {
+            ("google", url.contains("test-api"))
+        } else if url.contains("zerossl") {
+            ("zerossl", false)
+        } else if url.contains("buypass") {
+            ("buypass", url.contains("test.buypass"))
+        } else if url.is_empty() {
+            ("letsencrypt", false)
+        } else {
+            ("custom", false)
+        };
+        Self {
+            provider: provider.to_string(),
+            directory_url: if provider == "custom" {
+                url
+            } else {
+                String::new()
+            },
+            staging,
+            contacts: config.acme.contacts.clone(),
+            ..Self::default()
+        }
+    }
+
+    /// Resolve the configured provider name to an `AcmeProvider`.
+    pub fn resolve_provider(&self) -> UnifiedResult<AcmeProvider> {
+        match self.provider.as_str() {
+            "letsencrypt" => Ok(AcmeProvider::LetsEncrypt),
+            "google" => Ok(AcmeProvider::Google),
+            "zerossl" => Ok(AcmeProvider::ZeroSsl),
+            "buypass" => Ok(AcmeProvider::BuyPass),
+            "custom" => Ok(AcmeProvider::Custom(self.directory_url.clone())),
+            other => Err(UnifiedError::bad_request(format!(
+                "unknown ACME provider: {other} (expected letsencrypt, google, zerossl, buypass, or custom)"
+            ))),
+        }
+    }
+
+    /// Resolve the directory URL: an explicit URL wins, otherwise the
+    /// provider default (or its staging directory).
+    pub fn resolve_directory_url(&self) -> UnifiedResult<String> {
+        if !self.directory_url.trim().is_empty() {
+            return Ok(self.directory_url.clone());
+        }
+        self.resolve_provider()?
+            .directory_url(self.staging)
+    }
+
+    /// External Account Binding credentials, when both parts are set.
+    /// The returned references borrow this struct; callers must not
+    /// copy them into logs or responses.
+    pub fn eab(&self) -> Option<(&str, &str)> {
+        if self.eab_key_id.is_empty() || self.eab_hmac_key.is_empty() {
+            None
+        } else {
+            Some((&self.eab_key_id, &self.eab_hmac_key))
+        }
+    }
+
+    /// Validate the configuration. Returns every problem found.
+    pub fn validate(&self) -> Vec<String> {
+        let mut problems = Vec::new();
+        match self.resolve_provider() {
+            Ok(provider) => {
+                if provider.requires_eab() && self.eab().is_none() {
+                    problems.push(format!(
+                        "{} requires External Account Binding (acme.eab_key_id and acme.eab_hmac_key)",
+                        provider.name()
+                    ));
+                }
+                if self.staging && provider.directory_url(true).is_err() {
+                    problems.push(format!(
+                        "{} does not offer a staging directory",
+                        provider.name()
+                    ));
+                }
+            }
+            Err(error) => problems.push(error.message),
+        }
+        if !(MIN_RENEW_DAYS..=MAX_RENEW_DAYS).contains(&self.renew_days_before_expiry) {
+            problems.push(format!(
+                "acme.renew_days_before_expiry must be between {MIN_RENEW_DAYS} and {MAX_RENEW_DAYS}, got {}",
+                self.renew_days_before_expiry
+            ));
+        }
+        match self.key_type {
+            KeyType::Rsa => {
+                if self.key_size != 2048 {
+                    problems.push(format!(
+                        "acme.key_size must be 2048 for RSA keys (the bundled generator produces 2048-bit RSA keys), got {}",
+                        self.key_size
+                    ));
+                }
+            }
+            KeyType::Ecdsa => {
+                if self.curve != "P-256" && self.curve != "P-384" {
+                    problems.push(format!(
+                        "acme.curve must be P-256 or P-384 for ECDSA keys, got \"{}\"",
+                        self.curve
+                    ));
+                }
+            }
+        }
+        if self.alert_thresholds_days.is_empty() {
+            problems.push("acme.alert_thresholds_days must contain at least one threshold".to_string());
+        }
+        for threshold in &self.alert_thresholds_days {
+            if *threshold < 0 || *threshold > 90 {
+                problems.push(format!(
+                    "acme.alert_thresholds_days entries must be between 0 and 90, got {threshold}"
+                ));
+            }
+        }
+        if self.contacts.iter().any(|contact| contact.trim().is_empty()) {
+            problems.push("acme.contacts must not contain empty entries".to_string());
+        }
+        problems
+    }
+
+    /// JSON view safe to return from the API: EAB secrets are never
+    /// included, only whether they are configured.
+    pub fn redacted(&self) -> Value {
+        serde_json::json!({
+            "provider": &self.provider,
+            "directory_url": self.resolve_directory_url().unwrap_or_default(),
+            "staging": self.staging,
+            "contacts": &self.contacts,
+            "eab_configured": self.eab().is_some(),
+            "renew_days_before_expiry": self.renew_days_before_expiry,
+            "key_type": self.key_type,
+            "key_size": self.key_size,
+            "curve": &self.curve,
+            "challenge": self.challenge.as_str(),
+            "alert_thresholds_days": &self.alert_thresholds_days,
+        })
+    }
+}
+
+impl AcmeClient {
+    /// Renew the stored certificate for `domain` when it expires within
+    /// `days`, issuing the replacement with the requested key
+    /// algorithm. Returns true when a renewal happened.
+    pub async fn renew_if_expiring_with_key_type(
+        &self,
+        storage: &SslStorage,
+        domain: &str,
+        days: i64,
+        key_type: KeyType,
+        curve: &str,
+    ) -> UnifiedResult<bool> {
+        let expiry = storage.cert_expiry(domain).ok_or_else(|| {
+            UnifiedError::not_found(format!("no certificate stored for {domain}"))
+        })?;
+        if expiry > Utc::now() + Duration::days(clamp_renew_days(days)) {
+            return Ok(false);
+        }
+        self.renew_stored_with_key_type(storage, domain, key_type, curve)
+            .await?;
+        Ok(true)
+    }
+
+    /// Renew the stored certificate for `domain` regardless of expiry,
+    /// issuing the replacement with the requested key algorithm.
+    pub async fn renew_certificate_with_key_type(
+        &self,
+        storage: &SslStorage,
+        domain: &str,
+        key_type: KeyType,
+        curve: &str,
+    ) -> UnifiedResult<()> {
+        if storage.cert_expiry(domain).is_none() {
+            return Err(UnifiedError::not_found(format!(
+                "no certificate stored for {domain}"
+            )));
+        }
+        self.renew_stored_with_key_type(storage, domain, key_type, curve)
+            .await
+    }
+
+    /// Order a replacement for the stored certificate with the
+    /// requested key algorithm and swap it into the live storage. The
+    /// replacement is requested for every renewable name on the old
+    /// certificate, so a renewal never silently drops a SAN.
+    async fn renew_stored_with_key_type(
+        &self,
+        storage: &SslStorage,
+        domain: &str,
+        key_type: KeyType,
+        curve: &str,
+    ) -> UnifiedResult<()> {
+        let domains = renewal_domains(storage, domain);
+        if domains.is_empty() {
+            return Err(UnifiedError::bad_request(format!(
+                "stored certificate for {domain} has no DNS names renewable over HTTP-01 (wildcard names need DNS-01)"
+            )));
+        }
+        let (cert_pem, key_pem) = self
+            .order_certificate_with_key_type(&domains, key_type, curve)
+            .await?;
+        storage.renew(domain, cert_pem.as_bytes(), key_pem.as_bytes())
+    }
+
+    /// Order a certificate with a caller-chosen key algorithm and
+    /// challenge type. DNS-01 is rejected: this client performs
+    /// HTTP-01 only (no DNS provider integration), so a DNS-01 order
+    /// would fail halfway through. The rest of the flow mirrors
+    /// `order_certificate` exactly.
+    pub async fn order_certificate_with_challenge(
+        &self,
+        domains: &[String],
+        key_type: KeyType,
+        curve: &str,
+        challenge: ChallengeKind,
+    ) -> UnifiedResult<(String, String)> {
+        if challenge != ChallengeKind::Http01 {
+            return Err(UnifiedError::bad_request(
+                "DNS-01 validation is not performed by this client (no DNS provider integration); use HTTP-01, or install a certificate issued with DNS-01 elsewhere",
+            ));
+        }
+        self.order_certificate_with_key_type(domains, key_type, curve)
+            .await
+    }
+
+    /// Order a certificate for `domains` via HTTP-01 with a key of
+    /// the requested algorithm. Returns `(certificate chain PEM,
+    /// private key PEM)`. Wildcard domains are rejected: HTTP-01
+    /// cannot validate them (DNS-01 is required).
+    pub async fn order_certificate_with_key_type(
+        &self,
+        domains: &[String],
+        key_type: KeyType,
+        curve: &str,
+    ) -> UnifiedResult<(String, String)> {
+        if domains.is_empty() {
+            return Err(UnifiedError::bad_request(
+                "at least one domain is required for a certificate order",
+            ));
+        }
+        let mut normalized = Vec::with_capacity(domains.len());
+        for domain in domains {
+            let ascii = to_ascii_name(domain);
+            if ascii.starts_with("*.") {
+                return Err(UnifiedError::bad_request(format!(
+                    "wildcard domain {domain} needs DNS-01 validation, HTTP-01 cannot issue it"
+                )));
+            }
+            if rustls_pki_types::DnsName::try_from(ascii.as_str()).is_err() {
+                return Err(UnifiedError::bad_request(format!(
+                    "invalid domain name: {domain}"
+                )));
+            }
+            normalized.push(ascii);
+        }
+        let mut seen = HashSet::new();
+        normalized.retain(|domain| seen.insert(domain.clone()));
+        let cert_key = generate_key_pair(key_type, curve)?;
+        let identifiers: Vec<Identifier> = normalized
+            .iter()
+            .map(|domain| Identifier::Dns(domain.clone()))
+            .collect();
+        let mut order = self
+            .account
+            .new_order(&NewOrder::new(&identifiers))
+            .await
+            .map_err(acme_err)?;
+        let mut params = CertificateParams::new(normalized.clone()).map_err(rcgen_err)?;
+        params.distinguished_name = DistinguishedName::new();
+        let csr = params.serialize_request(&cert_key).map_err(rcgen_err)?;
+
+        let mut tokens = ChallengeTokens::new(self.challenges.clone());
+        let mut authorizations = order.authorizations();
+        while let Some(authorization) = authorizations.next().await {
+            let mut authorization = authorization.map_err(acme_err)?;
+            let mut challenge = authorization
+                .challenge(ChallengeType::Http01)
+                .ok_or_else(|| {
+                    UnifiedError::internal(
+                        "ACME server offers no HTTP-01 challenge for this domain",
+                    )
+                })?;
+            let token = challenge.token.clone();
+            let key_authorization = challenge
+                .key_authorization(self.account.credentials().key())
+                .map_err(acme_err)?;
+            self.challenges
+                .write()
+                .expect("challenge map lock poisoned")
+                .insert(token.clone(), key_authorization.as_str().to_string());
+            challenge_store()
+                .write()
+                .expect("challenge store lock poisoned")
+                .insert(token.clone(), key_authorization.as_str().to_string());
+            tokens.published.push(token);
+            if challenge.status == ChallengeStatus::Pending {
+                if let Err(error) = challenge.set_ready().await {
+                    deactivate(&mut authorization).await;
+                    return Err(acme_err(error));
+                }
+            }
+            if let Some(problem) = challenge.error.clone() {
+                deactivate(&mut authorization).await;
+                return Err(UnifiedError::internal(format!(
+                    "ACME challenge failed: {problem:?}"
+                )));
+            }
+        }
+        let status = order
+            .poll_ready(&RetryPolicy::new())
+            .await
+            .map_err(acme_err)?;
+        if status != OrderStatus::Ready {
+            return Err(UnifiedError::internal(format!(
+                "ACME order did not become ready (status: {status:?})"
+            )));
+        }
+        order.finalize_csr(csr.der()).await.map_err(acme_err)?;
+        let chain = order
+            .certificate()
+            .await
+            .map_err(acme_err)?
+            .ok_or_else(|| {
+                UnifiedError::internal("ACME server returned no certificate chain")
+            })?;
+        Ok((chain, cert_key.serialize_pem()))
+    }
 }

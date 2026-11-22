@@ -8,28 +8,43 @@
   <link rel="stylesheet" href="/assets/css/dashboard.css">
 </head>
 <body>
+  <a class="skip-link" href="#dashboard-content">Skip to content</a>
+  {{> icons}}
   <div class="dashboard-shell">
+    <div class="sidebar-backdrop" data-sidebar-backdrop hidden></div>
     <aside class="sidebar" id="sidebar" aria-label="Dashboard navigation">
       <div class="sidebar-brand">
         <a class="brand" href="/">
           <span class="brand-mark" aria-hidden="true">U</span>
           <span class="brand-name">{{#if app_name}}{{app_name}}{{else}}Unified{{/if}}</span>
         </a>
-        <button type="button" class="sidebar-close" data-sidebar-toggle aria-label="Close sidebar">&times;</button>
+        <button type="button" class="icon-button sidebar-collapse" data-sidebar-collapse aria-label="Collapse sidebar" aria-expanded="true">
+          <svg class="icon" aria-hidden="true"><use href="#icon-chevron-down"></use></svg>
+        </button>
+        <button type="button" class="sidebar-close" data-sidebar-toggle aria-label="Close sidebar" aria-expanded="false">&times;</button>
       </div>
       <nav class="sidebar-nav" aria-label="Modules">
         <p class="sidebar-section">Navigate</p>
-        <a class="sidebar-link is-active" href="/dashboard">Dashboard</a>
+        <a class="sidebar-link is-active" href="{{route_url "user_dashboard"}}" aria-current="page">
+          <svg class="icon" aria-hidden="true"><use href="#icon-grid"></use></svg>
+          <span class="sidebar-label">Dashboard</span>
+        </a>
         {{#if nav}}
         {{#each nav}}
-        <a class="sidebar-link{{#if active}} is-active{{/if}}" href="{{url}}">{{label}}</a>
+        <a class="sidebar-link{{#if active}} is-active{{/if}}" href="{{url}}"{{#if active}} aria-current="page"{{/if}}>
+          <svg class="icon" aria-hidden="true"><use href="#icon-layers"></use></svg>
+          <span class="sidebar-label">{{label}}</span>
+        </a>
         {{/each}}
         {{/if}}
         <p class="sidebar-section">Modules</p>
         <span id="module-nav-list">
           {{#if modules}}
           {{#each modules}}
-          <a class="sidebar-link" href="/dashboard/{{id}}">{{name}}</a>
+          <a class="sidebar-link" href="{{route_url "user_dashboard"}}/{{id}}">
+            <svg class="icon" aria-hidden="true"><use href="#icon-layers"></use></svg>
+            <span class="sidebar-label">{{name}}</span>
+          </a>
           {{/each}}
           {{else}}
           <span class="sidebar-empty">No modules registered yet.</span>
@@ -38,43 +53,88 @@
       </nav>
       <div class="sidebar-footer">
         {{#if user}}
-        <span class="user-chip">{{user.name}}</span>
+        <span class="user-chip"><span class="user-chip-name">{{user.name}}</span></span>
         {{else}}
-        <a class="button button-small" href="/login">Sign in</a>
+        <a class="button button-small" href="{{route_url "login"}}">Sign in</a>
         {{/if}}
       </div>
     </aside>
 
     <div class="dashboard-main">
       <header class="topbar">
-        <button type="button" class="sidebar-open" data-sidebar-toggle aria-label="Open sidebar">&#9776;</button>
-        <form class="topbar-search" action="/dashboard" method="get" role="search">
-          <label class="visually-hidden" for="dashboard-search">Search</label>
-          <input id="dashboard-search" name="search" type="search" placeholder="Search modules, sites, tickets&hellip;" value="{{#if search_query}}{{search_query}}{{/if}}" data-dashboard-search>
+        <button type="button" class="icon-button sidebar-open" data-sidebar-toggle aria-label="Open sidebar" aria-expanded="false">
+          <svg class="icon" aria-hidden="true"><use href="#icon-menu"></use></svg>
+        </button>
+        <form class="topbar-search" action="{{route_url "user_dashboard"}}" method="get" role="search">
+          <label class="visually-hidden" for="dashboard-search">Search modules</label>
+          <input id="dashboard-search" name="search" type="search" placeholder="Search modules&hellip;" value="{{#if search_query}}{{search_query}}{{/if}}" data-dashboard-search>
+          <span class="topbar-search-hint" aria-hidden="true"><kbd>Ctrl K</kbd></span>
         </form>
         <div class="topbar-actions">
+          <button type="button" class="icon-button" data-palette-open aria-label="Search and commands (Ctrl K)" title="Search and commands (Ctrl K)">
+            <svg class="icon" aria-hidden="true"><use href="#icon-command"></use></svg>
+          </button>
+          <a class="icon-button notification-bell" href="#notifications-panel" aria-label="Notifications">
+            <svg class="icon" aria-hidden="true"><use href="#icon-bell"></use></svg>
+            <span class="badge badge-count" data-notification-count hidden>0</span>
+          </a>
           <button type="button" class="theme-toggle" data-theme-toggle aria-label="Toggle dark or light theme">
-            <span aria-hidden="true">&#9788;</span>
-            <span class="theme-toggle-label">Theme</span>
+            <span class="theme-toggle-icon" data-theme-icon aria-hidden="true">
+              <svg class="icon" aria-hidden="true"><use href="#icon-moon"></use></svg>
+            </span>
+            <span class="theme-toggle-label">Dark</span>
           </button>
           {{#if user}}
-          <span class="user-chip">{{user.name}}</span>
+          <div class="menu-wrap">
+            <button type="button" class="user-chip" data-menu-toggle aria-controls="user-menu" aria-expanded="false" aria-haspopup="true">
+              
+              <span class="user-chip-name">{{user.name}}</span>
+              <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-chevron-down"></use></svg>
+            </button>
+            <div class="menu" id="user-menu" role="menu" hidden>
+              <p class="menu-heading">Signed in as {{user.name}}</p>
+              <a class="menu-item" href="{{route_url "user_dashboard"}}" role="menuitem">
+                <svg class="icon" aria-hidden="true"><use href="#icon-grid"></use></svg>
+                Dashboard
+              </a>
+              <a class="menu-item" href="{{route_url "user_dashboard" "/tasks"}}" role="menuitem">
+                <svg class="icon" aria-hidden="true"><use href="#icon-check-circle"></use></svg>
+                My tasks
+              </a>
+              <a class="menu-item" href="{{route_url "user_dashboard" "/notifications"}}" role="menuitem">
+                <svg class="icon" aria-hidden="true"><use href="#icon-bell"></use></svg>
+                Notifications
+              </a>
+            </div>
+          </div>
+          {{else}}
+          <a class="button button-small" href="{{route_url "login"}}">Sign in</a>
           {{/if}}
         </div>
       </header>
 
-      <main class="dashboard-content">
+      <main class="dashboard-content" id="dashboard-content">
         {{#if flash}}
         <div class="flash flash-{{flash.type}}" role="alert" data-flash>{{flash.message}}</div>
         {{/if}}
 
         <div class="page-heading">
-          <h1>Dashboard</h1>
-          {{#if user}}
-          <p>Welcome back, {{user.name}}.</p>
-          {{else}}
-          <p>Overview of your Unified installation.</p>
-          {{/if}}
+          <div>
+            <h1>Dashboard</h1>
+            {{#if user}}
+            <p>Welcome back, {{user.name}}.</p>
+            {{else}}
+            <p>Overview of your Unified installation.</p>
+            {{/if}}
+          </div>
+          <div class="page-heading-actions">
+            <button type="button" class="button button-secondary" data-palette-open>
+              <svg class="icon" aria-hidden="true"><use href="#icon-search"></use></svg>
+              Quick search
+              <kbd>Ctrl K</kbd>
+            </button>
+            <a class="button" href="{{route_url "user_dashboard"}}">Refresh</a>
+          </div>
         </div>
 
         <section class="stat-grid" aria-label="Overview statistics">
@@ -88,27 +148,98 @@
           {{/each}}
           {{else}}
           <article class="stat-card">
-            <p class="stat-label">Modules</p>
+            <div class="stat-card-top">
+              <p class="stat-label">Modules</p>
+              <span class="stat-card-icon" aria-hidden="true"><svg class="icon"><use href="#icon-layers"></use></svg></span>
+            </div>
             <p class="stat-value">{{#if counts}}{{counts.modules_total}}{{else}}0{{/if}}</p>
             <p class="stat-change">No statistics available yet.</p>
           </article>
           <article class="stat-card">
-            <p class="stat-label">Sites</p>
+            <div class="stat-card-top">
+              <p class="stat-label">Sites</p>
+              <span class="stat-card-icon" aria-hidden="true"><svg class="icon"><use href="#icon-server"></use></svg></span>
+            </div>
             <p class="stat-value">{{#if counts}}{{counts.sites_total}}{{else}}0{{/if}}</p>
             <p class="stat-change">No statistics available yet.</p>
           </article>
           <article class="stat-card">
-            <p class="stat-label">Open tickets</p>
+            <div class="stat-card-top">
+              <p class="stat-label">Open tickets</p>
+              <span class="stat-card-icon" aria-hidden="true"><svg class="icon"><use href="#icon-file"></use></svg></span>
+            </div>
             <p class="stat-value">{{#if counts}}{{counts.tickets_open}}{{else}}0{{/if}}</p>
             <p class="stat-change">No statistics available yet.</p>
           </article>
           <article class="stat-card">
-            <p class="stat-label">Orders</p>
+            <div class="stat-card-top">
+              <p class="stat-label">Orders</p>
+              <span class="stat-card-icon" aria-hidden="true"><svg class="icon"><use href="#icon-package"></use></svg></span>
+            </div>
             <p class="stat-value">{{#if counts}}{{counts.orders_total}}{{else}}0{{/if}}</p>
             <p class="stat-change">No statistics available yet.</p>
           </article>
           {{/if}}
         </section>
+
+        <div class="widget-grid">
+          <section class="panel" aria-label="System status">
+            <div class="panel-heading">
+              <h2>System status</h2>
+              <span class="panel-meta">Live from the service monitor</span>
+            </div>
+            <div data-widget="system-status" aria-live="polite">
+              <div class="status-summary">
+                <div><p class="status-metric-label">Status</p><p class="skeleton skeleton-line" style="width: 6rem">&nbsp;</p></div>
+                <div><p class="status-metric-label">Uptime</p><p class="skeleton skeleton-line" style="width: 4rem">&nbsp;</p></div>
+                <div><p class="status-metric-label">CPU</p><p class="skeleton skeleton-line" style="width: 3rem">&nbsp;</p></div>
+                <div><p class="status-metric-label">Memory</p><p class="skeleton skeleton-line" style="width: 7rem">&nbsp;</p></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel" aria-label="Open tasks">
+            <div class="panel-heading">
+              <h2>Open tasks</h2>
+              <a class="panel-meta" href="{{route_url "user_dashboard" "/tasks"}}">View all</a>
+            </div>
+            <div data-widget="tasks" aria-live="polite">
+              <p class="empty-state"><span class="skeleton skeleton-line" style="width: 60%; margin-left: auto; margin-right: auto">&nbsp;</span><span class="skeleton skeleton-line" style="width: 40%; margin-left: auto; margin-right: auto">&nbsp;</span></p>
+            </div>
+          </section>
+
+          <section class="panel" id="notifications-panel" aria-label="Notifications">
+            <div class="panel-heading">
+              <h2>Notifications</h2>
+              <a class="panel-meta" href="{{route_url "user_dashboard" "/notifications"}}">View all</a>
+            </div>
+            <div data-widget="notifications" aria-live="polite">
+              <p class="empty-state"><span class="skeleton skeleton-line" style="width: 60%; margin-left: auto; margin-right: auto">&nbsp;</span><span class="skeleton skeleton-line" style="width: 40%; margin-left: auto; margin-right: auto">&nbsp;</span></p>
+            </div>
+          </section>
+
+          <section class="panel" aria-label="Recent activity">
+            <div class="panel-heading">
+              <h2>Recent activity</h2>
+            </div>
+            {{#if activities}}
+            <ul class="activity-feed">
+              {{#each activities}}
+              <li class="activity-item">
+                <span class="activity-time">{{time}}</span>
+                <span class="activity-text">{{text}}</span>
+              </li>
+              {{/each}}
+            </ul>
+            {{else}}
+            <p class="empty-state">
+              <svg class="icon icon-xl empty-state-icon" aria-hidden="true"><use href="#icon-activity"></use></svg>
+              <span class="empty-state-title">No recent activity yet</span>
+              Events from modules &mdash; logins, orders, tickets, deployments &mdash; will show up here.
+            </p>
+            {{/if}}
+          </section>
+        </div>
 
         <section class="panel" aria-label="Modules">
           <div class="panel-heading">
@@ -121,13 +252,14 @@
             {{#if modules}}
             {{#each modules}}
             <article class="module-card">
+              <span class="module-card-icon" aria-hidden="true"><svg class="icon icon-lg"><use href="#icon-layers"></use></svg></span>
               <h3>{{name}}</h3>
               <p class="module-description">{{description}}</p>
               <p class="module-meta">
                 <span class="badge{{#if enabled}} badge-enabled{{else}} badge-disabled{{/if}}">{{#if enabled}}Enabled{{else}}Disabled{{/if}}</span>
                 {{#if version}}<span>v{{version}}</span>{{/if}}
               </p>
-              <a class="button button-small" href="/dashboard/{{id}}">Open</a>
+              <a class="button button-small" href="{{route_url "user_dashboard"}}/{{id}}">Open</a>
             </article>
             {{/each}}
             {{else}}
@@ -136,29 +268,14 @@
           </div>
           <p class="panel-note" data-module-status role="status"></p>
         </section>
-
-        <section class="panel" aria-label="Recent activity">
-          <div class="panel-heading">
-            <h2>Recent activity</h2>
-          </div>
-          {{#if activities}}
-          <ul class="activity-feed">
-            {{#each activities}}
-            <li class="activity-item">
-              <span class="activity-time">{{time}}</span>
-              <span class="activity-text">{{text}}</span>
-            </li>
-            {{/each}}
-          </ul>
-          {{else}}
-          <p class="empty-state">No recent activity yet. Events from modules — logins, orders, tickets, deployments — will show up here.</p>
-          {{/if}}
-        </section>
       </main>
 
       {{> footer}}
     </div>
   </div>
+
+  {{> palette}}
+
   <script src="/assets/js/dashboard.js" defer></script>
 </body>
 </html>

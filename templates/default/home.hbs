@@ -8,15 +8,20 @@
   <link rel="stylesheet" href="/assets/css/dashboard.css">
 </head>
 <body>
+  <a class="skip-link" href="#home-content">Skip to content</a>
+  {{> icons}}
   {{> header}}
 
-  <main class="home-main">
+  <main class="home-main" id="home-content">
     <section class="hero">
       <h1>{{#if app_name}}{{app_name}}{{else}}Unified{{/if}}</h1>
       {{#if tagline}}<p class="hero-tagline">{{tagline}}</p>{{/if}}
       {{#if description}}<p class="hero-description">{{description}}</p>{{/if}}
       <p class="hero-actions">
-        <a class="button" href="{{#if dashboard_url}}{{dashboard_url}}{{else}}/dashboard{{/if}}">Open dashboard</a>
+        <a class="button" href="{{route_url "user_dashboard"}}">
+          <svg class="icon" aria-hidden="true"><use href="#icon-grid"></use></svg>
+          Open dashboard
+        </a>
         {{#if login_url}}<a class="button button-secondary" href="{{login_url}}">Sign in</a>{{/if}}
       </p>
     </section>
@@ -25,6 +30,7 @@
     <section class="feature-grid" aria-label="Features">
       {{#each features}}
       <article class="feature-card">
+        <span class="feature-card-icon" aria-hidden="true"><svg class="icon icon-lg"><use href="#icon-layers"></use></svg></span>
         <h2>{{title}}</h2>
         <p>{{description}}</p>
       </article>
@@ -33,14 +39,17 @@
     {{else}}
     <section class="feature-grid" aria-label="Features">
       <article class="feature-card">
+        <span class="feature-card-icon" aria-hidden="true"><svg class="icon icon-lg"><use href="#icon-grid"></use></svg></span>
         <h2>One control plane</h2>
         <p>Licensing, downloads, storefront, software and asset management, and day-to-day operations in one place.</p>
       </article>
       <article class="feature-card">
+        <span class="feature-card-icon" aria-hidden="true"><svg class="icon icon-lg"><use href="#icon-layers"></use></svg></span>
         <h2>Modular by design</h2>
         <p>Every capability is a module that can be enabled, configured, and interconnected through the hook bus.</p>
       </article>
       <article class="feature-card">
+        <span class="feature-card-icon" aria-hidden="true"><svg class="icon icon-lg"><use href="#icon-users"></use></svg></span>
         <h2>Built for teams</h2>
         <p>Companies, sites, domains, billing, and support tickets share one login and one dashboard.</p>
       </article>
@@ -55,6 +64,7 @@
   </main>
 
   {{> footer}}
+  {{> palette}}
   <script src="/assets/js/dashboard.js" defer></script>
 </body>
 </html>

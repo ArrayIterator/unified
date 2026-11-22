@@ -15,7 +15,7 @@ use crate::core::context::AppContext;
 use crate::core::error::{UnifiedError, UnifiedResult};
 use crate::core::hooks::events;
 use crate::core::json;
-use crate::core::modules::{Module, ModuleRegistry};
+use crate::core::modules::{Module, ModuleRegistry, RouteInfo};
 use crate::core::pagination::{PageResult, PaginationParams};
 use crate::db::models::{Domain, NewDomain};
 use crate::modules::company::{company_exists, site_exists};
@@ -691,6 +691,19 @@ impl Module for DomainsModule {
                 }),
             );
         }
+    }
+
+    fn route_info(&self) -> Vec<RouteInfo> {
+        vec![
+            RouteInfo { method: "GET", path: "/api/v1/domains", owner: "domains", description: "List domains" },
+            RouteInfo { method: "POST", path: "/api/v1/domains", owner: "domains", description: "Create domain" },
+            RouteInfo { method: "GET", path: "/api/v1/domains/{id}", owner: "domains", description: "Get domain" },
+            RouteInfo { method: "PUT", path: "/api/v1/domains/{id}", owner: "domains", description: "Update domain" },
+            RouteInfo { method: "DELETE", path: "/api/v1/domains/{id}", owner: "domains", description: "Delete domain" },
+            RouteInfo { method: "POST", path: "/api/v1/domains/{id}/verify", owner: "domains", description: "Verify domain" },
+            RouteInfo { method: "POST", path: "/api/v1/domains/{id}/ssl-renew", owner: "domains", description: "Ssl renew handler" },
+            RouteInfo { method: "POST", path: "/api/v1/domains/{id}/subdomains", owner: "domains", description: "Create subdomain" },
+        ]
     }
 
     fn configure_routes(&self, cfg: &mut actix_web::web::ServiceConfig) {

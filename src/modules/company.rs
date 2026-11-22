@@ -9,7 +9,7 @@ use crate::core::context::AppContext;
 use crate::core::error::{UnifiedError, UnifiedResult};
 use crate::core::hooks::{HookBus, HookContext};
 use crate::core::json;
-use crate::core::modules::{Module, ModuleRegistry};
+use crate::core::modules::{Module, ModuleRegistry, RouteInfo};
 use crate::core::pagination::{PageResult, PaginationParams};
 use crate::db::models::{Company, CompanySite, NewCompany, NewCompanySite};
 use crate::modules::network::DnsVerifier;
@@ -826,6 +826,23 @@ impl Module for CompanyModule {
             "company",
             Arc::new(on_company_create_requested),
         );
+    }
+
+    fn route_info(&self) -> Vec<RouteInfo> {
+        vec![
+            RouteInfo { method: "GET", path: "/api/v1/company/companies", owner: "company", description: "List companies" },
+            RouteInfo { method: "POST", path: "/api/v1/company/companies", owner: "company", description: "Create company" },
+            RouteInfo { method: "GET", path: "/api/v1/company/companies/{id}", owner: "company", description: "Get company" },
+            RouteInfo { method: "PUT", path: "/api/v1/company/companies/{id}", owner: "company", description: "Update company" },
+            RouteInfo { method: "DELETE", path: "/api/v1/company/companies/{id}", owner: "company", description: "Delete company" },
+            RouteInfo { method: "GET", path: "/api/v1/company/companies/{id}/sites", owner: "company", description: "List company sites" },
+            RouteInfo { method: "GET", path: "/api/v1/company/{id}/sites", owner: "company", description: "List company sites" },
+            RouteInfo { method: "GET", path: "/api/v1/company/sites", owner: "company", description: "List sites" },
+            RouteInfo { method: "POST", path: "/api/v1/company/sites", owner: "company", description: "Create site" },
+            RouteInfo { method: "GET", path: "/api/v1/company/sites/{id}", owner: "company", description: "Get site" },
+            RouteInfo { method: "PUT", path: "/api/v1/company/sites/{id}", owner: "company", description: "Update site" },
+            RouteInfo { method: "DELETE", path: "/api/v1/company/sites/{id}", owner: "company", description: "Delete site" },
+        ]
     }
 
     fn configure_routes(&self, cfg: &mut actix_web::web::ServiceConfig) {

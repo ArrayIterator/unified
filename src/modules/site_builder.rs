@@ -37,7 +37,7 @@ use crate::core::context::AppContext;
 use crate::core::error::{UnifiedError, UnifiedResult};
 use crate::core::hooks::HookBus;
 use crate::core::json as api_json;
-use crate::core::modules::{Module, ModuleRegistry};
+use crate::core::modules::{Module, ModuleRegistry, RouteInfo};
 use crate::core::pagination::{PageResult, PaginationParams};
 use actix_web::{web, HttpResponse};
 use chrono::Utc;
@@ -1144,6 +1144,29 @@ impl Module for SiteBuilderModule {
     }
 
     fn register_hooks(&self, _bus: &HookBus) {}
+
+    fn route_info(&self) -> Vec<RouteInfo> {
+        vec![
+            RouteInfo { method: "GET", path: "/api/v1/site-builder/pages", owner: "site-builder", description: "List pages" },
+            RouteInfo { method: "POST", path: "/api/v1/site-builder/pages", owner: "site-builder", description: "Create page" },
+            RouteInfo { method: "GET", path: "/api/v1/site-builder/pages/{id}", owner: "site-builder", description: "Get page" },
+            RouteInfo { method: "PUT", path: "/api/v1/site-builder/pages/{id}", owner: "site-builder", description: "Update page" },
+            RouteInfo { method: "DELETE", path: "/api/v1/site-builder/pages/{id}", owner: "site-builder", description: "Delete page" },
+            RouteInfo { method: "GET", path: "/api/v1/site-builder/pages/{id}/blocks", owner: "site-builder", description: "List blocks" },
+            RouteInfo { method: "POST", path: "/api/v1/site-builder/pages/{id}/blocks", owner: "site-builder", description: "Create block" },
+            RouteInfo { method: "PUT", path: "/api/v1/site-builder/pages/{id}/blocks/order", owner: "site-builder", description: "Reorder blocks" },
+            RouteInfo { method: "PUT", path: "/api/v1/site-builder/pages/{id}/blocks/{block_id}", owner: "site-builder", description: "Update block" },
+            RouteInfo { method: "DELETE", path: "/api/v1/site-builder/pages/{id}/blocks/{block_id}", owner: "site-builder", description: "Delete block" },
+            RouteInfo { method: "GET", path: "/api/v1/site-builder/pages/{id}/sections", owner: "site-builder", description: "List sections" },
+            RouteInfo { method: "POST", path: "/api/v1/site-builder/pages/{id}/sections", owner: "site-builder", description: "Create section" },
+            RouteInfo { method: "PUT", path: "/api/v1/site-builder/pages/{id}/sections/order", owner: "site-builder", description: "Reorder sections" },
+            RouteInfo { method: "PUT", path: "/api/v1/site-builder/pages/{id}/sections/{section_id}", owner: "site-builder", description: "Update section" },
+            RouteInfo { method: "DELETE", path: "/api/v1/site-builder/pages/{id}/sections/{section_id}", owner: "site-builder", description: "Delete section" },
+            RouteInfo { method: "POST", path: "/api/v1/site-builder/pages/{id}/publish", owner: "site-builder", description: "Publish page" },
+            RouteInfo { method: "POST", path: "/api/v1/site-builder/pages/{id}/unpublish", owner: "site-builder", description: "Unpublish page" },
+            RouteInfo { method: "GET", path: "/api/v1/site-builder/pages/{id}/render", owner: "site-builder", description: "Render page" },
+        ]
+    }
 
     fn configure_routes(&self, cfg: &mut actix_web::web::ServiceConfig) {
         let state = self.state.clone();

@@ -5,13 +5,17 @@
 // a checksum over the preceding characters. Validation is real: the key
 // must exist, be `active`, not be expired, and have a free activation
 // seat; a successful validation auto-registers the activation.
-// Revocation emits the `license.revoked` hook event.
+// Revocation emits the `license.revoked` hook event. The expiry scan
+// (`check_license_expiry`, below) emits `license.expiring` for
+// licenses entering a warning window; it runs on the
+// `license.expiry.check_requested` hook and on
+// `POST /api/v1/licensing/licenses/expiry-check`.
 
 use crate::core::context::AppContext;
 use crate::core::error::{UnifiedError, UnifiedResult};
 use crate::core::hooks::{events, HookBus, HookContext};
 use crate::core::json;
-use crate::core::modules::{Module, ModuleRegistry};
+use crate::core::modules::{Module, ModuleRegistry, RouteInfo};
 use crate::core::pagination::{PageResult, PaginationParams};
 use crate::db::models::{License, LicenseActivation, NewLicense, NewLicenseActivation};
 use actix_web::{web, HttpResponse};
@@ -70,6 +74,191 @@ pub fn key_checksum_valid(key: &str) -> bool {
 
 fn normalize_key(key: &str) -> String {
     key.trim().to_uppercase()
+}
+
+// ---------------------------------------------------------------------------
+// Expiry scan: `license.expiring`.
+// ---------------------------------------------------------------------------
+
+/// Event emitted when a license enters an expiry warning window (or
+/// has already expired). Payload: `{"license_id", "license_key",
+/// "days_remaining", "threshold_days", "expired", "expires_at"}`.
+/// There is no `license.expiring` constant in `crate::core::hooks`
+/// (it only defines `license.issued` / `license.revoked`), so the
+/// name lives here next to the code that emits it. The notifications
+/// module does NOT subscribe to this event yet (verified by reading
+/// its listener list: it subscribes to `license.issued` /
+/// `activated` / `deactivated` / `suspended` / `revoked` only), so
+/// the scan also requests a notification directly
+/// (`notification.requested`, user `system`), the same pattern the
+/// certificates module uses for `ssl.expiring` (which the
+/// notifications module likewise does not subscribe to). If the
+/// notifications module later subscribes to `license.expiring`
+/// directly, drop the direct request to avoid duplicate alerts.
+pub const LICENSE_EXPIRING: &str = "license.expiring";
+
+/// Hook an operator or the scheduler can emit to run the expiry scan
+/// now. The scheduler has no license job kind yet (its known kinds
+/// are mail, geo, ssl, cleanup, backup, cluster, subscription
+/// renewal, report, newsletter, digest); until one is added there,
+/// the scan is reachable through this hook and through
+/// `POST /api/v1/licensing/licenses/expiry-check`.
+pub const LICENSE_EXPIRY_CHECK_REQUESTED: &str = "license.expiry.check_requested";
+
+/// Warning windows in days before expiry. There is no expiry-window
+/// setting in `AppConfig` (the `licenses` section only carries the
+/// MaxMind key), so the windows are these documented defaults: a
+/// license is alerted once per window it newly enters, and once when
+/// it expires.
+pub const EXPIRY_ALERT_WINDOW_DAYS: &[i64] = &[30, 14, 7];
+
+/// Thresholds already alerted for, per license id, so the scan
+/// alerts once per window instead of on every run. Mirrors the
+/// certificates module's `alerted_thresholds` (`-1` = expired).
+static EXPIRY_ALERTED: OnceLock<DashMap<Uuid, Vec<i64>>> = OnceLock::new();
+
+fn expiry_alerted_store() -> &'static DashMap<Uuid, Vec<i64>> {
+    EXPIRY_ALERTED.get_or_init(DashMap::new)
+}
+
+/// Run the expiry scan over every `active` license: for each warning
+/// window (30/14/7 days) a license has newly entered, emit
+/// `license.expiring` and request a notification; an already-expired
+/// license alerts once the same way (`threshold_days: -1`,
+/// `days_remaining` negative). Licenses with no expiry date and
+/// non-`active` licenses are skipped. Returns a summary of what was
+/// checked. The database rows are authoritative when a pool is
+/// attached; otherwise the in-memory store is scanned.
+pub fn check_license_expiry(ctx: &AppContext) -> UnifiedResult<Value> {
+    let licenses: Vec<License> = match db_pool(ctx) {
+        Some(pool) => db_load_licenses(&pool)?,
+        None => licenses_store()
+            .iter()
+            .map(|entry| entry.value().clone())
+            .collect(),
+    };
+    let now = Utc::now();
+    let mut checked = 0u64;
+    let mut expiring: Vec<Value> = Vec::new();
+    let mut expired: Vec<Value> = Vec::new();
+    for license in &licenses {
+        if license.status != "active" {
+            continue;
+        }
+        let Some(expires_at) = license.expires_at else {
+            continue;
+        };
+        checked += 1;
+        let days = (expires_at - now).num_days();
+        let mut alerted = expiry_alerted_store()
+            .get(&license.id)
+            .map(|entry| entry.value().clone())
+            .unwrap_or_default();
+        let mut crossed: Vec<i64> = Vec::new();
+        if days < 0 {
+            if !alerted.contains(&-1) {
+                crossed.push(-1);
+            }
+            expired.push(serde_json::json!({
+                "license_id": license.id,
+                "license_key": license.license_key,
+                "days_remaining": days,
+                "expires_at": expires_at,
+            }));
+        } else {
+            for threshold in EXPIRY_ALERT_WINDOW_DAYS {
+                if days <= *threshold && !alerted.contains(threshold) {
+                    crossed.push(*threshold);
+                }
+            }
+            if !crossed.is_empty() {
+                expiring.push(serde_json::json!({
+                    "license_id": license.id,
+                    "license_key": license.license_key,
+                    "days_remaining": days,
+                    "expires_at": expires_at,
+                    "threshold_days": &crossed,
+                }));
+            }
+        }
+        for threshold in &crossed {
+            alerted.push(*threshold);
+            let expired_flag = *threshold == -1;
+            ctx.hooks.emit(
+                LICENSE_EXPIRING,
+                serde_json::json!({
+                    "license_id": license.id,
+                    "license_key": license.license_key,
+                    "days_remaining": days,
+                    "threshold_days": threshold,
+                    "expired": expired_flag,
+                    "expires_at": expires_at,
+                }),
+            );
+            // Direct notification, same pattern as the certificates
+            // module's `ssl.expiring` alerts: the notifications
+            // module does not subscribe to this event, so without
+            // this request the alert would land nowhere.
+            let (title, body) = if expired_flag {
+                (
+                    format!("License {} has expired", license.license_key),
+                    format!(
+                        "License {} expired {} day(s) ago; it can no longer be validated until it is renewed or replaced.",
+                        license.license_key,
+                        -days
+                    ),
+                )
+            } else {
+                (
+                    format!(
+                        "License {} expires in {days} day(s)",
+                        license.license_key
+                    ),
+                    format!(
+                        "License {} expires on {} (in {days} day(s)); renewal is due within the warning window.",
+                        license.license_key,
+                        expires_at.to_rfc3339()
+                    ),
+                )
+            };
+            ctx.hooks.emit(
+                "notification.requested",
+                serde_json::json!({
+                    "user_id": "system",
+                    "title": title,
+                    "body": body,
+                    "kind": "license.expiring",
+                }),
+            );
+        }
+        if !crossed.is_empty() {
+            expiry_alerted_store().insert(license.id, alerted);
+        }
+    }
+    Ok(serde_json::json!({
+        "checked": checked,
+        "expiring": expiring,
+        "expired": expired,
+    }))
+}
+
+/// Answer `license.expiry.check_requested` by running the expiry
+/// scan and returning its summary as the hook result.
+fn on_license_expiry_check_requested(ctx: &mut HookContext) {
+    let Some(app_ctx) = hook_ctx() else {
+        ctx.add_result(serde_json::json!({
+            "checked": 0,
+            "error": "licensing module is not initialised",
+        }));
+        return;
+    };
+    match check_license_expiry(&app_ctx) {
+        Ok(summary) => ctx.add_result(summary),
+        Err(error) => ctx.add_result(serde_json::json!({
+            "checked": 0,
+            "error": error.message,
+        })),
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -141,6 +330,20 @@ fn db_find_license_by_key(pool: &crate::db::DbPool, key: &str) -> UnifiedResult<
     })?;
     lic_dsl::licenses
         .filter(lic_dsl::license_key.eq(key))
+        .select(License::as_select())
+        .first(&mut conn)
+        .optional()
+        .map_err(|error| UnifiedError::internal(format!("Cannot load license: {error}")))
+}
+
+/// Load one license by id from the database, when a pool is attached.
+fn db_find_license_by_id(pool: &crate::db::DbPool, id: Uuid) -> UnifiedResult<Option<License>> {
+    use crate::db::schema::licenses::dsl as lic_dsl;
+    let mut conn = pool.get().map_err(|error| {
+        UnifiedError::internal(format!("Cannot get database connection: {error}"))
+    })?;
+    lic_dsl::licenses
+        .filter(lic_dsl::id.eq(id))
         .select(License::as_select())
         .first(&mut conn)
         .optional()
@@ -354,7 +557,12 @@ fn on_license_validate_requested(ctx: &mut HookContext) {
 /// Auto-issue licenses for a new order (from the Store module). Only
 /// items flagged `license_product` get a license, one per item, keyed by
 /// the item name as the product; already-licensed product/owner pairs
-/// are skipped so a repeated event does not issue duplicates.
+/// are skipped so a repeated event does not issue duplicates. The seat
+/// count comes from the item's `seats` field (times its quantity) and
+/// the expiry from the item's `expires_at` field, both set by the store
+/// from the purchased pricing tier and pricing model, so a software
+/// purchase issues the right license: one-time purchases get the
+/// updates-window expiry, subscriptions get one billing period.
 fn on_order_created(ctx: &mut HookContext) {
     let Some(app_ctx) = hook_ctx() else {
         ctx.add_result(serde_json::json!({
@@ -400,14 +608,40 @@ fn on_order_created(ctx: &mut HookContext) {
         if license_exists_for_product(&app_ctx, &product, user_id) {
             continue;
         }
+        let quantity = item
+            .get("quantity")
+            .and_then(|value| value.as_u64())
+            .unwrap_or(1)
+            .max(1);
+        let seats_per_unit = item
+            .get("seats")
+            .and_then(|value| value.as_i64())
+            .unwrap_or(1)
+            .max(1);
+        let max_activations = (seats_per_unit * quantity as i64).min(i32::MAX as i64) as i32;
+        let expires_at = item
+            .get("expires_at")
+            .and_then(|value| value.as_str())
+            .and_then(|value| value.parse::<DateTime<Utc>>().ok());
+        let software_id = item
+            .get("software_id")
+            .and_then(|value| value.as_str())
+            .map(str::to_string);
+        let software_slug = item
+            .get("software_slug")
+            .and_then(|value| value.as_str())
+            .map(str::to_string);
+        let download_limit = item
+            .get("download_limit")
+            .and_then(|value| value.as_u64());
         match issue_license(
             &app_ctx,
             generate_license_key(),
             product.clone(),
             user_id,
             company_id,
-            1,
-            None,
+            max_activations,
+            expires_at,
         ) {
             Ok(license) => {
                 ctx.add_result(serde_json::json!({
@@ -416,6 +650,11 @@ fn on_order_created(ctx: &mut HookContext) {
                     "license_id": license.id,
                     "license_key": license.license_key,
                     "product": product,
+                    "seats": max_activations,
+                    "expires_at": license.expires_at,
+                    "software_id": software_id,
+                    "software_slug": software_slug,
+                    "download_limit": download_limit,
                 }));
             }
             Err(error) => {
@@ -428,6 +667,95 @@ fn on_order_created(ctx: &mut HookContext) {
             }
         }
     }
+}
+
+/// Revoke the real licenses of a refunded order (from the Store
+/// module, `store.order.refunded`, payload
+/// `{ "order_id": ..., "license_ids": [...] }`).
+///
+/// The store only suspends its own mirror of the issued licenses and
+/// revokes its download entitlements, so without this listener a
+/// refunded license key would stay valid. A refund is final, so the
+/// license is revoked rather than suspended: a revoked key fails
+/// validation with `revoked` and can never activate again. Licenses
+/// are resolved from the in-memory store first and from the database
+/// when a pool is attached and the license is not in memory; ids that
+/// match nothing are reported in `not_found` instead of failing the
+/// whole refund. Each revocation emits `license.revoked`.
+fn on_order_refunded(ctx: &mut HookContext) {
+    let Some(app_ctx) = hook_ctx() else {
+        ctx.add_result(serde_json::json!({
+            "revoked": [],
+            "not_found": [],
+            "error": "licensing module is not initialised",
+        }));
+        return;
+    };
+    let order_id = ctx
+        .get("order_id")
+        .and_then(|value| value.as_str())
+        .map(str::to_string)
+        .or_else(|| {
+            ctx.get("order")
+                .and_then(|value| value.get("id"))
+                .and_then(|value| value.as_str())
+                .map(str::to_string)
+        });
+    let license_ids: Vec<String> = ctx
+        .get("license_ids")
+        .and_then(|value| value.as_array())
+        .map(|values| {
+            values
+                .iter()
+                .filter_map(|value| value.as_str().map(str::to_string))
+                .collect()
+        })
+        .unwrap_or_default();
+    let mut revoked: Vec<String> = Vec::new();
+    let mut not_found: Vec<String> = Vec::new();
+    for license_id in license_ids {
+        let Ok(id) = license_id.parse::<Uuid>() else {
+            not_found.push(license_id);
+            continue;
+        };
+        let mut license = licenses_store()
+            .get(&id)
+            .map(|entry| entry.value().clone());
+        if license.is_none() {
+            if let Some(pool) = db_pool(&app_ctx) {
+                license = db_find_license_by_id(&pool, id).ok().flatten();
+            }
+        }
+        let Some(mut license) = license else {
+            not_found.push(license_id);
+            continue;
+        };
+        if license.status == "revoked" {
+            revoked.push(license_id);
+            continue;
+        }
+        license.status = "revoked".to_string();
+        license.updated_at = Utc::now();
+        if persist_license_status(&app_ctx, &license).is_err() {
+            not_found.push(license_id);
+            continue;
+        }
+        app_ctx.hooks.emit(
+            events::LICENSE_REVOKED,
+            serde_json::json!({
+                "license_id": license.id,
+                "license_key": license.license_key,
+                "order_id": order_id,
+                "reason": "order_refunded",
+            }),
+        );
+        revoked.push(license_id);
+    }
+    ctx.add_result(serde_json::json!({
+        "revoked": revoked,
+        "not_found": not_found,
+        "order_id": order_id,
+    }));
 }
 
 // ---------------------------------------------------------------------------
@@ -1003,6 +1331,15 @@ async fn deactivate_handler(
     json::respond(result, debug)
 }
 
+/// Run the expiry scan now and return its summary. This is the
+/// operator trigger for the scan until the scheduler gains a
+/// license job kind (see `LICENSE_EXPIRY_CHECK_REQUESTED`).
+async fn expiry_check_handler(ctx: web::Data<Arc<AppContext>>) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let result = check_license_expiry(&ctx);
+    json::respond(result, debug)
+}
+
 async fn suspend_handler(ctx: web::Data<Arc<AppContext>>, id: web::Path<Uuid>) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<License> = (|| {
@@ -1113,7 +1450,7 @@ impl Module for LicensingModule {
     }
 
     fn description(&self) -> &'static str {
-        "License key management: generation, validation, activation seats, suspension, and revocation."
+        "License key management: generation, validation, activation seats, suspension, revocation, and expiry alerts."
     }
 
     fn init(&self, ctx: &AppContext) -> UnifiedResult<()> {
@@ -1127,7 +1464,34 @@ impl Module for LicensingModule {
             "licensing",
             Arc::new(on_license_validate_requested),
         );
+        bus.register(
+            LICENSE_EXPIRY_CHECK_REQUESTED,
+            "licensing",
+            Arc::new(on_license_expiry_check_requested),
+        );
         bus.register("order.created", "licensing", Arc::new(on_order_created));
+        bus.register(
+            "store.order.refunded",
+            "licensing",
+            Arc::new(on_order_refunded),
+        );
+    }
+
+    fn route_info(&self) -> Vec<RouteInfo> {
+        vec![
+            RouteInfo { method: "GET", path: "/api/v1/licensing/licenses", owner: "licensing", description: "List licenses" },
+            RouteInfo { method: "POST", path: "/api/v1/licensing/licenses", owner: "licensing", description: "Create license" },
+            RouteInfo { method: "POST", path: "/api/v1/licensing/validate", owner: "licensing", description: "Validate handler" },
+            RouteInfo { method: "POST", path: "/api/v1/licensing/activate", owner: "licensing", description: "Activate handler" },
+            RouteInfo { method: "POST", path: "/api/v1/licensing/deactivate", owner: "licensing", description: "Deactivate handler" },
+            RouteInfo { method: "GET", path: "/api/v1/licensing/licenses/{id}", owner: "licensing", description: "Get license" },
+            RouteInfo { method: "PUT", path: "/api/v1/licensing/licenses/{id}", owner: "licensing", description: "Update license" },
+            RouteInfo { method: "DELETE", path: "/api/v1/licensing/licenses/{id}", owner: "licensing", description: "Delete license" },
+            RouteInfo { method: "POST", path: "/api/v1/licensing/licenses/{id}/suspend", owner: "licensing", description: "Suspend handler" },
+            RouteInfo { method: "POST", path: "/api/v1/licensing/licenses/expiry-check", owner: "licensing", description: "Run the license expiry scan now" },
+            RouteInfo { method: "POST", path: "/api/v1/licensing/licenses/{id}/revoke", owner: "licensing", description: "Revoke handler" },
+            RouteInfo { method: "GET", path: "/api/v1/licensing/licenses/{id}/activations", owner: "licensing", description: "List activations" },
+        ]
     }
 
     fn configure_routes(&self, cfg: &mut actix_web::web::ServiceConfig) {
@@ -1143,6 +1507,7 @@ impl Module for LicensingModule {
                 .route("/licenses/{id}", web::delete().to(delete_license))
                 .route("/licenses/{id}/suspend", web::post().to(suspend_handler))
                 .route("/licenses/{id}/revoke", web::post().to(revoke_handler))
+                .route("/licenses/expiry-check", web::post().to(expiry_check_handler))
                 .route(
                     "/licenses/{id}/activations",
                     web::get().to(list_activations),

@@ -10,7 +10,7 @@ use crate::core::context::AppContext;
 use crate::core::error::UnifiedError;
 use crate::core::hooks::HookBus;
 use crate::core::json as api_json;
-use crate::core::modules::{Module, ModuleRegistry};
+use crate::core::modules::{Module, ModuleRegistry, RouteInfo};
 use crate::core::pagination::{PageResult, PaginationParams};
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Utc};
@@ -900,6 +900,17 @@ impl Module for SeoModule {
             let analysis = analyze_content(&title, &content, None, None, None, post_id);
             state.analyses.insert(analysis.id, analysis);
         }));
+    }
+
+    fn route_info(&self) -> Vec<RouteInfo> {
+        vec![
+            RouteInfo { method: "GET", path: "/api/v1/seo/settings", owner: "seo", description: "Get settings" },
+            RouteInfo { method: "PUT", path: "/api/v1/seo/settings", owner: "seo", description: "Update settings" },
+            RouteInfo { method: "POST", path: "/api/v1/seo/analyze", owner: "seo", description: "Analyze" },
+            RouteInfo { method: "POST", path: "/api/v1/seo/meta", owner: "seo", description: "Generate meta tags" },
+            RouteInfo { method: "GET", path: "/api/v1/seo/analyses", owner: "seo", description: "List analyses" },
+            RouteInfo { method: "GET", path: "/api/v1/seo/analyses/{id}", owner: "seo", description: "Get analysis" },
+        ]
     }
 
     fn configure_routes(&self, cfg: &mut web::ServiceConfig) {

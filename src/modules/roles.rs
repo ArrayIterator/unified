@@ -1,6 +1,7 @@
 // Roles module — the Role Manager.
 //
-// Static default roles (admin, editor, author, member, customer) are
+// Static default roles (admin, editor, author, member, customer,
+// reseller) are
 // seeded in memory with permission sets; dynamic roles can be created,
 // updated and deleted through the API. Permissions are a JSON map of
 // resource -> actions, for example `{"posts": ["create", "read"]}`.
@@ -15,7 +16,7 @@ use crate::core::context::AppContext;
 use crate::core::error::{UnifiedError, UnifiedResult};
 use crate::core::hooks::{events, HookBus};
 use crate::core::json::{error_response, success_response};
-use crate::core::modules::{Module, ModuleRegistry};
+use crate::core::modules::{Module, ModuleRegistry, RouteInfo};
 use crate::core::pagination::{PageResult, PaginationParams};
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Utc};
@@ -61,7 +62,7 @@ pub fn register(registry: &ModuleRegistry) {
     registry.register(Arc::new(RolesModule::new()));
 }
 
-/// The five static default roles and their permission sets.
+/// The six static default roles and their permission sets.
 fn default_roles() -> Vec<(&'static str, &'static str, &'static str, Value)> {
     vec![
         (
@@ -108,6 +109,17 @@ fn default_roles() -> Vec<(&'static str, &'static str, &'static str, Value)> {
             json!({
                 "store": ["read", "purchase"],
                 "orders": ["create", "read"],
+                "licenses": ["read"],
+            }),
+        ),
+        (
+            "Reseller",
+            "reseller",
+            "Can manage linked clients and view commissions and payouts.",
+            json!({
+                "reseller": ["access", "clients.view", "clients.manage", "payouts.view"],
+                "user": ["access"],
+                "orders": ["read"],
                 "licenses": ["read"],
             }),
         ),
@@ -227,7 +239,7 @@ pub fn find_role(store: &RolesStore, role: &str) -> Option<RoleRecord> {
 
 /// Evaluate one permission against a permissions map. `permission` is
 /// `resource:action`; a bare `resource` checks any action on it, and `*`
-/// matches everything.
+/// is granted only by a literal `"*": ["*"]` entry in the map.
 pub fn permission_allowed(permissions: &Value, permission: &str) -> bool {
     let map = match permissions.as_object() {
         Some(map) => map,
@@ -243,7 +255,12 @@ pub fn permission_allowed(permissions: &Value, permission: &str) -> bool {
         }
     }
     if permission == "*" {
-        return !map.is_empty();
+        // The wildcard-resource check above already returned true for a
+        // literal `"*": ["*"]` grant; any other map holds no wildcard,
+        // so `"*"` must not be granted here. Returning true for any
+        // non-empty map would grant every permission to any role that
+        // has any permission at all.
+        return false;
     }
     let (resource, action) = match permission.split_once(':') {
         Some((resource, action)) => (resource, Some(action)),
@@ -592,6 +609,18 @@ impl Module for RolesModule {
                 }
             }
         }));
+    }
+
+    fn route_info(&self) -> Vec<RouteInfo> {
+        vec![
+            RouteInfo { method: "GET", path: "/api/v1/roles", owner: "roles", description: "List roles" },
+            RouteInfo { method: "POST", path: "/api/v1/roles", owner: "roles", description: "Create role" },
+            RouteInfo { method: "POST", path: "/api/v1/roles/check", owner: "roles", description: "Check permission" },
+            RouteInfo { method: "GET", path: "/api/v1/roles/{id}", owner: "roles", description: "Get role" },
+            RouteInfo { method: "PUT", path: "/api/v1/roles/{id}", owner: "roles", description: "Update role" },
+            RouteInfo { method: "DELETE", path: "/api/v1/roles/{id}", owner: "roles", description: "Delete role" },
+            RouteInfo { method: "GET", path: "/api/v1/roles/{id}/permissions", owner: "roles", description: "Get role permissions" },
+        ]
     }
 
     fn configure_routes(&self, cfg: &mut web::ServiceConfig) {
