@@ -7,17 +7,23 @@ management, and the day-to-day operations around them. One login, one
 dashboard, many modules.
 
 > Project status: 137 modules registered and wired through the hook/event
-> bus (see the list below), 107 Diesel migrations covering 672 tables
-> (1,344 Diesel structs), 476,228 Rust lines under `src/`, payment
-> security re-checked, public API access control with default-deny
-> (see below). Integration round 2 (2026-11-22) registered all 137
-> modules, renumbered migrations gapless, and wired the cross-module
-> hook contracts — see [INTEGRATION_NOTES_INTEGRATION2.md](docs/integration/INTEGRATION_NOTES_INTEGRATION2.md).
+> bus (see the list below), 108 Diesel migrations (gapless 000001–000108)
+> covering 675 tables (1,350 Diesel structs), 645,165 Rust lines under
+> `src/` + `crates/` (counted 2026-11-22; the total grows while
+> external-module crates are being added), payment security re-checked,
+> public API access control with default-deny (see below). Integration
+> round 2 (2026-11-22) registered all 137 modules, renumbered migrations
+> gapless, and wired the cross-module hook contracts — see
+> [INTEGRATION_NOTES_INTEGRATION2.md](docs/integration/INTEGRATION_NOTES_INTEGRATION2.md).
 > The implementation milestones are tracked in
-> [TODO.md](TODO.md). `cargo check` has not run in this environment (no
-> toolchain, crates.io blocked) — compilation is unverified; see TODO.md
-> for the honest list of what is verified by reading only and what is
-> still open.
+> [TODO.md](TODO.md). Compilation is unverified: Rust 1.100.0 is
+> installed and `cargo check` has run in this environment, but it is
+> OOM-blocked here (rustc needs ~5.3 GiB RSS and is killed repeatedly
+> on this 7.7 GiB VM); a Colab run failed with exit 101 on 3 real code
+> errors, which are fixed in the local tree and await a re-run after the
+> final push. No migration has ever run against a live PostgreSQL and
+> no endpoint has been live-tested; see TODO.md for the honest list of
+> what is verified by reading only and what is still open.
 
 ## What it is
 
@@ -239,22 +245,189 @@ Core modules ship inside the binary and cannot be removed:
     rules, templates, and reports, wired into the ERP bus (billing
     for invoiced time, notifications, audit, and search).
 
-Plus **Theme Management** (described below) — 72 registered modules in
-total, counted from `src/modules/mod.rs` (`pub mod` == register calls ==
-module files).
+72. **Theme Management** — add themes through a templating engine, embed
+    themes internally, or load them dynamically, with strict checking and
+    screenshot support. The engine (`src/themes/engine.rs`) is Handlebars
+    with `rust-embed`: the default theme ships in the binary from
+    `templates/default/`, disk themes are discovered from `themes/` and
+    loaded only after strict validation (manifest must exist and parse, the
+    layout template must exist, theme ids reject path traversal). The
+    dashboard (`templates/default/dashboard.hbs`, `assets/css/dashboard.css`,
+    `assets/js/dashboard.js`) is server-rendered with light/dark mode, a
+    sidebar, stat cards, a module grid fed live from `/api/v1/extensions`,
+    and an activity feed that shows an honest empty state when there is no
+    data yet.
+73. **Academic** — academic system: students, lecturers, study programs,
+    subjects, class schedules and rooms, course registration with advisor
+    approval, attendance, grades and GPA, grade appeals, transcripts,
+    academic calendar, thesis tracking, and academic standing.
+74. **Admissions** — admission periods with quotas and stages; applications
+    with document checklists, scores, decisions, results, fee invoices,
+    enrollment, and a waitlist.
+75. **Advisor** — rule-based advisor: evaluates rules over invoice, payment,
+    license, CRM, and subscription facts and produces suggestions that can
+    be acknowledged, snoozed, or dismissed.
+76. **Affiliates** — affiliate program: affiliates, tracking links, clicks,
+    conversions, commission rules with approval/void, and payouts.
+77. **Appointments** — bookable services with staff availability and slots;
+    a public booking flow, appointments, reminder rules, settings, and ICS
+    export.
+78. **Approvals** — multi-step approval workflows: definitions with steps and
+    approvers, requests, decisions, delegations, escalations, and overdue
+    tracking.
+79. **Assets** — asset register with assignments, stock levels and
+    adjustments, stock takes, depreciation, and warranty checks.
+80. **Auditors** — external auditor accounts with scoped sessions, public
+    share links, activity and access logs, and session revocation.
+81. **BI (Business Intelligence)** — reports, KPI dashboards, and forecasts
+    (revenue, churn, cashflow) computed from cross-module source records.
+82. **Calendar** — calendar items aggregated from multiple sources, with
+    feeds (ICS), non-working days, conflict hints, settings, and AI day
+    summaries.
+83. **Cards** — card validation: brand/IIN rules, custom validation rules,
+    daily counts, and settings.
+84. **Community** — discussion community: categories, topics, posts, votes,
+    flags, moderation actions, members, and announcements.
+85. **Compliance** — data-protection compliance: processing records, consent
+    records, retention policies, data-subject deletion requests, exports,
+    breach records with timelines, and checklists.
+86. **Contracts** — contract templates and contracts with signers, tokenized
+    signing links, activation, renewal, termination, void, expiry checks,
+    and an audit trail.
+87. **Curriculum** — curriculum frameworks, school levels, subjects, core and
+    basic competencies, structures, lesson plans, assessment domains, grade
+    descriptors, interventions, and report cards.
+88. **Domain Verification** — domain ownership verification: verification
+    tokens, attempts, status, and settings, backing the domain → SSL →
+    site-publish flow.
+89. **Documents** — document storage: records with versions, chunked upload
+    sessions, a download allowlist with signed token downloads, quotas,
+    and scanner hooks.
+90. **E-Learning** — courses with modules and lessons, enrollments, quizzes,
+    learning paths, reviews, and certificates with verification, anchoring,
+    and revocation.
+91. **Entitlements** — what a tenant may use: entitlement grants, per-module
+    enable/disable and access checks, denied-attempt logging, history, and
+    package changes.
+92. **Events** — events with venues, recurrence, ticket types, registrations,
+    attendees, check-in, waitlist, reminders, and public event pages with
+    ICS.
+93. **Exams** — question banks, exams, attempts with autosave, heartbeat, and
+    proctor signals, grading, results, settings, and paid certification
+    exams.
+94. **Expenses** — expense categories, policies, expenses with receipts,
+    reports, reimbursements, currency rates, adjustments, and spend
+    analytics.
+95. **Field Service** — field operations: equipment and equipment types, work
+    orders, dispatch board and assignments, parts, maintenance plans,
+    templates, and time/sign-off.
+96. **Forms** — form builder: forms with fields and conditions, public
+    submission pages, submissions with spam marking and remapping, and
+    embeds.
+97. **Frontend** — public pages: home, sign-in, registration,
+    forgot-password, reset-password, and sign-out, server-rendered through
+    the theme engine with paths from the shared route registry.
+98. **Gamification** — points ledger, award rules, badges, seasons, rewards,
+    and leaderboards.
+99. **Holidays** — holiday providers and countries, sync configs and runs,
+    holidays with overrides, and is-holiday / non-working-day lookups.
+100. **HR** — employees, positions, contracts, leave, attendance, payroll,
+    documents, onboarding checklists, reviews, and HR reports.
+101. **Inbox** — message threads with assignment, replies, canned replies,
+    snooze, merge, and stats.
+102. **Incidents** — incident management: incidents with timeline and
+    responders, on-call rotations, escalation policies, auto-open rules,
+    and postmortems.
+103. **Library** — library catalog, copies, members, loans, holds, fines,
+    loan policies, inventory audits, and tokenized digital access.
+104. **Logistics** — shipments, drivers, vehicles, delivery routes,
+    warehouses, rate tables and quotes, tracking, exceptions, and proof of
+    delivery.
+105. **Loyalty** — loyalty programs with earn rules, tiers, ledger entries,
+    redemptions, and expiry.
+106. **Manufacturing** — bills of materials with versions, work centers, work
+    orders, production runs, stock consumption, scrap, and production
+    reports.
+107. **Marketing** — campaigns with A/B variants and scheduling, segments,
+    audience sync, automated sequences with enrollments, and lead scores.
+108. **Network Tools** — network diagnostics: DNS lookup, ping, traceroute,
+    port check, whois, HTTP check, IP info, blacklist check, certificate
+    watches, uptime monitors, and saved-check history.
+109. **OKRs** — objectives and key results in cycles, with check-ins,
+    overrides, and links to other records.
+110. **Portals** — customer portals with menus and public pages, plus
+    per-user views of downloads, invoices, and licenses.
+111. **POS** — point of sale: registers with cashier assignment and shifts,
+    sales, checkout with payment methods, receipts, product search, and
+    end-of-day reports.
+112. **Presets** — setup presets and a guided setup wizard that applies a
+    preset's module selection and seeds to a company.
+113. **Pricing** — price engine: money and proration math, discount rules,
+    coupons, bundles, credit notes, reconciliation, and price
+    recommendations.
+114. **Pricing Tables** — pricing tables with tiers and features, plus a
+    vendor marketplace: commission rules, commissions, payouts, and product
+    approvals.
+115. **Printing** — print jobs with printer profiles and paper sizes,
+    including ESC/POS thermal output, reprint, and cancel/complete/fail
+    flow.
+116. **Privacy** — privacy controls: field declarations, consent types and
+    records, erasure and anonymization requests, privacy notices, and an
+    audit trail.
+117. **Procurement** — vendors, purchase orders with lines and approvals,
+    goods receipts, and budgets.
+118. **Properties** — property listings with plans and blocks, location
+    search/reverse-geocoding, public pages with SVG plans and printable
+    output, and sold-out marking.
+119. **Quality** — quality points and criteria, inspections with measurements,
+    alerts, CAPAs, and quality blocks.
+120. **Recruitment** — job postings, applicants with stage history,
+    interviews, evaluations, offers, and hire.
+121. **Risk** — risk register with mitigation plans and tasks, checklist
+    templates and instances, a risk matrix, and alerts.
+122. **SaaS Domains** — tenant domain handling: domain reservations, aliases
+    with suspend/resume/release, and per-product subdomains.
+123. **SaaS Packages** — sellable SaaS packages: package versions, purchases,
+    provisioning steps with per-module outcomes, and purchase history.
+124. **Storage Manager** — storage plans with quotas and metering, buckets
+    and objects with lifecycle and signed URLs, and bring-your-own (BYO)
+    external storage connections with health checks and terms.
+125. **Studio** — custom fields: record types, field definitions with
+    validation, values, and layouts for extending any record.
+126. **Supervision** — site supervision: assignments, inspection templates
+    and inspections, defects with follow-ups, daily logs with sign-off,
+    progress reports, and approvals.
+127. **Surveys** — surveys with questions, distributions, public response
+    pages, and results.
+128. **Tax** — tax rules, tax computation with breakdowns, filings with due
+    checks and submission, and external tax connectors.
+129. **Tenant Destroy** — tenant destruction requests with two-step approval,
+    grace period, export proof, and external-cleanup confirmation;
+    destroyed tenants keep no record of their own.
+130. **Tenants** — tenant lifecycle: provisioning with per-module grants,
+    suspend/resume, module grant/revoke, and tenant context views.
+131. **Time Tracker** — time tracking: timers and entries, activity
+    reporting, agent heartbeat and screenshots, rates, teams, and staff.
+132. **Todos** — todo lists with todos, subtasks, attachments, shares,
+    reminders, completion logs, and streaks.
+133. **Vault** — secure document vault: folders, documents with versions,
+    share links, access requests with approve/deny, retention, and an
+    access log.
+134. **Web3** — blockchain integration: chain networks and providers (EVM,
+    Cardano, Stellar, plus a fake provider), watched addresses, transaction
+    records, anchors with verification, and wallet links.
+135. **Webinars** — webinars with registrations, attendance, polls, Q&A,
+    in-webinar chat, recordings, follow-ups, analytics, and links to
+    meetings.
+136. **Whitelabel** — per-company whitelabel branding: global and per-company
+    allowances, defaults, branding profiles, and change history.
+137. **Workflows** — automation workflows: triggers, condition groups,
+    actions, runs with retry, manual run/test, and tokenized webhook hooks.
 
-**Theme Management** is also a core module: add themes through a templating
-engine, embed themes internally, or load them dynamically, with strict
-checking and screenshot support. The engine (`src/themes/engine.rs`) is
-Handlebars with `rust-embed`: the default theme ships in the binary from
-`templates/default/`, disk themes are discovered from `themes/` and loaded
-only after strict validation (manifest must exist and parse, the layout
-template must exist, theme ids reject path traversal). The dashboard
-(`templates/default/dashboard.hbs`, `assets/css/dashboard.css`,
-`assets/js/dashboard.js`) is server-rendered with light/dark mode, a
-sidebar, stat cards, a module grid fed live from `/api/v1/extensions`,
-and an activity feed that shows an honest empty state when there is no
-data yet.
+137 registered modules in total, counted from `src/modules/mod.rs`
+(`pub mod` lines). Entries 1–72 are the original core list; entries
+73–137 are the integration-round-2 modules, in `mod.rs` (alphabetical)
+order.
 
 ## Integration round 2 (2026-11-22)
 
@@ -263,6 +436,10 @@ in round 2 (registration, gapless migration renumbering 000001–000107,
 Diesel schema/models, hook wiring, compile-blocker fixes). Full detail,
 the renumbering map, and the honest open list live in
 [INTEGRATION_NOTES_INTEGRATION2.md](docs/integration/INTEGRATION_NOTES_INTEGRATION2.md).
+
+The complete numbered list of all 137 modules is in "Core modules"
+above; the groups below are the round-2 batch history, not a second
+list.
 
 - **Projects & time:** projects (15 methodologies), timetracker,
   todos, okrs.
@@ -330,8 +507,10 @@ change a flow by registering a hook handler. The main flows are:
 ## Stack
 
 - **Backend:** Rust, Actix-web, PostgreSQL (Diesel by default).
-- **Frontend:** React (SEO friendly) with a modern Tailwind dashboard UI,
-  easy navigation, and Dark / Light mode support.
+- **Frontend:** Handlebars (SEO friendly) with a modern Tailwind dashboard UI,
+  easy navigation, and Dark / Light mode support. Dashboard scripts are
+  TypeScript (`assets/js/*.ts`), transpiled to JavaScript in-memory at
+  startup — no `.js` files in the repository.
 - **Themes:** Handlebars (HBS) with dynamic loading.
 - **Icons:** IcoMoon icon sets, for example Entypo and Material Icons.
 - **TLS:** Let's Encrypt ACME, configurable from the dashboard, with SSL
