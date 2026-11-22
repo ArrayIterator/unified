@@ -6,7 +6,7 @@ One control plane for licensing, downloads, storefront, software and asset
 management, and the day-to-day operations around them. One login, one
 dashboard, many modules.
 
-> Project status: 139 modules registered and wired through the hook/event
+> Project status: 142 modules registered and wired through the hook/event
 > bus (see the list below), 108 Diesel migrations (gapless 000001–000108)
 > covering 675 tables (1,350 Diesel structs), 645,165 Rust lines under
 > `src/` + `crates/` (counted 2026-11-22; the total grows while
@@ -40,399 +40,244 @@ Unified Pentagonal Project is a CRM-like unified management system for:
 
 ## Core modules
 
-Core modules ship inside the binary and cannot be removed:
+Core modules ship inside the binary and cannot be removed. The 142 modules
+below are grouped by business area, Odoo-style: each top-level category has
+subcategories, and every module appears exactly once. Counts are verified
+against `src/modules/mod.rs` (`pub mod` lines).
 
-1. **Service Monitor & Management** — health of sites, services, and
-   servers; server information; reload with dry-run support.
-2. **Security Management** — security checks, policies, and audit trails.
-3. **User Management** — users, roles, and permissions.
-4. **Modules / Extensions Manager** — list, enable, disable, and configure
-   extensions. Extensions are fully integrated and can interconnect.
-5. **Content Management** — posts, categories, and pages, with a site
-   builder.
-6. **Settings** — site-wide settings (details are defined per setting).
-7. **SEO Manager** — SEO management for sites and content.
-8. **API Manager** — create and manage public and client APIs with rules,
-   versioning, and a registry of registered endpoints. This is separate
-   from the core API.
-9. **Auth Manager** — authentication with submodules: SSO, OAuth server,
-   OAuth login, SSO as provider, social login (for example Google and
-   Facebook), biometric login, and a JSON Web Token manager. Submodules can
-   inject their own settings into the Auth Manager.
-10. **Translations / i18n Manager** — dynamic translations and translation
-    management.
-11. **Roles Manager** — static default roles plus dynamic, hookable roles
-    and a role factory for access checks.
-12. **Company Management** — multi-site and multi-company support with an
-    immutable site basis.
-13. **Domain / Subdomain Manager** — domains and subdomains, interconnected
-    with the SSL manager in both directions.
-14. **Network Manager** — networking core with a GEO submodule and a DNS
-    verifier / DNS checker library, wired into Domain, Mail, and Security.
-15. **GEO Location** — GeoLite / MaxMind-compatible database, downloadable
-    from MaxMind or a custom URL, a global Geo information variable in the
-    core engine, ASN checks, and IP-range-to-country settings overrides
-    (IPv4 and IPv6) that win over the database reading by default.
-16. **Application Connection & Sync** — connection and sync core for
-    desktop app integration.
-17. **Chat** — realtime chat, interconnected with Support Tickets and the
-    Knowledgebase through hooks.
-18. **AI Support** — AI chat with connectors, knowledgebase-grounded
-    answers, and handoff to a human agent.
-19. **Knowledgebase** — searchable articles that Chat and AI Support
-    suggest and that tickets link back to.
-20. **Store / Marketplace** — sell themes, plugins, and software;
-    products with pricing tiers and editions, one-time and subscription
-    pricing with trials, coupons, cart and checkout, orders with a
-    validated lifecycle, HMAC-signed expiring download links,
-    entitlements, a WordPress-style update API, vendor payout
-    summaries, and an update catalog. Cart and checkout feed orders
-    into licensing and billing.
-21. **Licensing** — issue, validate, suspend, and revoke licenses;
-    licenses gate downloads and store purchases. Orders issue licenses
-    with seats and expiry from the purchased tier; refunds revoke
-    them.
-22. **Software and Assets** — enterprise software manager: software
-    records with a status lifecycle and vendor-company ownership,
-    versions with semver and platform requirements, releases with a
-    publish flow, per-release files with sha256/sha512 checksum
-    verification, hierarchical groups and categories, tags, and
-    full-text discovery, behind the storefront and the downloader.
-    Releases imported from a connected VCS repository arrive as
-    review drafts and are published manually.
-23. **Billing / Invoicing** — invoices raised from store orders and
-    licenses, with payment tracking.
-24. **Support Tickets** — tickets created from chat, AI Support, and CRM,
-    with knowledgebase suggestions attached; full status workflow,
-    priorities, assignment, internal notes, customer replies,
-    storage-backed attachments, canned responses, SLA timers with breach
-    alerts and escalation rules, merging and linking to orders, licenses,
-    and servers, routed through the Departments module.
-25. **Notifications** — a core module: system and per-user notifications
-    with audience targeting (single user, role, department, segment, or
-    broadcast), a notification centre with unread counts, filters and
-    per-user channel/category/digest preferences (including digest off),
-    per-event templates with email delivery through the configured email
-    provider (or the Mail Manager fallback) and GrapeJS email templates,
-    delivery tracking with retries, and listeners for the other modules'
-    important events (orders, payments, backups, clusters, tickets,
-    licenses, incidents, webhooks, security). Announcements compose with
-    audience, channels, scheduling and expiry, fan out into the
-    notification centre and the user dashboard, and can also go out as
-    email.
-26. **Audit Log** — an append-only record of security-relevant events,
-    including Geo and network context.
-27. **Scheduler / Queue** — scheduled jobs and background queues, including
-    Geo database updates and SSL renewal.
-28. **File Manager** — file browsing and management for uploads and
-    assets.
-29. **CRM Contacts / Leads** — contacts and leads shared by sales, support,
-    and billing.
-30. **Mail Manager** — SMTP settings, mail connectors, and the default
-    mailer used by notifications and billing.
-31. **Email Template Builder** — visual template editor (GrapeJS) for the
-    emails the Mail Manager sends.
-32. **Site Builder** — visual site building for content and pages.
-33. **SaaS Multi-Site** — multi-site hosting with the Site Builder
-    integrated.
-34. **Downloader** — secure, resumable downloads for licensed files and
-    assets.
-35. **Third-Party VCS Integrations** — GitHub, GitLab, and Bitbucket
-    integrations: repository connections linked to software records,
-    release import as review drafts (never auto-published), HMAC /
-    token-verified webhooks, allowlisted release-asset downloads with
-    streamed SHA-256 verification, manual sync with rate-limit
-    handling, and sync history. Provider tokens are write-only and
-    never logged or returned; configuration flags are merged into the
-    settings store under `vcs.<provider>`.
-36. **Cache** — HTTP access to the shared application cache (filesystem
-    and Redis adapters).
-37. **AI Module** — provider abstraction (Anthropic, OpenAI,
-    OpenAI-compatible, local): drafts ticket/chat replies, CMS content,
-    and email/newsletter copy from a prompt plus site context, with
-    human approval before anything is sent or published — never
-    auto-send. Credentials write-only and encrypted, per-key rate
-    limits, usage tracking, audit log, per-role capability checks.
-    Consumes the same shared context as the MCP server.
-38. **Analytics** — analytics and reports: sales, licenses, usage,
-    uptime, and revenue.
-39. **Announcements** — announcements and changelog; audience-targeted,
-    scheduled, expiring, and pinned; fans out into the notification
-    centre and the user dashboard, and can go out as email.
-40. **API Keys** — enterprise API key management; the single source of
-    truth for API keys (the API Manager delegates to it), with per-key
-    scopes and rate limits.
-41. **Backup Manager** — scheduled and on-demand backups to local, S3,
-    Google Drive, and R2 storage, with restore.
-42. **Bank Transfer** — manual payment verification: proof upload, admin
-    approval/rejection, split bills.
-43. **Certificates** — advanced SSL certificate management via config and
-    ACME, with renewal and lifecycle events.
-44. **Cloudflare** — Cloudflare connector: zones, DNS, and cache.
-45. **Clusters** — multi-cluster connection and mutual sync, with load
-    balancing across nodes.
-46. **Dashboards** — separate admin, user (client), and reseller
-    dashboards, one shared design system, role/capability enforced
-    server-side per route, with admin "view as user" for support
-    (audited).
-47. **Departments** (core) — departments CRUD, agents/staff per
-    department linked to users and roles, routing rules (category,
-    product, keyword, manual), per-department SLA policies, working
-    hours and out-of-hours auto-replies.
-48. **Email Providers** — email provider registry (Mailchimp, Brevo,
-    SendGrid, and others) with settings, behind the Mail Manager.
-49. **Hosting** — hosting plans and accounts; a module that needs another
-    module auto-activates it (the hosting module requires the
-    cart/sales module) and the module list shows the requirement.
-50. **Import / Export** — CSV and JSON data exchange.
-51. **Load Balancer** — load balancing across backends, sharing the one
-    TLS storage with the server.
-52. **Logs** — central log viewer.
-53. **Maintenance** — maintenance windows; the status endpoint and the
-    status-page API stay reachable during maintenance.
-54. **MCP Server** — Model Context Protocol access to the site's own
-    context (tools, resources, prompts assembled from the modules' own
-    APIs, never raw table dumps). MVP database access is read-only only:
-    declared tables/queries, parameterized queries, no writes, no DDL,
-    no credential columns. API-key auth with per-key tool allowlists;
-    sellable per server/site through Product Management.
-55. **Meetings** — Zoom-like video meetings: rooms (scheduled and
-    instant), WebRTC signalling over the WebSocket hub, screen share,
-    in-meeting chat, recording metadata via storage, host/co-host/
-    participant roles, join tokens, waiting room, scheduling, history
-    and attendance. Paid rooms check product entitlements at join.
-    Signalling and room management are real; media transport is browser
-    WebRTC — no media server/SFU is built in (see TODO.md).
-56. **Newsletter** — newsletter sending through the email providers.
-57. **Panels** — hosting/billing panel connectors (WHMCS, cPanel/WHM,
-    DirectAdmin, Plesk, CyberPanel, generic).
-58. **Payment Gateway** — a wrapper/framework for many providers (cards,
-    Swift, 2Checkout, HyperPay, Xendit, Mastercard, Google Pay,
-    custom) plus bank transfer and split bills; see the payment
-    security re-check in TODO.md.
-59. **Resource Planner** — capacity planning across servers, clusters,
-    and providers.
-60. **Product Management** — the single source of truth for what is
-    sold: lifecycle (draft → active → deprecated → retired), types
-    (digital, physical, service, subscription, bundle, meeting,
-    hosting), variants and options, bundles with cycle rejection,
-    tiers, per-seat and usage-based pricing, regional pricing, taxes,
-    physical inventory, files and versions linked to the Software
-    Manager, groups/categories/tags, vendor ownership. The store sells
-    what Product Management defines.
-61. **Providers** — cloud/VPS/container provider connectors (AWS,
-    DigitalOcean, Linode, Hetzner, Huawei, OVH, Tencent, and others),
-    plus server management for Redshift, OpenStack, KVM, Proxmox, and
-    Xen.
-62. **Records** — records store behind the audit trail, with retention
-    from config.
-63. **Routes** — customizable page routes: login, register, admin and
-    user dashboard paths are changeable via admin or config.
-64. **Saved Views** — saved filters/views for lists.
-65. **Global Search** — global search across modules, with a timeline.
-66. **Status Page** — public status page with incidents.
-67. **Storage** — storage abstraction (local, S3, Drive, R2) with signed
-    access.
-68. **Tasks** — task management.
-69. **Activity Timeline** — activity timeline across modules.
-70. **Webhooks** — outgoing webhook endpoints and deliveries.
-71. **Project Management** — projects with 15 selectable
-    methodologies (Kanban, Scrum, Waterfall, Scrumban, Agile, Lean,
-    XP, PRINCE2, PMBOK, CPM, CCPM, Six Sigma, Hybrid, Shape Up,
-    SAFe), boards and columns, tasks with subtasks and dependencies,
-    sprints, phases and gates, cycles, program increments, business
-    cases, milestones, time tracking with billable hours, automation
-    rules, templates, and reports, wired into the ERP bus (billing
-    for invoiced time, notifications, audit, and search).
+### 1. Platform & Administration (28)
 
-72. **Theme Management** — add themes through a templating engine, embed
-    themes internally, or load them dynamically, with strict checking and
-    screenshot support. The engine (`src/themes/engine.rs`) is Handlebars
-    with `rust-embed`: the default theme ships in the binary from
-    `templates/default/`, disk themes are discovered from `themes/` and
-    loaded only after strict validation (manifest must exist and parse, the
-    layout template must exist, theme ids reject path traversal). The
-    dashboard (`templates/default/dashboard.hbs`, `assets/css/dashboard.css`,
-    `assets/js/dashboard.js`) is server-rendered with light/dark mode, a
-    sidebar, stat cards, a module grid fed live from `/api/v1/extensions`,
-    and an activity feed that shows an honest empty state when there is no
-    data yet.
-73. **Academic** — academic system: students, lecturers, study programs,
-    subjects, class schedules and rooms, course registration with advisor
-    approval, attendance, grades and GPA, grade appeals, transcripts,
-    academic calendar, thesis tracking, and academic standing.
-74. **Admissions** — admission periods with quotas and stages; applications
-    with document checklists, scores, decisions, results, fee invoices,
-    enrollment, and a waitlist.
-75. **Advisor** — rule-based advisor: evaluates rules over invoice, payment,
-    license, CRM, and subscription facts and produces suggestions that can
-    be acknowledged, snoozed, or dismissed.
-76. **Affiliates** — affiliate program: affiliates, tracking links, clicks,
-    conversions, commission rules with approval/void, and payouts.
-77. **Appointments** — bookable services with staff availability and slots;
-    a public booking flow, appointments, reminder rules, settings, and ICS
-    export.
-78. **Approvals** — multi-step approval workflows: definitions with steps and
-    approvers, requests, decisions, delegations, escalations, and overdue
-    tracking.
-79. **Assets** — asset register with assignments, stock levels and
-    adjustments, stock takes, depreciation, and warranty checks.
-80. **Auditors** — external auditor accounts with scoped sessions, public
-    share links, activity and access logs, and session revocation.
-81. **BI (Business Intelligence)** — reports, KPI dashboards, and forecasts
-    (revenue, churn, cashflow) computed from cross-module source records.
-82. **Calendar** — calendar items aggregated from multiple sources, with
-    feeds (ICS), non-working days, conflict hints, settings, and AI day
-    summaries.
-83. **Cards** — card validation: brand/IIN rules, custom validation rules,
-    daily counts, and settings.
-84. **Community** — discussion community: categories, topics, posts, votes,
-    flags, moderation actions, members, and announcements.
-85. **Compliance** — data-protection compliance: processing records, consent
-    records, retention policies, data-subject deletion requests, exports,
-    breach records with timelines, and checklists.
-86. **Contracts** — contract templates and contracts with signers, tokenized
-    signing links, activation, renewal, termination, void, expiry checks,
-    and an audit trail.
-87. **Curriculum** — curriculum frameworks, school levels, subjects, core and
-    basic competencies, structures, lesson plans, assessment domains, grade
-    descriptors, interventions, and report cards.
-88. **Domain Verification** — domain ownership verification: verification
-    tokens, attempts, status, and settings, backing the domain → SSL →
-    site-publish flow.
-89. **Documents** — document storage: records with versions, chunked upload
-    sessions, a download allowlist with signed token downloads, quotas,
-    and scanner hooks.
-90. **E-Learning** — courses with modules and lessons, enrollments, quizzes,
-    learning paths, reviews, and certificates with verification, anchoring,
-    and revocation.
-91. **Entitlements** — what a tenant may use: entitlement grants, per-module
-    enable/disable and access checks, denied-attempt logging, history, and
-    package changes.
-92. **Events** — events with venues, recurrence, ticket types, registrations,
-    attendees, check-in, waitlist, reminders, and public event pages with
-    ICS.
-93. **Exams** — question banks, exams, attempts with autosave, heartbeat, and
-    proctor signals, grading, results, settings, and paid certification
-    exams.
-94. **Expenses** — expense categories, policies, expenses with receipts,
-    reports, reimbursements, currency rates, adjustments, and spend
-    analytics.
-95. **Field Service** — field operations: equipment and equipment types, work
-    orders, dispatch board and assignments, parts, maintenance plans,
-    templates, and time/sign-off.
-96. **Forms** — form builder: forms with fields and conditions, public
-    submission pages, submissions with spam marking and remapping, and
-    embeds.
-97. **Frontend** — public pages: home, sign-in, registration,
-    forgot-password, reset-password, and sign-out, server-rendered through
-    the theme engine with paths from the shared route registry.
-98. **Gamification** — points ledger, award rules, badges, seasons, rewards,
-    and leaderboards.
-99. **Holidays** — holiday providers and countries, sync configs and runs,
-    holidays with overrides, and is-holiday / non-working-day lookups.
-100. **HR** — employees, positions, contracts, leave, attendance, payroll,
-    documents, onboarding checklists, reviews, and HR reports.
-101. **Inbox** — message threads with assignment, replies, canned replies,
-    snooze, merge, and stats.
-102. **Incidents** — incident management: incidents with timeline and
-    responders, on-call rotations, escalation policies, auto-open rules,
-    and postmortems.
-103. **Library** — library catalog, copies, members, loans, holds, fines,
-    loan policies, inventory audits, and tokenized digital access.
-104. **Logistics** — shipments, drivers, vehicles, delivery routes,
-    warehouses, rate tables and quotes, tracking, exceptions, and proof of
-    delivery.
-105. **Loyalty** — loyalty programs with earn rules, tiers, ledger entries,
-    redemptions, and expiry.
-106. **Manufacturing** — bills of materials with versions, work centers, work
-    orders, production runs, stock consumption, scrap, and production
-    reports.
-107. **Marketing** — campaigns with A/B variants and scheduling, segments,
-    audience sync, automated sequences with enrollments, and lead scores.
-108. **Network Tools** — network diagnostics: DNS lookup, ping, traceroute,
-    port check, whois, HTTP check, IP info, blacklist check, certificate
-    watches, uptime monitors, and saved-check history.
-109. **OKRs** — objectives and key results in cycles, with check-ins,
-    overrides, and links to other records.
-110. **Portals** — customer portals with menus and public pages, plus
-    per-user views of downloads, invoices, and licenses.
-111. **POS** — point of sale: registers with cashier assignment and shifts,
-    sales, checkout with payment methods, receipts, product search, and
-    end-of-day reports.
-112. **Presets** — setup presets and a guided setup wizard that applies a
-    preset's module selection and seeds to a company.
-113. **Pricing** — price engine: money and proration math, discount rules,
-    coupons, bundles, credit notes, reconciliation, and price
-    recommendations.
-114. **Pricing Tables** — pricing tables with tiers and features, plus a
-    vendor marketplace: commission rules, commissions, payouts, and product
-    approvals.
-115. **Printing** — print jobs with printer profiles and paper sizes,
-    including ESC/POS thermal output, reprint, and cancel/complete/fail
-    flow.
-116. **Privacy** — privacy controls: field declarations, consent types and
-    records, erasure and anonymization requests, privacy notices, and an
-    audit trail.
-117. **Procurement** — vendors, purchase orders with lines and approvals,
-    goods receipts, and budgets.
-118. **Properties** — property listings with plans and blocks, location
-    search/reverse-geocoding, public pages with SVG plans and printable
-    output, and sold-out marking.
-119. **Quality** — quality points and criteria, inspections with measurements,
-    alerts, CAPAs, and quality blocks.
-120. **Recruitment** — job postings, applicants with stage history,
-    interviews, evaluations, offers, and hire.
-121. **Risk** — risk register with mitigation plans and tasks, checklist
-    templates and instances, a risk matrix, and alerts.
-122. **SaaS Domains** — tenant domain handling: domain reservations, aliases
-    with suspend/resume/release, and per-product subdomains.
-123. **SaaS Packages** — sellable SaaS packages: package versions, purchases,
-    provisioning steps with per-module outcomes, and purchase history.
-124. **Storage Manager** — storage plans with quotas and metering, buckets
-    and objects with lifecycle and signed URLs, and bring-your-own (BYO)
-    external storage connections with health checks and terms.
-125. **Studio** — custom fields: record types, field definitions with
-    validation, values, and layouts for extending any record.
-126. **Supervision** — site supervision: assignments, inspection templates
-    and inspections, defects with follow-ups, daily logs with sign-off,
-    progress reports, and approvals.
-127. **Surveys** — surveys with questions, distributions, public response
-    pages, and results.
-128. **Tax** — tax rules, tax computation with breakdowns, filings with due
-    checks and submission, and external tax connectors.
-129. **Tenant Destroy** — tenant destruction requests with two-step approval,
-    grace period, export proof, and external-cleanup confirmation;
-    destroyed tenants keep no record of their own.
-130. **Tenants** — tenant lifecycle: provisioning with per-module grants,
-    suspend/resume, module grant/revoke, and tenant context views.
-131. **Time Tracker** — time tracking: timers and entries, activity
-    reporting, agent heartbeat and screenshots, rates, teams, and staff.
-132. **Todos** — todo lists with todos, subtasks, attachments, shares,
-    reminders, completion logs, and streaks.
-133. **Vault** — secure document vault: folders, documents with versions,
-    share links, access requests with approve/deny, retention, and an
-    access log.
-134. **Web3** — blockchain integration: chain networks and providers (EVM,
-    Cardano, Stellar, plus a fake provider), watched addresses, transaction
-    records, anchors with verification, and wallet links.
-135. **Webinars** — webinars with registrations, attendance, polls, Q&A,
-    in-webinar chat, recordings, follow-ups, analytics, and links to
-    meetings.
-136. **Whitelabel** — per-company whitelabel branding: global and per-company
-    allowances, defaults, branding profiles, and change history.
-137. **Workflows** — automation workflows: triggers, condition groups,
-    actions, runs with retry, manual run/test, and tokenized webhook hooks.
-138. **Forums** — public discussion forums: SEO-friendly slugs, threads
-    with best answers, polls, subscriptions, reputation, and moderation.
-139. **Rental** — rental products: rental orders and contracts, deliveries
-    and returns, late fees, deposits, and availability.
+#### Platform & Administration > Core System (15)
 
-139 registered modules in total, counted from `src/modules/mod.rs`
-(`pub mod` lines). Entries 1–72 are the original core list; entries
-73–137 are the integration-round-2 modules, in `mod.rs` (alphabetical)
-order. Entries 138–139 (Forums, Rental) landed after round 2 and are
-appended here; the list will be re-alphabetized on the next full refresh.
+- **Service Monitor & Management** — health of sites, services, and
+- **Security Management** — security checks, policies, and audit trails.
+- **User Management** — users, roles, and permissions.
+- **Roles Manager** — static default roles plus dynamic, hookable roles and a role factory for access checks.
+- **Modules / Extensions Manager** — list, enable, disable, and configure
+- **Settings** — site-wide settings (details are defined per setting).
+- **Audit Log** — an append-only record of security-relevant events, including Geo and network context.
+- **Scheduler / Queue** — scheduled jobs and background queues, including Geo database updates and SSL renewal.
+- **Logs** — central log viewer.
+- **Maintenance** — maintenance windows; the status endpoint and the status-page API stay reachable during maintenance.
+- **Import / Export** — CSV and JSON data exchange.
+- **Presets** — setup presets and a guided setup wizard that applies a preset's module selection and seeds to a company.
+- **Saved Views** — saved filters/views for lists.
+- **Activity Timeline** — activity timeline across modules.
+- **Status Page** — public status page with incidents.
+
+#### Platform & Administration > Identity & Access (4)
+
+- **Auth Manager** — authentication with submodules: SSO, OAuth server,
+- **API Manager** — create and manage public and client APIs with rules,
+- **API Keys** — enterprise API key management; the single source of truth for API keys (the API Manager delegates to it), with per-key scopes and rate limits.
+- **Entitlements** — what a tenant may use: entitlement grants, per-module enable/disable and access checks, denied-attempt logging, history, and package changes.
+
+#### Platform & Administration > Tenancy & SaaS (9)
+
+- **SaaS Multi-Site** — multi-site hosting with the Site Builder integrated.
+- **SaaS Domains** — tenant domain handling: domain reservations, aliases with suspend/resume/release, and per-product subdomains.
+- **SaaS Packages** — sellable SaaS packages: package versions, purchases, provisioning steps with per-module outcomes, and purchase history.
+- **Tenants** — tenant lifecycle: provisioning with per-module grants, suspend/resume, module grant/revoke, and tenant context views.
+- **Tenant Destroy** — tenant destruction requests with two-step approval, grace period, export proof, and external-cleanup confirmation; destroyed tenants keep no record of their own.
+- **Whitelabel** — per-company whitelabel branding: global and per-company allowances, defaults, branding profiles, and change history.
+- **Domain / Subdomain Manager** — domains and subdomains, interconnected with the SSL manager in both directions.
+- **Domain Verification** — domain ownership verification: verification tokens, attempts, status, and settings, backing the domain → SSL → site-publish flow.
+- **Company Management** — multi-site and multi-company support with an immutable site basis.
+
+### 2. Infrastructure & Network (21)
+
+#### Infrastructure & Network > Network & Domains (7)
+
+- **Network Manager** — networking core with a GEO submodule and a DNS verifier / DNS checker library, wired into Domain, Mail, and Security.
+- **Network Tools** — network diagnostics: DNS lookup, ping, traceroute, port check, whois, HTTP check, IP info, blacklist check, certificate watches, uptime monitors, and saved-check history.
+- **GEO Location** — GeoLite / MaxMind-compatible database, downloadable from MaxMind or a custom URL, a global Geo information variable in the core engine, ASN checks, and IP-range-to-country settings overrides (IPv4 and IPv6) that win over the database reading by default.
+- **Clusters** — multi-cluster connection and mutual sync, with load balancing across nodes.
+- **Load Balancer** — load balancing across backends, sharing the one TLS storage with the server.
+- **Hosting** — hosting plans and accounts; a module that needs another module auto-activates it (the hosting module requires the cart/sales module) and the module list shows the requirement.
+- **Cloudflare** — Cloudflare connector: zones, DNS, and cache.
+
+#### Infrastructure & Network > Storage & Data (6)
+
+- **Storage** — storage abstraction (local, S3, Drive, R2) with signed access.
+- **Storage Manager** — storage plans with quotas and metering, buckets and objects with lifecycle and signed URLs, and bring-your-own (BYO) external storage connections with health checks and terms.
+- **Backup Manager** — scheduled and on-demand backups to local, S3, Google Drive, and R2 storage, with restore.
+- **Cache** — HTTP access to the shared application cache (filesystem and Redis adapters).
+- **Downloader** — secure, resumable downloads for licensed files and assets.
+- **Third-Party VCS Integrations** — GitHub, GitLab, and Bitbucket integrations: repository connections linked to software records, release import as review drafts (never auto-published), HMAC / token-verified webhooks, allowlisted release-asset downloads with streamed SHA-256 verification, manual sync with rate-limit handling, and sync history. Provider tokens are write-only and never logged or returned; configuration flags are merged into the settings store under `vcs.<provider>`.
+
+#### Infrastructure & Network > Platform Services (8)
+
+- **Panels** — hosting/billing panel connectors (WHMCS, cPanel/WHM, DirectAdmin, Plesk, CyberPanel, generic).
+- **Providers** — cloud/VPS/container provider connectors (AWS, DigitalOcean, Linode, Hetzner, Huawei, OVH, Tencent, and others), plus server management for Redshift, OpenStack, KVM, Proxmox, and Xen.
+- **Webhooks** — outgoing webhook endpoints and deliveries.
+- **Routes** — customizable page routes: login, register, admin and user dashboard paths are changeable via admin or config.
+- **Global Search** — global search across modules, with a timeline.
+- **Translations / i18n Manager** — dynamic translations and translation management.
+- **Application Connection & Sync** — connection and sync core for desktop app integration.
+- **Web3** — blockchain integration: chain networks and providers (EVM, Cardano, Stellar, plus a fake provider), watched addresses, transaction records, anchors with verification, and wallet links.
+
+### 3. AI & Intelligence (7)
+
+#### AI & Intelligence > AI (4)
+
+- **AI Module** — provider abstraction (Anthropic, OpenAI, OpenAI-compatible, local): drafts ticket/chat replies, CMS content, and email/newsletter copy from a prompt plus site context, with human approval before anything is sent or published — never auto-send. Credentials write-only and encrypted, per-key rate limits, usage tracking, audit log, per-role capability checks. Consumes the same shared context as the MCP server.
+- **MCP Server** — Model Context Protocol access to the site's own context (tools, resources, prompts assembled from the modules' own APIs, never raw table dumps). MVP database access is read-only only: declared tables/queries, parameterized queries, no writes, no DDL, no credential columns. API-key auth with per-key tool allowlists; sellable per server/site through Product Management.
+- **AI Support** — AI chat with connectors, knowledgebase-grounded answers, and handoff to a human agent.
+- **Advisor** — rule-based advisor: evaluates rules over invoice, payment, license, CRM, and subscription facts and produces suggestions that can be acknowledged, snoozed, or dismissed.
+
+#### AI & Intelligence > Analytics (3)
+
+- **Analytics** — analytics and reports: sales, licenses, usage, uptime, and revenue.
+- **BI (Business Intelligence)** — reports, KPI dashboards, and forecasts (revenue, churn, cashflow) computed from cross-module source records.
+- **Dashboards** — separate admin, user (client), and reseller dashboards, one shared design system, role/capability enforced server-side per route, with admin "view as user" for support (audited).
+
+### 4. Sales & Commerce (19)
+
+#### Sales & Commerce > Store & Marketplace (8)
+
+- **Store / Marketplace** — sell themes, plugins, and software; products with pricing tiers and editions, one-time and subscription pricing with trials, coupons, cart and checkout, orders with a validated lifecycle, HMAC-signed expiring download links, entitlements, a WordPress-style update API, vendor payout summaries, and an update catalog. Cart and checkout feed orders into licensing and billing.
+- **Product Management** — the single source of truth for what is sold: lifecycle (draft → active → deprecated → retired), types (digital, physical, service, subscription, bundle, meeting, hosting), variants and options, bundles with cycle rejection, tiers, per-seat and usage-based pricing, regional pricing, taxes, physical inventory, files and versions linked to the Software Manager, groups/categories/tags, vendor ownership. The store sells what Product Management defines.
+- **Pricing** — price engine: money and proration math, discount rules, coupons, bundles, credit notes, reconciliation, and price recommendations.
+- **Pricing Tables** — pricing tables with tiers and features, plus a vendor marketplace: commission rules, commissions, payouts, and product approvals.
+- **POS** — point of sale: registers with cashier assignment and shifts, sales, checkout with payment methods, receipts, product search, and end-of-day reports.
+- **Rental** — rental products: rental orders and contracts, deliveries and returns, late fees, deposits, and availability.
+- **Licensing** — issue, validate, suspend, and revoke licenses; licenses gate downloads and store purchases. Orders issue licenses with seats and expiry from the purchased tier; refunds revoke them.
+- **Software and Assets** — enterprise software manager: software records with a status lifecycle and vendor-company ownership, versions with semver and platform requirements, releases with a publish flow, per-release files with sha256/sha512 checksum verification, hierarchical groups and categories, tags, and full-text discovery, behind the storefront and the downloader. Releases imported from a connected VCS repository arrive as review drafts and are published manually.
+
+#### Sales & Commerce > Billing & Payments (5)
+
+- **Billing / Invoicing** — invoices raised from store orders and licenses, with payment tracking.
+- **Payment Gateway** — a wrapper/framework for many providers (cards, Swift, 2Checkout, HyperPay, Xendit, Mastercard, Google Pay, custom) plus bank transfer and split bills; see the payment security re-check in TODO.md.
+- **Bank Transfer** — manual payment verification: proof upload, admin approval/rejection, split bills.
+- **Cards** — card validation: brand/IIN rules, custom validation rules, daily counts, and settings.
+- **Tax** — tax rules, tax computation with breakdowns, filings with due checks and submission, and external tax connectors.
+
+#### Sales & Commerce > Marketing & CRM (6)
+
+- **CRM Contacts / Leads** — contacts and leads shared by sales, support, and billing.
+- **Marketing** — campaigns with A/B variants and scheduling, segments, audience sync, automated sequences with enrollments, and lead scores.
+- **Newsletter** — newsletter sending through the email providers.
+- **Affiliates** — affiliate program: affiliates, tracking links, clicks, conversions, commission rules with approval/void, and payouts.
+- **Loyalty** — loyalty programs with earn rules, tiers, ledger entries, redemptions, and expiry.
+- **Surveys** — surveys with questions, distributions, public response pages, and results.
+
+### 5. Communication & Support (15)
+
+#### Communication & Support > Messaging (7)
+
+- **Chat** — realtime chat, interconnected with Support Tickets and the Knowledgebase through hooks.
+- **Mail Manager** — SMTP settings, mail connectors, and the default mailer used by notifications and billing.
+- **Email Providers** — email provider registry (Mailchimp, Brevo, SendGrid, and others) with settings, behind the Mail Manager.
+- **Email Template Builder** — visual template editor (GrapeJS) for the emails the Mail Manager sends.
+- **Notifications** — a core module: system and per-user notifications with audience targeting (single user, role, department, segment, or broadcast), a notification centre with unread counts, filters and per-user channel/category/digest preferences (including digest off), per-event templates with email delivery through the configured email provider (or the Mail Manager fallback) and GrapeJS email templates, delivery tracking with retries, and listeners for the other modules' important events (orders, payments, backups, clusters, tickets, licenses, incidents, webhooks, security). Announcements compose with audience, channels, scheduling and expiry, fan out into the notification centre and the user dashboard, and can also go out as email.
+- **Inbox** — message threads with assignment, replies, canned replies, snooze, merge, and stats.
+- **Announcements** — announcements and changelog; audience-targeted, scheduled, expiring, and pinned; fans out into the notification centre and the user dashboard, and can go out as email.
+
+#### Communication & Support > Support (3)
+
+- **Support Tickets** — tickets created from chat, AI Support, and CRM, with knowledgebase suggestions attached; full status workflow, priorities, assignment, internal notes, customer replies, storage-backed attachments, canned responses, SLA timers with breach alerts and escalation rules, merging and linking to orders, licenses, and servers, routed through the Departments module.
+- **Departments (core)** — departments CRUD, agents/staff per department linked to users and roles, routing rules (category, product, keyword, manual), per-department SLA policies, working hours and out-of-hours auto-replies.
+- **Knowledgebase** — searchable articles that Chat and AI Support suggest and that tickets link back to.
+
+#### Communication & Support > Community (3)
+
+- **Community** — discussion community: categories, topics, posts, votes, flags, moderation actions, members, and announcements.
+- **Forums** — public discussion forums: SEO-friendly slugs, threads with best answers, polls, subscriptions, reputation, and moderation.
+- **Gamification** — points ledger, award rules, badges, seasons, rewards, and leaderboards.
+
+#### Communication & Support > Meetings (2)
+
+- **Meetings** — Zoom-like video meetings: rooms (scheduled and instant), WebRTC signalling over the WebSocket hub, screen share, in-meeting chat, recording metadata via storage, host/co-host/ participant roles, join tokens, waiting room, scheduling, history and attendance. Paid rooms check product entitlements at join. Signalling and room management are real; media transport is browser WebRTC — no media server/SFU is built in (see TODO.md).
+- **Webinars** — webinars with registrations, attendance, polls, Q&A, in-webinar chat, recordings, follow-ups, analytics, and links to meetings.
+
+### 6. Productivity & Content (20)
+
+#### Productivity & Content > Content & Website (7)
+
+- **Content Management** — posts, categories, and pages, with a site
+- **Site Builder** — visual site building for content and pages.
+- **Theme Management** — add themes through a templating engine, embed themes internally, or load them dynamically, with strict checking and screenshot support. The engine (`src/themes/engine.rs`) is Handlebars with `rust-embed`: the default theme ships in the binary from `templates/default/`, disk themes are discovered from `themes/` and loaded only after strict validation (manifest must exist and parse, the layout template must exist, theme ids reject path traversal). The dashboard (`templates/default/dashboard.hbs`, `assets/css/dashboard.css`, `assets/js/dashboard.js`) is server-rendered with light/dark mode, a sidebar, stat cards, a module grid fed live from `/api/v1/extensions`, and an activity feed that shows an honest empty state when there is no data yet.
+- **Frontend** — public pages: home, sign-in, registration, forgot-password, reset-password, and sign-out, server-rendered through the theme engine with paths from the shared route registry.
+- **SEO Manager** — SEO management for sites and content.
+- **Portals** — customer portals with menus and public pages, plus per-user views of downloads, invoices, and licenses.
+- **Studio** — custom fields: record types, field definitions with validation, values, and layouts for extending any record.
+
+#### Productivity & Content > Documents & Files (5)
+
+- **Documents** — document storage: records with versions, chunked upload sessions, a download allowlist with signed token downloads, quotas, and scanner hooks.
+- **File Manager** — file browsing and management for uploads and assets.
+- **Forms** — form builder: forms with fields and conditions, public submission pages, submissions with spam marking and remapping, and embeds.
+- **Printing** — print jobs with printer profiles and paper sizes, including ESC/POS thermal output, reprint, and cancel/complete/fail flow.
+- **Records** — records store behind the audit trail, with retention from config.
+
+#### Productivity & Content > Planning & Tasks (8)
+
+- **Tasks** — task management.
+- **Todos** — todo lists with todos, subtasks, attachments, shares, reminders, completion logs, and streaks.
+- **Calendar** — calendar items aggregated from multiple sources, with feeds (ICS), non-working days, conflict hints, settings, and AI day summaries.
+- **Resource Planner** — capacity planning across servers, clusters, and providers.
+- **Workflows** — automation workflows: triggers, condition groups, actions, runs with retry, manual run/test, and tokenized webhook hooks.
+- **Approvals** — multi-step approval workflows: definitions with steps and approvers, requests, decisions, delegations, escalations, and overdue tracking.
+- **Appointments** — bookable services with staff availability and slots; a public booking flow, appointments, reminder rules, settings, and ICS export.
+- **OKRs** — objectives and key results in cycles, with check-ins, overrides, and links to other records.
+
+### 7. Operations & Business (21)
+
+#### Operations & Business > Projects & Field Service (5)
+
+- **Project Management** — projects with 15 selectable methodologies (Kanban, Scrum, Waterfall, Scrumban, Agile, Lean, XP, PRINCE2, PMBOK, CPM, CCPM, Six Sigma, Hybrid, Shape Up, SAFe), boards and columns, tasks with subtasks and dependencies, sprints, phases and gates, cycles, program increments, business cases, milestones, time tracking with billable hours, automation rules, templates, and reports, wired into the ERP bus (billing for invoiced time, notifications, audit, and search).
+- **Field Service** — field operations: equipment and equipment types, work orders, dispatch board and assignments, parts, maintenance plans, templates, and time/sign-off.
+- **Time Tracker** — time tracking: timers and entries, activity reporting, agent heartbeat and screenshots, rates, teams, and staff.
+- **Supervision** — site supervision: assignments, inspection templates and inspections, defects with follow-ups, daily logs with sign-off, progress reports, and approvals.
+- **Incidents** — incident management: incidents with timeline and responders, on-call rotations, escalation policies, auto-open rules, and postmortems.
+
+#### Operations & Business > Manufacturing & Supply (7)
+
+- **Manufacturing** — bills of materials with versions, work centers, work orders, production runs, stock consumption, scrap, and production reports.
+- **Quality** — quality points and criteria, inspections with measurements, alerts, CAPAs, and quality blocks.
+- **Procurement** — vendors, purchase orders with lines and approvals, goods receipts, and budgets.
+- **Logistics** — shipments, drivers, vehicles, delivery routes, warehouses, rate tables and quotes, tracking, exceptions, and proof of delivery.
+- **Properties** — property listings with plans and blocks, location search/reverse-geocoding, public pages with SVG plans and printable output, and sold-out marking.
+- **PLM** — Product lifecycle management: lifecycle stages with approval gates, product versions, engineering change orders, and versioned BOM snapshots.
+- **Assets** — asset register with assignments, stock levels and adjustments, stock takes, depreciation, and warranty checks.
+
+#### Operations & Business > People & HR (4)
+
+- **HR** — employees, positions, contracts, leave, attendance, payroll, documents, onboarding checklists, reviews, and HR reports.
+- **Recruitment** — job postings, applicants with stage history, interviews, evaluations, offers, and hire.
+- **Holidays** — holiday providers and countries, sync configs and runs, holidays with overrides, and is-holiday / non-working-day lookups.
+- **Expenses** — expense categories, policies, expenses with receipts, reports, reimbursements, currency rates, adjustments, and spend analytics.
+
+#### Operations & Business > Governance & Compliance (5)
+
+- **Compliance** — data-protection compliance: processing records, consent records, retention policies, data-subject deletion requests, exports, breach records with timelines, and checklists.
+- **KYC** — Know Your Customer: identity verification cases with AI-assisted document checks, a human admin review queue, risk levels as data, and a hash-chained audit trail.
+- **Privacy** — privacy controls: field declarations, consent types and records, erasure and anonymization requests, privacy notices, and an audit trail.
+- **Risk** — risk register with mitigation plans and tasks, checklist templates and instances, a risk matrix, and alerts.
+- **Auditors** — external auditor accounts with scoped sessions, public share links, activity and access logs, and session revocation.
+
+### 8. Education & Services (11)
+
+#### Education & Services > Education (7)
+
+- **Academic** — academic system: students, lecturers, study programs, subjects, class schedules and rooms, course registration with advisor approval, attendance, grades and GPA, grade appeals, transcripts, academic calendar, thesis tracking, and academic standing.
+- **Admissions** — admission periods with quotas and stages; applications with document checklists, scores, decisions, results, fee invoices, enrollment, and a waitlist.
+- **Curriculum** — curriculum frameworks, school levels, subjects, core and basic competencies, structures, lesson plans, assessment domains, grade descriptors, interventions, and report cards.
+- **E-Learning** — courses with modules and lessons, enrollments, quizzes, learning paths, reviews, and certificates with verification, anchoring, and revocation.
+- **Exams** — question banks, exams, attempts with autosave, heartbeat, and proctor signals, grading, results, settings, and paid certification exams.
+- **Library** — library catalog, copies, members, loans, holds, fines, loan policies, inventory audits, and tokenized digital access.
+- **Certificates** — advanced SSL certificate management via config and ACME, with renewal and lifecycle events.
+
+#### Education & Services > Business Services (4)
+
+- **Events** — events with venues, recurrence, ticket types, registrations, attendees, check-in, waitlist, reminders, and public event pages with ICS.
+- **Contracts** — contract templates and contracts with signers, tokenized signing links, activation, renewal, termination, void, expiry checks, and an audit trail.
+- **Sign** — Core e-signature: signing envelopes over documents with hashed signing tokens, signature capture (drawn, typed, or uploaded), completion certificates, and public token-gated signing flows.
+- **Vault** — secure document vault: folders, documents with versions, share links, access requests with approve/deny, retention, and an access log.
+
+142 registered modules in total, counted from `src/modules/mod.rs`
+(`pub mod` lines). The list is grouped by business area; the ordering
+inside each subcategory follows the original list order.
 
 ## Integration round 2 (2026-11-22)
 
@@ -442,7 +287,7 @@ Diesel schema/models, hook wiring, compile-blocker fixes). Full detail,
 the renumbering map, and the honest open list live in
 [INTEGRATION_NOTES_INTEGRATION2.md](docs/integration/INTEGRATION_NOTES_INTEGRATION2.md).
 
-The complete numbered list of all 139 modules is in "Core modules"
+The complete categorized list of all 142 modules is in "Core modules"
 above; the groups below are the round-2 batch history, not a second
 list.
 
