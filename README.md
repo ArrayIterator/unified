@@ -520,6 +520,30 @@ change a flow by registering a hook handler. The main flows are:
   (ports 80 / 443, with validation).
 - **Realtime:** WebSocket support where needed.
 
+## TypeScript / JavaScript engine
+
+External modules can also be authored in **TypeScript** — no Rust
+needed. The server embeds a **QuickJS** runtime
+(`crates/unified-scripting`, via `rquickjs`): TypeScript sources
+are transpiled to JavaScript in-memory with OXC and executed in an
+isolated QuickJS context per module, with memory/time limits. There
+is deliberately no V8 here: QuickJS is small (~1 MB) and
+musl-friendly, while V8 would break the static musl binary.
+
+Every TS module sees one `Unified` global object holding the whole
+SDK (hooks, routes, events, tenant-scoped DB, read-only config, log,
+allowlisted HTTP, scoped storage) — the same shape as Bun's `Bun`
+global. The type declarations are the canonical contract:
+`crates/unified-scripting/unified.d.ts` (type-check a module with
+`tsc --noEmit`). A working example lives at
+`modules/example-ts/module.ts`. Native Rust external modules
+(`crates/external-*`) stay as-is — TypeScript is a second plugin
+layer on top of them.
+
+TODO: publish the `Unified` SDK types as an `@types`-style SDK
+package, so external TS/JS modules can depend on the standardized
+public API types instead of copying `unified.d.ts`.
+
 ## API standard
 
 All JSON APIs follow the same shape and standard HTTP status codes.
