@@ -1,0 +1,27 @@
+# Line endings: LF everywhere, regardless of platform.
+* text=auto eol=lf
+
+# Explicit text files.
+*.md text
+*.rs text
+*.toml text
+*.yaml text
+*.yml text
+*.json text
+*.hbs text
+*.html text
+*.css text
+*.js text
+*.ts text
+*.tsx text
+
+# Binary files.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
