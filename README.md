@@ -6,7 +6,7 @@ One control plane for licensing, downloads, storefront, software and asset
 management, and the day-to-day operations around them. One login, one
 dashboard, many modules.
 
-> Project status: 137 modules registered and wired through the hook/event
+> Project status: 139 modules registered and wired through the hook/event
 > bus (see the list below), 108 Diesel migrations (gapless 000001–000108)
 > covering 675 tables (1,350 Diesel structs), 645,165 Rust lines under
 > `src/` + `crates/` (counted 2026-11-22; the total grows while
@@ -423,11 +423,16 @@ Core modules ship inside the binary and cannot be removed:
     allowances, defaults, branding profiles, and change history.
 137. **Workflows** — automation workflows: triggers, condition groups,
     actions, runs with retry, manual run/test, and tokenized webhook hooks.
+138. **Forums** — public discussion forums: SEO-friendly slugs, threads
+    with best answers, polls, subscriptions, reputation, and moderation.
+139. **Rental** — rental products: rental orders and contracts, deliveries
+    and returns, late fees, deposits, and availability.
 
-137 registered modules in total, counted from `src/modules/mod.rs`
+139 registered modules in total, counted from `src/modules/mod.rs`
 (`pub mod` lines). Entries 1–72 are the original core list; entries
 73–137 are the integration-round-2 modules, in `mod.rs` (alphabetical)
-order.
+order. Entries 138–139 (Forums, Rental) landed after round 2 and are
+appended here; the list will be re-alphabetized on the next full refresh.
 
 ## Integration round 2 (2026-11-22)
 
@@ -437,7 +442,7 @@ Diesel schema/models, hook wiring, compile-blocker fixes). Full detail,
 the renumbering map, and the honest open list live in
 [INTEGRATION_NOTES_INTEGRATION2.md](docs/integration/INTEGRATION_NOTES_INTEGRATION2.md).
 
-The complete numbered list of all 137 modules is in "Core modules"
+The complete numbered list of all 139 modules is in "Core modules"
 above; the groups below are the round-2 batch history, not a second
 list.
 
