@@ -902,7 +902,7 @@ Remote head still `7cf6853c`.
   positive in `hr.rs`); 0 stub macros in code (one hit is a comment);
   0 Indonesian words (2 comments fixed by the coordinator).
 
-### What was fixed / wired (headline — full proof in INTEGRATION_NOTES_INTEGRATION2.md)
+### What was fixed / wired (headline — full proof in docs/integration/INTEGRATION_NOTES_INTEGRATION2.md)
 
 - `pub mod privacy;` + `pub mod cards;` (both were tree-wide compile
   blocks); Caller-type mismatch in library/saas_packages; tenants.rs
@@ -933,16 +933,26 @@ Remote head still `7cf6853c`.
   reconciliation; middleware product-scope + `Released`; sharing
   kinds; CertStoreSwap wiring (whole-store swaps need a restart).
 
-### Still open (not fixed here — full list of 30 in INTEGRATION_NOTES_INTEGRATION2.md §10)
+### Still open (not fixed here — full list of 30 in docs/integration/INTEGRATION_NOTES_INTEGRATION2.md §10)
 
-- **Entitlements vs licensing DIVERGE (most consequential):**
-  subscription leg missing from licensing's gate — a
-  subscription-backed module reads entitled in entitlements, denied
-  403 by licensing. Apply the batch-3 B5 snippet in licensing.rs,
-  then align non-sellable + grace + ctx=None semantics.
-- **`certificates` + `pricing_tiers` table-name collisions**
-  (000005 vs 000079; 000041 vs 000103) — rename the second shape
-  before any migration run.
+- **Entitlements vs licensing DIVERGE — FIXED 2026-11-22 (final
+  inspection, task 104):** subscription leg added to licensing's
+  gate (`licensing::check_module_entitlement`, reason
+  `"subscription"`, via the store's
+  `subscription.module_entitlement.check` answerer) and mirrored
+  in `entitlements::effective()` (source kind `subscription`) and
+  `entitled_module_ids` (core modules included via the owner
+  entitlement, subscription-covered addons included); non-sellable
+  modules now report entitled through the derived `builtin`
+  source so `effective()` agrees with licensing. Grace stays
+  entitlements-only by design (licensing gate is boolean) and
+  `effective(ctx: None)` stays stored-rows-only, fail closed.
+- **`certificates` + `pricing_tiers` table-name collisions —
+  FIXED 2026-11-22 (final inspection, task 104):** second shapes
+  renamed before any migration run — 000079 `certificates` →
+  `elearning_certificates`, 000103 `pricing_tiers` →
+  `pricing_volume_tiers` (migrations + `table!` + models, 673
+  unique CREATEs, 0 duplicates).
 - Modularity violations V1–V8 (provider URLs, closed enums, 40
   hard-coded `matches!()` vocabularies, …).
 - **Tenant-scoping rollout: 125/138 modules not-guarded**; stores
@@ -952,12 +962,33 @@ Remote head still `7cf6853c`.
   tenants data-provider for entity `tenant` missing (destroy stays
   export-blocked); `saas_packages.package.modules_requested` has no
   answerer; projects `sharing.allow_check` missing; whole-store
-  CertStoreSwap needs a listener rebuild; `build_fee_invoice`
-  unenforced; `elearning.enrollment.purchase_requested` creates no
-  order; `renew_one` ungated; `settings.merge` vcs-only allowlist;
-  calendar control-plane policy decision; no
-  `academic.enrollment.lookup`; in-memory stores authoritative
-  almost everywhere; billing stores f64 money.
+  CertStoreSwap needs a listener rebuild;
+  `elearning.enrollment.purchase_requested` creates no
+  order; `renew_one` ungated; calendar control-plane policy
+  decision; no `academic.enrollment.lookup`; school-fee schedules
+  fall back to the academic student id until academic echoes the
+  user id; in-memory stores authoritative almost everywhere.
+- **Auth sweep findings (final inspection, task 104 — NOT fixed,
+  need a design decision + a rewrite):** the projects module takes
+  caller identity from query params (`viewer_id` / `viewer_role`
+  filters, `projects/state.rs:208` `viewer_of`) and the
+  network-tools module the same way (`tool_actor`), so any client
+  can pass `viewer_role=admin`; the analytics module takes no
+  `HttpRequest` anywhere (27 handlers unauthenticated, reads and
+  writes); billing `get/update_settings` and store catalog
+  create/update/delete run with no caller check (no billing admin
+  permission exists yet to gate on).
+- **Resolved since the last edit (final inspection, task 104):**
+  `build_fee_invoice` now enforces pricing validation (draft-held
+  without a tenant id or a pricing answer);
+  `settings.merge` accepts `vcs.*` + `auth.*` + `cloudflare`
+  (refusals logged, not silent); `create_subscription` now
+  requires `customer_id` + `require_customer` ownership;
+  billing/store/pos money is integer minor units (0 `f64` in all
+  three); holiday scheduled syncs run in spawned tasks (manual
+  sync stays inline by documented decision); manufacturing
+  reservations are per-product unknown-aware; `invoice.created`,
+  `order.paid`, `store.order.completed` added to AUDITED_EVENTS.
 - **Standing caveat (unchanged): `cargo check` / `cargo build` /
   `cargo test` NEVER ran anywhere** — no toolchain, crates.io
   blocked. Compilation is unverified for the whole tree. No

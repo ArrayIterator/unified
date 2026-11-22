@@ -12,7 +12,7 @@ dashboard, many modules.
 > security re-checked, public API access control with default-deny
 > (see below). Integration round 2 (2026-11-22) registered all 137
 > modules, renumbered migrations gapless, and wired the cross-module
-> hook contracts — see [INTEGRATION_NOTES_INTEGRATION2.md](INTEGRATION_NOTES_INTEGRATION2.md).
+> hook contracts — see [INTEGRATION_NOTES_INTEGRATION2.md](docs/integration/INTEGRATION_NOTES_INTEGRATION2.md).
 > The implementation milestones are tracked in
 > [TODO.md](TODO.md). `cargo check` has not run in this environment (no
 > toolchain, crates.io blocked) — compilation is unverified; see TODO.md
@@ -262,7 +262,7 @@ The 65 modules below were built in parallel batch rounds and integrated
 in round 2 (registration, gapless migration renumbering 000001–000107,
 Diesel schema/models, hook wiring, compile-blocker fixes). Full detail,
 the renumbering map, and the honest open list live in
-[INTEGRATION_NOTES_INTEGRATION2.md](INTEGRATION_NOTES_INTEGRATION2.md).
+[INTEGRATION_NOTES_INTEGRATION2.md](docs/integration/INTEGRATION_NOTES_INTEGRATION2.md).
 
 - **Projects & time:** projects (15 methodologies), timetracker,
   todos, okrs.
