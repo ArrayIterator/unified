@@ -1,0 +1,84 @@
+<section class="admin-overview" data-section="{{section}}">
+  <h1>Admin overview</h1>
+  <p class="page-intro">System status, modules, users, orders, and security at a glance.</p>
+
+  <div class="stat-grid">
+    <article class="stat-card">
+      <h2>Users</h2>
+      <p class="stat-value">{{overview.counts.users}}</p>
+      <p class="stat-note">Registered users</p>
+    </article>
+    <article class="stat-card">
+      <h2>Roles</h2>
+      <p class="stat-value">{{overview.counts.roles}}</p>
+      <p class="stat-note">Roles in the system</p>
+    </article>
+    <article class="stat-card">
+      <h2>Licenses</h2>
+      <p class="stat-value">{{overview.counts.licenses}}</p>
+      <p class="stat-note">Licenses issued</p>
+    </article>
+    <article class="stat-card">
+      <h2>Orders</h2>
+      <p class="stat-value">{{overview.counts.orders}}</p>
+      <p class="stat-note">Store orders</p>
+    </article>
+    <article class="stat-card">
+      <h2>Modules</h2>
+      <p class="stat-value">{{overview.system.modules_total}}</p>
+      <p class="stat-note">
+        {{#if overview.system.dependencies_valid}}Dependencies valid{{else}}Dependency issues found{{/if}}
+      </p>
+    </article>
+    <article class="stat-card">
+      <h2>Uptime</h2>
+      <p class="stat-value">{{overview.system.uptime_seconds}}s</p>
+      <p class="stat-note">
+        {{#if overview.system.maintenance}}Maintenance mode{{else}}{{#if overview.system.paused}}Paused{{else}}Running{{/if}}{{/if}}
+        {{#unless overview.system.db_available}} &middot; No database{{/unless}}
+      </p>
+    </article>
+  </div>
+
+  <div class="panel-grid">
+    <section class="panel" aria-labelledby="admin-modules-heading">
+      <h2 id="admin-modules-heading">Module status</h2>
+      {{#if overview.system.modules}}
+      <ul class="module-list">
+        {{#each overview.system.modules}}
+        <li>
+          <span class="module-name">{{name}}</span>
+          <span class="module-id">{{id}} &middot; v{{version}}</span>
+        </li>
+        {{/each}}
+      </ul>
+      {{else}}
+      <p class="empty-note">No modules registered.</p>
+      {{/if}}
+      {{#unless overview.system.dependencies_valid}}
+      <ul class="issue-list">
+        {{#each overview.system.dependency_issues}}
+        <li>{{message}}</li>
+        {{/each}}
+      </ul>
+      {{/unless}}
+    </section>
+
+    <section class="panel" aria-labelledby="admin-sections-heading">
+      <h2 id="admin-sections-heading">Operations</h2>
+      <ul class="section-list">
+        {{#each overview.sections}}
+        <li>
+          <span class="section-name">{{section}}</span>
+          {{#if available}}
+          <span class="section-status section-status-ok">Available</span>
+          {{else}}
+          <span class="section-status">Not connected &mdash; {{reason}}</span>
+          {{/if}}
+        </li>
+        {{/each}}
+      </ul>
+      <p class="panel-note">Servers, security, and logs are provided by their owning modules through the dashboard section hook.</p>
+    </section>
+  </div>
+</section>

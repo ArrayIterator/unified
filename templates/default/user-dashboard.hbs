@@ -1,0 +1,101 @@
+<section class="user-overview" data-section="{{section}}">
+  <h1>Your dashboard</h1>
+  <p class="page-intro">Your licenses, downloads, orders, tickets, and services in one place.</p>
+
+  <div class="stat-grid">
+    <article class="stat-card">
+      <h2>Licenses</h2>
+      <p class="stat-value">{{overview.counts.licenses}}</p>
+      <p class="stat-note">{{overview.counts.active_licenses}} active</p>
+    </article>
+    <article class="stat-card">
+      <h2>Downloads</h2>
+      <p class="stat-value">{{overview.counts.downloads}}</p>
+      <p class="stat-note">Across your licenses</p>
+    </article>
+    <article class="stat-card">
+      <h2>Orders</h2>
+      <p class="stat-value">{{overview.counts.orders}}</p>
+      <p class="stat-note">Your store orders</p>
+    </article>
+    <article class="stat-card">
+      <h2>Entitlements</h2>
+      <p class="stat-value">{{overview.counts.entitlements}}</p>
+      <p class="stat-note">Granted with your orders</p>
+    </article>
+  </div>
+
+  {{#unless overview.db_available}}
+  <p class="empty-note">Your data is unavailable right now: no database is configured.</p>
+  {{/unless}}
+
+  <div class="panel-grid">
+    <section class="panel" aria-labelledby="recent-licenses-heading">
+      <h2 id="recent-licenses-heading">Recent licenses</h2>
+      {{#if overview.recent_licenses}}
+      <ul class="record-list">
+        {{#each overview.recent_licenses}}
+        <li>
+          <span class="record-name">{{product}}</span>
+          <span class="record-meta">{{status}}{{#if expires_at}} &middot; expires {{expires_at}}{{/if}}</span>
+        </li>
+        {{/each}}
+      </ul>
+      {{else}}
+      <p class="empty-note">No licenses yet.</p>
+      {{/if}}
+    </section>
+
+    <section class="panel" aria-labelledby="recent-orders-heading">
+      <h2 id="recent-orders-heading">Recent orders</h2>
+      {{#if overview.recent_orders}}
+      <ul class="record-list">
+        {{#each overview.recent_orders}}
+        <li>
+          <span class="record-name">{{status}}</span>
+          <span class="record-meta">{{total}} {{currency}}</span>
+        </li>
+        {{/each}}
+      </ul>
+      {{else}}
+      <p class="empty-note">No orders yet.</p>
+      {{/if}}
+    </section>
+
+    <section class="panel" aria-labelledby="support-sections-heading">
+      <h2 id="support-sections-heading">Tickets, services &amp; API keys</h2>
+      <ul class="section-list">
+        {{#each overview.sections}}
+        <li>
+          <span class="section-name">{{section}}</span>
+          {{#if available}}
+          <span class="section-status section-status-ok">Available</span>
+          {{else}}
+          <span class="section-status">Not connected &mdash; {{reason}}</span>
+          {{/if}}
+        </li>
+        {{/each}}
+      </ul>
+    </section>
+
+    {{#if reseller.clients_total}}
+    <section class="panel" aria-labelledby="reseller-heading">
+      <h2 id="reseller-heading">Your clients</h2>
+      <p class="stat-value">{{reseller.clients_total}} clients</p>
+      <p class="stat-note">{{reseller.counts.client_orders}} client orders &middot; {{reseller.counts.client_orders_value}} total value</p>
+      <ul class="section-list">
+        {{#each reseller.sections}}
+        <li>
+          <span class="section-name">{{section}}</span>
+          {{#if available}}
+          <span class="section-status section-status-ok">Available</span>
+          {{else}}
+          <span class="section-status">Not connected &mdash; {{reason}}</span>
+          {{/if}}
+        </li>
+        {{/each}}
+      </ul>
+    </section>
+    {{/if}}
+  </div>
+</section>
