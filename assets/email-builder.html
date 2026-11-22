@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Email Template Builder &mdash; Unified</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/grapesjs@0.22.6/dist/css/grapes.min.css">
+  <link rel="stylesheet" href="/assets/css/dashboard.css">
+  <style>
+    /* Page-local layout only; the shared dashboard theme lives in
+       dashboard.css and is intentionally not duplicated here. */
+    .builder-shell { max-width: 1400px; margin: 0 auto; padding: 1rem; }
+    .builder-toolbar {
+      display: flex; flex-wrap: wrap; align-items: end; gap: 1rem;
+      padding: 1rem; margin-bottom: 1rem;
+      border: 1px solid var(--border); border-radius: var(--radius);
+      background: var(--surface); box-shadow: var(--shadow);
+    }
+    .builder-toolbar .form-row { flex: 1 1 200px; margin-bottom: 0; }
+    .builder-toolbar .form-row.narrow { flex: 0 1 160px; }
+    .builder-actions { display: flex; gap: 0.5rem; align-items: center; }
+    #gjs { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; min-height: 600px; }
+    .builder-status { margin: 1rem 0; }
+  </style>
+</head>
+<body>
+  <div class="builder-shell">
+    <header class="page-heading">
+      <h1>Email Template Builder</h1>
+      <p>Design an email template with the visual editor, then save it to the Email Templates module. Templates are stored through the standard JSON API (<code>POST /api/v1/email-templates</code>) and render with the <code>{"data": ...}</code> success envelope.</p>
+    </header>
+
+    <form id="template-form" class="builder-toolbar" autocomplete="off">
+      <div class="form-row">
+        <label for="template-name">Template name</label>
+        <input id="template-name" name="name" type="text" required maxlength="120" placeholder="Welcome email">
+      </div>
+      <div class="form-row">
+        <label for="template-subject">Subject</label>
+        <input id="template-subject" name="subject" type="text" required maxlength="200" placeholder="Welcome to Unified">
+      </div>
+      <div class="form-row narrow">
+        <label for="template-category">Category</label>
+        <select id="template-category" name="category">
+          <option value="transactional">Transactional</option>
+          <option value="marketing">Marketing</option>
+          <option value="notification">Notification</option>
+        </select>
+      </div>
+      <div class="builder-actions">
+        <button id="save-template" class="button" type="submit">Save template</button>
+        <button id="clear-template" class="button button-secondary" type="button">Clear canvas</button>
+      </div>
+    </form>
+
+    <div id="builder-status" class="builder-status" role="status" aria-live="polite"></div>
+
+    <div id="gjs"></div>
+
+    <p><a href="/dashboard/email-templates">Back to email templates</a></p>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/grapesjs@0.22.6/dist/grapes.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/grapesjs-preset-webpage@1.0.3/dist/grapesjs-preset-webpage.min.js"></script>
+  <script>
+    (function () {
+      "use strict";
+
+      var form = document.getElementById("template-form");
+      var statusBox = document.getElementById("builder-status");
+      var nameInput = document.getElementById("template-name");
+      var subjectInput = document.getElementById("template-subject");
+      var categoryInput = document.getElementById("template-category");
+      var saveButton = document.getElementById("save-template");
+      var clearButton = document.getElementById("clear-template");
+
+      var editor = grapesjs.init({
+        container: "#gjs",
+        fromElement: false,
+        height: "600px",
+        width: "auto",
+        storageManager: false,
+        plugins: ["gjs-preset-webpage"],
+        pluginsOpts: {
+          "gjs-preset-webpage": {},
+        },
+        // Email-safe starting content: a single-column layout with a
+        // heading, a paragraph, and a call-to-action button.
+        components: [
+          {
+            tagName: "div",
+            attributes: { style: "max-width: 600px; margin: 0 auto; padding: 24px; font-family: Arial, sans-serif; color: #1a2230;" },
+            components: [
+              { tagName: "h1", content: "Hello!" },
+              { tagName: "p", content: "Replace this text with your message. Use {{name}} style placeholders for per-recipient values; the Mail Manager replaces them when the email is sent." },
+              {
+                tagName: "a",
+                attributes: { href: "https://example.com", style: "display: inline-block; padding: 12px 24px; background: #0b6b3a; color: #ffffff; text-decoration: none; border-radius: 8px;" },
+                content: "Get started",
+              },
+            ],
+          },
+        ],
+      });
+
+      function showStatus(message, type) {
+        statusBox.textContent = message;
+        statusBox.className = "builder-status flash flash-" + (type || "info");
+      }
+
+      function templatePayload() {
+        return {
+          name: nameInput.value.trim(),
+          subject: subjectInput.value.trim(),
+          category: categoryInput.value,
+          html: editor.getHtml(),
+          css: editor.getCss(),
+          // The GrapeJS component tree, so the template can be reopened
+          // in the editor later instead of only as raw HTML.
+          design: editor.getProjectData(),
+        };
+      }
+
+      form.addEventListener("submit", function (event) {
+        event.preventDefault();
+        var payload = templatePayload();
+        if (!payload.name || !payload.subject) {
+          showStatus("Template name and subject are both required.", "error");
+          return;
+        }
+        if (!payload.html) {
+          showStatus("The canvas is empty — add some content before saving.", "error");
+          return;
+        }
+        saveButton.disabled = true;
+        saveButton.textContent = "Saving…";
+        window
+          .fetch("/api/v1/email-templates", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+            credentials: "same-origin",
+            body: JSON.stringify(payload),
+          })
+          .then(function (response) {
+            return response.json().then(function (body) {
+              if (!response.ok) {
+                var message =
+                  (body && body.error && body.error.message) ||
+                  "Saving failed with HTTP " + response.status;
+                throw new Error(message);
+              }
+              return body;
+            });
+          })
+          .then(function (envelope) {
+            var saved = envelope && envelope.data ? envelope.data : null;
+            var id = saved && (saved.id || saved.name);
+            showStatus(
+              id
+                ? 'Template "' + payload.name + '" saved (id: ' + id + ")."
+                : 'Template "' + payload.name + '" saved.',
+              "success"
+            );
+          })
+          .catch(function (error) {
+            showStatus("Could not save the template: " + error.message, "error");
+          })
+          .finally(function () {
+            saveButton.disabled = false;
+            saveButton.textContent = "Save template";
+          });
+      });
+
+      clearButton.addEventListener("click", function () {
+        if (window.confirm("Clear the canvas? Unsaved design changes will be lost.")) {
+          editor.setComponents("");
+          editor.setStyle("");
+          showStatus("Canvas cleared.", "warning");
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

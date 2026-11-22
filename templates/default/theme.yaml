@@ -1,0 +1,15 @@
+# Default theme manifest.
+name: Default
+version: 1.0.0
+description: "Default Unified theme: dashboard, public home page, and error page with light and dark mode support."
+# No screenshot ships with the default theme; a theme that has one names
+# its file here (for example `screenshot.png`).
+screenshot: ""
+directories:
+  - templates
+  - partials
+templates:
+  - layout
+  - dashboard
+  - home
+  - error

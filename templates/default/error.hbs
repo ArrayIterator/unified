@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en" class="theme-{{#if theme}}{{theme}}{{else}}light{{/if}}" data-theme="{{#if theme}}{{theme}}{{else}}light{{/if}}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{#if code}}Error {{code}}{{else}}Error{{/if}} &mdash; {{#if app_name}}{{app_name}}{{else}}Unified{{/if}}</title>
+  <meta name="description" content="An error occurred.">
+  <link rel="stylesheet" href="/assets/css/dashboard.css">
+</head>
+<body>
+  {{> header}}
+
+  <main class="error-main">
+    <section class="error-card" role="alert">
+      {{#if code}}<p class="error-code">{{code}}</p>{{/if}}
+      <h1>{{#if title}}{{title}}{{else}}Something went wrong{{/if}}</h1>
+      {{#if message}}<p class="error-message">{{message}}</p>{{/if}}
+      {{#if request_id}}<p class="error-request">Request id: {{request_id}}</p>{{/if}}
+      <p class="error-actions">
+        <a class="button" href="{{#if home_url}}{{home_url}}{{else}}/{{/if}}">Back to home</a>
+        <a class="button button-secondary" href="{{#if dashboard_url}}{{dashboard_url}}{{else}}/dashboard{{/if}}">Open dashboard</a>
+      </p>
+    </section>
+  </main>
+
+  {{> footer}}
+  <script src="/assets/js/dashboard.js" defer></script>
+</body>
+</html>

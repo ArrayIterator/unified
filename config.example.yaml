@@ -1,0 +1,135 @@
+# Unified Pentagonal Project — example configuration.
+# Copy this file to `config.yaml` and adjust it. All values are optional;
+# missing values fall back to the built-in defaults.
+# Run `unified -t` to test a configuration file before using it.
+
+# ----------------------------------------
+# Application configuration
+# ----------------------------------------
+app:
+  # Application mode: development or production. Default: production.
+  mode: "production"
+  # Dashboard path. Default: dashboard.
+  dashboard_path: "dashboard"
+  # Session cookie name. Default: vault.
+  session_name: "vault"
+  # CSRF token lifetime in minutes (5..86400). Default: 30.
+  csrf_duration: 30
+  # Secret and salt keys. In production, secret_key must be at least 32
+  # characters and salt_key at least 16 characters, and they must differ.
+  secret_key: "change-this-to-a-random-secret-string"
+  salt_key: "change-this-to-a-random-salt-string"
+  # System user the daemon runs as (empty means auto-detect).
+  user: ""
+  # TCP listen addresses.
+  tcp:
+    - "127.0.0.1:8080"
+  # TLS configuration.
+  ssl:
+    # Automatically create a certificate when no certificate matches.
+    auto_create: false
+    # TLS listen addresses.
+    listen:
+      - "127.0.0.1:8443"
+    # Default certificate and key files.
+    cert: ""
+    key: ""
+    # TLS session cache size in MB (2..256). Default: 32.
+    ssl_session_cache: 32
+    # Per-domain / per-IP certificates.
+    domains:
+      "127.0.0.1":
+        cert: ""
+        key: ""
+  # Workers, 0 means auto-detect. Default: 0.
+  workers: 0
+  # Operation timeout in seconds (1..3600). Default: 10.
+  operation_timeout: 10
+  # Request timeout in seconds (0 disables it). Default: 10.
+  request_timeout: 10
+  # Disconnect timeout in seconds. Default: 5.
+  disconnect_timeout: 5
+  # Maximum concurrent connections. Default: 25000.
+  max_connections: 25000
+  # Per-worker maximum concurrent TLS connections (0 means auto).
+  max_connections_rate: 0
+  # Listen backlog. Default: 4096.
+  backlog: 4096
+  # Maximum open file descriptors. Default: 65535.
+  rlimit_nofile: 65535
+  # Keep-alive timeout in seconds (0 disables it). Default: 75.
+  keep_alive: 75
+  # Automatic memory cleanup.
+  auto_clean_memory: true
+  auto_clean_memory_size: "384M"
+  auto_clean_memory_interval: "1H"
+
+# ----------------------------------------
+# Redis configuration
+# ----------------------------------------
+redis:
+  unix_socket: ""
+  host: "localhost"
+  port: 6379
+  username: ""
+  password: ""
+  database: 0
+  max_pools: 10
+  minimum_idle_connections: 1
+  idle_timeout: 600
+  connect_timeout: 5
+
+# ----------------------------------------
+# Database configuration (PostgreSQL by default)
+# ----------------------------------------
+database:
+  driver: "postgresql"
+  socket: null
+  host: "localhost"
+  port: 5432
+  username: ""
+  password: ""
+  database: ""
+  max_connections: 50
+  min_connections: 1
+  max_lifetime: 1800
+  statement_timeout: 5
+  idle_timeout: 600
+  acquire_timeout: 10
+  log_enable: false
+  log_level: "warn"
+  log_slow_level: "error"
+  log_threshold: 1
+  collation: "utf8mb4_general_ci"
+
+# ----------------------------------------
+# Licenses / API keys
+# ----------------------------------------
+licenses:
+  # MaxMind license key used to download GeoLite databases.
+  maxmind: ""
+
+# ----------------------------------------
+# Geo location configuration
+# ----------------------------------------
+geo:
+  # Path to the GeoLite / MaxMind database file.
+  database_path: "data/geo/GeoLite2-City.mmdb"
+  # Download URL for the database. Empty means the built-in MaxMind URL.
+  download_url: ""
+  auto_update: false
+  update_interval_hours: 168
+  # When true, settings-defined IP range overrides win over the GeoLite
+  # database reading (default behaviour).
+  settings_override: true
+
+# ----------------------------------------
+# Let's Encrypt ACME configuration
+# ----------------------------------------
+acme:
+  # Enable ACME certificate issuance and renewal.
+  enabled: false
+  # ACME directory URL.
+  directory_url: "https://acme-v02.api.letsencrypt.org/directory"
+  # Contact addresses for the ACME account.
+  contacts: []

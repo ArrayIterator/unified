@@ -1,0 +1,29 @@
+<header class="site-header">
+  <div class="site-header-inner">
+    <a class="brand" href="{{#if home_url}}{{home_url}}{{else}}/{{/if}}">
+      <span class="brand-mark" aria-hidden="true">U</span>
+      <span class="brand-name">{{#if app_name}}{{app_name}}{{else}}Unified{{/if}}</span>
+    </a>
+    <nav class="site-nav" aria-label="Main navigation">
+      {{#if nav}}
+      {{#each nav}}
+      <a class="nav-link{{#if active}} is-active{{/if}}" href="{{url}}"{{#if active}} aria-current="page"{{/if}}>{{label}}</a>
+      {{/each}}
+      {{else}}
+      <a class="nav-link" href="/">Home</a>
+      <a class="nav-link" href="/dashboard">Dashboard</a>
+      {{/if}}
+    </nav>
+    <div class="site-header-actions">
+      <button type="button" class="theme-toggle" data-theme-toggle aria-label="Toggle dark or light theme">
+        <span class="theme-toggle-icon" aria-hidden="true">&#9788;</span>
+        <span class="theme-toggle-label">Theme</span>
+      </button>
+      {{#if user}}
+      <span class="user-chip">{{user.name}}</span>
+      {{else}}
+      <a class="button button-small" href="/login">Sign in</a>
+      {{/if}}
+    </div>
+  </div>
+</header>
