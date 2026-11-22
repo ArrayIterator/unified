@@ -174,6 +174,15 @@ pub struct SecuritySettings {
     pub allowlist: Vec<String>,
     /// CIDR ranges or bare IPs rejected with 403.
     pub blocklist: Vec<String>,
+    /// CIDR ranges or bare IPs of trusted reverse proxies / load
+    /// balancers. Only a peer address inside this list may supply the
+    /// client IP through `X-Forwarded-For` (see
+    /// `trusted_client_ip`): when the list is empty (the default) no
+    /// forwarded header is ever trusted and the TCP peer address is
+    /// always the client IP. An untrusted client that can set
+    /// `X-Forwarded-For` must never be able to spoof the IP the
+    /// blocklist, rate limiter, and brute-force engine enforce on.
+    pub trusted_proxies: Vec<String>,
 }
 
 impl Default for SecuritySettings {
@@ -220,6 +229,7 @@ impl Default for SecuritySettings {
             ip_reputation_burst_penalty: DEFAULT_IP_REPUTATION_BURST_PENALTY,
             allowlist: Vec::new(),
             blocklist: Vec::new(),
+            trusted_proxies: Vec::new(),
         }
     }
 }
@@ -325,6 +335,13 @@ impl SecuritySettings {
                 ));
             }
         }
+        for entry in &self.trusted_proxies {
+            if parse_cidr(entry).is_err() {
+                problems.push(format!(
+                    "security.trusted_proxies entry \"{entry}\" is not a valid IP address or CIDR range"
+                ));
+            }
+        }
         problems
     }
 }
@@ -369,6 +386,7 @@ pub struct SecuritySettingsUpdate {
     pub ip_reputation_burst_penalty: Option<i32>,
     pub allowlist: Option<Vec<String>>,
     pub blocklist: Option<Vec<String>>,
+    pub trusted_proxies: Option<Vec<String>>,
 }
 
 /// Partial security-header update: only the fields present are changed.
@@ -786,6 +804,9 @@ impl HardeningState {
         }
         if let Some(value) = update.blocklist {
             next.blocklist = value;
+        }
+        if let Some(value) = update.trusted_proxies {
+            next.trusted_proxies = value;
         }
         let problems = next.validate();
         if !problems.is_empty() {
@@ -1325,10 +1346,19 @@ impl HardeningState {
         counter.fetch_add(1, Ordering::SeqCst) + 1
     }
 
-    /// Decrement the in-flight request count for one IP.
+    /// Decrement the in-flight request count for one IP. Saturating:
+    /// a decrement without a matching increment (for example a slot
+    /// released twice, or a counter left over from an older build)
+    /// never wraps the counter to `u64::MAX`.
     pub fn dec_concurrent(&self, ip: &str) {
         if let Some(counter) = self.concurrent.get(ip) {
-            counter.fetch_sub(1, Ordering::SeqCst);
+            let _ = counter.fetch_update(Ordering::SeqCst, Ordering::SeqCst, |value| {
+                if value == 0 {
+                    None
+                } else {
+                    Some(value - 1)
+                }
+            });
         }
     }
 
@@ -1565,8 +1595,12 @@ pub fn shared_state() -> Arc<HardeningState> {
 
 /// Client IP for a request: the first forwarded address reported by
 /// Actix `ConnectionInfo` when present, otherwise the peer address.
-/// Deployments must only trust `X-Forwarded-For` from a trusted proxy
-/// or load balancer in front of this server.
+///
+/// WARNING: Actix trusts `X-Forwarded-For` from any client, so this
+/// helper is spoofable by a direct client and must NOT be used for
+/// enforcement (blocklist, rate limiting, brute-force keys). It is
+/// kept for display / logging callers that already use it.
+/// Enforcement paths must use `trusted_client_ip` instead.
 pub fn client_ip(req: &ServiceRequest) -> Option<IpAddr> {
     if let Some(real_ip) = req.connection_info().realip_remote_addr() {
         if let Ok(ip) = real_ip.parse::<IpAddr>() {
@@ -1574,6 +1608,85 @@ pub fn client_ip(req: &ServiceRequest) -> Option<IpAddr> {
         }
     }
     req.peer_addr().map(|address| address.ip())
+}
+
+/// Client IP for enforcement, honouring `X-Forwarded-For` only when
+/// the TCP peer is a configured trusted proxy
+/// (`security.trusted_proxies`). With no trusted proxies configured
+/// (the default) the peer address is always the client IP, so a
+/// direct client can never spoof the IP the blocklist, rate limiter,
+/// and brute-force engine enforce on. When the peer is trusted, the
+/// first `X-Forwarded-For` entry is the client IP; an unparseable or
+/// absent entry falls back to the peer address (fail closed: never
+/// invent an address).
+pub fn trusted_client_ip(
+    peer: Option<std::net::SocketAddr>,
+    headers: &actix_web::http::header::HeaderMap,
+    settings: &SecuritySettings,
+) -> Option<IpAddr> {
+    let peer_ip = peer.map(|address| address.ip())?;
+    if settings.trusted_proxies.is_empty() {
+        return Some(peer_ip);
+    }
+    let trusted = settings.trusted_proxies.iter().any(|entry| {
+        parse_cidr(entry).is_ok_and(|range| range.contains(peer_ip))
+    });
+    if !trusted {
+        return Some(peer_ip);
+    }
+    let forwarded = headers
+        .get(header::X_FORWARDED_FOR)
+        .and_then(|value| value.to_str().ok())?;
+    let first = forwarded.split(',').next().map(str::trim).unwrap_or("");
+    match first.parse::<IpAddr>() {
+        Ok(ip) => Some(ip),
+        Err(_) => Some(peer_ip),
+    }
+}
+
+/// `trusted_client_ip` for a middleware `ServiceRequest`.
+pub fn trusted_client_ip_for_request(
+    req: &ServiceRequest,
+    settings: &SecuritySettings,
+) -> Option<IpAddr> {
+    trusted_client_ip(req.peer_addr(), req.headers(), settings)
+}
+
+/// `trusted_client_ip` for a handler `HttpRequest`.
+pub fn trusted_client_ip_for_http_request(
+    req: &actix_web::HttpRequest,
+    settings: &SecuritySettings,
+) -> Option<IpAddr> {
+    trusted_client_ip(req.peer_addr(), req.headers(), settings)
+}
+
+/// One held concurrent-connection slot. Dropping the slot releases
+/// it, so a request that is dropped mid-flight (client disconnect)
+/// can never leak a slot and permanently throttle its IP.
+pub struct ConcurrentSlot {
+    state: Arc<HardeningState>,
+    ip: String,
+}
+
+impl ConcurrentSlot {
+    /// Take one slot for `ip` and return the in-flight count after
+    /// incrementing, with the guard that releases it on drop.
+    pub fn acquire(state: &Arc<HardeningState>, ip: &str) -> (u64, Self) {
+        let count = state.inc_concurrent(ip);
+        (
+            count,
+            Self {
+                state: Arc::clone(state),
+                ip: ip.to_string(),
+            },
+        )
+    }
+}
+
+impl Drop for ConcurrentSlot {
+    fn drop(&mut self) {
+        self.state.dec_concurrent(&self.ip);
+    }
 }
 
 /// True when the path is the ACME HTTP-01 challenge route.
@@ -1767,7 +1880,7 @@ impl Middleware for IpFilterMiddleware {
         if is_acme_challenge_path(&path) || state.is_exempt_path(&path, &settings) {
             return Box::pin(async move { next(req).await });
         }
-        if let Some(ip) = client_ip(&req) {
+        if let Some(ip) = trusted_client_ip_for_request(&req, &settings) {
             if state.is_blocklisted(ip) {
                 let error = UnifiedError::forbidden("Request rejected: IP address is blocked")
                     .with_metadata("ip", serde_json::json!(ip.to_string()))
@@ -1818,7 +1931,7 @@ impl Middleware for RateLimitMiddleware {
         if is_acme_challenge_path(&path) || state.is_exempt_path(&path, &settings) {
             return Box::pin(async move { next(req).await });
         }
-        let ip = match client_ip(&req) {
+        let ip = match trusted_client_ip_for_request(&req, &settings) {
             Some(ip) => ip,
             None => return Box::pin(async move { next(req).await }),
         };
@@ -1892,10 +2005,12 @@ impl Middleware for RateLimitMiddleware {
         };
 
         // Concurrent-connection limit: counted only around the inner
-        // call so a rejected request never occupies a slot.
-        let in_flight = state.inc_concurrent(&ip_text);
+        // call so a rejected request never occupies a slot. The slot
+        // is a drop guard, so a request dropped mid-flight (client
+        // disconnect) releases it instead of leaking the count.
+        let (in_flight, slot) = ConcurrentSlot::acquire(&state, &ip_text);
         if in_flight > u64::from(settings.max_concurrent_per_ip) {
-            state.dec_concurrent(&ip_text);
+            drop(slot);
             let retry_after = 1u64;
             state.hooks.emit(
                 security_events::RATE_LIMITED,
@@ -1917,8 +2032,8 @@ impl Middleware for RateLimitMiddleware {
         }
 
         Box::pin(async move {
+            let _slot = slot;
             let mut res = next(req).await;
-            state.dec_concurrent(&ip_text);
             if let Ok(res) = &mut res {
                 let headers = res.headers_mut();
                 headers.insert(

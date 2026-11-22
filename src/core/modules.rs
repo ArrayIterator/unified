@@ -22,6 +22,16 @@
 // `module.auto_activated` per auto-activated module) and refuses to
 // disable a module that other enabled modules still depend on unless
 // the caller passes `force=true`.
+//
+// Product declarations: a module may declare itself sellable as a
+// product through `Module::available_as_product` together with a
+// `Module::product_category` from the closed `ProductCategory` set.
+// `ModuleRegistry::validate_product_declarations` reports modules
+// whose declaration is missing or invalid, `sellable_modules` and
+// `product_offerings` expose the sellable modules to Product
+// Management, and the licensing module gates enabling a sellable
+// module on a module entitlement (see
+// `crate::modules::licensing::check_module_entitlement`).
 
 use crate::core::context::AppContext;
 use crate::core::error::{UnifiedError, UnifiedResult};
@@ -39,6 +49,21 @@ use std::sync::{Arc, RwLock};
 /// well-known core events in `crate::core::hooks::events`), so the name
 /// is defined here next to the dependency system that emits it.
 pub const MODULE_AUTO_ACTIVATED_EVENT: &str = "module.auto_activated";
+
+/// Event emitted when enabling a sellable module is allowed by its
+/// entitlement check. Payload: `{"id", "company_id", "reason"}`,
+/// where `reason` is `"license"` for a matching active license or
+/// `"owner_entitlement"` for the implicit owner entitlement of a
+/// core sellable module. Emitted by
+/// `crate::modules::licensing::check_module_entitlement`.
+pub const MODULE_ENTITLEMENT_GRANTED_EVENT: &str = "module.entitlement.granted";
+
+/// Event emitted when enabling a sellable module is refused because
+/// no entitlement covers it. Payload:
+/// `{"id", "company_id", "reason"}`, where `reason` is
+/// `"no_active_entitlement"`. Emitted by
+/// `crate::modules::licensing::check_module_entitlement`.
+pub const MODULE_ENTITLEMENT_DENIED_EVENT: &str = "module.entitlement.denied";
 
 /// Metadata describing one HTTP route a module exposes. The registry
 /// aggregates these into a route catalog (see
@@ -90,6 +115,66 @@ pub enum RouteVersionSupport {
 impl Default for RouteVersionSupport {
     fn default() -> Self {
         RouteVersionSupport::All
+    }
+}
+
+/// Closed set of product categories a sellable module may declare
+/// through `Module::product_category`. The set is closed on purpose:
+/// Product Management groups module offerings by these categories,
+/// so a free-form string would silently create a category nothing
+/// else understands. `from_str` rejects anything outside the set.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub enum ProductCategory {
+    #[serde(rename = "productivity")]
+    Productivity,
+    #[serde(rename = "communication")]
+    Communication,
+    #[serde(rename = "commerce")]
+    Commerce,
+    #[serde(rename = "infrastructure")]
+    Infrastructure,
+    #[serde(rename = "ai")]
+    Ai,
+}
+
+impl ProductCategory {
+    /// Every valid category string, in canonical order.
+    pub const ALL: [&'static str; 5] = [
+        "productivity",
+        "communication",
+        "commerce",
+        "infrastructure",
+        "ai",
+    ];
+
+    /// Canonical string of this category.
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            ProductCategory::Productivity => "productivity",
+            ProductCategory::Communication => "communication",
+            ProductCategory::Commerce => "commerce",
+            ProductCategory::Infrastructure => "infrastructure",
+            ProductCategory::Ai => "ai",
+        }
+    }
+
+    /// Parse a category string. Returns `None` for any string
+    /// outside the closed set, so callers can reject unknown
+    /// categories instead of storing them.
+    pub fn from_str(value: &str) -> Option<Self> {
+        match value {
+            "productivity" => Some(ProductCategory::Productivity),
+            "communication" => Some(ProductCategory::Communication),
+            "commerce" => Some(ProductCategory::Commerce),
+            "infrastructure" => Some(ProductCategory::Infrastructure),
+            "ai" => Some(ProductCategory::Ai),
+            _ => None,
+        }
+    }
+
+    /// True when `value` is one of the valid category strings.
+    pub fn is_valid(value: &str) -> bool {
+        Self::from_str(value).is_some()
     }
 }
 
@@ -243,6 +328,25 @@ pub trait Module: Send + Sync {
     fn requires_external_libraries(&self) -> &[ExternalLibraryRequirement] {
         &[]
     }
+    /// True when this module may be sold as a product: it appears in
+    /// the module offerings Product Management lists and a customer
+    /// can buy an entitlement for it. Defaults to `false`, so
+    /// existing modules compile unchanged and stay unsellable.
+    /// A module that returns `true` here MUST also return a valid
+    /// `product_category` (one of `ProductCategory::ALL`); the
+    /// registry reports violations through
+    /// `ModuleRegistry::validate_product_declarations`.
+    fn available_as_product(&self) -> bool {
+        false
+    }
+    /// Product category of this module, from the closed
+    /// `ProductCategory` set, when `available_as_product` is true.
+    /// Defaults to `None`; returning `Some` for a module that is not
+    /// sellable is a declaration error reported by
+    /// `ModuleRegistry::validate_product_declarations`.
+    fn product_category(&self) -> Option<&'static str> {
+        None
+    }
     fn register_hooks(&self, _bus: &HookBus) {}
     fn register_cli(&self, _registry: &mut CliRegistry) {}
     fn configure_routes(&self, _cfg: &mut ServiceConfig) {}
@@ -294,6 +398,27 @@ pub struct ModuleInfo {
     pub requires_libraries: Vec<&'static str>,
     /// Declared external system libraries / binaries.
     pub requires_external_libraries: Vec<ExternalLibraryRequirement>,
+    /// True when this module may be sold as a product.
+    pub available_as_product: bool,
+    /// Product category, from the closed `ProductCategory` set, when
+    /// the module is sellable; `None` otherwise.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub product_category: Option<&'static str>,
+}
+
+/// One sellable module as a product offering, as listed by Product
+/// Management (`GET /api/v1/products/module-offerings`). Derived
+/// from the registry in memory; no database row backs it.
+#[derive(Debug, Clone, Serialize)]
+pub struct ModuleProductOffering {
+    /// Module id; this is also the product reference a module
+    /// entitlement license names.
+    pub id: &'static str,
+    pub name: &'static str,
+    pub description: &'static str,
+    /// Category string from the closed `ProductCategory` set.
+    pub category: &'static str,
+    pub version: &'static str,
 }
 
 /// The external library requirements declared by one module.
@@ -304,9 +429,13 @@ pub fn module_external_requirements(
 }
 
 /// One dependency-graph problem found by `validate_dependencies`.
+/// The same shape also carries product-declaration problems from
+/// `validate_product_declarations` (kind
+/// `"invalid_product_declaration"`).
 #[derive(Debug, Clone, Serialize)]
 pub struct DependencyIssue {
-    /// `"missing_dependency"` or `"circular_dependency"`.
+    /// `"missing_dependency"`, `"circular_dependency"`, or
+    /// `"invalid_product_declaration"`.
     pub kind: &'static str,
     /// Id of the module the problem belongs to.
     pub module: String,
@@ -451,8 +580,90 @@ impl ModuleRegistry {
                 dependencies: module_requires(module.as_ref()),
                 requires_libraries: module.requires_libraries().to_vec(),
                 requires_external_libraries: module_external_requirements(module.as_ref()),
+                available_as_product: module.available_as_product(),
+                product_category: module.product_category(),
             })
             .collect()
+    }
+
+    /// Summaries of the registered modules that declare themselves
+    /// sellable as products, in registration order.
+    pub fn sellable_modules(&self) -> Vec<ModuleInfo> {
+        self.summary()
+            .into_iter()
+            .filter(|info| info.available_as_product)
+            .collect()
+    }
+
+    /// Product offerings for the sellable modules: id, name,
+    /// description, category, and version, in registration order.
+    /// Derived from the registry in memory; no database row backs
+    /// an offering. Callers should run
+    /// `validate_product_declarations` first: an offering whose
+    /// module declares no category carries an empty category string.
+    pub fn product_offerings(&self) -> Vec<ModuleProductOffering> {
+        self.list()
+            .iter()
+            .filter(|module| module.available_as_product())
+            .map(|module| ModuleProductOffering {
+                id: module.id(),
+                name: module.name(),
+                version: module.version(),
+                description: module.description(),
+                category: module.product_category().unwrap_or_default(),
+            })
+            .collect()
+    }
+
+    /// Validate the product declarations of the registered modules:
+    /// a module that declares `available_as_product` must also
+    /// declare a valid `product_category` (one of
+    /// `ProductCategory::ALL`), and a module that declares a
+    /// category must declare itself sellable. Reports every problem
+    /// with kind `"invalid_product_declaration"` and never stops at
+    /// the first one, following the `validate_dependencies` pattern.
+    pub fn validate_product_declarations(&self) -> DependencyReport {
+        let mut issues: Vec<DependencyIssue> = Vec::new();
+        for module in self.list() {
+            match (module.available_as_product(), module.product_category()) {
+                (true, None) => issues.push(DependencyIssue {
+                    kind: "invalid_product_declaration",
+                    module: module.id().to_string(),
+                    dependency: None,
+                    cycle: Vec::new(),
+                    message: format!(
+                        "Module \"{}\" is available as a product but declares no product category",
+                        module.id()
+                    ),
+                }),
+                (true, Some(category)) if !ProductCategory::is_valid(category) => {
+                    issues.push(DependencyIssue {
+                        kind: "invalid_product_declaration",
+                        module: module.id().to_string(),
+                        dependency: None,
+                        cycle: Vec::new(),
+                        message: format!(
+                            "Module \"{}\" declares unknown product category \"{category}\" (expected one of: {})",
+                            module.id(),
+                            ProductCategory::ALL.join(", ")
+                        ),
+                    })
+                }
+                (false, Some(category)) => issues.push(DependencyIssue {
+                    kind: "invalid_product_declaration",
+                    module: module.id().to_string(),
+                    dependency: None,
+                    cycle: Vec::new(),
+                    message: format!(
+                        "Module \"{}\" declares product category \"{category}\" but is not available as a product",
+                        module.id()
+                    ),
+                }),
+                _ => {}
+            }
+        }
+        let valid = issues.is_empty();
+        DependencyReport { valid, issues }
     }
 
     /// Merged requirements of one registered module, or an empty list
@@ -569,7 +780,27 @@ impl ModuleRegistry {
     }
 
     /// Run `init` on every registered module, in registration order.
+    ///
+    /// Before any module initializes, the product declarations are
+    /// validated (`validate_product_declarations`): a module that
+    /// declares itself sellable must declare a valid product
+    /// category, and a module that declares a category must declare
+    /// itself sellable. An invalid declaration fails startup
+    /// loudly instead of silently listing a broken offering in
+    /// `product_offerings` / `sellable_modules`.
     pub fn init_all(&self, ctx: &AppContext) -> UnifiedResult<()> {
+        let report = self.validate_product_declarations();
+        if !report.valid {
+            let details: Vec<String> = report
+                .issues
+                .iter()
+                .map(|issue| issue.message.clone())
+                .collect();
+            return Err(UnifiedError::conflict(format!(
+                "Invalid module product declarations: {}",
+                details.join("; ")
+            )));
+        }
         for module in self.list() {
             module.init(ctx)?;
         }

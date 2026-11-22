@@ -74,6 +74,12 @@ cache:
   # Default time-to-live for cache entries in seconds. 0 means entries
   # never expire unless a per-entry TTL is given.
   default_ttl_secs: 3600
+  # Maximum entries kept by the filesystem cache adapter. 0 means
+  # unlimited; past the limit the oldest entries are evicted.
+  max_entries: 10000
+  # When true and Redis is enabled, a Redis failure at runtime falls
+  # back to the filesystem adapter instead of failing the request.
+  failover_enabled: true
 
 # ----------------------------------------
 # Redis configuration
@@ -215,6 +221,14 @@ security:
   # with 403. Empty by default.
   allowlist: []
   blocklist: []
+  # CIDR ranges or bare IPs of trusted reverse proxies / load
+  # balancers. Only a TCP peer inside this list may supply the client
+  # IP through X-Forwarded-For. Empty by default: with no trusted
+  # proxies the peer address is always the client IP, so a direct
+  # client can never spoof the IP the blocklist, rate limiter, and
+  # brute-force engine enforce on. Add entries ONLY for proxies you
+  # operate that overwrite X-Forwarded-For themselves.
+  trusted_proxies: []
 
 # ----------------------------------------
 # Public API configuration

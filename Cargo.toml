@@ -99,6 +99,7 @@ infer = "0.19"
 walkdir = "2.5"
 
 # Utilities
+arc-swap = "1"
 dashmap = "6.1"
 bytes = "1.10"
 zip = "2.4"

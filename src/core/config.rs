@@ -204,6 +204,16 @@ pub struct CacheSection {
     /// Default time-to-live for cache entries in seconds. 0 means entries
     /// never expire unless a per-entry TTL is given.
     pub default_ttl_secs: u64,
+    /// Maximum entries kept by the filesystem cache adapter. 0 means
+    /// unlimited. When the limit is exceeded the oldest entries are
+    /// evicted (see `FilesystemCache::prune`). Configurable default:
+    /// 10000.
+    pub max_entries: u64,
+    /// When true (the default) and Redis is enabled, a Redis failure
+    /// at runtime falls back to the filesystem adapter instead of
+    /// failing the request. The fallback is logged and reported by
+    /// the cache status endpoint.
+    pub failover_enabled: bool,
 }
 
 impl Default for CacheSection {
@@ -211,6 +221,8 @@ impl Default for CacheSection {
         Self {
             dir: "data/cache".to_string(),
             default_ttl_secs: 3600,
+            max_entries: 10_000,
+            failover_enabled: true,
         }
     }
 }

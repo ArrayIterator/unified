@@ -6,10 +6,14 @@ One control plane for licensing, downloads, storefront, software and asset
 management, and the day-to-day operations around them. One login, one
 dashboard, many modules.
 
-> Project status: 71 modules registered and wired through the hook/event
-> bus (see the list below), 30 Diesel migrations covering 160 tables,
-> payment security re-checked, public API access control with default-deny
-> (see below). The implementation milestones are tracked in
+> Project status: 137 modules registered and wired through the hook/event
+> bus (see the list below), 107 Diesel migrations covering 672 tables
+> (1,344 Diesel structs), 476,228 Rust lines under `src/`, payment
+> security re-checked, public API access control with default-deny
+> (see below). Integration round 2 (2026-11-22) registered all 137
+> modules, renumbered migrations gapless, and wired the cross-module
+> hook contracts — see [INTEGRATION_NOTES_INTEGRATION2.md](INTEGRATION_NOTES_INTEGRATION2.md).
+> The implementation milestones are tracked in
 > [TODO.md](TODO.md). `cargo check` has not run in this environment (no
 > toolchain, crates.io blocked) — compilation is unverified; see TODO.md
 > for the honest list of what is verified by reading only and what is
@@ -226,8 +230,16 @@ Core modules ship inside the binary and cannot be removed:
 68. **Tasks** — task management.
 69. **Activity Timeline** — activity timeline across modules.
 70. **Webhooks** — outgoing webhook endpoints and deliveries.
+71. **Project Management** — projects with 15 selectable
+    methodologies (Kanban, Scrum, Waterfall, Scrumban, Agile, Lean,
+    XP, PRINCE2, PMBOK, CPM, CCPM, Six Sigma, Hybrid, Shape Up,
+    SAFe), boards and columns, tasks with subtasks and dependencies,
+    sprints, phases and gates, cycles, program increments, business
+    cases, milestones, time tracking with billable hours, automation
+    rules, templates, and reports, wired into the ERP bus (billing
+    for invoiced time, notifications, audit, and search).
 
-Plus **Theme Management** (described below) — 71 registered modules in
+Plus **Theme Management** (described below) — 72 registered modules in
 total, counted from `src/modules/mod.rs` (`pub mod` == register calls ==
 module files).
 
@@ -243,6 +255,34 @@ template must exist, theme ids reject path traversal). The dashboard
 sidebar, stat cards, a module grid fed live from `/api/v1/extensions`,
 and an activity feed that shows an honest empty state when there is no
 data yet.
+
+## Integration round 2 (2026-11-22)
+
+The 65 modules below were built in parallel batch rounds and integrated
+in round 2 (registration, gapless migration renumbering 000001–000107,
+Diesel schema/models, hook wiring, compile-blocker fixes). Full detail,
+the renumbering map, and the honest open list live in
+[INTEGRATION_NOTES_INTEGRATION2.md](INTEGRATION_NOTES_INTEGRATION2.md).
+
+- **Projects & time:** projects (15 methodologies), timetracker,
+  todos, okrs.
+- **Commerce:** pos, pricing, pricing_tables, marketing, appointments,
+  field_service, store digital products, entitlements, saas_packages,
+  cards (card validation + payment reference ids).
+- **Education:** academic, curriculum, admissions,
+  exams, library, elearning, webinars.
+- **Operations:** manufacturing, quality, expenses, approvals, studio,
+  printing, assets, procurement, calculator, advisor, risk, hr, tax.
+- **Platform:** tenants, tenant_destroy, calendar, holidays,
+  network_tools, licensing (SaaS), saas_domains, presets, whitelabel,
+  documents, privacy, web3, community, compliance, gamification,
+  workflows, bi, affiliates, loyalty, portals, forms, contracts,
+  incidents, inbox, surveys, vault, logistics, properties,
+  supervision, events, storage_manager, auditors, domain_verification.
+
+50 of the 137 modules declare themselves sellable as products
+(`available_as_product`, see `src/core/modules.rs`); the rest are
+infrastructure or core.
 
 ## ERP interconnection
 

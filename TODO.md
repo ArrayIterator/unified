@@ -698,3 +698,269 @@ integrator: the fixed function is in place as described.
   `payments.rs` (10,021 lines — HMAC/webhook paths), the MCP ↔ AI
   context merge (W4), and the API access-rules persistence path
   (raw SQL in api_manager.rs).
+
+## Project Management module (2026-11-22) — DO NOT EDIT ABOVE
+
+Schema and docs only (builder S6). The module file itself
+(`src/modules/projects.rs`) is built by another builder in this round;
+this section records only what the schema/docs builder added.
+
+### Files added / changed
+
+- Added `migrations/2026-11-22-000031_projects/up.sql` and `down.sql`
+  (19 tables, PostgreSQL only).
+- Changed `src/db/schema.rs`: 19 `table!` macros plus all 19 names in
+  `allow_tables_to_appear_in_same_query!` (appended after the AI
+  tables, in migration order). Header comment updated to migration
+  000031.
+- Changed `src/db/models.rs`: a Queryable struct plus a New* Insertable
+  struct for each of the 19 tables (38 structs), mirroring the AiDraft
+  / NewAiDraft pair. Header comment updated to migrations 000001-000031.
+- Changed `src/modules/audit.rs`: 8 project events added to
+  `AUDITED_EVENTS`.
+- Changed `src/modules/mod.rs`: `pub mod projects;` (alphabetical, after
+  `products`, before `providers`) and `projects::register(registry);`
+  right after `planner::register(registry);`.
+- Changed `README.md`: module count 71 -> 72 (both places), migration
+  count 30 -> 31 and table count 160 -> 179, new list entry
+  "71. Project Management".
+- This TODO section (append-only, nothing above edited).
+
+### The 15 methodologies
+
+kanban, scrum, waterfall, scrumban, agile, lean, xp, prince2, pmbok,
+cpm, ccpm, six_sigma, hybrid, shape_up, safe. They are the CHECK
+values of `projects.methodology` and select which companion records a
+project uses: sprints for Scrum, phases and gates for Waterfall and
+PRINCE2, cycles and appetite for Shape Up, program increments for
+SAFe, DMAIC phases for Six Sigma, process groups and knowledge areas
+for PMBOK, critical-path dependencies for CPM/CCPM, waste flags and
+pair partners for Lean/XP.
+
+### Submodules (methodologies)
+
+Each methodology is its own declared submodule of the Project
+Management module, so the admin UI can list and enable them per
+project. The module exposes them as declared submodules via
+`PROJECT_SUBMODULES` in `src/modules/projects.rs` (S1 builder).
+
+- `kanban` — Kanban: continuous-flow board, WIP limits, cumulative
+  flow.
+- `scrum` — Scrum: sprints, backlog, standups, review/retrospective,
+  velocity, burndown.
+- `waterfall` — Waterfall: sequential phases, phase gates, milestones,
+  Gantt.
+- `scrumban` — Scrumban: Scrum structure + Kanban flow, WIP limits
+  inside sprints.
+- `agile` — Agile: generic iterations without strict Scrum ceremonies.
+- `lean` — Lean: value-stream stages, waste flags, pull-based flow.
+- `xp` — Extreme Programming: short iterations, pair programming,
+  test-first, spikes.
+- `prince2` — PRINCE2: stages, stage gates, business case, exception
+  reports.
+- `pmbok` — PMBOK/PMI: process groups + knowledge-area tags.
+- `cpm` — Critical Path Method: dependency DAG, critical-path
+  computation, float/slack.
+- `ccpm` — Critical Chain: resource-constrained scheduling,
+  project/feeding buffers.
+- `six_sigma` — Six Sigma DMAIC: Define/Measure/Analyze/Improve/
+  Control, defect tracking.
+- `hybrid` — Hybrid: waterfall phases on top, agile execution inside.
+- `shape_up` — Shape Up: 6-week cycles, appetite, betting/pitches,
+  cool-down.
+- `safe` — SAFe: program increments, ART/team-of-teams, PI planning,
+  features + enablers.
+
+### Module as product
+
+The projects module declares `available_as_product = true`, product
+category `"productivity"` (public constants `AVAILABLE_AS_PRODUCT` /
+`PRODUCT_CATEGORY` in `src/modules/projects.rs`, S1 builder), so it can
+be sold as a product once the general registry rule lands. The rule
+itself (module declares it is available as a product) is being added
+by a second coordinator; the integrator wires it.
+
+### Time-tracking convergence (parallel TimeTracker module)
+
+The shared time-entry shape the parallel TimeTracker module and this
+module converge on is `ProjectTimeEntry { id, task_id, project_id,
+user_id, description, hours, billable, billed, invoice_id, started_at,
+ended_at, timer_running, created_at, updated_at }`, plus the
+`"billing.time_logged"` and `"project.billable_hours_requested"` hook
+events. The integrator reconciles the two modules against this shape
+later. No TimeTracker files were touched by this builder.
+
+### The 19 tables (migration 2026-11-22-000031_projects)
+
+projects, project_members, project_boards, project_board_columns,
+project_milestones, project_sprints, project_phases, project_cycles,
+project_program_increments, project_business_cases, project_tasks,
+project_task_dependencies, project_task_comments,
+project_task_watchers, project_task_attachments, project_time_entries,
+project_automation_rules, project_templates, project_activity.
+
+### Honest notes (read before relying on any of this)
+
+- The in-memory DashMap store is authoritative; these tables are
+  persistence targets only, not the module's read path.
+- The migration has never been executed against a live PostgreSQL
+  database, and no live HTTP render or database run was done.
+- Compilation is unverified: `cargo check` never ran anywhere in this
+  project (no toolchain in this VM, crates.io blocked). The 179-table
+  Diesel schema/models are the riskiest integration point for the
+  first compile; type/nullability mismatches would surface there
+  first.
+- `viewer_id` / `viewer_role` are trusted query params until the auth
+  extractor lands — the same known gap as tickets (see "Still open"
+  above). Project membership/role checks must not treat them as
+  authenticated identity.
+- MCP context has no project source yet: `mcp.context.*` hook handlers
+  report `available: false` with a gap note for project data until a
+  source module answers them.
+- Webhook/IP allowlist is not applicable here: the module emits events
+  on the internal hook/event bus; no provider webhook endpoint is
+  added by this schema.
+- The module's routes are registered in the versioned public API
+  registry with default All-versions support (`Module::route_version_support`
+  default), so API Management's allowed-public-access controls apply
+  to them (default-deny: a route is public only where an access rule
+  explicitly allows it).
+
+### Still open (not fixed here)
+
+- The module implementation (`src/modules/projects.rs`: handlers,
+  routes, hooks, reports, ERP wiring to billing/notifications/audit/
+  search) is a separate builder's work in this round; this section
+  covers schema and docs only.
+- Cross-task dependency cycle detection is the module's job, not the
+  schema's (the schema only forbids a task depending on itself).
+- `project_time_entries.invoice_id` is a plain TEXT reference with no
+  foreign key on purpose (deleting an invoice must not delete the
+  time record); billable-time invoicing is wired by the module, not
+  by the schema.
+
+### Assembly completed (coordinator, 2026-11-22)
+
+- `src/modules/projects.rs` assembled from the five builder sections
+  (s1 core 1,479 lines, s2 projects 2,388, s3 tasks 2,894, s4
+  sprints/phases 2,298, s5 time/reports 1,921) — 11,007 lines total,
+  121 routes, 121 handlers, 0 missing / 0 extra, 0 duplicate
+  definitions. Verified by the coordinator by reading the code back:
+  0 forbidden-name hits, 0 Indonesian hits, 0 stub macros, braces and
+  parentheses balanced, `PageResult::new` / `HookBus::new` /
+  `HookContext::add_result` all exist in core.
+- Fixes applied during assembly (all compile errors or semantic
+  mismatches found while reading the sections): hook event name
+  `project.task_created` corrected to `project.task.created`;
+  `delete_project` cascade now resolves dependencies/comments/
+  watchers/attachments by task id (those records carry no
+  `project_id`); template phase literal fixed to the real
+  `ProjectPhase` fields (`kind`/`status`/`gate_status`/
+  `gate_decision`, template `due_date` mapped to `end_date`);
+  member update/remove now resolve the membership by
+  (project_id, user_id) as the route declares `{user_id}`;
+  `s3_find_column` renamed the type to `ProjectBoardColumn` and
+  resolves project scope through the column's board; milestone
+  references corrected from `.title` to `.name` (timeline, calendar,
+  export); `list_task_attachments` source typo `viewer.viewer_role`
+  corrected to `viewer_role`; `convert_task_to_ticket` gained the
+  missing `projects:edit` capability check; import priority default
+  corrected from "medium" to "normal" (the module's priority set is
+  low/normal/high/urgent).
+- Authorization note: read-only handlers are gated by
+  `require_project_access`, which enforces the `projects:view`
+  capability (or owner/member access). `list_methodologies` returns
+  static methodology metadata only and carries no check;
+  `update_task_comment` is author-only gated. `cargo check` still
+  never ran anywhere (no toolchain, crates.io blocked) — compilation
+  remains unverified. Do NOT push without parent verification and
+  user approval.
+
+## Integration Round 2 (2026-11-22)
+
+Ten builders (W1a–W9) + coordinator assembly. All batches 2–18 +
+Project Management + storage-as-product integrated. Nothing pushed.
+Remote head still `7cf6853c`.
+
+### Final counts (verified by the coordinator, by reading and counting)
+
+- `src/modules/`: 138 `.rs` files; `mod.rs` declares **137 `pub mod`**
+  and **137 `::register(registry);`** calls (alphabetical); **zero
+  modules left unregistered** (65 newly registered this round).
+- Total Rust lines under `src/`: **476,228** (was 445,944).
+- Migrations: **107 dirs, 000001–000107, zero duplicates, zero gaps**
+  (was 106 dirs with 6 duplicate pairs + 000100 out of sequence).
+  New: `000107_reference_backfill` (reference column + backfill SQL).
+- `src/db/schema.rs`: **672 `table!` blocks** (was 179);
+  `src/db/models.rs`: **1,344 structs** (exactly 2 per table).
+- CREATE TABLE = DROP TABLE: **672/672** (by table-name set).
+- AUDITED_EVENTS: **646 unique, 0 duplicates** (was ~67).
+  KNOWN_CAPABILITIES: **276 unique strings**. KNOWN_KINDS: **44**
+  (was 15). Sellable modules (trait): **50**.
+  DEFAULT_ACCESS_RULES: **158 rows** (39 public, 119 keyed).
+- Greps: 0 real forbidden-name hits (only the `OrgChartNode` false
+  positive in `hr.rs`); 0 stub macros in code (one hit is a comment);
+  0 Indonesian words (2 comments fixed by the coordinator).
+
+### What was fixed / wired (headline — full proof in INTEGRATION_NOTES_INTEGRATION2.md)
+
+- `pub mod privacy;` + `pub mod cards;` (both were tree-wide compile
+  blocks); Caller-type mismatch in library/saas_packages; tenants.rs
+  seam rewritten to the real tenancy API; migration CHECK
+  `^tenant_[0-9a-f]{32}$`; payments S0 (PaymentIntent field) + 6 gate
+  call sites (was 0) + `get_cards_settings` route; cards number-less
+  method/claim modes + `cards.custom_rule.changed` emits;
+  approvals `unreachable!()` replaced with a real error.
+- Discrepancies resolved by reading the files (batch 14 was right
+  twice): `AiCapability`/`register_ai_capabilities`/
+  `run_ai_capability` DO exist in ai.rs; `saas_packages.rs` IS 4,639
+  lines with a Module impl.
+- Settings decision: DROP the gateway `cards.*`/`reference_id.*`
+  namespaces (B1 per-tenant settings + store/billing
+  reference-settings endpoints are canonical).
+- Hook wiring: expenses↔approvals bridge; manufacturing↔quality
+  canonical event + block consultation (+ a real payload-key bug
+  fixed: Quality never received inspections before); stock/cost
+  answerers; billing answers pricing validation (enforced at issue
+  time), reimbursements, renew/cancel, `billing.invoice.requested`,
+  digital payouts; school fees on canonical enrollment events;
+  education handoff (admissions→academic with `application_id`);
+  AI entitlement gate in `run_ai_capability`; SaaS-domains
+  tenants-source claims + release listener; presets
+  `modules_requested`; destroy single source of truth (parallel
+  store deleted); export.requested/export.lookup; calendar
+  `resolve_tenant` swap; 4 supervision answerers; TimeTracker shape
+  reconciliation; middleware product-scope + `Released`; sharing
+  kinds; CertStoreSwap wiring (whole-store swaps need a restart).
+
+### Still open (not fixed here — full list of 30 in INTEGRATION_NOTES_INTEGRATION2.md §10)
+
+- **Entitlements vs licensing DIVERGE (most consequential):**
+  subscription leg missing from licensing's gate — a
+  subscription-backed module reads entitled in entitlements, denied
+  403 by licensing. Apply the batch-3 B5 snippet in licensing.rs,
+  then align non-sellable + grace + ctx=None semantics.
+- **`certificates` + `pricing_tiers` table-name collisions**
+  (000005 vs 000079; 000041 vs 000103) — rename the second shape
+  before any migration run.
+- Modularity violations V1–V8 (provider URLs, closed enums, 40
+  hard-coded `matches!()` vocabularies, …).
+- **Tenant-scoping rollout: 125/138 modules not-guarded**; stores
+  not partitioned by tenant anywhere; `dashboards.rs` direct reads.
+- Approvals sweep + web3 poll kinds have no listeners;
+  `tenant.destroy_due` arm incomplete (needs AppContext);
+  tenants data-provider for entity `tenant` missing (destroy stays
+  export-blocked); `saas_packages.package.modules_requested` has no
+  answerer; projects `sharing.allow_check` missing; whole-store
+  CertStoreSwap needs a listener rebuild; `build_fee_invoice`
+  unenforced; `elearning.enrollment.purchase_requested` creates no
+  order; `renew_one` ungated; `settings.merge` vcs-only allowlist;
+  calendar control-plane policy decision; no
+  `academic.enrollment.lookup`; in-memory stores authoritative
+  almost everywhere; billing stores f64 money.
+- **Standing caveat (unchanged): `cargo check` / `cargo build` /
+  `cargo test` NEVER ran anywhere** — no toolchain, crates.io
+  blocked. Compilation is unverified for the whole tree. No
+  migration ever ran against a live PostgreSQL. No endpoint has been
+  live-tested. Do NOT push without parent verification and user
+  approval.
