@@ -32,6 +32,19 @@ const MAX_KEY_BYTES: u64 = 10 * 1024;
 const SAN_OID: &[u32] = &[2, 5, 29, 17];
 
 /// Dynamic per-domain SSL storage, used as the rustls certificate resolver.
+///
+/// Hot-swap semantics (verified against this file, not assumed):
+/// `resolve` below reads the `DashMap`s on EVERY handshake, so
+/// `add`, `renew`, `swap_certificate`, `rollback_certificate`, and
+/// `remove` take effect for NEW handshakes immediately, with no server
+/// restart and no listener rebuild. Connections already established
+/// keep the certificate they handshook with; only new handshakes see
+/// the new certificate. Replacing the whole `Arc<SslStorage>` behind a
+/// holder (see `crate::http::cert_swap::CertStoreSwap::swap_store`)
+/// does NOT change a `ServerConfig` that was already built from the
+/// old `Arc` — only `ServerConfig`s built after the swap see the new
+/// store. The per-certificate path above is the one that changes live
+/// traffic.
 pub struct SslStorage {
     auto_create: bool,
     factory_key: Arc<(KeyPair, PrivateKeyDer<'static>)>,
@@ -243,6 +256,11 @@ fn read_capped(path: &str, max: u64) -> Result<Vec<u8>, String> {
 }
 
 impl ResolvesServerCert for SslStorage {
+    /// Resolve the certificate for one handshake. This runs on EVERY
+    /// handshake and reads the live `DashMap`s (see the `SslStorage`
+    /// header), which is what makes runtime swaps effective without a
+    /// restart: a certificate installed after startup is served by the
+    /// next handshake for its name.
     fn resolve(&self, client_hello: ClientHello<'_>) -> Option<Arc<CertifiedKey>> {
         let name = client_hello.server_name()?;
         self.lookup(name).or_else(|| {

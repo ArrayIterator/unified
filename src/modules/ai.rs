@@ -18,7 +18,28 @@
 //   - `POST /drafts/{id}/approve`, `/drafts/{id}/reject` - human review.
 //   - `DELETE /drafts/{id}` - delete a draft.
 //   - `GET  /usage`, `GET /usage/{id}`, `GET /usage/summary` - call usage.
+//   - `GET  /usage/by-user`, `GET /usage/by-company` - scoped usage.
+//   - `GET/POST /access/companies`, `GET/PATCH/DELETE /access/companies/{id}`
+//     - company access policies (admin; a company admin manages only
+//     their own company).
+//   - `GET/POST /access/users`, `GET/PATCH/DELETE /access/users/{id}`
+//     - user access policies (admin; same company scoping).
+//   - `GET/POST/DELETE /my-key`, `POST /my-key/test` - the caller's
+//     own personal API key (metadata only, never the key).
+//   - `GET/POST /my-mcp`, `GET/PATCH/DELETE /my-mcp/{id}` - the
+//     caller's own personal MCP servers.
+//   - `GET  /gating/effective` - the effective layered gate decision
+//     for a user / feature, with the per-layer breakdown.
+//   - `PATCH /gating/company/{company_id}`, `PATCH /gating/user/{user_id}`
+//     - company / user on-off switches and per-feature toggles.
+//   - `GET/PATCH /gating/settings` - the global kill-switch and
+//     global per-feature switches (platform admin).
 //   - `GET  /context` - the shared site context (see below).
+//   - `GET  /capabilities` - list every registered AI capability.
+//   - `GET  /capabilities/{module_id}` - list one module's AI capabilities.
+//   - `POST /capabilities/{module_id}/{capability}` - run one
+//     registered AI capability (see the AI Capabilities Contract
+//     section; body `{"input": {...}}`).
 //
 // Human approval is enforced in code, not by convention:
 //   - Every generation stores an `AiDraft` with status `draft` and
@@ -76,12 +97,15 @@ use crate::core::context::AppContext;
 use crate::core::error::{UnifiedError, UnifiedResult};
 use crate::core::hooks::{HookBus, HookContext};
 use crate::core::json;
+use crate::core::middleware::TenantContext;
 use crate::core::modules::{Module, ModuleRegistry, RouteInfo};
+use crate::core::tenancy;
 use crate::core::pagination::{PageResult, PaginationParams};
+use crate::modules::privacy;
 use actix_web::{web, HttpRequest, HttpResponse};
 use async_trait::async_trait;
 use base64::Engine as _;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Datelike, TimeZone, Utc};
 use dashmap::DashMap;
 use hmac::{Hmac, Mac};
 use reqwest::header::{HeaderValue, AUTHORIZATION, CONTENT_TYPE, RETRY_AFTER};
@@ -90,6 +114,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
+use std::net::{IpAddr, ToSocketAddrs};
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 use url::Url;
@@ -115,6 +140,45 @@ pub const EVENT_AI_DRAFT_REJECTED: &str = "ai.draft.rejected";
 pub const EVENT_AI_PROVIDER_CREATED: &str = "ai.provider.created";
 /// Emitted when a provider connection is deleted.
 pub const EVENT_AI_PROVIDER_DELETED: &str = "ai.provider.deleted";
+/// Emitted when an AI call is denied by the allowlist gate
+/// (`authorize_ai_call`). Payload carries `reason` (a non-leaking
+/// reason code) and the caller's own ids; it never carries any
+/// policy's limits.
+pub const EVENT_AI_ACCESS_DENIED: &str = "ai.access.denied";
+/// Emitted when a caller stores their first personal API key.
+pub const EVENT_AI_PERSONAL_KEY_CREATED: &str = "ai.personal_key.created";
+/// Emitted when a caller replaces their personal API key.
+pub const EVENT_AI_PERSONAL_KEY_ROTATED: &str = "ai.personal_key.rotated";
+/// Emitted when a caller deletes their personal API key.
+pub const EVENT_AI_PERSONAL_KEY_DELETED: &str = "ai.personal_key.deleted";
+/// Emitted when a company or user access policy is created, updated,
+/// or deleted. Payload carries the policy id, the company id, and
+/// the enabled flag only.
+pub const EVENT_AI_ACCESS_POLICY_CHANGED: &str = "ai.access.policy_changed";
+/// Emitted when a layered-gate setting changes: a company gate, a
+/// user gate, or the global settings. Payload carries `layer`
+/// (`settings` / `product` / `company` / `user`), the target id, the
+/// field name, and the old -> new values. It never carries prompt
+/// content. The audit module records it once the integrator adds
+/// the name to `AUDITED_EVENTS` in `audit.rs`.
+pub const EVENT_AI_GATING_CHANGED: &str = "ai.gating.changed";
+/// Hook query answered by the products / billing module: the
+/// purchased-product layer of the gate asks whether the caller's
+/// product (or subscription) includes AI. Request payload:
+/// `{ "product_id": "<uuid>", "user_id": "<uuid>" | null,
+/// "company_id": "<uuid>" | null }`. The answering handler sets
+/// `includes_ai` on the hook context (`ctx.set("includes_ai",
+/// json!(true))`). No answer means the product cannot be confirmed
+/// and the gate denies the call (fail closed) with reason
+/// `ai_product_unknown`. No product context on the call (no
+/// `X-Product-Id` header) means the product layer defaults to allow
+/// and the decision records that.
+pub const EVENT_AI_PRODUCT_INCLUDES_AI: &str = "ai.product_includes_ai";
+/// Emitted to resolve a caller's company: the users module answers
+/// with `{ "company_id": "<uuid>" }` for `{ "user_id": "<actor>" }`.
+/// No answer means the company is unknown and the allowlist gate
+/// denies the call (fail closed) once enforcement is active.
+pub const EVENT_USER_COMPANY_REQUESTED: &str = "user.company_requested";
 /// Shared-context request: answered by this module (and, once built,
 /// by the public server module) with site facts. The requester of
 /// this event gets the same context the AI features use.
@@ -171,6 +235,42 @@ const MAX_MAX_TOKENS: u32 = 8192;
 const GROUNDING_LIMIT: u64 = 5;
 /// User-Agent sent to provider APIs.
 const USER_AGENT: &str = concat!("unified/", env!("CARGO_PKG_VERSION"), " ai");
+
+/// Every use case an AI call can have. A policy's `allowed_features`
+/// is a subset of this list; `test` is the connection-test use case.
+/// `ai_capability` is the generic use case for per-module AI
+/// capabilities run through `run_ai_capability`; a capability may
+/// also declare its own module-scoped use case (for example
+/// `exams.draft_questions`), which `validate_policy_features`
+/// accepts when that capability is registered (see the AI
+/// Capabilities Contract section).
+const KNOWN_USE_CASES: &[&str] = &[
+    "complete",
+    "support_reply",
+    "chat_reply",
+    "content",
+    "email",
+    "kb_answer",
+    "test",
+    "ai_capability",
+];
+
+/// Most model names a policy may list, and most entries in one list.
+const MAX_POLICY_LIST_LEN: usize = 100;
+/// Longest single model name in a policy list.
+const MAX_MODEL_NAME_LEN: usize = 200;
+/// Longest personal API key / MCP auth token accepted.
+const MAX_SECRET_LEN: usize = 500;
+/// Longest personal MCP server name.
+const MAX_MCP_NAME_LEN: usize = 120;
+/// Longest personal MCP endpoint URL.
+const MAX_MCP_URL_LEN: usize = 2048;
+/// Most personal MCP servers one user may configure.
+const MAX_PERSONAL_MCP_SERVERS: usize = 10;
+/// Hardest monthly token cap a policy or personal key may set.
+const MAX_MONTHLY_TOKEN_CAP: u64 = 1_000_000_000;
+/// Hardest monthly cost cap (USD) a policy or personal key may set.
+const MAX_MONTHLY_COST_CAP_USD: f64 = 1_000_000.0;
 
 /// Development fallback secret, used only when `app.secret_key` is
 /// empty (same pattern as the app-sync token signer). Production
@@ -610,6 +710,24 @@ pub struct AiUsageRecord {
     pub status: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error_code: Option<u16>,
+    /// Owning user, parsed from the `X-User-Id` header. `None` for
+    /// records written before allowlists existed, and for calls whose
+    /// actor id is not a UUID.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user_id: Option<Uuid>,
+    /// Owning company, resolved from the `X-Company-Id` header or
+    /// the `user.company_requested` hook. `None` for legacy records
+    /// and for callers with no company.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub company_id: Option<Uuid>,
+    /// Non-leaking reason code when the allowlist gate denied the
+    /// call (`ai_not_allowed_for_company`, ...). `None` for calls
+    /// that reached a provider.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub denial_reason: Option<String>,
+    /// True when the call ran on the caller's personal API key
+    /// instead of the provider connection's key.
+    pub used_personal_key: bool,
     pub created_at: DateTime<Utc>,
 }
 
@@ -624,6 +742,276 @@ pub struct AiUsageSummary {
     pub total_tokens: u64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub estimated_cost_usd: Option<f64>,
+}
+
+// ---------------------------------------------------------------------------
+// Access allowlists (company + user policies), personal keys, personal
+// MCP servers.
+//
+// The in-memory DashMap stores are authoritative; the 000036
+// migration persists the same rows. A policy list of `None` means
+// "unrestricted" for that dimension; `Some(vec![])` means "allow
+// nothing". A cap of `None` means "no cap"; a user cap of `None` or
+// `0` means "inherit the company cap" (see `effective_user_cap`).
+// ---------------------------------------------------------------------------
+
+/// One company's AI access policy. Keyed by `company_id` in the
+/// state store (one policy per company).
+#[derive(Debug, Clone, Serialize)]
+pub struct AiCompanyPolicy {
+    pub id: Uuid,
+    pub company_id: Uuid,
+    /// `None` = any model; `Some(list)` = only these models.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub allowed_models: Option<Vec<String>>,
+    /// Use-case names from `KNOWN_USE_CASES`. `None` = any feature.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub allowed_features: Option<Vec<String>>,
+    /// Monthly token budget for the whole company. `None` = no cap.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub monthly_token_cap: Option<u64>,
+    /// Monthly cost budget (USD) for the whole company. `None` = no
+    /// cap. Stored as NUMERIC(19,4) in the database.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub monthly_cost_cap_usd: Option<f64>,
+    pub enabled: bool,
+    /// Layered-gate switch for the company, separate from the
+    /// allowlist master switch `enabled`: the effective company
+    /// gate is `enabled AND ai_enabled`. A company admin turns AI
+    /// off for the whole company here without touching the
+    /// allowlist lists and caps.
+    pub ai_enabled: bool,
+    /// Canonical feature (use-case) names switched off for this
+    /// company by the layered gate. `None` = no feature is switched
+    /// off here (features follow the allowlist `allowed_features`
+    /// instead). Checked after the allowlist feature list.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub disabled_features: Option<Vec<String>>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// One user's AI access policy, set by an admin of the user's
+/// company (or by a platform admin). Keyed by `user_id` in the
+/// state store (one policy per user).
+#[derive(Debug, Clone, Serialize)]
+pub struct AiUserPolicy {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub company_id: Uuid,
+    /// `None` = any model; `Some(list)` = only these models.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub allowed_models: Option<Vec<String>>,
+    /// Use-case names from `KNOWN_USE_CASES`. `None` = any feature.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub allowed_features: Option<Vec<String>>,
+    /// Monthly token budget for this user. `None` or `0` = inherit
+    /// the company cap.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub monthly_token_cap: Option<u64>,
+    /// Monthly cost budget (USD) for this user. `None` or `0` =
+    /// inherit the company cap.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub monthly_cost_cap_usd: Option<f64>,
+    pub enabled: bool,
+    /// Layered-gate switch for the user, separate from the
+    /// allowlist master switch `enabled`: the effective user gate
+    /// is `enabled AND ai_enabled`. A disabled user is denied for
+    /// every feature; a feature switched off below denies only
+    /// that feature.
+    pub ai_enabled: bool,
+    /// Canonical feature (use-case) names switched off for this
+    /// user by the layered gate. `None` = no feature is switched
+    /// off here. Checked after the allowlist feature list.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub disabled_features: Option<Vec<String>>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// Global AI settings: the platform kill-switch plus the global
+/// per-feature switches (layer (d) of the layered gate). One
+/// process-wide value, held in `AiState.global_settings` and read
+/// fresh on every gate evaluation; persisted in the
+/// `ai_global_settings` table (migration 000063), keyed by setting
+/// name (`ai.global_enabled`, `ai.features.<name>.enabled`).
+#[derive(Debug, Clone, Serialize)]
+pub struct AiGlobalSettings {
+    /// Master kill-switch. `false` denies every AI call
+    /// immediately, regardless of the other layers.
+    pub global_enabled: bool,
+    /// Canonical feature (use-case) names switched off globally.
+    /// Empty means no feature is switched off globally.
+    pub disabled_features: Vec<String>,
+    pub updated_at: DateTime<Utc>,
+}
+
+impl Default for AiGlobalSettings {
+    fn default() -> Self {
+        Self {
+            global_enabled: true,
+            disabled_features: Vec::new(),
+            updated_at: Utc::now(),
+        }
+    }
+}
+
+/// The outcome of one layered-gate evaluation, in evaluation order:
+/// settings kill-switch -> product -> company allowlist + gate ->
+/// user allowlist + gate -> feature toggles. Every layer must allow;
+/// the first denying layer decides. The decision is computed fresh
+/// on every call and never cached across calls.
+#[derive(Debug, Clone, Serialize)]
+pub struct AiGateDecision {
+    pub allowed: bool,
+    /// Which layer denied the call: `settings`, `product`,
+    /// `company`, `user`, or `feature`. `None` when allowed.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub denied_layer: Option<String>,
+    /// The requested feature, when the call was denied. `None`
+    /// when allowed.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub denied_feature: Option<String>,
+    /// Non-leaking reason code for the denial (the same code the
+    /// completion path returns in the `reason` error metadata).
+    /// `None` when allowed.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reason_code: Option<String>,
+    /// Per-layer outcome, in evaluation order. Admin-facing only:
+    /// the effective-gate endpoint is admin-only, and the
+    /// completion deny path returns only the reason code.
+    pub layers: Vec<AiGateLayerOutcome>,
+}
+
+/// One layer's outcome inside an `AiGateDecision`.
+#[derive(Debug, Clone, Serialize)]
+pub struct AiGateLayerOutcome {
+    pub layer: String,
+    pub allowed: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+}
+
+/// One user's own API key (bring-your-own-key). The plaintext key is
+/// never stored: only the ciphertext from `encrypt_api_key` and a
+/// fingerprint prefix. The key is scoped to its owning user and is
+/// usable only for that user's own AI calls.
+#[derive(Debug, Clone)]
+pub struct AiPersonalKey {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub provider_kind: AiProviderKind,
+    /// Base URL for a compatible / local endpoint. `None` means the
+    /// kind default (Anthropic / OpenAI). Used only by the key test;
+    /// live calls use the provider connection's base URL.
+    pub base_url: Option<String>,
+    /// Model this key is for. `None` = any model of this kind.
+    pub model: Option<String>,
+    pub api_key_encrypted: String,
+    /// Fingerprint prefix of the stored key, for the metadata view.
+    pub key_fingerprint: String,
+    /// Monthly token budget for calls on this key. `None` or `0` =
+    /// inherit the caller's effective user cap.
+    pub monthly_token_cap: Option<u64>,
+    /// Monthly cost budget (USD) for calls on this key. `None` or
+    /// `0` = inherit the caller's effective user cap.
+    pub monthly_cost_cap_usd: Option<f64>,
+    pub enabled: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// Metadata-only read view of a personal key: the key itself is
+/// never returned.
+#[derive(Debug, Clone, Serialize)]
+pub struct AiPersonalKeyView {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub provider_kind: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub base_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
+    pub key_configured: bool,
+    pub key_fingerprint: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub monthly_token_cap: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub monthly_cost_cap_usd: Option<f64>,
+    pub enabled: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+impl AiPersonalKey {
+    fn view(&self) -> AiPersonalKeyView {
+        AiPersonalKeyView {
+            id: self.id,
+            user_id: self.user_id,
+            provider_kind: self.provider_kind.as_str().to_string(),
+            base_url: self.base_url.clone(),
+            model: self.model.clone(),
+            key_configured: true,
+            key_fingerprint: self.key_fingerprint.clone(),
+            monthly_token_cap: self.monthly_token_cap,
+            monthly_cost_cap_usd: self.monthly_cost_cap_usd,
+            enabled: self.enabled,
+            created_at: self.created_at,
+            updated_at: self.updated_at,
+        }
+    }
+}
+
+/// One user's own MCP server. The auth token is write-only and
+/// encrypted like an API key. The server is never shared with other
+/// users: every lookup filters on `user_id`, and the server is
+/// offered only as a grounding source for its owner's AI calls.
+#[derive(Debug, Clone)]
+pub struct AiUserMcpServer {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub name: String,
+    /// Validated at write time: https only, public host only (see
+    /// `validate_mcp_endpoint_url`).
+    pub endpoint_url: String,
+    pub auth_token_encrypted: Option<String>,
+    /// Fingerprint prefix of the stored token, or `None`.
+    pub token_fingerprint: Option<String>,
+    pub enabled: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// Metadata-only read view of a personal MCP server: the auth token
+/// is never returned.
+#[derive(Debug, Clone, Serialize)]
+pub struct AiUserMcpServerView {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub name: String,
+    pub endpoint_url: String,
+    pub token_configured: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub token_fingerprint: Option<String>,
+    pub enabled: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+impl AiUserMcpServer {
+    fn view(&self) -> AiUserMcpServerView {
+        AiUserMcpServerView {
+            id: self.id,
+            user_id: self.user_id,
+            name: self.name.clone(),
+            endpoint_url: self.endpoint_url.clone(),
+            token_configured: self.auth_token_encrypted.is_some(),
+            token_fingerprint: self.token_fingerprint.clone(),
+            enabled: self.enabled,
+            created_at: self.created_at,
+            updated_at: self.updated_at,
+        }
+    }
 }
 
 /// Per-key rate-limit bucket: calls in the current minute window.
@@ -1445,6 +1833,24 @@ pub struct AiState {
     pub drafts: Arc<DashMap<Uuid, AiDraft>>,
     pub usage: Arc<DashMap<Uuid, AiUsageRecord>>,
     pub rate_buckets: Arc<DashMap<Uuid, RateBucket>>,
+    /// Company access policies, keyed by `company_id` (one policy
+    /// per company). Empty store + empty user-policy store means the
+    /// allowlist has never been switched on: see
+    /// `authorize_ai_call`.
+    pub company_policies: Arc<DashMap<Uuid, AiCompanyPolicy>>,
+    /// User access policies, keyed by `user_id` (one policy per
+    /// user).
+    pub user_policies: Arc<DashMap<Uuid, AiUserPolicy>>,
+    /// Personal API keys, keyed by `user_id` (one key per user).
+    /// Ciphertext only; the plaintext is never stored.
+    pub personal_keys: Arc<DashMap<Uuid, AiPersonalKey>>,
+    /// Personal MCP servers, keyed by server id. Every lookup
+    /// filters on `user_id`: a server is never visible to another
+    /// user.
+    pub personal_mcp_servers: Arc<DashMap<Uuid, AiUserMcpServer>>,
+    /// Global AI settings (kill-switch + global feature switches).
+    /// Read fresh on every gate evaluation; never cached.
+    pub global_settings: Arc<RwLock<AiGlobalSettings>>,
     pub hooks: Arc<RwLock<Option<Arc<HookBus>>>>,
 }
 
@@ -1517,6 +1923,10 @@ pub struct CompleteInput {
     pub site: Option<SiteContextInput>,
     #[serde(default)]
     pub grounding_query: Option<String>,
+    /// When true, the call runs on the caller's personal API key
+    /// instead of the provider connection's key.
+    #[serde(default)]
+    pub use_personal_key: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -1538,6 +1948,9 @@ pub struct SupportDraftInput {
     pub temperature: Option<f32>,
     #[serde(default)]
     pub site: Option<SiteContextInput>,
+    /// When true, the call runs on the caller's personal API key.
+    #[serde(default)]
+    pub use_personal_key: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -1556,6 +1969,9 @@ pub struct ContentDraftInput {
     pub temperature: Option<f32>,
     #[serde(default)]
     pub site: Option<SiteContextInput>,
+    /// When true, the call runs on the caller's personal API key.
+    #[serde(default)]
+    pub use_personal_key: bool,
 }
 
 fn default_content_type() -> String {
@@ -1577,6 +1993,9 @@ pub struct EmailDraftInput {
     pub temperature: Option<f32>,
     #[serde(default)]
     pub site: Option<SiteContextInput>,
+    /// When true, the call runs on the caller's personal API key.
+    #[serde(default)]
+    pub use_personal_key: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -1590,6 +2009,135 @@ pub struct AnswerInput {
     pub temperature: Option<f32>,
     #[serde(default)]
     pub site: Option<SiteContextInput>,
+    /// When true, the call runs on the caller's personal API key.
+    #[serde(default)]
+    pub use_personal_key: bool,
+}
+
+// ---------------------------------------------------------------------------
+// Access allowlist request bodies.
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Deserialize)]
+pub struct CreateCompanyPolicyInput {
+    pub company_id: Uuid,
+    #[serde(default)]
+    pub allowed_models: Option<Vec<String>>,
+    #[serde(default)]
+    pub allowed_features: Option<Vec<String>>,
+    #[serde(default)]
+    pub monthly_token_cap: Option<u64>,
+    #[serde(default)]
+    pub monthly_cost_cap_usd: Option<f64>,
+    #[serde(default)]
+    pub enabled: Option<bool>,
+    /// Layered-gate switch for the company (`enabled AND
+    /// ai_enabled` is the effective company gate). Defaults to on.
+    #[serde(default)]
+    pub ai_enabled: Option<bool>,
+    /// Canonical feature names switched off for the company.
+    #[serde(default)]
+    pub disabled_features: Option<Vec<String>>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateCompanyPolicyInput {
+    #[serde(default)]
+    pub allowed_models: Option<Option<Vec<String>>>,
+    #[serde(default)]
+    pub allowed_features: Option<Option<Vec<String>>>,
+    #[serde(default)]
+    pub monthly_token_cap: Option<Option<u64>>,
+    #[serde(default)]
+    pub monthly_cost_cap_usd: Option<Option<f64>>,
+    #[serde(default)]
+    pub enabled: Option<bool>,
+    #[serde(default)]
+    pub ai_enabled: Option<bool>,
+    #[serde(default)]
+    pub disabled_features: Option<Option<Vec<String>>>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateUserPolicyInput {
+    pub user_id: Uuid,
+    pub company_id: Uuid,
+    #[serde(default)]
+    pub allowed_models: Option<Vec<String>>,
+    #[serde(default)]
+    pub allowed_features: Option<Vec<String>>,
+    #[serde(default)]
+    pub monthly_token_cap: Option<u64>,
+    #[serde(default)]
+    pub monthly_cost_cap_usd: Option<f64>,
+    #[serde(default)]
+    pub enabled: Option<bool>,
+    /// Layered-gate switch for the user (`enabled AND ai_enabled`
+    /// is the effective user gate). Defaults to on.
+    #[serde(default)]
+    pub ai_enabled: Option<bool>,
+    /// Canonical feature names switched off for the user.
+    #[serde(default)]
+    pub disabled_features: Option<Vec<String>>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateUserPolicyInput {
+    #[serde(default)]
+    pub allowed_models: Option<Option<Vec<String>>>,
+    #[serde(default)]
+    pub allowed_features: Option<Option<Vec<String>>>,
+    #[serde(default)]
+    pub monthly_token_cap: Option<Option<u64>>,
+    #[serde(default)]
+    pub monthly_cost_cap_usd: Option<Option<f64>>,
+    #[serde(default)]
+    pub enabled: Option<bool>,
+    #[serde(default)]
+    pub ai_enabled: Option<bool>,
+    #[serde(default)]
+    pub disabled_features: Option<Option<Vec<String>>>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpsertPersonalKeyInput {
+    pub provider_kind: AiProviderKind,
+    #[serde(default)]
+    pub base_url: Option<String>,
+    #[serde(default)]
+    pub model: Option<String>,
+    /// Write-only: accepted once, encrypted, never returned.
+    pub api_key: String,
+    #[serde(default)]
+    pub monthly_token_cap: Option<u64>,
+    #[serde(default)]
+    pub monthly_cost_cap_usd: Option<f64>,
+    #[serde(default)]
+    pub enabled: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreatePersonalMcpInput {
+    pub name: String,
+    pub endpoint_url: String,
+    /// Write-only auth token for the MCP server, if any.
+    #[serde(default)]
+    pub auth_token: Option<String>,
+    #[serde(default)]
+    pub enabled: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdatePersonalMcpInput {
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub endpoint_url: Option<String>,
+    /// `null` clears the token, a string replaces it, absent keeps it.
+    #[serde(default)]
+    pub auth_token: Option<Option<String>>,
+    #[serde(default)]
+    pub enabled: Option<bool>,
 }
 
 // ---------------------------------------------------------------------------
@@ -1599,12 +2147,16 @@ pub struct AnswerInput {
 /// The caller, from the headers every module in this codebase uses:
 /// `X-User-Id` identifies the actor, `X-Role` carries the role slug
 /// or id the capability check runs against.
-struct Caller {
-    actor: String,
-    role: String,
+///
+/// Public so owning modules can build a `Caller` and hand it to
+/// `run_ai_capability` from their own AI endpoints.
+#[derive(Debug, Clone)]
+pub struct Caller {
+    pub actor: String,
+    pub role: String,
 }
 
-fn caller(req: &HttpRequest) -> UnifiedResult<Caller> {
+pub fn caller(req: &HttpRequest) -> UnifiedResult<Caller> {
     let actor = req
         .headers()
         .get("x-user-id")
@@ -1638,7 +2190,9 @@ fn check_capability(ctx: &AppContext, role: &str, permission: &str) -> bool {
         .unwrap_or(false)
 }
 
-fn require_permission(ctx: &AppContext, role: &str, permission: &str) -> UnifiedResult<()> {
+/// Public so owning modules can enforce `ai:use` on their own AI
+/// endpoints before delegating to `run_ai_capability`.
+pub fn require_permission(ctx: &AppContext, role: &str, permission: &str) -> UnifiedResult<()> {
     if check_capability(ctx, role, permission) {
         Ok(())
     } else {
@@ -1755,10 +2309,13 @@ fn record_usage(
     state: &AiState,
     connection: &AiProviderConnection,
     actor: &str,
+    user_id: Option<Uuid>,
+    company_id: Option<Uuid>,
     use_case: &str,
     completion: Option<&RawCompletion>,
     latency_ms: u64,
     error_code: Option<u16>,
+    used_personal_key: bool,
 ) -> AiUsageRecord {
     let (prompt_tokens, completion_tokens) = match completion {
         Some(raw) => (raw.prompt_tokens, raw.completion_tokens),
@@ -1779,6 +2336,8 @@ fn record_usage(
         provider_id: connection.id,
         provider_kind: connection.kind.as_str().to_string(),
         actor: actor.to_string(),
+        user_id,
+        company_id,
         use_case: use_case.to_string(),
         model: connection.model.clone(),
         prompt_tokens,
@@ -1792,13 +2351,1720 @@ fn record_usage(
             "error".to_string()
         },
         error_code,
+        denial_reason: None,
+        used_personal_key,
         created_at: Utc::now(),
     };
     state.usage.insert(record.id, record.clone());
     record
 }
 
-/// Resolve the provider connection for a call: the requested one, or
+/// Record a call the allowlist gate denied. There is no provider
+/// connection for a denied call, so the record carries the requested
+/// provider/model (or the zero UUID / `"unknown"` when none was
+/// resolved) and the non-leaking reason code. Token counts stay
+/// zero: a denied call never consumed anything.
+fn record_denied_usage(
+    state: &AiState,
+    actor: &str,
+    user_id: Option<Uuid>,
+    company_id: Option<Uuid>,
+    use_case: &str,
+    model: &str,
+    provider_id: Uuid,
+    provider_kind: &str,
+    reason: &str,
+) -> AiUsageRecord {
+    let record = AiUsageRecord {
+        id: Uuid::now_v7(),
+        provider_id,
+        provider_kind: provider_kind.to_string(),
+        actor: actor.to_string(),
+        user_id,
+        company_id,
+        use_case: use_case.to_string(),
+        model: model.to_string(),
+        prompt_tokens: None,
+        completion_tokens: None,
+        total_tokens: None,
+        estimated_cost_usd: None,
+        latency_ms: 0,
+        status: "error".to_string(),
+        error_code: Some(403),
+        denial_reason: Some(reason.to_string()),
+        used_personal_key: false,
+        created_at: Utc::now(),
+    };
+    state.usage.insert(record.id, record.clone());
+    record
+}
+
+// ---------------------------------------------------------------------------
+// Access allowlists: caller identity, validation, authorization.
+//
+// Enforcement model
+// -----------------
+// The allowlist is switched on by creating the first policy. While
+// BOTH policy stores are empty, `authorize_ai_call` runs in legacy
+// open mode: every caller holding `ai:use` may call, and usage is
+// still recorded with whatever user/company ids resolve. This keeps
+// existing deployments working until an admin opts in. The moment
+// the first company or user policy exists, enforcement is strict
+// and default-deny: a company or user without an enabled policy is
+// refused. Create the company policy BEFORE the first user policy,
+// or the users of that company are locked out immediately.
+//
+// Company membership is resolved from the `X-Company-Id` header
+// (same header-identity trust model as `X-User-Id` / `X-Role`: the
+// trusted edge sets these headers) with a fallback to the
+// `user.company_requested` hook answered by the users module.
+// ---------------------------------------------------------------------------
+
+/// The caller's user id, parsed from the `X-User-Id` header. The
+/// actor string is the only identity this module trusts; a body
+/// field is never accepted as the user id. `None` when the actor id
+/// is not a UUID (legacy / non-user actors).
+fn caller_user_id(caller: &Caller) -> Option<Uuid> {
+    Uuid::parse_str(&caller.actor).ok()
+}
+
+/// The caller's company id: `X-Company-Id` header first, then the
+/// `user.company_requested` hook. `None` when neither resolves;
+/// callers without a company are platform admins.
+///
+/// Public so owning modules can resolve the company id to pass to
+/// `run_ai_capability` from their own AI endpoints.
+pub fn resolve_caller_company(ctx: &AppContext, req: &HttpRequest, caller: &Caller) -> Option<Uuid> {
+    if let Some(raw) = req
+        .headers()
+        .get("x-company-id")
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        if let Ok(id) = Uuid::parse_str(raw) {
+            return Some(id);
+        }
+    }
+    let hook = ctx
+        .hooks
+        .emit(EVENT_USER_COMPANY_REQUESTED, json!({ "user_id": caller.actor }));
+    hook.get("company_id")
+        .and_then(|value| value.as_str())
+        .and_then(|raw| Uuid::parse_str(raw).ok())
+}
+
+/// Tenant-first company resolution for AI capability calls
+/// (tenant-scoped data access rule). The middleware attaches a
+/// verified `TenantContext` (resolved from the Host header) to
+/// tenant requests; on a tenant request that context is
+/// authoritative for the company id, because it is the tenant's
+/// own identity, not a caller-supplied claim. The resolved
+/// context is validated through the sanctioned tenancy extractor
+/// (`crate::core::tenancy::TenantContext::from_resolved`, which
+/// rejects a tenant id that is not a UUID): a present-but-invalid
+/// tenant context, or a tenant context with no parseable company
+/// id, resolves to `None` (the gate then denies the call when
+/// enforcement is on) instead of falling back to the weaker header
+/// claim — a broken tenant context must never be overridden by a
+/// header. Control-plane requests carry no tenant context, so they
+/// fall back to `resolve_caller_company` (header, then hook) — the
+/// pre-existing control-plane path. Nothing here falls back to a
+/// `public`-schema query: this module's stores are in-memory and
+/// no capability path touches Postgres at all (see the tenant
+/// scoping notes on the Capabilities Contract).
+pub fn resolve_capability_company(
+    ctx: &AppContext,
+    req: &HttpRequest,
+    caller: &Caller,
+) -> Option<Uuid> {
+    if let Some(resolved) = TenantContext::from_request(req) {
+        let tenant = tenancy::TenantContext::from_resolved(&resolved).ok()?;
+        return tenant
+            .company_id
+            .as_deref()
+            .and_then(|id| Uuid::parse_str(id).ok());
+    }
+    resolve_caller_company(ctx, req, caller)
+}
+
+/// Company scoping for admin writes: a caller who belongs to a
+/// company may only manage policies of that company. A caller with
+/// no resolvable company is a platform admin and may manage any
+/// company. The capability check (`ai:manage_providers`) happens
+/// separately in every handler.
+fn require_company_scope(caller_company: Option<Uuid>, target_company: Uuid) -> UnifiedResult<()> {
+    match caller_company {
+        Some(company) if company != target_company => Err(UnifiedError::forbidden(
+            "A company admin may only manage policies of their own company",
+        )),
+        _ => Ok(()),
+    }
+}
+
+/// Validate one model name for a policy list: non-empty, bounded,
+/// and made only of safe characters. Known provider families are
+/// accepted by prefix; anything else must still be a plausible
+/// custom-model name (openai-compatible / local endpoints accept
+/// arbitrary model ids). The call-time check in
+/// `authorize_ai_call` additionally requires fixed-kind providers
+/// to use their known families.
+fn validate_policy_model_name(model: &str) -> UnifiedResult<String> {
+    let model = model.trim();
+    if model.is_empty() || model.len() > MAX_MODEL_NAME_LEN {
+        return Err(UnifiedError::bad_request(format!(
+            "Model names must be between 1 and {MAX_MODEL_NAME_LEN} characters"
+        )));
+    }
+    if !model
+        .chars()
+        .all(|character| character.is_ascii_alphanumeric() || "-._/:".contains(character))
+    {
+        return Err(UnifiedError::bad_request(format!(
+            "Model name \"{model}\" contains characters outside [A-Za-z0-9._/:]"
+        )));
+    }
+    Ok(model.to_string())
+}
+
+/// Validate a policy model list: bounded, de-duplicated, every entry
+/// a valid model name. `None` (field absent) means unrestricted.
+fn validate_policy_models(models: &Option<Vec<String>>) -> UnifiedResult<Option<Vec<String>>> {
+    let Some(models) = models else {
+        return Ok(None);
+    };
+    if models.len() > MAX_POLICY_LIST_LEN {
+        return Err(UnifiedError::bad_request(format!(
+            "allowed_models must contain at most {MAX_POLICY_LIST_LEN} entries"
+        )));
+    }
+    let mut cleaned: Vec<String> = Vec::with_capacity(models.len());
+    for model in models {
+        let model = validate_policy_model_name(model)?;
+        if !cleaned.contains(&model) {
+            cleaned.push(model);
+        }
+    }
+    Ok(Some(cleaned))
+}
+
+/// Validate a policy feature list: every entry must be a known use
+/// case, or the use case of a capability registered through the AI
+/// Capabilities Contract (`register_ai_capabilities`). Capability
+/// use cases are module-scoped (for example
+/// `exams.draft_questions`) and are declared per-module in the
+/// registry, never in a hard-coded list here. `None` (field absent)
+/// means unrestricted.
+fn validate_policy_features(features: &Option<Vec<String>>) -> UnifiedResult<Option<Vec<String>>> {
+    let Some(features) = features else {
+        return Ok(None);
+    };
+    if features.len() > MAX_POLICY_LIST_LEN {
+        return Err(UnifiedError::bad_request(format!(
+            "allowed_features must contain at most {MAX_POLICY_LIST_LEN} entries"
+        )));
+    }
+    let mut cleaned: Vec<String> = Vec::with_capacity(features.len());
+    for feature in features {
+        let feature = feature.trim();
+        if !KNOWN_USE_CASES.contains(&feature)
+            && !ai_capability_registry().has_use_case(feature)
+        {
+            return Err(UnifiedError::bad_request(format!(
+                "Unknown AI feature \"{feature}\": expected one of {} or the use case of a registered AI capability",
+                KNOWN_USE_CASES.join(", ")
+            )));
+        }
+        if !cleaned.iter().any(|item| item == feature) {
+            cleaned.push(feature.to_string());
+        }
+    }
+    Ok(Some(cleaned))
+}
+
+/// Validate a monthly token cap: bounded. `None` means no cap.
+fn validate_token_cap(cap: Option<u64>) -> UnifiedResult<Option<u64>> {
+    match cap {
+        Some(cap) if cap > MAX_MONTHLY_TOKEN_CAP => Err(UnifiedError::bad_request(format!(
+            "monthly_token_cap must be at most {MAX_MONTHLY_TOKEN_CAP}"
+        ))),
+        cap => Ok(cap),
+    }
+}
+
+/// Validate a monthly cost cap (USD): finite, non-negative, bounded.
+/// `None` means no cap.
+fn validate_cost_cap(cap: Option<f64>) -> UnifiedResult<Option<f64>> {
+    match cap {
+        Some(cap) if !cap.is_finite() || cap < 0.0 || cap > MAX_MONTHLY_COST_CAP_USD => {
+            Err(UnifiedError::bad_request(format!(
+                "monthly_cost_cap_usd must be between 0 and {MAX_MONTHLY_COST_CAP_USD}"
+            )))
+        }
+        cap => Ok(cap),
+    }
+}
+
+/// Validate a caller-supplied use case against the known list.
+fn validate_use_case(use_case: &str) -> UnifiedResult<String> {
+    let use_case = use_case.trim();
+    if !KNOWN_USE_CASES.contains(&use_case) {
+        return Err(UnifiedError::bad_request(format!(
+            "Unknown AI use case \"{use_case}\": expected one of {}",
+            KNOWN_USE_CASES.join(", ")
+        )));
+    }
+    Ok(use_case.to_string())
+}
+
+/// True when the model belongs to the provider kind's known family.
+/// Fixed-kind providers only: compatible and local endpoints accept
+/// any model id. Fine-tuned OpenAI models (`ft:...`) are accepted.
+fn is_known_model(kind: AiProviderKind, model: &str) -> bool {
+    match kind {
+        AiProviderKind::Anthropic => model.starts_with("claude-"),
+        AiProviderKind::OpenAi => {
+            model.starts_with("gpt-")
+                || model.starts_with("o1")
+                || model.starts_with("o3")
+                || model.starts_with("chatgpt-")
+                || model.starts_with("ft:")
+        }
+        AiProviderKind::OpenAiCompatible | AiProviderKind::Local => !model.trim().is_empty(),
+    }
+}
+
+/// Rough token estimate for a prompt: ~4 characters per token.
+/// Used only for pre-call cap checks; actual billing uses the
+/// provider's reported counts.
+fn estimate_prompt_tokens(text: &str) -> u32 {
+    (text.chars().count() as u32).div_ceil(4)
+}
+
+/// Start of the current UTC calendar month: the window monthly caps
+/// are measured over.
+fn month_start() -> DateTime<Utc> {
+    let now = Utc::now();
+    Utc.with_ymd_and_hms(now.year(), now.month(), 1, 0, 0, 0)
+        .single()
+        .unwrap_or(now)
+}
+
+/// Tokens and estimated cost consumed in the current month by one
+/// user / one company / one user's personal key. Only successful
+/// and failed provider calls count; denied calls carry zero tokens.
+#[derive(Debug, Clone, Copy, Default)]
+struct MonthlyUsage {
+    tokens: u64,
+    cost_usd: f64,
+}
+
+fn monthly_usage_for_user(state: &AiState, user_id: Uuid, since: DateTime<Utc>) -> MonthlyUsage {
+    sum_monthly_usage(
+        state
+            .usage
+            .iter()
+            .map(|entry| entry.value().clone())
+            .filter(|record| record.user_id == Some(user_id) && record.created_at >= since),
+    )
+}
+
+fn monthly_usage_for_company(
+    state: &AiState,
+    company_id: Uuid,
+    since: DateTime<Utc>,
+) -> MonthlyUsage {
+    sum_monthly_usage(
+        state
+            .usage
+            .iter()
+            .map(|entry| entry.value().clone())
+            .filter(|record| record.company_id == Some(company_id) && record.created_at >= since),
+    )
+}
+
+fn monthly_personal_key_usage(
+    state: &AiState,
+    user_id: Uuid,
+    since: DateTime<Utc>,
+) -> MonthlyUsage {
+    sum_monthly_usage(
+        state
+            .usage
+            .iter()
+            .map(|entry| entry.value().clone())
+            .filter(|record| {
+                record.user_id == Some(user_id)
+                    && record.used_personal_key
+                    && record.created_at >= since
+            }),
+    )
+}
+
+fn sum_monthly_usage(records: impl Iterator<Item = AiUsageRecord>) -> MonthlyUsage {
+    let mut usage = MonthlyUsage::default();
+    for record in records {
+        usage.tokens += record.total_tokens.unwrap_or(0) as u64;
+        usage.cost_usd += record.estimated_cost_usd.unwrap_or(0.0);
+    }
+    usage
+}
+
+/// The effective monthly token cap for a user: the user's own cap
+/// when it is set and greater than zero, otherwise the company cap.
+/// `None` means no cap at all.
+fn effective_user_cap(
+    user_cap: Option<u64>,
+    company_cap: Option<u64>,
+) -> Option<u64> {
+    match user_cap {
+        Some(cap) if cap > 0 => Some(cap),
+        _ => company_cap,
+    }
+}
+
+/// The effective monthly cost cap for a user: same inheritance rule
+/// as `effective_user_cap`.
+fn effective_user_cost_cap(
+    user_cap: Option<f64>,
+    company_cap: Option<f64>,
+) -> Option<f64> {
+    match user_cap {
+        Some(cap) if cap > 0.0 => Some(cap),
+        _ => company_cap,
+    }
+}
+
+/// What a call needs the allowlist gate to decide.
+pub struct AiCallRequest<'a> {
+    pub use_case: &'a str,
+    pub model: &'a str,
+    pub provider_id: Uuid,
+    pub provider_kind: &'a str,
+    /// Prompt estimate + requested completion budget.
+    pub estimated_tokens: u32,
+    pub use_personal_key: bool,
+    /// Purchased-product context for the product gate layer
+    /// (`X-Product-Id` header, re-resolved from the request on
+    /// every call). `None` means no product context is present:
+    /// the product layer defaults to allow and the gate decision
+    /// records that. Never cached across calls.
+    pub product_id: Option<Uuid>,
+}
+
+/// The outcome of a successful authorization, carried into
+/// `run_completion` so the call runs with the right key and the
+/// usage record carries the right identity.
+pub struct AiAuthorization {
+    pub user_id: Option<Uuid>,
+    pub company_id: Option<Uuid>,
+    pub use_personal_key: bool,
+    /// The caller's decrypted personal key, present only when the
+    /// call runs on it. Lives only for the duration of the call.
+    pub personal_key: Option<AuthorizedPersonalKey>,
+}
+
+pub struct AuthorizedPersonalKey {
+    pub key_id: Uuid,
+    pub provider_kind: AiProviderKind,
+    pub decrypted_key: String,
+}
+
+/// Map a personal-key load failure to a denial: a 403 carries its
+/// reason code into the denial recorder (so the attempt is recorded
+/// and audited like every other denial); anything else — a stored
+/// key that cannot be decrypted — propagates unchanged.
+fn map_personal_key_denial(
+    state: &AiState,
+    deny: &dyn Fn(&AiState, &str) -> UnifiedError,
+    error: UnifiedError,
+) -> UnifiedError {
+    if error.code != 403 {
+        return error;
+    }
+    let reason = error
+        .metadata
+        .get("reason")
+        .and_then(|value| value.as_str())
+        .unwrap_or("ai_personal_key_not_configured")
+        .to_string();
+    deny(state, &reason)
+}
+
+/// The single allowlist gate. EVERY completion / draft entry point
+/// and the connection test call this FIRST, before any provider
+/// traffic. Checks run in this order; the first failure denies the
+/// call, records a denied usage row, and emits `ai.access.denied`:
+///   1. company allowed (policy exists and is enabled),
+///   2. user allowed (policy exists and is enabled),
+///   3. feature allowed for this use case,
+///   4. model allowed (known family for the kind, then policy lists),
+///   5. company monthly token / cost cap,
+///   6. user monthly token / cost cap (or the inherited company cap),
+///   7. personal-key quota when a personal key is used.
+///
+/// Before any of the steps above, the layered gate runs first
+/// (`evaluate_ai_gate`): the global kill-switch, the purchased
+/// product layer, the company and user on/off switches, and the
+/// per-feature toggles. The allowlist answers "is this caller
+/// allowed at all"; the gate answers "is AI on for this caller /
+/// feature right now". Both must allow.
+///
+/// Denials are 403s with a non-leaking reason code in the `reason`
+/// metadata field. The message and the audit event never reveal
+/// another user's or the company's limits.
+fn authorize_ai_call(
+    ctx: &AppContext,
+    state: &AiState,
+    caller: &Caller,
+    company_id: Option<Uuid>,
+    request: &AiCallRequest<'_>,
+) -> UnifiedResult<AiAuthorization> {
+    let user_id = caller_user_id(caller);
+    let enforcement_on =
+        !state.company_policies.is_empty() || !state.user_policies.is_empty();
+    // Deny helper: record the denial, emit the audit event, and
+    // return the non-leaking 403. Defined once so every check below
+    // denies exactly the same way.
+    let deny = |state: &AiState, reason: &str| -> UnifiedError {
+        let denied = record_denied_usage(
+            state,
+            &caller.actor,
+            user_id,
+            company_id,
+            request.use_case,
+            request.model,
+            request.provider_id,
+            request.provider_kind,
+            reason,
+        );
+        emit_audit(
+            ctx,
+            EVENT_AI_ACCESS_DENIED,
+            &caller.actor,
+            "ai-access",
+            json!({
+                "id": denied.id.to_string(),
+                "reason": reason,
+                "use_case": request.use_case,
+                "user_id": user_id.map(|id| id.to_string()),
+                "company_id": company_id.map(|id| id.to_string()),
+            }),
+        );
+        UnifiedError::forbidden("AI access is not allowed for this caller")
+            .with_metadata("reason", Value::String(reason.to_string()))
+            .with_metadata("use_case", Value::String(request.use_case.to_string()))
+    };
+
+    // Layered gating, evaluated FIRST on every call and re-checked
+    // on every call (the decision is never cached): the global
+    // kill-switch, the purchased-product layer, the company and
+    // user on/off switches, and the per-feature toggles
+    // (`evaluate_ai_gate`). The allowlist checks below (steps 1-7)
+    // still run afterwards: they enforce caps, models, and
+    // personal-key quotas, which the gate does not. A gate denial
+    // records a denied usage row and emits `ai.access.denied`
+    // through the same `deny` helper as every other denial, so a
+    // denied read is logged with the reason code and no prompt
+    // content.
+    let gate = evaluate_ai_gate(
+        ctx,
+        state,
+        user_id,
+        company_id,
+        request.use_case,
+        request.product_id,
+    );
+    if !gate.allowed {
+        return Err(deny(
+            state,
+            gate.reason_code.as_deref().unwrap_or("ai_not_allowed"),
+        ));
+    }
+
+    // Legacy open mode: no policy exists anywhere, so there is
+    // nothing to enforce against. Personal-key calls still need a
+    // key, and the key still has to match the connection.
+    if !enforcement_on {
+        let personal_key = if request.use_personal_key {
+            let key = load_personal_key_for_call(state, ctx, user_id, request).map_err(
+                |error| map_personal_key_denial(state, &deny, error),
+            )?;
+            Some(key)
+        } else {
+            None
+        };
+        return Ok(AiAuthorization {
+            user_id,
+            company_id,
+            use_personal_key: request.use_personal_key,
+            personal_key,
+        });
+    }
+
+    // 1. Company allowed.
+    let company_policy = match company_id {
+        Some(company_id) => match state.company_policies.get(&company_id) {
+            Some(policy) if policy.enabled => policy.value().clone(),
+            Some(_) => return Err(deny(state, "ai_not_allowed_for_company")),
+            None => return Err(deny(state, "ai_not_allowed_for_company")),
+        },
+        None => return Err(deny(state, "ai_company_unknown")),
+    };
+    // 2. User allowed.
+    let user_policy = match user_id {
+        Some(user_id) => match state.user_policies.get(&user_id) {
+            Some(policy) if policy.enabled => policy.value().clone(),
+            Some(_) => return Err(deny(state, "ai_not_allowed_for_user")),
+            None => return Err(deny(state, "ai_not_allowed_for_user")),
+        },
+        None => return Err(deny(state, "ai_user_unknown")),
+    };
+    // 3. Feature allowed for this use case.
+    for allowed in [&company_policy.allowed_features, &user_policy.allowed_features] {
+        if let Some(features) = allowed {
+            if !features.iter().any(|feature| feature == request.use_case) {
+                return Err(deny(state, "ai_feature_not_allowed"));
+            }
+        }
+    }
+    // 4. Model allowed: known family for the kind, then policy lists.
+    let kind = AiProviderKind::from_str(request.provider_kind).unwrap_or(AiProviderKind::Local);
+    if !is_known_model(kind, request.model) {
+        return Err(deny(state, "ai_model_not_allowed"));
+    }
+    for allowed in [&company_policy.allowed_models, &user_policy.allowed_models] {
+        if let Some(models) = allowed {
+            if !models.iter().any(|model| model == request.model) {
+                return Err(deny(state, "ai_model_not_allowed"));
+            }
+        }
+    }
+    // 5. Company monthly caps.
+    let since = month_start();
+    let company_usage = monthly_usage_for_company(state, company_policy.company_id, since);
+    if let Some(cap) = company_policy.monthly_token_cap {
+        if company_usage.tokens + request.estimated_tokens as u64 > cap {
+            return Err(deny(state, "ai_company_token_cap_exceeded"));
+        }
+    }
+    if let Some(cap) = company_policy.monthly_cost_cap_usd {
+        let estimated = estimate_cost_usd(request.model, request.estimated_tokens, 0);
+        if let Some(estimated) = estimated {
+            if company_usage.cost_usd + estimated > cap {
+                return Err(deny(state, "ai_company_cost_cap_exceeded"));
+            }
+        }
+    }
+    // 6. User monthly caps (own cap, or the inherited company cap).
+    let user_id = user_policy.user_id;
+    let user_usage = monthly_usage_for_user(state, user_id, since);
+    if let Some(cap) = effective_user_cap(
+        user_policy.monthly_token_cap,
+        company_policy.monthly_token_cap,
+    ) {
+        if user_usage.tokens + request.estimated_tokens as u64 > cap {
+            return Err(deny(state, "ai_user_token_cap_exceeded"));
+        }
+    }
+    if let Some(cap) = effective_user_cost_cap(
+        user_policy.monthly_cost_cap_usd,
+        company_policy.monthly_cost_cap_usd,
+    ) {
+        let estimated = estimate_cost_usd(request.model, request.estimated_tokens, 0);
+        if let Some(estimated) = estimated {
+            if user_usage.cost_usd + estimated > cap {
+                return Err(deny(state, "ai_user_cost_cap_exceeded"));
+            }
+        }
+    }
+    // 7. Personal key: existence, kind/model match, own quota.
+    let personal_key = if request.use_personal_key {
+        let key = load_personal_key_for_call(state, ctx, Some(user_id), request)
+            .map_err(|error| map_personal_key_denial(state, &deny, error))?;
+        // The key's own quota, when set; otherwise the effective
+        // user cap already checked in step 6 covers it.
+        if let Some(cap) = key_quota(&state, user_id) {
+            let key_usage = monthly_personal_key_usage(state, user_id, since);
+            if key_usage.tokens + request.estimated_tokens as u64 > cap {
+                return Err(deny(state, "ai_personal_key_quota_exceeded"));
+            }
+        }
+        Some(key)
+    } else {
+        None
+    };
+    Ok(AiAuthorization {
+        user_id: Some(user_id),
+        company_id: Some(company_policy.company_id),
+        use_personal_key: request.use_personal_key,
+        personal_key,
+    })
+}
+
+/// Load and decrypt the caller's personal key for a call, checking
+/// it exists, is enabled, and matches the connection kind (and the
+/// key's model when one is set). Failures are 403s whose metadata
+/// carries the non-leaking reason code; `authorize_ai_call` maps
+/// them through the denial recorder so the attempt is audited.
+/// A decryption failure is an internal error, not a denial, and
+/// propagates unchanged.
+fn load_personal_key_for_call(
+    state: &AiState,
+    ctx: &AppContext,
+    user_id: Option<Uuid>,
+    request: &AiCallRequest<'_>,
+) -> UnifiedResult<AuthorizedPersonalKey> {
+    let user_id = user_id.ok_or_else(|| {
+        UnifiedError::forbidden("AI access is not allowed for this caller")
+            .with_metadata("reason", Value::String("ai_user_unknown".to_string()))
+    })?;
+    let key = state.personal_keys.get(&user_id).ok_or_else(|| {
+        UnifiedError::forbidden("AI access is not allowed for this caller").with_metadata(
+            "reason",
+            Value::String("ai_personal_key_not_configured".to_string()),
+        )
+    })?;
+    let key = key.value().clone();
+    if !key.enabled {
+        return Err(UnifiedError::forbidden("AI access is not allowed for this caller")
+            .with_metadata(
+                "reason",
+                Value::String("ai_personal_key_not_configured".to_string()),
+            ));
+    }
+    if key.provider_kind.as_str() != request.provider_kind {
+        return Err(UnifiedError::forbidden("AI access is not allowed for this caller")
+            .with_metadata(
+                "reason",
+                Value::String("ai_personal_key_mismatch".to_string()),
+            ));
+    }
+    if let Some(model) = &key.model {
+        if model != request.model {
+            return Err(UnifiedError::forbidden("AI access is not allowed for this caller")
+                .with_metadata(
+                    "reason",
+                    Value::String("ai_personal_key_mismatch".to_string()),
+                ));
+        }
+    }
+    let secret = encryption_secret(ctx);
+    let decrypted = decrypt_api_key(&secret, &key.api_key_encrypted)?;
+    Ok(AuthorizedPersonalKey {
+        key_id: key.id,
+        provider_kind: key.provider_kind,
+        decrypted_key: decrypted,
+    })
+}
+
+/// The personal key's own monthly token cap, when one is set and
+/// greater than zero. `None` means "inherit the effective user cap".
+fn key_quota(state: &AiState, user_id: Uuid) -> Option<u64> {
+    state
+        .personal_keys
+        .get(&user_id)
+        .and_then(|entry| entry.monthly_token_cap)
+        .filter(|cap| *cap > 0)
+}
+
+// ---------------------------------------------------------------------------
+// Personal MCP endpoint validation (SSRF guard).
+// ---------------------------------------------------------------------------
+
+/// True when the address must never be an MCP target: private,
+/// link-local, unspecified, broadcast, multicast, documentation,
+/// benchmarking, or reserved ranges (v4), unique-local / link-local
+/// / multicast / unspecified (v6). Mirrors the webhook module's
+/// `is_forbidden_ip`, with loopback included: personal MCP servers
+/// are remote services, so loopback is never a valid target.
+fn is_forbidden_mcp_ip(ip: IpAddr) -> bool {
+    match ip {
+        IpAddr::V4(addr) => {
+            addr.is_loopback()
+                || addr.is_private()
+                || addr.is_link_local()
+                || addr.is_unspecified()
+                || addr.is_broadcast()
+                || addr.is_multicast()
+                || addr.is_documentation()
+                || addr.is_benchmarking()
+                || addr.is_reserved()
+        }
+        IpAddr::V6(addr) => {
+            addr.is_loopback()
+                || addr.is_unspecified()
+                || addr.is_multicast()
+                || addr.is_unique_local()
+                || (addr.segments()[0] & 0xfe00) == 0xfc00 // unique-local fc00::/7
+                || (addr.segments()[0] & 0xffc0) == 0xfe80 // link-local fe80::/10
+        }
+    }
+}
+
+/// Validate a personal MCP endpoint URL at write time: https only,
+/// no embedded credentials, no localhost / internal hostname, and
+/// the host must resolve to at least one public address. A hostname
+/// that does not resolve is refused: an unresolvable endpoint can
+/// never serve context. Residual risk: DNS rebinding between
+/// validation and use. This module never fetches an MCP endpoint
+/// (servers are offered as grounding references only), so there is
+/// no request-time fetch to rebind against; re-check the host
+/// before any future live MCP fetch is added.
+fn validate_mcp_endpoint_url(raw: &str) -> UnifiedResult<Url> {
+    let raw = raw.trim();
+    if raw.is_empty() || raw.len() > MAX_MCP_URL_LEN {
+        return Err(UnifiedError::bad_request(format!(
+            "endpoint_url must be between 1 and {MAX_MCP_URL_LEN} characters"
+        )));
+    }
+    let url = Url::parse(raw)
+        .map_err(|_| UnifiedError::bad_request(format!("Invalid MCP endpoint URL \"{raw}\"")))?;
+    if url.scheme() != "https" {
+        return Err(UnifiedError::bad_request(
+            "MCP endpoint URL must use https",
+        ));
+    }
+    if !url.username().is_empty() || url.password().is_some() {
+        return Err(UnifiedError::bad_request(
+            "MCP endpoint URL must not embed credentials; use the auth token field",
+        ));
+    }
+    let host = url.host_str().ok_or_else(|| {
+        UnifiedError::bad_request("MCP endpoint URL must include a host")
+    })?;
+    let lower = host.to_ascii_lowercase();
+    if lower == "localhost"
+        || lower.ends_with(".localhost")
+        || lower.ends_with(".local")
+        || lower.ends_with(".internal")
+        || lower.ends_with(".lan")
+        || lower.ends_with(".home")
+        || lower.ends_with(".corp")
+        || lower.ends_with(".intranet")
+    {
+        return Err(UnifiedError::bad_request(
+            "MCP endpoint host must be a public host, not a local or internal name",
+        ));
+    }
+    if let Ok(ip) = host.parse::<IpAddr>() {
+        if is_forbidden_mcp_ip(ip) {
+            return Err(UnifiedError::bad_request(
+                "MCP endpoint host must be a public IP address, not a private, loopback, or link-local address",
+            ));
+        }
+        return Ok(url);
+    }
+    // Hostname: it must resolve, and every resolved address must be
+    // public. A name that resolves only to private addresses (or
+    // that mixes public and private ones) is refused outright.
+    let port = url.port_or_known_default().unwrap_or(443);
+    let addresses = (host, port)
+        .to_socket_addrs()
+        .map_err(|_| UnifiedError::bad_request(format!("MCP endpoint host \"{host}\" does not resolve")))?;
+    let mut any = false;
+    for socket in addresses {
+        any = true;
+        if is_forbidden_mcp_ip(socket.ip()) {
+            return Err(UnifiedError::bad_request(format!(
+                "MCP endpoint host \"{host}\" resolves to a private, loopback, or link-local address"
+            )));
+        }
+    }
+    if !any {
+        return Err(UnifiedError::bad_request(format!(
+            "MCP endpoint host \"{host}\" does not resolve"
+        )));
+    }
+    Ok(url)
+}
+
+/// The caller's enabled personal MCP servers as grounding sources
+/// for the shared context: each server contributes its name and
+/// endpoint URL through the existing `SharedContext` grounding
+/// assembly (`assemble_shared_context` /
+/// `shared_context_prompt`), so the prompt carries the reference
+/// without duplicating context code. The servers are references
+/// only: this module never fetches an MCP endpoint at call time.
+/// A server is never offered to another user.
+fn personal_mcp_grounding_sources(
+    state: &AiState,
+    user_id: Option<Uuid>,
+) -> Vec<GroundingSource> {
+    let Some(user_id) = user_id else {
+        return Vec::new();
+    };
+    let mut servers: Vec<AiUserMcpServer> = state
+        .personal_mcp_servers
+        .iter()
+        .map(|entry| entry.value().clone())
+        .filter(|server| server.user_id == user_id && server.enabled)
+        .collect();
+    servers.sort_by(|a, b| a.name.cmp(&b.name).then(a.created_at.cmp(&b.created_at)));
+    servers
+        .into_iter()
+        .map(|server| GroundingSource {
+            article_id: format!("mcp:{}", server.id),
+            title: format!("Personal MCP server: {}", server.name),
+            url: server.endpoint_url.clone(),
+            score: 0.0,
+            excerpt: Some("Personal MCP context source configured by the caller".to_string()),
+        })
+        .collect()
+}
+
+/// In strict mode, a personal key / MCP change requires the caller
+/// to be an allowed user (enabled user policy). In legacy open mode
+/// any caller holding `ai:use` may configure their own.
+fn require_allowed_user(state: &AiState, user_id: Uuid) -> UnifiedResult<()> {
+    let enforcement_on =
+        !state.company_policies.is_empty() || !state.user_policies.is_empty();
+    if !enforcement_on {
+        return Ok(());
+    }
+    match state.user_policies.get(&user_id) {
+        Some(policy) if policy.enabled => Ok(()),
+        _ => Err(UnifiedError::forbidden("AI access is not allowed for this caller")
+            .with_metadata("reason", Value::String("ai_not_allowed_for_user".to_string()))),
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Layered AI gating.
+//
+// Effective access is the AND of four layers; any layer can disable
+// AI, and every layer must allow for a call to run:
+//
+//   (a) SETTINGS - the global kill-switch (`ai.global_enabled`)
+//       plus the global per-feature switches
+//       (`ai.features.<name>.enabled`). The kill-switch off denies
+//       everything immediately, regardless of the other layers.
+//   (b) PRODUCT - the purchased product / subscription includes AI
+//       or not, resolved through the `ai.product_includes_ai` hook
+//       query (see `EVENT_AI_PRODUCT_INCLUDES_AI`). No product
+//       context on the call means the product layer defaults to
+//       allow and the decision records that; a product context the
+//       hook cannot confirm denies the call (fail closed).
+//   (c) COMPANY - the company policy's allowlist switch (`enabled`)
+//       AND its gate switch (`ai_enabled`), plus the company
+//       per-feature off switches (`disabled_features`).
+//   (d) USER - the user policy's allowlist switch (`enabled`) AND
+//       its gate switch (`ai_enabled`), plus the user per-feature
+//       off switches (`disabled_features`). A disabled user is
+//       denied for every feature; a switched-off feature denies
+//       only that feature.
+//
+// The allowlist answers "is this caller allowed at all" (identity,
+// model lists, caps, personal-key quota); the gate answers "is AI
+// on for this caller / feature right now". ONE function composes
+// them: `evaluate_ai_gate`, called FIRST inside
+// `authorize_ai_call` on every completion / draft entry point, so
+// the combined evaluation order is:
+//
+//   settings kill-switch -> global feature switch -> product ->
+//   company allowlist + gate -> user allowlist + gate ->
+//   feature toggles (allowlist lists, then per-layer off switches)
+//   -> (back in `authorize_ai_call`) model, caps, personal key.
+//
+// The decision is computed fresh from the live stores on every
+// call: no gate decision is cached across calls. A denied call is
+// logged by the caller's `deny` helper in `authorize_ai_call`
+// (denied usage row + `ai.access.denied` event, count + reason
+// code, never prompt content). Every change to any layer emits
+// `ai.gating.changed` with the old -> new values through
+// `emit_gating_change`, on top of the policy-change audit the
+// policy endpoints already emit.
+// ---------------------------------------------------------------------------
+
+/// Canonical feature (use-case) names the gate understands, plus
+/// the friendly aliases admins may use in gating requests.
+/// `support` / `drafting` mean ticket-reply drafting
+/// (`support_reply`); `insights` means insight generation, which
+/// runs through the generic completion use case (`complete`), so
+/// switching `insights` off switches `complete` off as well until
+/// a dedicated insights use case exists.
+fn canonical_gate_feature(raw: &str) -> Option<&'static str> {
+    match raw.trim().to_ascii_lowercase().as_str() {
+        "complete" | "insights" | "insight" => Some("complete"),
+        "support_reply" | "support" | "drafting" | "support_drafting" => {
+            Some("support_reply")
+        }
+        "chat_reply" | "chat" => Some("chat_reply"),
+        "content" => Some("content"),
+        "email" => Some("email"),
+        "kb_answer" | "kb" | "knowledgebase" => Some("kb_answer"),
+        "test" => Some("test"),
+        _ => None,
+    }
+}
+
+/// Validate one feature name for a gating request, canonicalizing
+/// friendly aliases to the use-case name the gate checks.
+fn validate_gate_feature_name(raw: &str) -> UnifiedResult<String> {
+    canonical_gate_feature(raw).map(str::to_string).ok_or_else(|| {
+        UnifiedError::bad_request(format!(
+            "Unknown AI feature \"{raw}\": expected one of {}",
+            KNOWN_USE_CASES.join(", ")
+        ))
+    })
+}
+
+/// Validate a per-feature off-switch list: canonicalize every
+/// entry, reject unknown names, drop duplicates. `None` means no
+/// feature is switched off here.
+fn validate_gate_features(
+    features: &Option<Vec<String>>,
+) -> UnifiedResult<Option<Vec<String>>> {
+    let Some(features) = features else {
+        return Ok(None);
+    };
+    if features.len() > MAX_POLICY_LIST_LEN {
+        return Err(UnifiedError::bad_request(format!(
+            "disabled_features must contain at most {MAX_POLICY_LIST_LEN} entries"
+        )));
+    }
+    let mut cleaned: Vec<String> = Vec::with_capacity(features.len());
+    for feature in features {
+        let canonical = validate_gate_feature_name(feature)?;
+        if !cleaned.iter().any(|item| item == &canonical) {
+            cleaned.push(canonical);
+        }
+    }
+    Ok(Some(cleaned))
+}
+
+/// The caller's purchased-product context: the `X-Product-Id`
+/// header, re-read from the request on every call. `None` means no
+/// product context is present and the product layer defaults to
+/// allow.
+fn resolve_caller_product(req: &HttpRequest) -> Option<Uuid> {
+    req.headers()
+        .get("x-product-id")
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .and_then(|raw| Uuid::parse_str(raw).ok())
+}
+
+/// One user's company id through the `user.company_requested`
+/// hook, for the effective-gate read of a user other than the
+/// caller. `None` when the users module does not answer.
+fn resolve_user_company(ctx: &AppContext, user_id: Uuid) -> Option<Uuid> {
+    let hook = ctx
+        .hooks
+        .emit(EVENT_USER_COMPANY_REQUESTED, json!({ "user_id": user_id.to_string() }));
+    hook.get("company_id")
+        .and_then(|value| value.as_str())
+        .and_then(|raw| Uuid::parse_str(raw).ok())
+}
+
+/// Ask the products / billing module whether the purchased product
+/// includes AI (`ai.product_includes_ai` hook query; contract on
+/// `EVENT_AI_PRODUCT_INCLUDES_AI`). `Some(true)` = the product
+/// includes AI; `Some(false)` = it excludes AI; `None` = no handler
+/// answered, so the caller cannot be confirmed.
+fn product_includes_ai(
+    ctx: &AppContext,
+    product_id: Uuid,
+    user_id: Option<Uuid>,
+    company_id: Option<Uuid>,
+) -> Option<bool> {
+    let hook = ctx.hooks.emit(
+        EVENT_AI_PRODUCT_INCLUDES_AI,
+        json!({
+            "product_id": product_id.to_string(),
+            "user_id": user_id.map(|id| id.to_string()),
+            "company_id": company_id.map(|id| id.to_string()),
+        }),
+    );
+    hook.get("includes_ai").and_then(|value| value.as_bool())
+}
+
+fn gate_layer_outcome(layer: &str, allowed: bool, note: &str) -> AiGateLayerOutcome {
+    AiGateLayerOutcome {
+        layer: layer.to_string(),
+        allowed,
+        note: Some(note.to_string()),
+    }
+}
+
+fn gate_denied(
+    mut layers: Vec<AiGateLayerOutcome>,
+    layer: &str,
+    feature: &str,
+    reason: &str,
+    note: &str,
+) -> AiGateDecision {
+    layers.push(gate_layer_outcome(layer, false, note));
+    AiGateDecision {
+        allowed: false,
+        denied_layer: Some(layer.to_string()),
+        denied_feature: Some(feature.to_string()),
+        reason_code: Some(reason.to_string()),
+        layers,
+    }
+}
+
+/// The single composed gate: the allowlist ("is this caller
+/// allowed at all") AND the layered on/off switches ("is AI on for
+/// this caller / feature right now"), evaluated in this exact
+/// order on every call, with no caching:
+///
+///   1. settings kill-switch (`ai.global_enabled`),
+///   2. global per-feature switch for this feature,
+///   3. product layer (`ai.product_includes_ai` hook),
+///   4. company allowlist (`enabled`) + gate (`ai_enabled`),
+///   5. user allowlist (`enabled`) + gate (`ai_enabled`),
+///   6. feature toggles: allowlist `allowed_features` lists, then
+///      the company and user `disabled_features` off switches.
+///
+/// A missing company or user policy denies only while the
+/// allowlist is switched on (at least one policy exists anywhere);
+/// in legacy open mode (no policy exists) the company / user
+/// layers allow, because no admin has switched anything off, while
+/// the settings and product layers still apply. The caller maps a
+/// denial to the non-leaking 403 through its own `deny` helper.
+fn evaluate_ai_gate(
+    ctx: &AppContext,
+    state: &AiState,
+    user_id: Option<Uuid>,
+    company_id: Option<Uuid>,
+    feature: &str,
+    product_id: Option<Uuid>,
+) -> AiGateDecision {
+    let mut layers: Vec<AiGateLayerOutcome> = Vec::new();
+
+    // 1-2. Settings: kill-switch, then the global feature switch.
+    let global = state
+        .global_settings
+        .read()
+        .expect("ai global settings lock poisoned")
+        .clone();
+    if !global.global_enabled {
+        return gate_denied(
+            layers,
+            "settings",
+            feature,
+            "ai_globally_disabled",
+            "Global AI kill-switch is off",
+        );
+    }
+    layers.push(gate_layer_outcome(
+        "settings",
+        true,
+        "Global AI kill-switch is on",
+    ));
+    if global.disabled_features.iter().any(|name| name == feature) {
+        return gate_denied(
+            layers,
+            "settings",
+            feature,
+            "ai_feature_disabled",
+            "Feature is switched off globally",
+        );
+    }
+
+    // 3. Product: only when a product context is present.
+    match product_id {
+        Some(product_id) => match product_includes_ai(ctx, product_id, user_id, company_id) {
+            Some(true) => layers.push(gate_layer_outcome(
+                "product",
+                true,
+                "Purchased product includes AI",
+            )),
+            Some(false) => {
+                return gate_denied(
+                    layers,
+                    "product",
+                    feature,
+                    "ai_product_excludes_ai",
+                    "Purchased product does not include AI",
+                );
+            }
+            None => {
+                return gate_denied(
+                    layers,
+                    "product",
+                    feature,
+                    "ai_product_unknown",
+                    "Purchased product could not be confirmed",
+                );
+            }
+        },
+        None => layers.push(gate_layer_outcome(
+            "product",
+            true,
+            "No product context: product layer defaults to allow",
+        )),
+    }
+
+    // 4-5. Company and user: allowlist switch + gate switch. In
+    // legacy open mode there is no policy to switch anything off.
+    let enforcement_on =
+        !state.company_policies.is_empty() || !state.user_policies.is_empty();
+    let company_policy: Option<AiCompanyPolicy> = if enforcement_on {
+        match company_id {
+            Some(company_id) => match state.company_policies.get(&company_id) {
+                Some(entry) => {
+                    let policy = entry.value().clone();
+                    if !policy.enabled {
+                        return gate_denied(
+                            layers,
+                            "company",
+                            feature,
+                            "ai_not_allowed_for_company",
+                            "Company is not on the AI allowlist",
+                        );
+                    }
+                    if !policy.ai_enabled {
+                        return gate_denied(
+                            layers,
+                            "company",
+                            feature,
+                            "ai_disabled_for_company",
+                            "AI is switched off for the company",
+                        );
+                    }
+                    layers.push(gate_layer_outcome(
+                        "company",
+                        true,
+                        "Company allowlist and gate allow AI",
+                    ));
+                    Some(policy)
+                }
+                None => {
+                    return gate_denied(
+                        layers,
+                        "company",
+                        feature,
+                        "ai_not_allowed_for_company",
+                        "Company is not on the AI allowlist",
+                    );
+                }
+            },
+            None => {
+                return gate_denied(
+                    layers,
+                    "company",
+                    feature,
+                    "ai_company_unknown",
+                    "Caller has no resolvable company",
+                );
+            }
+        }
+    } else {
+        layers.push(gate_layer_outcome(
+            "company",
+            true,
+            "Allowlist is off: no company policy switches AI off",
+        ));
+        None
+    };
+    let user_policy: Option<AiUserPolicy> = if enforcement_on {
+        match user_id {
+            Some(user_id) => match state.user_policies.get(&user_id) {
+                Some(entry) => {
+                    let policy = entry.value().clone();
+                    if !policy.enabled {
+                        return gate_denied(
+                            layers,
+                            "user",
+                            feature,
+                            "ai_not_allowed_for_user",
+                            "User is not on the AI allowlist",
+                        );
+                    }
+                    if !policy.ai_enabled {
+                        return gate_denied(
+                            layers,
+                            "user",
+                            feature,
+                            "ai_disabled_for_user",
+                            "AI is switched off for the user",
+                        );
+                    }
+                    layers.push(gate_layer_outcome(
+                        "user",
+                        true,
+                        "User allowlist and gate allow AI",
+                    ));
+                    Some(policy)
+                }
+                None => {
+                    return gate_denied(
+                        layers,
+                        "user",
+                        feature,
+                        "ai_not_allowed_for_user",
+                        "User is not on the AI allowlist",
+                    );
+                }
+            },
+            None => {
+                return gate_denied(
+                    layers,
+                    "user",
+                    feature,
+                    "ai_user_unknown",
+                    "Caller has no user id",
+                );
+            }
+        }
+    } else {
+        layers.push(gate_layer_outcome(
+            "user",
+            true,
+            "Allowlist is off: no user policy switches AI off",
+        ));
+        None
+    };
+
+    // 6. Feature toggles: allowlist lists first, then the explicit
+    // per-layer off switches. A switched-off feature denies only
+    // that feature.
+    if let Some(policy) = &company_policy {
+        if let Some(features) = &policy.allowed_features {
+            if !features.iter().any(|name| name == feature) {
+                return gate_denied(
+                    layers,
+                    "feature",
+                    feature,
+                    "ai_feature_not_allowed",
+                    "Feature is not on the company allowlist",
+                );
+            }
+        }
+        if let Some(disabled) = &policy.disabled_features {
+            if disabled.iter().any(|name| name == feature) {
+                return gate_denied(
+                    layers,
+                    "company",
+                    feature,
+                    "ai_feature_disabled_for_company",
+                    "Feature is switched off for the company",
+                );
+            }
+        }
+    }
+    if let Some(policy) = &user_policy {
+        if let Some(features) = &policy.allowed_features {
+            if !features.iter().any(|name| name == feature) {
+                return gate_denied(
+                    layers,
+                    "feature",
+                    feature,
+                    "ai_feature_not_allowed",
+                    "Feature is not on the user allowlist",
+                );
+            }
+        }
+        if let Some(disabled) = &policy.disabled_features {
+            if disabled.iter().any(|name| name == feature) {
+                return gate_denied(
+                    layers,
+                    "user",
+                    feature,
+                    "ai_feature_disabled_for_user",
+                    "Feature is switched off for the user",
+                );
+            }
+        }
+    }
+    layers.push(gate_layer_outcome(
+        "feature",
+        true,
+        "Feature is allowed by every layer",
+    ));
+    AiGateDecision {
+        allowed: true,
+        denied_layer: None,
+        denied_feature: None,
+        reason_code: None,
+        layers,
+    }
+}
+
+/// Audit one gate-layer change: the event the audit module records
+/// (`ai.gating.changed`), carrying the layer, the target, the
+/// field, and the old -> new values. Never carries prompt content.
+fn emit_gating_change(
+    ctx: &AppContext,
+    actor: &str,
+    layer: &str,
+    target_id: &str,
+    field: &str,
+    old_value: Value,
+    new_value: Value,
+) {
+    emit_audit(
+        ctx,
+        EVENT_AI_GATING_CHANGED,
+        actor,
+        &format!("ai-gating:{layer}:{target_id}"),
+        json!({
+            "layer": layer,
+            "target_id": target_id,
+            "field": field,
+            "old_value": old_value,
+            "new_value": new_value,
+        }),
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Layered-gate admin endpoints (all admin-only:
+// `ai:manage_providers`, same capability as the policy endpoints).
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Deserialize)]
+pub struct EffectiveGateQuery {
+    #[serde(default)]
+    pub user_id: Option<String>,
+    #[serde(default)]
+    pub feature: Option<String>,
+    #[serde(default)]
+    pub product_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateCompanyGateInput {
+    #[serde(default)]
+    pub ai_enabled: Option<bool>,
+    #[serde(default)]
+    pub disabled_features: Option<Option<Vec<String>>>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateUserGateInput {
+    #[serde(default)]
+    pub ai_enabled: Option<bool>,
+    #[serde(default)]
+    pub disabled_features: Option<Option<Vec<String>>>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateGlobalSettingsInput {
+    #[serde(default)]
+    pub global_enabled: Option<bool>,
+    #[serde(default)]
+    pub disabled_features: Option<Option<Vec<String>>>,
+}
+
+/// The effective gate decision for a user / feature, with the
+/// per-layer breakdown that explains which layer decides. Defaults
+/// to the caller and the `complete` feature; `feature` accepts the
+/// friendly aliases (`support`, `drafting`, `insights`, `chat`).
+async fn get_effective_gate(
+    ctx: web::Data<Arc<AppContext>>,
+    state: web::Data<AiState>,
+    req: HttpRequest,
+    query: web::Query<EffectiveGateQuery>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let result: UnifiedResult<AiGateDecision> = (|| {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_AI_MANAGE_PROVIDERS)?;
+        let params = query.into_inner();
+        let target_user_id = match &params.user_id {
+            Some(raw) => Some(parse_uuid(raw, "user")?),
+            None => caller_user_id(&caller),
+        };
+        let feature = match &params.feature {
+            Some(raw) => validate_gate_feature_name(raw)?,
+            None => "complete".to_string(),
+        };
+        let product_id = match &params.product_id {
+            Some(raw) => Some(parse_uuid(raw, "product")?),
+            None => resolve_caller_product(&req),
+        };
+        // Company scope: a company admin inspects only their own
+        // company. The target user's company comes from the users
+        // module; the caller's own company from the header / hook.
+        let caller_company = resolve_caller_company(&ctx, &req, &caller);
+        let caller_own_user_id = caller_user_id(&caller);
+        let target_company = if target_user_id == caller_own_user_id {
+            caller_company
+        } else {
+            match target_user_id {
+                Some(target_user_id) => {
+                    let resolved = resolve_user_company(&ctx, target_user_id);
+                    match resolved {
+                        Some(company_id) => {
+                            require_company_scope(caller_company, company_id)?;
+                            Some(company_id)
+                        }
+                        None => {
+                            if caller_company.is_some() {
+                                return Err(UnifiedError::forbidden(
+                                    "Cannot verify the target user's company",
+                                ));
+                            }
+                            None
+                        }
+                    }
+                }
+                None => caller_company,
+            }
+        };
+        Ok(evaluate_ai_gate(
+            &ctx,
+            &state,
+            target_user_id,
+            target_company,
+            &feature,
+            product_id,
+        ))
+    })();
+    match result {
+        Ok(decision) => ok(decision),
+        Err(error) => err(error, debug),
+    }
+}
+
+/// Switch AI on/off for a company, or switch single features off
+/// for it. The company must already have an access policy (create
+/// one through `POST /access/companies` first): creating a policy
+/// shell here would switch the allowlist on for the company, which
+/// would deny every user without a user policy.
+async fn patch_company_gate(
+    ctx: web::Data<Arc<AppContext>>,
+    state: web::Data<AiState>,
+    req: HttpRequest,
+    path: web::Path<String>,
+    body: web::Json<UpdateCompanyGateInput>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let input = body.into_inner();
+    let result: UnifiedResult<AiCompanyPolicy> = (|| {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_AI_MANAGE_PROVIDERS)?;
+        let caller_company = resolve_caller_company(&ctx, &req, &caller);
+        let company_id = parse_uuid(&path.into_inner(), "company")?;
+        require_company_scope(caller_company, company_id)?;
+        let mut policy = state
+            .company_policies
+            .get(&company_id)
+            .map(|entry| entry.value().clone())
+            .ok_or_else(|| {
+                UnifiedError::not_found(format!(
+                    "No AI access policy exists for company {company_id}: create one through POST /access/companies first"
+                ))
+            })?;
+        if let Some(ai_enabled) = input.ai_enabled {
+            if policy.ai_enabled != ai_enabled {
+                emit_gating_change(
+                    &ctx,
+                    &caller.actor,
+                    "company",
+                    &policy.company_id.to_string(),
+                    "ai_enabled",
+                    json!(policy.ai_enabled),
+                    json!(ai_enabled),
+                );
+                policy.ai_enabled = ai_enabled;
+            }
+        }
+        if let Some(disabled) = input.disabled_features {
+            let validated = validate_gate_features(&disabled)?;
+            if policy.disabled_features != validated {
+                emit_gating_change(
+                    &ctx,
+                    &caller.actor,
+                    "company",
+                    &policy.company_id.to_string(),
+                    "disabled_features",
+                    json!(policy.disabled_features),
+                    json!(validated),
+                );
+                policy.disabled_features = validated;
+            }
+        }
+        policy.updated_at = Utc::now();
+        state
+            .company_policies
+            .insert(policy.company_id, policy.clone());
+        emit_audit(
+            &ctx,
+            EVENT_AI_ACCESS_POLICY_CHANGED,
+            &caller.actor,
+            &format!("ai-company-policy:{}", policy.id),
+            json!({
+                "id": policy.id.to_string(),
+                "company_id": policy.company_id.to_string(),
+                "enabled": policy.enabled,
+                "ai_enabled": policy.ai_enabled,
+            }),
+        );
+        Ok(policy)
+    })();
+    match result {
+        Ok(policy) => ok(policy),
+        Err(error) => err(error, debug),
+    }
+}
+
+/// Switch AI on/off for a user, or switch single features off for
+/// them. The user must already have an access policy (create one
+/// through `POST /access/users` first).
+async fn patch_user_gate(
+    ctx: web::Data<Arc<AppContext>>,
+    state: web::Data<AiState>,
+    req: HttpRequest,
+    path: web::Path<String>,
+    body: web::Json<UpdateUserGateInput>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let input = body.into_inner();
+    let result: UnifiedResult<AiUserPolicy> = (|| {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_AI_MANAGE_PROVIDERS)?;
+        let caller_company = resolve_caller_company(&ctx, &req, &caller);
+        let user_id = parse_uuid(&path.into_inner(), "user")?;
+        let mut policy = state
+            .user_policies
+            .get(&user_id)
+            .map(|entry| entry.value().clone())
+            .ok_or_else(|| {
+                UnifiedError::not_found(format!(
+                    "No AI access policy exists for user {user_id}: create one through POST /access/users first"
+                ))
+            })?;
+        require_company_scope(caller_company, policy.company_id)?;
+        if let Some(ai_enabled) = input.ai_enabled {
+            if policy.ai_enabled != ai_enabled {
+                emit_gating_change(
+                    &ctx,
+                    &caller.actor,
+                    "user",
+                    &policy.user_id.to_string(),
+                    "ai_enabled",
+                    json!(policy.ai_enabled),
+                    json!(ai_enabled),
+                );
+                policy.ai_enabled = ai_enabled;
+            }
+        }
+        if let Some(disabled) = input.disabled_features {
+            let validated = validate_gate_features(&disabled)?;
+            if policy.disabled_features != validated {
+                emit_gating_change(
+                    &ctx,
+                    &caller.actor,
+                    "user",
+                    &policy.user_id.to_string(),
+                    "disabled_features",
+                    json!(policy.disabled_features),
+                    json!(validated),
+                );
+                policy.disabled_features = validated;
+            }
+        }
+        policy.updated_at = Utc::now();
+        state.user_policies.insert(policy.user_id, policy.clone());
+        emit_audit(
+            &ctx,
+            EVENT_AI_ACCESS_POLICY_CHANGED,
+            &caller.actor,
+            &format!("ai-user-policy:{}", policy.id),
+            json!({
+                "id": policy.id.to_string(),
+                "user_id": policy.user_id.to_string(),
+                "company_id": policy.company_id.to_string(),
+                "enabled": policy.enabled,
+                "ai_enabled": policy.ai_enabled,
+            }),
+        );
+        Ok(policy)
+    })();
+    match result {
+        Ok(policy) => ok(policy),
+        Err(error) => err(error, debug),
+    }
+}
+
+/// Read the global AI settings (kill-switch + global feature
+/// switches).
+async fn get_global_settings(
+    ctx: web::Data<Arc<AppContext>>,
+    state: web::Data<AiState>,
+    req: HttpRequest,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let result: UnifiedResult<AiGlobalSettings> = (|| {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_AI_MANAGE_PROVIDERS)?;
+        Ok(state
+            .global_settings
+            .read()
+            .expect("ai global settings lock poisoned")
+            .clone())
+    })();
+    match result {
+        Ok(settings) => ok(settings),
+        Err(error) => err(error, debug),
+    }
+}
+
+/// Change the global AI settings. Turning `global_enabled` off is
+/// the kill-switch: it denies every AI call immediately,
+/// regardless of the other layers.
+async fn patch_global_settings(
+    ctx: web::Data<Arc<AppContext>>,
+    state: web::Data<AiState>,
+    req: HttpRequest,
+    body: web::Json<UpdateGlobalSettingsInput>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let input = body.into_inner();
+    let result: UnifiedResult<AiGlobalSettings> = (|| {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_AI_MANAGE_PROVIDERS)?;
+        let mut settings = state
+            .global_settings
+            .read()
+            .expect("ai global settings lock poisoned")
+            .clone();
+        if let Some(global_enabled) = input.global_enabled {
+            if settings.global_enabled != global_enabled {
+                emit_gating_change(
+                    &ctx,
+                    &caller.actor,
+                    "settings",
+                    "global",
+                    "ai.global_enabled",
+                    json!(settings.global_enabled),
+                    json!(global_enabled),
+                );
+                settings.global_enabled = global_enabled;
+            }
+        }
+        if let Some(disabled) = input.disabled_features {
+            let validated = validate_gate_features(&disabled)?.unwrap_or_default();
+            if settings.disabled_features != validated {
+                emit_gating_change(
+                    &ctx,
+                    &caller.actor,
+                    "settings",
+                    "global",
+                    "ai.features.disabled",
+                    json!(settings.disabled_features),
+                    json!(validated),
+                );
+                settings.disabled_features = validated;
+            }
+        }
+        settings.updated_at = Utc::now();
+        *state
+            .global_settings
+            .write()
+            .expect("ai global settings lock poisoned") = settings.clone();
+        Ok(settings)
+    })();
+    match result {
+        Ok(settings) => ok(settings),
+        Err(error) => err(error, debug),
+    }
+}
 /// the earliest-created enabled connection when none was requested.
 fn resolve_connection(
     state: &AiState,
@@ -1836,38 +4102,748 @@ struct CompletionOutcome {
     model: String,
 }
 
+// ---------------------------------------------------------------------------
+// AI Capabilities Contract.
+//
+// Every dynamic module exposes its AI features through this registry
+// instead of hard-coding them here: a module declares its
+// capabilities (a `&[AiCapability]` const in its own file) and calls
+// `register_ai_capabilities` once from its `init`. The AI module
+// never keeps a hard-coded match list of module capabilities; the
+// registry is the single source of truth, and `run_ai_capability`
+// is the single runner every module AI endpoint delegates to.
+//
+// Flow for one capability call (`run_ai_capability`):
+//   (a) look the capability up in the registry (unknown = 404),
+//   (b) validate the input object contains exactly the declared
+//       `input_fields` (missing or unexpected field = 422),
+//   (c) redact PII through the privacy module when the capability
+//       does not allow it (`allows_pii == false`),
+//   (d) emit the grounding hook `<module>.ai.<capability>_requested`
+//       with `{"request_id", "module_id", "capability", "caller",
+//       "input"}` and collect grounding from the results (first
+//       result wins, the rest merge into `extra_context`),
+//   (e) run the allowlist gate (`authorize_ai_call`, with the
+//       capability's `use_case`) FIRST, before any provider traffic,
+//   (e2) package-entitlement gate (after authorization, still
+//       before any provider traffic): for a sellable non-core
+//       module, the calling tenant's entitlement is checked
+//       through the `entitlements.check_requested` hook query,
+//       fail closed — only an explicit `allowed: true` passes.
+//       Core modules, modules that are not sellable, and
+//       control-plane calls (no company id) skip the hook; see the
+//       gate in the function body.
+//   (f) run the completion through the same `run_completion` path
+//       the draft endpoints use (default provider connection: the
+//       earliest-created enabled connection; the connection key,
+//       never a personal key),
+//   (g) record usage and emit `ai.call.completed` / `ai.call.failed`
+//       through `run_completion`, exactly like the draft endpoints,
+//   (h) return the output inline; the owning module decides whether
+//       the output is stored, reviewed, or published. Capability
+//       outputs are deliberately NOT stored as `AiDraft`s here: the
+//       draft endpoints own the human-review draft flow, and a
+//       capability result is data the owning module handles.
+//
+// Security notes:
+//   - The gate + allowlist run on EVERY capability call and are
+//     never cached; `authorize_ai_call` re-evaluates the layered
+//     gate and the policy caps on each call.
+//   - Undeclared input fields are never passed to the model.
+//   - No prompt content is ever logged or put in an audit payload:
+//     audit events carry ids and reason codes only.
+//   - Capability calls carry no purchased-product context (there is
+//     no request to read `X-Product-Id` from in this signature), so
+//     the product layer defaults to allow exactly as it does for
+//     any call without that header. The module-level package
+//     entitlement is checked separately by the gate in (e2): the
+//     tenant's entitlement for the called module is resolved
+//     through the `entitlements.check_requested` hook, fail closed,
+//     before any provider traffic.
+//   - A capability's `use_case` is the string the gate and the
+//     policy `allowed_features` lists match on. Built-in use cases
+//     live in `KNOWN_USE_CASES`; a module-scoped use case (for
+//     example `exams.draft_questions`) is accepted by
+//     `validate_policy_features` once its capability is registered.
+//
+// Tenant scoping (standing rule: tenant-scoped data access).
+//   - Tenant data: capability calls, usage records, and grounding
+//     data are tenant-scoped. The company id on every capability
+//     call comes from `resolve_capability_company` — the verified
+//     `TenantContext` first (middleware-attached, resolved from
+//     the Host header), then the pre-existing header / hook path
+//     for control-plane requests. Usage is recorded per company
+//     (`AiUsageRecord.company_id`). Grounding hooks receive the
+//     calling tenant's company id in the payload and must only
+//     ever return that tenant's data.
+//   - Control-plane data: provider connections and the global AI
+//     settings are platform data; when persisted they belong in
+//     the `public` schema, never in a tenant schema. Company and
+//     user access policies are per-tenant data.
+//   - Current state, honestly: every store in this module (and in
+//     the wired modules) is in-memory with no tenant partition
+//     and no Postgres access at all, so there is no
+//     `public`-schema fallback to remove — but also no
+//     tenant-column filtering to enforce yet. The tenancy plumbing
+//     itself DOES exist (`crate::core::tenancy`: `schema_name`,
+//     `with_tenant_connection`, the `TenantContext` extractor, the
+//     `ControlPlaneGuard`); the convergence points for persistence
+//     are: (1) when AI state gains Postgres persistence, usage /
+//     policies / capability results must be written through
+//     `with_tenant_connection` in the tenant schema resolved from
+//     the tenant context, and provider connections / global
+//     settings through `public` (via `ControlPlaneGuard`);
+//     (2) grounding handlers must filter by the payload's caller
+//     company id once their stores carry one; (3) the
+//     package-entitlement gate in `run_ai_capability` (step (e2))
+//     asks `entitlements.check_requested` and fails closed while
+//     the entitlements module is not registered and answering, so
+//     sellable-module capability calls stay denied until the
+//     integrator registers it in `mod.rs`.
+// The AI module's own state is shared with this runner through a
+// process-wide handle (`AI_STATE`), set once in `AiModule::init`
+// from the same `AiState` the HTTP scope serves, so the providers,
+// usage, and policy stores are the same instance on both paths.
+// This follows the static-state pattern already used by other
+// modules in this codebase for cross-module access.
+// ---------------------------------------------------------------------------
+
+/// One AI capability a module exposes. Capability ids, module ids,
+/// and use cases are declared per-module (registry), never matched
+/// on in a hard-coded list here. Field names and order are part of
+/// the contract: parallel builders write against this exact shape.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct AiCapability {
+    pub id: &'static str,
+    pub module_id: &'static str,
+    pub name: &'static str,
+    pub description: &'static str,
+    pub input_fields: &'static [&'static str],
+    pub allows_pii: bool,
+    pub use_case: &'static str,
+}
+
+/// The AI module's own capabilities, registered in `AiModule::init`
+/// so the registry is self-describing from startup.
+pub const AI_CAPABILITIES: &[AiCapability] = &[
+    AiCapability {
+        id: "summarize",
+        module_id: "ai",
+        name: "Summarize text",
+        description: "Summarize caller-supplied text into a short summary. No personal data is accepted: input is redacted before it reaches the model.",
+        input_fields: &["text"],
+        allows_pii: false,
+        use_case: "complete",
+    },
+    AiCapability {
+        id: "draft",
+        module_id: "ai",
+        name: "Draft text",
+        description: "Draft text from a topic and a short brief. The output is returned inline; it is never published or sent by this module.",
+        input_fields: &["topic", "brief"],
+        allows_pii: false,
+        use_case: "content",
+    },
+    AiCapability {
+        id: "analyze",
+        module_id: "ai",
+        name: "Analyze text",
+        description: "Analyze caller-supplied text and return key points, tone, and suggested follow-ups. No personal data is accepted: input is redacted before it reaches the model.",
+        input_fields: &["text"],
+        allows_pii: false,
+        use_case: "complete",
+    },
+    AiCapability {
+        id: "translate",
+        module_id: "ai",
+        name: "Translate text",
+        description: "Translate caller-supplied text into the requested target language. No personal data is accepted: input is redacted before it reaches the model.",
+        input_fields: &["text", "target_language"],
+        allows_pii: false,
+        use_case: "complete",
+    },
+];
+
+/// Registry of per-module AI capabilities, keyed by module id.
+/// Backed by a `DashMap` so modules can register from `init`
+/// without a lock held across the call.
+pub struct AiCapabilityRegistry {
+    capabilities: DashMap<String, Vec<AiCapability>>,
+}
+
+impl AiCapabilityRegistry {
+    fn new() -> Self {
+        Self {
+            capabilities: DashMap::new(),
+        }
+    }
+
+    /// Register (or replace) the full capability list of one
+    /// module. Call once per module, from that module's `init`,
+    /// with the module's complete list.
+    pub fn register(&self, module_id: &str, capabilities: &[AiCapability]) {
+        let mut owned: Vec<AiCapability> = capabilities.to_vec();
+        owned.sort_by(|a, b| a.id.cmp(b.id));
+        owned.dedup_by(|a, b| a.id == b.id);
+        self.capabilities.insert(module_id.to_string(), owned);
+    }
+
+    /// Owned copies of one module's capabilities, sorted by id.
+    /// An unregistered module yields an empty list.
+    pub fn capabilities_for(&self, module_id: &str) -> Vec<AiCapability> {
+        self.capabilities
+            .get(module_id)
+            .map(|entry| entry.value().clone())
+            .unwrap_or_default()
+    }
+
+    /// Owned copies of every registered capability, sorted by
+    /// module id, then capability id.
+    pub fn all_capabilities(&self) -> Vec<AiCapability> {
+        let mut out: Vec<AiCapability> = self
+            .capabilities
+            .iter()
+            .flat_map(|entry| entry.value().clone())
+            .collect();
+        out.sort_by(|a, b| {
+            a.module_id
+                .cmp(b.module_id)
+                .then_with(|| a.id.cmp(b.id))
+        });
+        out
+    }
+
+    /// One capability by module id and capability id.
+    pub fn find(&self, module_id: &str, capability: &str) -> Option<AiCapability> {
+        self.capabilities.get(module_id).and_then(|entry| {
+            entry
+                .value()
+                .iter()
+                .find(|item| item.id == capability)
+                .copied()
+        })
+    }
+
+    /// True when any registered capability declares this use case.
+    /// Used by policy validation so module-scoped use cases are
+    /// allowlistable without a hard-coded list.
+    pub fn has_use_case(&self, use_case: &str) -> bool {
+        self.capabilities.iter().any(|entry| {
+            entry
+                .value()
+                .iter()
+                .any(|capability| capability.use_case == use_case)
+        })
+    }
+}
+
+static CAPABILITY_REGISTRY: std::sync::OnceLock<AiCapabilityRegistry> =
+    std::sync::OnceLock::new();
+
+/// The shared capability registry, created on first use.
+pub fn ai_capability_registry() -> &'static AiCapabilityRegistry {
+    CAPABILITY_REGISTRY.get_or_init(AiCapabilityRegistry::new)
+}
+
+/// Register one module's AI capabilities. Called from the owning
+/// module's `init` with that module's complete capability list.
+pub fn register_ai_capabilities(module_id: &'static str, capabilities: &[AiCapability]) {
+    ai_capability_registry().register(module_id, capabilities);
+}
+
+/// Process-wide handle on the AI module's state, set once in
+/// `AiModule::init` from the same `AiState` the HTTP scope serves.
+static AI_STATE: std::sync::OnceLock<AiState> = std::sync::OnceLock::new();
+
+/// The shared AI state, or an internal error when the AI module
+/// has not initialised yet. Fail closed: no state means no
+/// capability call runs.
+fn ai_state() -> UnifiedResult<AiState> {
+    AI_STATE.get().cloned().ok_or_else(|| {
+        UnifiedError::internal("AI module is not initialised: capability calls are unavailable")
+    })
+}
+
+/// Split grounding-hook results: the first result is the grounding,
+/// every later result merges into `extra_context` (object results
+/// merge by key; other results land under `result_{index}`).
+fn split_grounding(results: &[Value]) -> (Value, Value) {
+    let grounding = match results.first() {
+        Some(Value::Object(_)) => results[0].clone(),
+        Some(other) => json!({ "result": other }),
+        None => Value::Null,
+    };
+    let mut extra = serde_json::Map::new();
+    for (index, result) in results.iter().skip(1).enumerate() {
+        match result {
+            Value::Object(map) => {
+                for (key, value) in map {
+                    extra.insert(key.clone(), value.clone());
+                }
+            }
+            other => {
+                extra.insert(format!("result_{index}"), other.clone());
+            }
+        }
+    }
+    (grounding, Value::Object(extra))
+}
+
+/// True when a grounding value carries real content: a non-empty
+/// string, a non-empty array / object (recursively), or any number
+/// or boolean. Empty objects, empty arrays, empty strings, and
+/// nulls carry nothing.
+fn grounding_has_content(value: &Value) -> bool {
+    match value {
+        Value::Null => false,
+        Value::Bool(_) | Value::Number(_) => true,
+        Value::String(text) => !text.trim().is_empty(),
+        Value::Array(items) => items.iter().any(grounding_has_content),
+        Value::Object(map) => map.values().any(grounding_has_content),
+    }
+}
+
+/// Render the validated, redacted input fields as prompt text, in
+/// declared field order. Non-string values render as compact JSON.
+fn render_capability_input(capability: &AiCapability, input: &Value) -> String {
+    let mut lines: Vec<String> = Vec::new();
+    for field in capability.input_fields {
+        match input.get(*field) {
+            Some(Value::String(text)) => lines.push(format!("{field}: {text}")),
+            Some(other) => lines.push(format!("{field}: {other}")),
+            None => lines.push(format!("{field}: (missing)")),
+        }
+    }
+    lines.join("\n")
+}
+
+/// Truncate text to at most `max` characters, keeping whole
+/// characters.
+fn truncate_chars(text: &str, max: usize) -> String {
+    if text.chars().count() <= max {
+        text.to_string()
+    } else {
+        text.chars().take(max).collect()
+    }
+}
+
+/// Run one registered AI capability end to end. See the section
+/// header for the step order and the security notes. Denials are
+/// 403s with reason codes; unknown module / capability is a 404
+/// with reason `ai_capability_not_found` in metadata; input
+/// validation failures are 422s. No prompt content is ever logged
+/// or placed in an audit payload.
+pub async fn run_ai_capability(
+    ctx: &AppContext,
+    caller: &Caller,
+    company_id: Option<Uuid>,
+    module_id: &str,
+    capability: &str,
+    input: Value,
+) -> UnifiedResult<Value> {
+    let request_id = Uuid::now_v7();
+    // (a) Look the capability up in the registry.
+    let found = ai_capability_registry()
+        .find(module_id, capability)
+        .ok_or_else(|| {
+            UnifiedError::not_found(format!(
+                "AI capability not found: {module_id}.{capability}"
+            ))
+            .with_metadata(
+                "reason",
+                Value::String("ai_capability_not_found".to_string()),
+            )
+            .with_metadata("module_id", Value::String(module_id.to_string()))
+            .with_metadata("capability", Value::String(capability.to_string()))
+        })?;
+    // (b) The input must be an object with exactly the declared fields.
+    let object = input.as_object().ok_or_else(|| {
+        UnifiedError::unprocessable("input must be a JSON object")
+            .with_metadata("module_id", Value::String(module_id.to_string()))
+            .with_metadata("capability", Value::String(capability.to_string()))
+    })?;
+    for field in found.input_fields {
+        if !object.contains_key(*field) {
+            return Err(UnifiedError::unprocessable(format!(
+                "input is missing required field \"{field}\""
+            ))
+            .with_metadata("field", Value::String(field.to_string()))
+            .with_metadata("module_id", Value::String(module_id.to_string()))
+            .with_metadata("capability", Value::String(capability.to_string())));
+        }
+    }
+    for key in object.keys() {
+        if !found
+            .input_fields
+            .iter()
+            .any(|field| *field == key.as_str())
+        {
+            return Err(UnifiedError::unprocessable(format!(
+                "input contains unexpected field \"{key}\""
+            ))
+            .with_metadata("field", Value::String(key.clone()))
+            .with_metadata("module_id", Value::String(module_id.to_string()))
+            .with_metadata("capability", Value::String(capability.to_string())));
+        }
+    }
+    if input.to_string().len() > MAX_PROMPT_LEN {
+        return Err(UnifiedError::bad_request(format!(
+            "input must be at most {MAX_PROMPT_LEN} characters in total"
+        )));
+    }
+    // (c) Redact PII unless the capability explicitly allows it.
+    // The privacy module owns redaction (`redact_value`); there is
+    // no `privacy.redact_requested` hook, so the public helper is
+    // called directly. Names are not redacted here (`false`):
+    // field values that name a person stay usable for drafting,
+    // while emails, phones, and ID-like numbers are masked.
+    let (effective_input, pii_redacted) = if found.allows_pii {
+        (input.clone(), false)
+    } else {
+        (privacy::redact_value(&input, false), true)
+    };
+    // (d) Grounding hook: `<module>.ai.<capability>_requested`.
+    let event = format!("{module_id}.ai.{capability}_requested");
+    let hook = ctx.hooks.emit(
+        &event,
+        json!({
+            "request_id": request_id.to_string(),
+            "module_id": module_id,
+            "capability": capability,
+            "caller": {
+                "user_id": caller_user_id(caller).map(|id| id.to_string()),
+                "company_id": company_id.map(|id| id.to_string()),
+            },
+            "input": effective_input,
+        }),
+    );
+    let (grounding, extra_context) = split_grounding(&hook.results);
+    let grounded = grounding_has_content(&grounding);
+    let grounding_text = if grounded {
+        truncate_chars(
+            &serde_json::to_string_pretty(&grounding).unwrap_or_default(),
+            MAX_CONTEXT_TEXT_LEN,
+        )
+    } else {
+        String::new()
+    };
+    let extra_text = if grounding_has_content(&extra_context) {
+        truncate_chars(
+            &serde_json::to_string_pretty(&extra_context).unwrap_or_default(),
+            MAX_CONTEXT_TEXT_LEN,
+        )
+    } else {
+        String::new()
+    };
+    // Prompt: the validated input fields, rendered in declared
+    // order. Grounding travels in the system prompt only, like the
+    // draft endpoints do.
+    let prompt_text = truncate_chars(
+        &render_capability_input(&found, &effective_input),
+        MAX_PROMPT_LEN,
+    );
+    let system_prompt = if grounded || !extra_text.is_empty() {
+        let mut text = format!(
+            "You are the \"{}\" capability of the \"{}\" module. Return only the output text, in the language of the input unless the capability asks otherwise. Do not publish, send, or act on anything; only return text.",
+            found.name, found.module_id
+        );
+        if !grounding_text.is_empty() {
+            text.push_str(&format!("\n\nGrounding (use only this context; do not invent facts):\n{grounding_text}"));
+        }
+        if !extra_text.is_empty() {
+            text.push_str(&format!("\n\nAdditional context:\n{extra_text}"));
+        }
+        Some(text)
+    } else {
+        Some(format!(
+            "You are the \"{}\" capability of the \"{}\" module. Return only the output text, in the language of the input unless the capability asks otherwise. Do not publish, send, or act on anything; only return text.",
+            found.name, found.module_id
+        ))
+    };
+    // Resolve the provider connection (not provider traffic), then
+    // (e) run the allowlist gate FIRST, before any provider traffic.
+    let state = ai_state()?;
+    let connection = resolve_connection(&state, None)?;
+    let auth = authorize_ai_call(
+        ctx,
+        &state,
+        caller,
+        company_id,
+        &AiCallRequest {
+            use_case: found.use_case,
+            model: &connection.model,
+            provider_id: connection.id,
+            provider_kind: connection.kind.as_str(),
+            estimated_tokens: estimate_prompt_tokens(&prompt_text) + DEFAULT_MAX_TOKENS,
+            use_personal_key: false,
+            product_id: None,
+        },
+    )?;
+    // (e2) Package-entitlement gate, after authorization and
+    // before any provider traffic. A sellable non-core module may
+    // only run a capability for a tenant that holds an entitlement
+    // for it, resolved through the `entitlements.check_requested`
+    // hook query (answered by the entitlements module from its
+    // stored rows; the event name is the literal of
+    // `entitlements::EVENT_CHECK_REQUESTED` — the const cannot be
+    // referenced here until that module is declared in `mod.rs`).
+    // The answer is read fail-closed, like `role.check`: only an
+    // explicit `allowed: true` — on the payload first, then in the
+    // contributed results — passes. No answer, an explicit
+    // `false`, or a malformed answer denies the call with a 403
+    // and the provider is never contacted. Core modules and
+    // modules that are not sellable pass from the registry alone,
+    // mirroring the SaaS packages hook path. A capability
+    // registered for a module the registry does not know is
+    // inconsistent state and also denies. Control-plane calls
+    // carry no company id, so there is no tenant to entitle; they
+    // are covered by the allowlist gate in (e) above.
+    if let Some(tenant_company_id) = company_id {
+        let gated = match ctx.modules.get(module_id) {
+            Some(module) => module.available_as_product() && !module.is_core(),
+            None => true,
+        };
+        if gated {
+            let answered = ctx.hooks.emit(
+                "entitlements.check_requested",
+                json!({
+                    "company_id": tenant_company_id.to_string(),
+                    "module_id": module_id,
+                    "allowed": false,
+                }),
+            );
+            let allowed = if answered.results.is_empty() {
+                false
+            } else {
+                answered
+                    .get("allowed")
+                    .and_then(|value| value.as_bool())
+                    .or_else(|| {
+                        answered
+                            .results
+                            .iter()
+                            .filter_map(|value| {
+                                value.get("allowed").and_then(|allowed| allowed.as_bool())
+                            })
+                            .next()
+                    })
+                    .unwrap_or(false)
+            };
+            if !allowed {
+                return Err(UnifiedError::forbidden(format!(
+                    "Tenant is not entitled to module \"{module_id}\""
+                ))
+                .with_metadata(
+                    "reason",
+                    Value::String("entitlement.required".to_string()),
+                )
+                .with_metadata("module_id", Value::String(module_id.to_string()))
+                .with_metadata("capability", Value::String(capability.to_string())));
+            }
+        }
+    }
+    // (f) Run the completion through the shared path; usage
+    // recording and the `ai.call.completed` / `ai.call.failed`
+    // events happen inside `run_completion` (g).
+    let call = CompletionCall {
+        prompt: prompt_text,
+        system_prompt,
+        max_tokens: DEFAULT_MAX_TOKENS,
+        temperature: None,
+    };
+    let outcome =
+        run_completion(&state, ctx, &caller.actor, &connection, &call, found.use_case, &auth)
+            .await?;
+    // (h) Return the output inline.
+    Ok(json!({
+        "capability": found.id,
+        "module_id": found.module_id,
+        "output": outcome.text,
+        "model": outcome.model,
+        "grounded": grounded,
+        "pii_redacted": pii_redacted,
+        "usage_id": outcome.usage.id.to_string(),
+    }))
+}
+
+// ---------------------------------------------------------------------------
+// Capability HTTP handlers.
+// ---------------------------------------------------------------------------
+
+/// Body of `POST /capabilities/{module_id}/{capability}`.
+#[derive(Debug, Deserialize)]
+pub struct CapabilityCallInput {
+    pub input: Value,
+}
+
+/// List every registered capability, paginated and filterable by
+/// `module_id` and free-text search over id / name / description.
+async fn list_capabilities(
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+    query: web::Query<PaginationParams>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let result: UnifiedResult<Value> = (|| {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_AI_USE)?;
+        let params = query.into_inner();
+        let module_filter = params.filters.get("module_id").cloned();
+        let search = params.search.clone().unwrap_or_default().to_lowercase();
+        let mut items: Vec<AiCapability> = ai_capability_registry()
+            .all_capabilities()
+            .into_iter()
+            .filter(|capability| {
+                if let Some(module_id) = &module_filter {
+                    if capability.module_id != module_id {
+                        return false;
+                    }
+                }
+                if !search.is_empty() {
+                    let haystack = format!(
+                        "{} {} {} {}",
+                        capability.module_id,
+                        capability.id,
+                        capability.name,
+                        capability.description
+                    )
+                    .to_lowercase();
+                    if !haystack.contains(&search) {
+                        return false;
+                    }
+                }
+                true
+            })
+            .collect();
+        items.sort_by(|a, b| {
+            a.module_id
+                .cmp(b.module_id)
+                .then_with(|| a.id.cmp(b.id))
+        });
+        Ok(paginate(items, &params).to_json())
+    })();
+    match result {
+        Ok(data) => ok(data),
+        Err(error) => err(error, debug),
+    }
+}
+
+/// List one module's registered capabilities, paginated.
+async fn list_module_capabilities(
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+    path: web::Path<String>,
+    query: web::Query<PaginationParams>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let module_id = path.into_inner();
+    let result: UnifiedResult<Value> = (|| {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_AI_USE)?;
+        let params = query.into_inner();
+        let search = params.search.clone().unwrap_or_default().to_lowercase();
+        let mut items: Vec<AiCapability> = ai_capability_registry()
+            .capabilities_for(&module_id)
+            .into_iter()
+            .filter(|capability| {
+                if search.is_empty() {
+                    return true;
+                }
+                let haystack = format!(
+                    "{} {} {}",
+                    capability.id, capability.name, capability.description
+                )
+                .to_lowercase();
+                haystack.contains(&search)
+            })
+            .collect();
+        items.sort_by(|a, b| a.id.cmp(b.id));
+        Ok(paginate(items, &params).to_json())
+    })();
+    match result {
+        Ok(data) => ok(data),
+        Err(error) => err(error, debug),
+    }
+}
+
+/// Run one registered capability: `POST
+/// /capabilities/{module_id}/{capability}` with body
+/// `{"input": {...}}`. Requires `ai:use`; delegates to
+/// `run_ai_capability`.
+async fn run_capability_endpoint(
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+    path: web::Path<(String, String)>,
+    body: web::Json<CapabilityCallInput>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let (module_id, capability) = path.into_inner();
+    let input = body.into_inner().input;
+    let caller = match caller(&req) {
+        Ok(caller) => caller,
+        Err(error) => return err(error, debug),
+    };
+    if let Err(error) = require_permission(&ctx, &caller.role, PERM_AI_USE) {
+        return err(error, debug);
+    }
+    let company_id = resolve_capability_company(&ctx, &req, &caller);
+    match run_ai_capability(&ctx, &caller, company_id, &module_id, &capability, input).await {
+        Ok(data) => ok(data),
+        Err(error) => err(error, debug),
+    }
+}
+
 /// Run one provider call end to end: resolve and rate-limit the
 /// connection, decrypt the key, call the adapter, record usage, and
 /// emit the audit event. A disabled connection is refused before any
 /// provider traffic.
 async fn run_completion(
     state: &AiState,
-    ctx: &Arc<AppContext>,
+    ctx: &AppContext,
     actor: &str,
-    provider_id: Option<Uuid>,
+    connection: &AiProviderConnection,
     call: &CompletionCall,
     use_case: &str,
+    auth: &AiAuthorization,
 ) -> UnifiedResult<CompletionOutcome> {
-    let connection = resolve_connection(state, provider_id)?;
     if !connection.enabled {
         return Err(UnifiedError::bad_request(format!(
             "AI provider connection \"{}\" is disabled",
             connection.name
         )));
     }
-    check_rate_limit(state, &connection)?;
-    let secret = encryption_secret(ctx);
-    let api_key = match &connection.api_key_encrypted {
-        Some(stored) => Some(decrypt_api_key(&secret, stored)?),
-        None => None,
+    check_rate_limit(state, connection)?;
+    // The key comes from the authorization: the caller's personal key
+    // when the call runs on it, otherwise the connection's key. The
+    // personal key was decrypted once by `authorize_ai_call` and
+    // lives only for this call.
+    let api_key = if let Some(personal) = &auth.personal_key {
+        Some(personal.decrypted_key.clone())
+    } else {
+        let secret = encryption_secret(ctx);
+        match &connection.api_key_encrypted {
+            Some(stored) => Some(decrypt_api_key(&secret, stored)?),
+            None => None,
+        }
     };
-    let adapter = ai_provider_registry().build(&connection, api_key)?;
+    let adapter = ai_provider_registry().build(connection, api_key)?;
     let started = Instant::now();
     let result = adapter.complete(call).await;
     let latency_ms = started.elapsed().as_millis() as u64;
     match result {
         Ok(raw) => {
-            let usage = record_usage(state, &connection, actor, use_case, Some(&raw), latency_ms, None);
+            let usage = record_usage(
+                state,
+                connection,
+                actor,
+                auth.user_id,
+                auth.company_id,
+                use_case,
+                Some(&raw),
+                latency_ms,
+                None,
+                auth.use_personal_key,
+            );
             emit_audit(
                 ctx,
                 EVENT_AI_CALL_COMPLETED,
@@ -1878,7 +4854,7 @@ async fn run_completion(
                     "provider_id": connection.id.to_string(),
                     "provider_kind": connection.kind.as_str(),
                     "use_case": use_case,
-                    "model": connection.model,
+                    "model": connection.model.clone(),
                     "prompt_tokens": raw.prompt_tokens,
                     "completion_tokens": raw.completion_tokens,
                     "usage_id": usage.id.to_string(),
@@ -1893,7 +4869,18 @@ async fn run_completion(
             })
         }
         Err(error) => {
-            let usage = record_usage(state, &connection, actor, use_case, None, latency_ms, Some(error.code));
+            let usage = record_usage(
+                state,
+                connection,
+                actor,
+                auth.user_id,
+                auth.company_id,
+                use_case,
+                None,
+                latency_ms,
+                Some(error.code),
+                auth.use_personal_key,
+            );
             emit_audit(
                 ctx,
                 EVENT_AI_CALL_FAILED,
@@ -1904,7 +4891,7 @@ async fn run_completion(
                     "provider_id": connection.id.to_string(),
                     "provider_kind": connection.kind.as_str(),
                     "use_case": use_case,
-                    "model": connection.model,
+                    "model": connection.model.clone(),
                     "error_code": error.code,
                     "usage_id": usage.id.to_string(),
                 }),
@@ -2078,7 +5065,7 @@ impl Module for AiModule {
     }
 
     fn description(&self) -> &'static str {
-        "AI provider abstraction (Anthropic, OpenAI, OpenAI-compatible, local) with human-approved drafts for support, content, and email, plus usage tracking and a shared site context."
+        "AI provider abstraction (Anthropic, OpenAI, OpenAI-compatible, local) with human-approved drafts for support, content, and email, plus usage tracking, a shared site context, company/user access allowlists with personal API keys and personal MCP servers, layered AI gating (global kill-switch, purchased-product layer, company and user on/off switches, per-feature toggles) enforced on every call, and a registry of per-module AI capabilities run through one gated runner."
     }
 
     fn requires(&self) -> &[&'static str] {
@@ -2097,6 +5084,12 @@ impl Module for AiModule {
 
     fn init(&self, ctx: &AppContext) -> UnifiedResult<()> {
         *self.state.hooks.write().expect("hooks lock poisoned") = Some(Arc::clone(&ctx.hooks));
+        // Share this module's state with the capability runner
+        // (`run_ai_capability`); the first initialisation wins.
+        let _ = AI_STATE.set(self.state.clone());
+        // Register the AI module's own capabilities so the registry
+        // is self-describing from startup.
+        register_ai_capabilities("ai", AI_CAPABILITIES);
         Ok(())
     }
 
@@ -2161,7 +5154,36 @@ impl Module for AiModule {
             RouteInfo { method: "GET", path: "/api/v1/ai/usage", owner: "ai", description: "List usage records" },
             RouteInfo { method: "GET", path: "/api/v1/ai/usage/{id}", owner: "ai", description: "Get usage record" },
             RouteInfo { method: "GET", path: "/api/v1/ai/usage/summary", owner: "ai", description: "Usage summary" },
+            RouteInfo { method: "GET", path: "/api/v1/ai/usage/by-user", owner: "ai", description: "Usage records for one user (own records, or any user for usage readers)" },
+            RouteInfo { method: "GET", path: "/api/v1/ai/usage/by-company", owner: "ai", description: "Usage records for one company (own company, or any company for platform usage readers)" },
+            RouteInfo { method: "GET", path: "/api/v1/ai/access/companies", owner: "ai", description: "List company access policies" },
+            RouteInfo { method: "POST", path: "/api/v1/ai/access/companies", owner: "ai", description: "Create company access policy" },
+            RouteInfo { method: "GET", path: "/api/v1/ai/access/companies/{id}", owner: "ai", description: "Get company access policy" },
+            RouteInfo { method: "PATCH", path: "/api/v1/ai/access/companies/{id}", owner: "ai", description: "Update company access policy" },
+            RouteInfo { method: "DELETE", path: "/api/v1/ai/access/companies/{id}", owner: "ai", description: "Delete company access policy" },
+            RouteInfo { method: "GET", path: "/api/v1/ai/access/users", owner: "ai", description: "List user access policies" },
+            RouteInfo { method: "POST", path: "/api/v1/ai/access/users", owner: "ai", description: "Create user access policy" },
+            RouteInfo { method: "GET", path: "/api/v1/ai/access/users/{id}", owner: "ai", description: "Get user access policy" },
+            RouteInfo { method: "PATCH", path: "/api/v1/ai/access/users/{id}", owner: "ai", description: "Update user access policy" },
+            RouteInfo { method: "DELETE", path: "/api/v1/ai/access/users/{id}", owner: "ai", description: "Delete user access policy" },
+            RouteInfo { method: "GET", path: "/api/v1/ai/my-key", owner: "ai", description: "Get own personal API key metadata (never the key)" },
+            RouteInfo { method: "POST", path: "/api/v1/ai/my-key", owner: "ai", description: "Create or rotate own personal API key" },
+            RouteInfo { method: "DELETE", path: "/api/v1/ai/my-key", owner: "ai", description: "Delete own personal API key" },
+            RouteInfo { method: "POST", path: "/api/v1/ai/my-key/test", owner: "ai", description: "Test own personal API key" },
+            RouteInfo { method: "GET", path: "/api/v1/ai/my-mcp", owner: "ai", description: "List own personal MCP servers" },
+            RouteInfo { method: "POST", path: "/api/v1/ai/my-mcp", owner: "ai", description: "Create own personal MCP server" },
+            RouteInfo { method: "GET", path: "/api/v1/ai/my-mcp/{id}", owner: "ai", description: "Get own personal MCP server" },
+            RouteInfo { method: "PATCH", path: "/api/v1/ai/my-mcp/{id}", owner: "ai", description: "Update own personal MCP server" },
+            RouteInfo { method: "DELETE", path: "/api/v1/ai/my-mcp/{id}", owner: "ai", description: "Delete own personal MCP server" },
             RouteInfo { method: "GET", path: "/api/v1/ai/context", owner: "ai", description: "Get the shared site context" },
+            RouteInfo { method: "GET", path: "/api/v1/ai/capabilities", owner: "ai", description: "List every registered AI capability" },
+            RouteInfo { method: "GET", path: "/api/v1/ai/capabilities/{module_id}", owner: "ai", description: "List one module's registered AI capabilities" },
+            RouteInfo { method: "POST", path: "/api/v1/ai/capabilities/{module_id}/{capability}", owner: "ai", description: "Run one registered AI capability" },
+            RouteInfo { method: "GET", path: "/api/v1/ai/gating/effective", owner: "ai", description: "Effective layered gate decision for a user / feature, with per-layer breakdown" },
+            RouteInfo { method: "PATCH", path: "/api/v1/ai/gating/company/{company_id}", owner: "ai", description: "Switch AI on/off or switch features off for a company" },
+            RouteInfo { method: "PATCH", path: "/api/v1/ai/gating/user/{user_id}", owner: "ai", description: "Switch AI on/off or switch features off for a user" },
+            RouteInfo { method: "GET", path: "/api/v1/ai/gating/settings", owner: "ai", description: "Read the global AI settings (kill-switch + global feature switches)" },
+            RouteInfo { method: "PATCH", path: "/api/v1/ai/gating/settings", owner: "ai", description: "Change the global AI settings (kill-switch + global feature switches)" },
         ]
     }
 
@@ -2189,8 +5211,37 @@ impl Module for AiModule {
                 .route("/drafts/{id}", web::delete().to(delete_draft))
                 .route("/usage", web::get().to(list_usage))
                 .route("/usage/summary", web::get().to(usage_summary))
+                .route("/usage/by-user", web::get().to(usage_by_user))
+                .route("/usage/by-company", web::get().to(usage_by_company))
                 .route("/usage/{id}", web::get().to(get_usage))
-                .route("/context", web::get().to(get_context)),
+                .route("/access/companies", web::get().to(list_company_policies))
+                .route("/access/companies", web::post().to(create_company_policy))
+                .route("/access/companies/{id}", web::get().to(get_company_policy))
+                .route("/access/companies/{id}", web::patch().to(update_company_policy))
+                .route("/access/companies/{id}", web::delete().to(delete_company_policy))
+                .route("/access/users", web::get().to(list_user_policies))
+                .route("/access/users", web::post().to(create_user_policy))
+                .route("/access/users/{id}", web::get().to(get_user_policy))
+                .route("/access/users/{id}", web::patch().to(update_user_policy))
+                .route("/access/users/{id}", web::delete().to(delete_user_policy))
+                .route("/my-key", web::get().to(get_my_key))
+                .route("/my-key", web::post().to(upsert_my_key))
+                .route("/my-key", web::delete().to(delete_my_key))
+                .route("/my-key/test", web::post().to(test_my_key))
+                .route("/my-mcp", web::get().to(list_my_mcp))
+                .route("/my-mcp", web::post().to(create_my_mcp))
+                .route("/my-mcp/{id}", web::get().to(get_my_mcp))
+                .route("/my-mcp/{id}", web::patch().to(update_my_mcp))
+                .route("/my-mcp/{id}", web::delete().to(delete_my_mcp))
+                .route("/gating/effective", web::get().to(get_effective_gate))
+                .route("/gating/company/{company_id}", web::patch().to(patch_company_gate))
+                .route("/gating/user/{user_id}", web::patch().to(patch_user_gate))
+                .route("/gating/settings", web::get().to(get_global_settings))
+                .route("/gating/settings", web::patch().to(patch_global_settings))
+                .route("/context", web::get().to(get_context))
+                .route("/capabilities", web::get().to(list_capabilities))
+                .route("/capabilities/{module_id}", web::get().to(list_module_capabilities))
+                .route("/capabilities/{module_id}/{capability}", web::post().to(run_capability_endpoint)),
         );
     }
 }
@@ -2541,6 +5592,29 @@ async fn test_provider_connection(
         Ok(caller) => caller,
         Err(error) => return err(error, debug),
     };
+    // The connection test is a provider call, so the allowlist gate
+    // runs first: a test on a connection the caller's company or user
+    // is not allowed to use is denied before any provider traffic.
+    // A failed test itself is still recorded as a usage row below.
+    let user_id = caller_user_id(&caller);
+    let company_id = resolve_caller_company(&ctx, &req, &caller);
+    if let Err(error) = authorize_ai_call(
+        &ctx,
+        &state,
+        &caller,
+        company_id,
+        &AiCallRequest {
+            use_case: "test",
+            model: &connection.model,
+            provider_id: connection.id,
+            provider_kind: connection.kind.as_str(),
+            estimated_tokens: 0,
+            use_personal_key: false,
+            product_id: resolve_caller_product(&req),
+        },
+    ) {
+        return err(error, debug);
+    }
     let started = Instant::now();
     let secret = encryption_secret(&ctx);
     let api_key = match &connection.api_key_encrypted {
@@ -2556,7 +5630,18 @@ async fn test_provider_connection(
     };
     match adapter.test_connection().await {
         Ok(test) => {
-            let usage = record_usage(&state, &connection, &caller.actor, "test", None, test.latency_ms, None);
+            let usage = record_usage(
+                &state,
+                &connection,
+                &caller.actor,
+                user_id,
+                company_id,
+                "test",
+                None,
+                test.latency_ms,
+                None,
+                false,
+            );
             emit_audit(
                 &ctx,
                 EVENT_AI_CALL_COMPLETED,
@@ -2574,7 +5659,18 @@ async fn test_provider_connection(
         }
         Err(error) => {
             let latency_ms = started.elapsed().as_millis() as u64;
-            let usage = record_usage(&state, &connection, &caller.actor, "test", None, latency_ms, Some(error.code));
+            let usage = record_usage(
+                &state,
+                &connection,
+                &caller.actor,
+                user_id,
+                company_id,
+                "test",
+                None,
+                latency_ms,
+                Some(error.code),
+                false,
+            );
             emit_audit(
                 &ctx,
                 EVENT_AI_CALL_FAILED,
@@ -2606,6 +5702,41 @@ async fn test_provider_connection(
 // ---------------------------------------------------------------------------
 // Completion and draft handlers.
 // ---------------------------------------------------------------------------
+
+/// Resolve the provider connection and run the allowlist gate for
+/// one draft / completion call, after the prompt is built and before
+/// any provider traffic. Returns the resolved connection plus the
+/// authorization. Every completion / draft entry point calls this.
+fn authorize_call(
+    ctx: &Arc<AppContext>,
+    state: &AiState,
+    req: &HttpRequest,
+    caller: &Caller,
+    provider_id: Option<Uuid>,
+    prompt_text: &str,
+    max_tokens: u32,
+    use_case: &str,
+    use_personal_key: bool,
+) -> UnifiedResult<(AiProviderConnection, AiAuthorization)> {
+    let connection = resolve_connection(state, provider_id)?;
+    let company_id = resolve_caller_company(ctx, req, caller);
+    let auth = authorize_ai_call(
+        ctx,
+        state,
+        caller,
+        company_id,
+        &AiCallRequest {
+            use_case,
+            model: &connection.model,
+            provider_id: connection.id,
+            provider_kind: connection.kind.as_str(),
+            estimated_tokens: estimate_prompt_tokens(prompt_text) + max_tokens,
+            use_personal_key,
+            product_id: resolve_caller_product(req),
+        },
+    )?;
+    Ok((connection, auth))
+}
 
 async fn complete(
     ctx: web::Data<Arc<AppContext>>,
@@ -2639,7 +5770,10 @@ async fn complete(
         .grounding_query
         .clone()
         .unwrap_or_else(|| prompt.clone());
-    let shared = assemble_shared_context(Some(&ctx.hooks), &grounding_query, &site, true);
+    let mut shared = assemble_shared_context(Some(&ctx.hooks), &grounding_query, &site, true);
+    shared
+        .grounding_articles
+        .extend(personal_mcp_grounding_sources(&state, caller_user_id(&caller)));
     let context_text = shared_context_prompt(&shared);
     let full_system = match system_prompt {
         Some(system) if !context_text.is_empty() => {
@@ -2655,8 +5789,28 @@ async fn complete(
         max_tokens,
         temperature,
     };
-    let use_case = input.use_case.clone().unwrap_or_else(|| "complete".to_string());
-    match run_completion(&state, &ctx, &caller.actor, input.provider_id, &call, &use_case).await {
+    let use_case = match input.use_case.clone() {
+        Some(use_case) => match validate_use_case(&use_case) {
+            Ok(use_case) => use_case,
+            Err(error) => return err(error, debug),
+        },
+        None => "complete".to_string(),
+    };
+    let (connection, auth) = match authorize_call(
+        &ctx,
+        &state,
+        &req,
+        &caller,
+        input.provider_id,
+        &prompt,
+        max_tokens,
+        &use_case,
+        input.use_personal_key,
+    ) {
+        Ok(authorization) => authorization,
+        Err(error) => return err(error, debug),
+    };
+    match run_completion(&state, &ctx, &caller.actor, &connection, &call, &use_case, &auth).await {
         Ok(outcome) => {
             let draft = store_draft(
                 &state,
@@ -2740,7 +5894,10 @@ async fn build_reply_draft(
         );
     }
     let site = input.site.clone().unwrap_or_default();
-    let shared = assemble_shared_context(Some(&ctx.hooks), &instruction, &site, true);
+    let mut shared = assemble_shared_context(Some(&ctx.hooks), &instruction, &site, true);
+    shared
+        .grounding_articles
+        .extend(personal_mcp_grounding_sources(&state, caller_user_id(&caller)));
     let context_text = shared_context_prompt(&shared);
     let system_prompt = if context_text.is_empty() {
         Some(
@@ -2770,7 +5927,21 @@ async fn build_reply_draft(
         ),
         _ => (None, None),
     };
-    match run_completion(&state, &ctx, &caller.actor, input.provider_id, &call, use_case).await {
+    let (connection, auth) = match authorize_call(
+        &ctx,
+        &state,
+        &req,
+        &caller,
+        input.provider_id,
+        &prompt,
+        max_tokens,
+        use_case,
+        input.use_personal_key,
+    ) {
+        Ok(authorization) => authorization,
+        Err(error) => return err(error, debug),
+    };
+    match run_completion(&state, &ctx, &caller.actor, &connection, &call, use_case, &auth).await {
         Ok(outcome) => {
             let draft = store_draft(
                 &state,
@@ -2849,7 +6020,10 @@ async fn content_draft(
         Err(error) => return err(error, debug),
     };
     let site = input.site.clone().unwrap_or_default();
-    let shared = assemble_shared_context(Some(&ctx.hooks), &prompt, &site, true);
+    let mut shared = assemble_shared_context(Some(&ctx.hooks), &prompt, &site, true);
+    shared
+        .grounding_articles
+        .extend(personal_mcp_grounding_sources(&state, caller_user_id(&caller)));
     let context_text = shared_context_prompt(&shared);
     let system_prompt = if context_text.is_empty() {
         Some(format!(
@@ -2866,7 +6040,21 @@ async fn content_draft(
         max_tokens,
         temperature,
     };
-    match run_completion(&state, &ctx, &caller.actor, input.provider_id, &call, "content").await {
+    let (connection, auth) = match authorize_call(
+        &ctx,
+        &state,
+        &req,
+        &caller,
+        input.provider_id,
+        &prompt,
+        max_tokens,
+        "content",
+        input.use_personal_key,
+    ) {
+        Ok(authorization) => authorization,
+        Err(error) => return err(error, debug),
+    };
+    match run_completion(&state, &ctx, &caller.actor, &connection, &call, "content", &auth).await {
         Ok(outcome) => {
             let draft = store_draft(
                 &state,
@@ -2916,7 +6104,10 @@ async fn email_draft(
         Err(error) => return err(error, debug),
     };
     let site = input.site.clone().unwrap_or_default();
-    let shared = assemble_shared_context(Some(&ctx.hooks), &prompt, &site, true);
+    let mut shared = assemble_shared_context(Some(&ctx.hooks), &prompt, &site, true);
+    shared
+        .grounding_articles
+        .extend(personal_mcp_grounding_sources(&state, caller_user_id(&caller)));
     let context_text = shared_context_prompt(&shared);
     let system_prompt = if context_text.is_empty() {
         Some(
@@ -2933,12 +6124,26 @@ async fn email_draft(
         None => prompt.clone(),
     };
     let call = CompletionCall {
-        prompt: full_prompt,
+        prompt: full_prompt.clone(),
         system_prompt,
         max_tokens,
         temperature,
     };
-    match run_completion(&state, &ctx, &caller.actor, input.provider_id, &call, "email").await {
+    let (connection, auth) = match authorize_call(
+        &ctx,
+        &state,
+        &req,
+        &caller,
+        input.provider_id,
+        &full_prompt,
+        max_tokens,
+        "email",
+        input.use_personal_key,
+    ) {
+        Ok(authorization) => authorization,
+        Err(error) => return err(error, debug),
+    };
+    match run_completion(&state, &ctx, &caller.actor, &connection, &call, "email", &auth).await {
         Ok(outcome) => {
             // Split a leading "Subject: ..." line off the body.
             let (subject, body_text) = match outcome.text.split_once('\n') {
@@ -3004,7 +6209,10 @@ async fn answer(
     // Grounding uses the knowledgebase module's real search path
     // (`knowledgebase.search`, published articles only) through the
     // shared-context assembler.
-    let shared = assemble_shared_context(Some(&ctx.hooks), &question, &site, true);
+    let mut shared = assemble_shared_context(Some(&ctx.hooks), &question, &site, true);
+    shared
+        .grounding_articles
+        .extend(personal_mcp_grounding_sources(&state, caller_user_id(&caller)));
     let grounded = !shared.grounding_articles.is_empty();
     let context_text = shared_context_prompt(&shared);
     let system_prompt = if grounded {
@@ -3020,7 +6228,21 @@ async fn answer(
         max_tokens,
         temperature,
     };
-    match run_completion(&state, &ctx, &caller.actor, input.provider_id, &call, "kb_answer").await {
+    let (connection, auth) = match authorize_call(
+        &ctx,
+        &state,
+        &req,
+        &caller,
+        input.provider_id,
+        &question,
+        max_tokens,
+        "kb_answer",
+        input.use_personal_key,
+    ) {
+        Ok(authorization) => authorization,
+        Err(error) => return err(error, debug),
+    };
+    match run_completion(&state, &ctx, &caller.actor, &connection, &call, "kb_answer", &auth).await {
         Ok(outcome) => {
             let draft = store_draft(
                 &state,
@@ -3435,6 +6657,1258 @@ async fn usage_summary(
     })();
     match result {
         Ok(summary) => ok(summary),
+        Err(error) => err(error, debug),
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Access allowlist handlers.
+//
+// Admin endpoints (`/access/...`) require `ai:manage_providers`.
+// A caller who belongs to a company may only manage policies of
+// that company (`require_company_scope`); a caller with no
+// resolvable company is a platform admin. Personal endpoints
+// (`/my-key`, `/my-mcp`) derive the owner from the `X-User-Id`
+// header only: a caller can never see or touch another user's key
+// or servers, and keys / tokens are never returned, only metadata.
+// ---------------------------------------------------------------------------
+
+/// Find a company policy by its policy id (the store is keyed by
+/// `company_id`, so this scans).
+fn find_company_policy(state: &AiState, id: Uuid) -> Option<AiCompanyPolicy> {
+    state
+        .company_policies
+        .iter()
+        .map(|entry| entry.value().clone())
+        .find(|policy| policy.id == id)
+}
+
+/// Find a user policy by its policy id (the store is keyed by
+/// `user_id`, so this scans).
+fn find_user_policy(state: &AiState, id: Uuid) -> Option<AiUserPolicy> {
+    state
+        .user_policies
+        .iter()
+        .map(|entry| entry.value().clone())
+        .find(|policy| policy.id == id)
+}
+
+/// Load a personal MCP server the caller owns. A foreign or missing
+/// id is the same 404: existence is never leaked across users.
+fn load_own_mcp_server(
+    state: &AiState,
+    user_id: Uuid,
+    id: Uuid,
+) -> UnifiedResult<AiUserMcpServer> {
+    match state.personal_mcp_servers.get(&id) {
+        Some(entry) if entry.user_id == user_id => Ok(entry.value().clone()),
+        _ => Err(UnifiedError::not_found(format!(
+            "Personal MCP server not found: {id}"
+        ))),
+    }
+}
+
+async fn list_company_policies(
+    ctx: web::Data<Arc<AppContext>>,
+    state: web::Data<AiState>,
+    req: HttpRequest,
+    query: web::Query<PaginationParams>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let result: UnifiedResult<Value> = (|| {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_AI_MANAGE_PROVIDERS)?;
+        let caller_company = resolve_caller_company(&ctx, &req, &caller);
+        let params = query.into_inner();
+        let company_filter = params.filters.get("company_id").cloned();
+        let enabled_filter = params.filters.get("enabled").cloned();
+        let search = params.search.clone().unwrap_or_default().to_lowercase();
+        let mut items: Vec<AiCompanyPolicy> = state
+            .company_policies
+            .iter()
+            .map(|entry| entry.value().clone())
+            .filter(|policy| {
+                if let Some(company) = caller_company {
+                    if policy.company_id != company {
+                        return false;
+                    }
+                }
+                if let Some(company_id) = &company_filter {
+                    if policy.company_id.to_string() != *company_id {
+                        return false;
+                    }
+                }
+                if let Some(enabled) = &enabled_filter {
+                    let expected = match enabled.as_str() {
+                        "true" => true,
+                        "false" => false,
+                        _ => return false,
+                    };
+                    if policy.enabled != expected {
+                        return false;
+                    }
+                }
+                if !search.is_empty() && !policy.company_id.to_string().contains(&search) {
+                    return false;
+                }
+                true
+            })
+            .collect();
+        let sort = params.allowed_sort(&["created_at", "company_id"], "created_at");
+        let descending = params.normalized().order == "desc";
+        items.sort_by(|a, b| {
+            let ordering = match sort.as_str() {
+                "company_id" => a.company_id.cmp(&b.company_id),
+                _ => a.created_at.cmp(&b.created_at),
+            };
+            if descending {
+                ordering.reverse()
+            } else {
+                ordering
+            }
+        });
+        Ok(paginate(items, &params).to_json())
+    })();
+    match result {
+        Ok(data) => ok(data),
+        Err(error) => err(error, debug),
+    }
+}
+
+async fn create_company_policy(
+    ctx: web::Data<Arc<AppContext>>,
+    state: web::Data<AiState>,
+    req: HttpRequest,
+    body: web::Json<CreateCompanyPolicyInput>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let input = body.into_inner();
+    let result: UnifiedResult<AiCompanyPolicy> = (|| {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_AI_MANAGE_PROVIDERS)?;
+        let caller_company = resolve_caller_company(&ctx, &req, &caller);
+        require_company_scope(caller_company, input.company_id)?;
+        let allowed_models = validate_policy_models(&input.allowed_models)?;
+        let allowed_features = validate_policy_features(&input.allowed_features)?;
+        let monthly_token_cap = validate_token_cap(input.monthly_token_cap)?;
+        let monthly_cost_cap_usd = validate_cost_cap(input.monthly_cost_cap_usd)?;
+        let disabled_features = validate_gate_features(&input.disabled_features)?;
+        if state.company_policies.contains_key(&input.company_id) {
+            return Err(UnifiedError::conflict(format!(
+                "A company access policy already exists for company {}",
+                input.company_id
+            )));
+        }
+        let now = Utc::now();
+        let policy = AiCompanyPolicy {
+            id: Uuid::now_v7(),
+            company_id: input.company_id,
+            allowed_models,
+            allowed_features,
+            monthly_token_cap,
+            monthly_cost_cap_usd,
+            enabled: input.enabled.unwrap_or(true),
+            ai_enabled: input.ai_enabled.unwrap_or(true),
+            disabled_features,
+            created_at: now,
+            updated_at: now,
+        };
+        state
+            .company_policies
+            .insert(policy.company_id, policy.clone());
+        emit_audit(
+            &ctx,
+            EVENT_AI_ACCESS_POLICY_CHANGED,
+            &caller.actor,
+            &format!("ai-company-policy:{}", policy.id),
+            json!({
+                "id": policy.id.to_string(),
+                "company_id": policy.company_id.to_string(),
+                "enabled": policy.enabled,
+            }),
+        );
+        Ok(policy)
+    })();
+    match result {
+        Ok(policy) => created(policy),
+        Err(error) => err(error, debug),
+    }
+}
+
+async fn get_company_policy(
+    ctx: web::Data<Arc<AppContext>>,
+    state: web::Data<AiState>,
+    req: HttpRequest,
+    path: web::Path<String>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let result: UnifiedResult<AiCompanyPolicy> = (|| {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_AI_MANAGE_PROVIDERS)?;
+        let caller_company = resolve_caller_company(&ctx, &req, &caller);
+        let id = parse_uuid(&path.into_inner(), "company policy")?;
+        let policy = find_company_policy(&state, id).ok_or_else(|| {
+            UnifiedError::not_found(format!("Company access policy not found: {id}"))
+        })?;
+        require_company_scope(caller_company, policy.company_id)?;
+        Ok(policy)
+    })();
+    match result {
+        Ok(policy) => ok(policy),
+        Err(error) => err(error, debug),
+    }
+}
+
+async fn update_company_policy(
+    ctx: web::Data<Arc<AppContext>>,
+    state: web::Data<AiState>,
+    req: HttpRequest,
+    path: web::Path<String>,
+    body: web::Json<UpdateCompanyPolicyInput>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let input = body.into_inner();
+    let result: UnifiedResult<AiCompanyPolicy> = (|| {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_AI_MANAGE_PROVIDERS)?;
+        let caller_company = resolve_caller_company(&ctx, &req, &caller);
+        let id = parse_uuid(&path.into_inner(), "company policy")?;
+        let mut policy = find_company_policy(&state, id).ok_or_else(|| {
+            UnifiedError::not_found(format!("Company access policy not found: {id}"))
+        })?;
+        require_company_scope(caller_company, policy.company_id)?;
+        if let Some(models) = &input.allowed_models {
+            policy.allowed_models = validate_policy_models(models)?;
+        }
+        if let Some(features) = &input.allowed_features {
+            policy.allowed_features = validate_policy_features(features)?;
+        }
+        if let Some(cap) = input.monthly_token_cap {
+            policy.monthly_token_cap = validate_token_cap(cap)?;
+        }
+        if let Some(cap) = input.monthly_cost_cap_usd {
+            policy.monthly_cost_cap_usd = validate_cost_cap(cap)?;
+        }
+        if let Some(enabled) = input.enabled {
+            policy.enabled = enabled;
+        }
+        if let Some(ai_enabled) = input.ai_enabled {
+            if policy.ai_enabled != ai_enabled {
+                emit_gating_change(
+                    &ctx,
+                    &caller.actor,
+                    "company",
+                    &policy.company_id.to_string(),
+                    "ai_enabled",
+                    json!(policy.ai_enabled),
+                    json!(ai_enabled),
+                );
+                policy.ai_enabled = ai_enabled;
+            }
+        }
+        if let Some(disabled) = input.disabled_features {
+            let validated = validate_gate_features(&disabled)?;
+            if policy.disabled_features != validated {
+                emit_gating_change(
+                    &ctx,
+                    &caller.actor,
+                    "company",
+                    &policy.company_id.to_string(),
+                    "disabled_features",
+                    json!(policy.disabled_features),
+                    json!(validated),
+                );
+                policy.disabled_features = validated;
+            }
+        }
+        policy.updated_at = Utc::now();
+        state
+            .company_policies
+            .insert(policy.company_id, policy.clone());
+        emit_audit(
+            &ctx,
+            EVENT_AI_ACCESS_POLICY_CHANGED,
+            &caller.actor,
+            &format!("ai-company-policy:{}", policy.id),
+            json!({
+                "id": policy.id.to_string(),
+                "company_id": policy.company_id.to_string(),
+                "enabled": policy.enabled,
+            }),
+        );
+        Ok(policy)
+    })();
+    match result {
+        Ok(policy) => ok(policy),
+        Err(error) => err(error, debug),
+    }
+}
+
+async fn delete_company_policy(
+    ctx: web::Data<Arc<AppContext>>,
+    state: web::Data<AiState>,
+    req: HttpRequest,
+    path: web::Path<String>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let result: UnifiedResult<Value> = (|| {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_AI_MANAGE_PROVIDERS)?;
+        let caller_company = resolve_caller_company(&ctx, &req, &caller);
+        let id = parse_uuid(&path.into_inner(), "company policy")?;
+        let policy = find_company_policy(&state, id).ok_or_else(|| {
+            UnifiedError::not_found(format!("Company access policy not found: {id}"))
+        })?;
+        require_company_scope(caller_company, policy.company_id)?;
+        state.company_policies.remove(&policy.company_id);
+        emit_audit(
+            &ctx,
+            EVENT_AI_ACCESS_POLICY_CHANGED,
+            &caller.actor,
+            &format!("ai-company-policy:{}", policy.id),
+            json!({
+                "id": policy.id.to_string(),
+                "company_id": policy.company_id.to_string(),
+                "enabled": false,
+                "deleted": true,
+            }),
+        );
+        Ok(json!({ "deleted": true, "policy_id": id.to_string() }))
+    })();
+    match result {
+        Ok(data) => ok(data),
+        Err(error) => err(error, debug),
+    }
+}
+
+async fn list_user_policies(
+    ctx: web::Data<Arc<AppContext>>,
+    state: web::Data<AiState>,
+    req: HttpRequest,
+    query: web::Query<PaginationParams>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let result: UnifiedResult<Value> = (|| {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_AI_MANAGE_PROVIDERS)?;
+        let caller_company = resolve_caller_company(&ctx, &req, &caller);
+        let params = query.into_inner();
+        let user_filter = params.filters.get("user_id").cloned();
+        let company_filter = params.filters.get("company_id").cloned();
+        let enabled_filter = params.filters.get("enabled").cloned();
+        let search = params.search.clone().unwrap_or_default().to_lowercase();
+        let mut items: Vec<AiUserPolicy> = state
+            .user_policies
+            .iter()
+            .map(|entry| entry.value().clone())
+            .filter(|policy| {
+                if let Some(company) = caller_company {
+                    if policy.company_id != company {
+                        return false;
+                    }
+                }
+                if let Some(user_id) = &user_filter {
+                    if policy.user_id.to_string() != *user_id {
+                        return false;
+                    }
+                }
+                if let Some(company_id) = &company_filter {
+                    if policy.company_id.to_string() != *company_id {
+                        return false;
+                    }
+                }
+                if let Some(enabled) = &enabled_filter {
+                    let expected = match enabled.as_str() {
+                        "true" => true,
+                        "false" => false,
+                        _ => return false,
+                    };
+                    if policy.enabled != expected {
+                        return false;
+                    }
+                }
+                if !search.is_empty()
+                    && !policy.user_id.to_string().contains(&search)
+                    && !policy.company_id.to_string().contains(&search)
+                {
+                    return false;
+                }
+                true
+            })
+            .collect();
+        let sort = params.allowed_sort(&["created_at", "user_id", "company_id"], "created_at");
+        let descending = params.normalized().order == "desc";
+        items.sort_by(|a, b| {
+            let ordering = match sort.as_str() {
+                "user_id" => a.user_id.cmp(&b.user_id),
+                "company_id" => a.company_id.cmp(&b.company_id),
+                _ => a.created_at.cmp(&b.created_at),
+            };
+            if descending {
+                ordering.reverse()
+            } else {
+                ordering
+            }
+        });
+        Ok(paginate(items, &params).to_json())
+    })();
+    match result {
+        Ok(data) => ok(data),
+        Err(error) => err(error, debug),
+    }
+}
+
+async fn create_user_policy(
+    ctx: web::Data<Arc<AppContext>>,
+    state: web::Data<AiState>,
+    req: HttpRequest,
+    body: web::Json<CreateUserPolicyInput>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let input = body.into_inner();
+    let result: UnifiedResult<AiUserPolicy> = (|| {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_AI_MANAGE_PROVIDERS)?;
+        let caller_company = resolve_caller_company(&ctx, &req, &caller);
+        // A company admin limits only their own company's users.
+        require_company_scope(caller_company, input.company_id)?;
+        let allowed_models = validate_policy_models(&input.allowed_models)?;
+        let allowed_features = validate_policy_features(&input.allowed_features)?;
+        let monthly_token_cap = validate_token_cap(input.monthly_token_cap)?;
+        let monthly_cost_cap_usd = validate_cost_cap(input.monthly_cost_cap_usd)?;
+        let disabled_features = validate_gate_features(&input.disabled_features)?;
+        if state.user_policies.contains_key(&input.user_id) {
+            return Err(UnifiedError::conflict(format!(
+                "A user access policy already exists for user {}",
+                input.user_id
+            )));
+        }
+        let now = Utc::now();
+        let policy = AiUserPolicy {
+            id: Uuid::now_v7(),
+            user_id: input.user_id,
+            company_id: input.company_id,
+            allowed_models,
+            allowed_features,
+            monthly_token_cap,
+            monthly_cost_cap_usd,
+            enabled: input.enabled.unwrap_or(true),
+            ai_enabled: input.ai_enabled.unwrap_or(true),
+            disabled_features,
+            created_at: now,
+            updated_at: now,
+        };
+        state.user_policies.insert(policy.user_id, policy.clone());
+        emit_audit(
+            &ctx,
+            EVENT_AI_ACCESS_POLICY_CHANGED,
+            &caller.actor,
+            &format!("ai-user-policy:{}", policy.id),
+            json!({
+                "id": policy.id.to_string(),
+                "user_id": policy.user_id.to_string(),
+                "company_id": policy.company_id.to_string(),
+                "enabled": policy.enabled,
+            }),
+        );
+        Ok(policy)
+    })();
+    match result {
+        Ok(policy) => created(policy),
+        Err(error) => err(error, debug),
+    }
+}
+
+async fn get_user_policy(
+    ctx: web::Data<Arc<AppContext>>,
+    state: web::Data<AiState>,
+    req: HttpRequest,
+    path: web::Path<String>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let result: UnifiedResult<AiUserPolicy> = (|| {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_AI_MANAGE_PROVIDERS)?;
+        let caller_company = resolve_caller_company(&ctx, &req, &caller);
+        let id = parse_uuid(&path.into_inner(), "user policy")?;
+        let policy = find_user_policy(&state, id).ok_or_else(|| {
+            UnifiedError::not_found(format!("User access policy not found: {id}"))
+        })?;
+        require_company_scope(caller_company, policy.company_id)?;
+        Ok(policy)
+    })();
+    match result {
+        Ok(policy) => ok(policy),
+        Err(error) => err(error, debug),
+    }
+}
+
+async fn update_user_policy(
+    ctx: web::Data<Arc<AppContext>>,
+    state: web::Data<AiState>,
+    req: HttpRequest,
+    path: web::Path<String>,
+    body: web::Json<UpdateUserPolicyInput>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let input = body.into_inner();
+    let result: UnifiedResult<AiUserPolicy> = (|| {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_AI_MANAGE_PROVIDERS)?;
+        let caller_company = resolve_caller_company(&ctx, &req, &caller);
+        let id = parse_uuid(&path.into_inner(), "user policy")?;
+        let mut policy = find_user_policy(&state, id).ok_or_else(|| {
+            UnifiedError::not_found(format!("User access policy not found: {id}"))
+        })?;
+        require_company_scope(caller_company, policy.company_id)?;
+        if let Some(models) = &input.allowed_models {
+            policy.allowed_models = validate_policy_models(models)?;
+        }
+        if let Some(features) = &input.allowed_features {
+            policy.allowed_features = validate_policy_features(features)?;
+        }
+        if let Some(cap) = input.monthly_token_cap {
+            policy.monthly_token_cap = validate_token_cap(cap)?;
+        }
+        if let Some(cap) = input.monthly_cost_cap_usd {
+            policy.monthly_cost_cap_usd = validate_cost_cap(cap)?;
+        }
+        if let Some(enabled) = input.enabled {
+            policy.enabled = enabled;
+        }
+        if let Some(ai_enabled) = input.ai_enabled {
+            if policy.ai_enabled != ai_enabled {
+                emit_gating_change(
+                    &ctx,
+                    &caller.actor,
+                    "user",
+                    &policy.user_id.to_string(),
+                    "ai_enabled",
+                    json!(policy.ai_enabled),
+                    json!(ai_enabled),
+                );
+                policy.ai_enabled = ai_enabled;
+            }
+        }
+        if let Some(disabled) = input.disabled_features {
+            let validated = validate_gate_features(&disabled)?;
+            if policy.disabled_features != validated {
+                emit_gating_change(
+                    &ctx,
+                    &caller.actor,
+                    "user",
+                    &policy.user_id.to_string(),
+                    "disabled_features",
+                    json!(policy.disabled_features),
+                    json!(validated),
+                );
+                policy.disabled_features = validated;
+            }
+        }
+        policy.updated_at = Utc::now();
+        state.user_policies.insert(policy.user_id, policy.clone());
+        emit_audit(
+            &ctx,
+            EVENT_AI_ACCESS_POLICY_CHANGED,
+            &caller.actor,
+            &format!("ai-user-policy:{}", policy.id),
+            json!({
+                "id": policy.id.to_string(),
+                "user_id": policy.user_id.to_string(),
+                "company_id": policy.company_id.to_string(),
+                "enabled": policy.enabled,
+            }),
+        );
+        Ok(policy)
+    })();
+    match result {
+        Ok(policy) => ok(policy),
+        Err(error) => err(error, debug),
+    }
+}
+
+async fn delete_user_policy(
+    ctx: web::Data<Arc<AppContext>>,
+    state: web::Data<AiState>,
+    req: HttpRequest,
+    path: web::Path<String>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let result: UnifiedResult<Value> = (|| {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_AI_MANAGE_PROVIDERS)?;
+        let caller_company = resolve_caller_company(&ctx, &req, &caller);
+        let id = parse_uuid(&path.into_inner(), "user policy")?;
+        let policy = find_user_policy(&state, id).ok_or_else(|| {
+            UnifiedError::not_found(format!("User access policy not found: {id}"))
+        })?;
+        require_company_scope(caller_company, policy.company_id)?;
+        state.user_policies.remove(&policy.user_id);
+        emit_audit(
+            &ctx,
+            EVENT_AI_ACCESS_POLICY_CHANGED,
+            &caller.actor,
+            &format!("ai-user-policy:{}", policy.id),
+            json!({
+                "id": policy.id.to_string(),
+                "user_id": policy.user_id.to_string(),
+                "company_id": policy.company_id.to_string(),
+                "enabled": false,
+                "deleted": true,
+            }),
+        );
+        Ok(json!({ "deleted": true, "policy_id": id.to_string() }))
+    })();
+    match result {
+        Ok(data) => ok(data),
+        Err(error) => err(error, debug),
+    }
+}
+
+/// The caller's own user id, or a 400 when the actor id is not a
+/// UUID. Personal endpoints are keyed by user id, so a non-UUID
+/// actor cannot own a key or a server.
+fn own_user_id(caller: &Caller) -> UnifiedResult<Uuid> {
+    caller_user_id(caller).ok_or_else(|| {
+        UnifiedError::bad_request("Caller id is not a user id: personal AI settings need a UUID user id")
+    })
+}
+
+async fn get_my_key(
+    ctx: web::Data<Arc<AppContext>>,
+    state: web::Data<AiState>,
+    req: HttpRequest,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let result: UnifiedResult<AiPersonalKeyView> = (|| {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_AI_USE)?;
+        let user_id = own_user_id(&caller)?;
+        state
+            .personal_keys
+            .get(&user_id)
+            .map(|entry| entry.value().view())
+            .ok_or_else(|| {
+                UnifiedError::not_found("No personal API key is configured for this user")
+            })
+    })();
+    match result {
+        Ok(view) => ok(view),
+        Err(error) => err(error, debug),
+    }
+}
+
+async fn upsert_my_key(
+    ctx: web::Data<Arc<AppContext>>,
+    state: web::Data<AiState>,
+    req: HttpRequest,
+    body: web::Json<UpsertPersonalKeyInput>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let input = body.into_inner();
+    let result: UnifiedResult<(AiPersonalKeyView, bool)> = (|| {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_AI_USE)?;
+        let user_id = own_user_id(&caller)?;
+        // In strict mode only an allowed user may configure a key.
+        require_allowed_user(&state, user_id)?;
+        let key = input.api_key.trim();
+        if key.is_empty() || key.len() > MAX_SECRET_LEN {
+            return Err(UnifiedError::bad_request(format!(
+                "api_key must be between 1 and {MAX_SECRET_LEN} characters"
+            )));
+        }
+        let base_url = match &input.base_url {
+            Some(url) => {
+                validate_base_url(url, input.provider_kind)?;
+                Some(url.trim().to_string())
+            }
+            None => None,
+        };
+        let model = match &input.model {
+            Some(model) => {
+                let model = validate_policy_model_name(model)?;
+                if !is_known_model(input.provider_kind, &model) {
+                    return Err(UnifiedError::bad_request(format!(
+                        "Model \"{model}\" is not a known {} model",
+                        input.provider_kind.as_str()
+                    )));
+                }
+                Some(model)
+            }
+            None => None,
+        };
+        let monthly_token_cap = validate_token_cap(input.monthly_token_cap)?;
+        let monthly_cost_cap_usd = validate_cost_cap(input.monthly_cost_cap_usd)?;
+        let secret = encryption_secret(&ctx);
+        let now = Utc::now();
+        let existing = state.personal_keys.get(&user_id).map(|entry| entry.value().clone());
+        let (record, is_new) = match existing {
+            Some(mut record) => {
+                record.provider_kind = input.provider_kind;
+                record.base_url = base_url;
+                record.model = model;
+                record.api_key_encrypted = encrypt_api_key(&secret, key);
+                record.key_fingerprint = key_fingerprint(key);
+                record.monthly_token_cap = monthly_token_cap;
+                record.monthly_cost_cap_usd = monthly_cost_cap_usd;
+                record.enabled = input.enabled.unwrap_or(record.enabled);
+                record.updated_at = now;
+                (record, false)
+            }
+            None => (
+                AiPersonalKey {
+                    id: Uuid::now_v7(),
+                    user_id,
+                    provider_kind: input.provider_kind,
+                    base_url,
+                    model,
+                    api_key_encrypted: encrypt_api_key(&secret, key),
+                    key_fingerprint: key_fingerprint(key),
+                    monthly_token_cap,
+                    monthly_cost_cap_usd,
+                    enabled: input.enabled.unwrap_or(true),
+                    created_at: now,
+                    updated_at: now,
+                },
+                true,
+            ),
+        };
+        state.personal_keys.insert(user_id, record.clone());
+        emit_audit(
+            &ctx,
+            if is_new {
+                EVENT_AI_PERSONAL_KEY_CREATED
+            } else {
+                EVENT_AI_PERSONAL_KEY_ROTATED
+            },
+            &caller.actor,
+            &format!("ai-personal-key:{}", record.id),
+            json!({
+                "id": record.id.to_string(),
+                "user_id": user_id.to_string(),
+                "provider_kind": record.provider_kind.as_str(),
+                "key_configured": true,
+            }),
+        );
+        Ok((record.view(), is_new))
+    })();
+    match result {
+        Ok((view, true)) => created(view),
+        Ok((view, false)) => ok(view),
+        Err(error) => err(error, debug),
+    }
+}
+
+async fn delete_my_key(
+    ctx: web::Data<Arc<AppContext>>,
+    state: web::Data<AiState>,
+    req: HttpRequest,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let result: UnifiedResult<Value> = (|| {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_AI_USE)?;
+        let user_id = own_user_id(&caller)?;
+        let (_, record) = state.personal_keys.remove(&user_id).ok_or_else(|| {
+            UnifiedError::not_found("No personal API key is configured for this user")
+        })?;
+        emit_audit(
+            &ctx,
+            EVENT_AI_PERSONAL_KEY_DELETED,
+            &caller.actor,
+            &format!("ai-personal-key:{}", record.id),
+            json!({
+                "id": record.id.to_string(),
+                "user_id": user_id.to_string(),
+                "provider_kind": record.provider_kind.as_str(),
+            }),
+        );
+        Ok(json!({ "deleted": true, "key_id": record.id.to_string() }))
+    })();
+    match result {
+        Ok(data) => ok(data),
+        Err(error) => err(error, debug),
+    }
+}
+
+async fn test_my_key(
+    ctx: web::Data<Arc<AppContext>>,
+    state: web::Data<AiState>,
+    req: HttpRequest,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let caller = match caller(&req) {
+        Ok(caller) => caller,
+        Err(error) => return err(error, debug),
+    };
+    if let Err(error) = require_permission(&ctx, &caller.role, PERM_AI_USE) {
+        return err(error, debug);
+    }
+    let user_id = match own_user_id(&caller) {
+        Ok(user_id) => user_id,
+        Err(error) => return err(error, debug),
+    };
+    let key = match state.personal_keys.get(&user_id) {
+        Some(entry) => entry.value().clone(),
+        None => {
+            return err(
+                UnifiedError::not_found("No personal API key is configured for this user"),
+                debug,
+            )
+        }
+    };
+    if !key.enabled {
+        return err(
+            UnifiedError::bad_request("Personal API key is disabled"),
+            debug,
+        );
+    }
+    // A synthetic connection carries the key's kind and model so the
+    // existing adapters can test it; it is never stored. The test
+    // itself runs through the allowlist gate like any other call.
+    let (base_url, model) = match resolve_base_url_and_model(
+        key.provider_kind,
+        &key.base_url,
+        &key.model,
+    ) {
+        Ok(resolved) => resolved,
+        Err(error) => return err(error, debug),
+    };
+    let connection = AiProviderConnection {
+        id: key.id,
+        name: format!("personal-key:{}", key.id),
+        kind: key.provider_kind,
+        base_url,
+        model: model.clone(),
+        api_key_encrypted: None,
+        key_fingerprint: Some(key.key_fingerprint.clone()),
+        enabled: true,
+        rate_limit_per_minute: DEFAULT_RATE_LIMIT_PER_MINUTE,
+        created_at: key.created_at,
+        updated_at: key.updated_at,
+    };
+    let company_id = resolve_caller_company(&ctx, &req, &caller);
+    if let Err(error) = authorize_ai_call(
+        &ctx,
+        &state,
+        &caller,
+        company_id,
+        &AiCallRequest {
+            use_case: "test",
+            model: &model,
+            provider_id: key.id,
+            provider_kind: key.provider_kind.as_str(),
+            estimated_tokens: 0,
+            use_personal_key: true,
+            product_id: resolve_caller_product(&req),
+        },
+    ) {
+        return err(error, debug);
+    }
+    let started = Instant::now();
+    let secret = encryption_secret(&ctx);
+    let api_key = match decrypt_api_key(&secret, &key.api_key_encrypted) {
+        Ok(api_key) => Some(api_key),
+        Err(error) => return err(error, debug),
+    };
+    let adapter = match ai_provider_registry().build(&connection, api_key) {
+        Ok(adapter) => adapter,
+        Err(error) => return err(error, debug),
+    };
+    match adapter.test_connection().await {
+        Ok(test) => {
+            record_usage(
+                &state,
+                &connection,
+                &caller.actor,
+                Some(user_id),
+                company_id,
+                "test",
+                None,
+                test.latency_ms,
+                None,
+                true,
+            );
+            ok(test)
+        }
+        Err(error) => {
+            let latency_ms = started.elapsed().as_millis() as u64;
+            record_usage(
+                &state,
+                &connection,
+                &caller.actor,
+                Some(user_id),
+                company_id,
+                "test",
+                None,
+                latency_ms,
+                Some(error.code),
+                true,
+            );
+            ok(ProviderTestResult {
+                provider_id: key.id,
+                kind: key.provider_kind.as_str().to_string(),
+                reachable: false,
+                latency_ms,
+                model_count: None,
+                detail: error.message.clone(),
+            })
+        }
+    }
+}
+
+async fn list_my_mcp(
+    ctx: web::Data<Arc<AppContext>>,
+    state: web::Data<AiState>,
+    req: HttpRequest,
+    query: web::Query<PaginationParams>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let result: UnifiedResult<Value> = (|| {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_AI_USE)?;
+        let user_id = own_user_id(&caller)?;
+        let params = query.into_inner();
+        let enabled_filter = params.filters.get("enabled").cloned();
+        let search = params.search.clone().unwrap_or_default().to_lowercase();
+        let mut items: Vec<AiUserMcpServerView> = state
+            .personal_mcp_servers
+            .iter()
+            .map(|entry| entry.value().clone())
+            .filter(|server| server.user_id == user_id)
+            .filter(|server| {
+                if let Some(enabled) = &enabled_filter {
+                    let expected = match enabled.as_str() {
+                        "true" => true,
+                        "false" => false,
+                        _ => return false,
+                    };
+                    if server.enabled != expected {
+                        return false;
+                    }
+                }
+                if !search.is_empty() {
+                    let haystack = format!("{} {}", server.name, server.endpoint_url)
+                        .to_lowercase();
+                    if !haystack.contains(&search) {
+                        return false;
+                    }
+                }
+                true
+            })
+            .map(|server| server.view())
+            .collect();
+        let sort = params.allowed_sort(&["name", "created_at"], "created_at");
+        let descending = params.normalized().order == "desc";
+        items.sort_by(|a, b| {
+            let ordering = match sort.as_str() {
+                "name" => a.name.cmp(&b.name),
+                _ => a.created_at.cmp(&b.created_at),
+            };
+            if descending {
+                ordering.reverse()
+            } else {
+                ordering
+            }
+        });
+        Ok(paginate(items, &params).to_json())
+    })();
+    match result {
+        Ok(data) => ok(data),
+        Err(error) => err(error, debug),
+    }
+}
+
+async fn create_my_mcp(
+    ctx: web::Data<Arc<AppContext>>,
+    state: web::Data<AiState>,
+    req: HttpRequest,
+    body: web::Json<CreatePersonalMcpInput>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let input = body.into_inner();
+    let result: UnifiedResult<AiUserMcpServerView> = (|| {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_AI_USE)?;
+        let user_id = own_user_id(&caller)?;
+        // In strict mode only an allowed user may configure servers.
+        require_allowed_user(&state, user_id)?;
+        let name = require_text(&input.name, "name", MAX_MCP_NAME_LEN)?;
+        let endpoint = validate_mcp_endpoint_url(&input.endpoint_url)?;
+        let token = match &input.auth_token {
+            Some(token) => {
+                let token = token.trim();
+                if token.is_empty() || token.len() > MAX_SECRET_LEN {
+                    return Err(UnifiedError::bad_request(format!(
+                        "auth_token must be between 1 and {MAX_SECRET_LEN} characters"
+                    )));
+                }
+                Some(token.to_string())
+            }
+            None => None,
+        };
+        let owned = state
+            .personal_mcp_servers
+            .iter()
+            .filter(|entry| entry.value().user_id == user_id)
+            .count();
+        if owned >= MAX_PERSONAL_MCP_SERVERS {
+            return Err(UnifiedError::bad_request(format!(
+                "At most {MAX_PERSONAL_MCP_SERVERS} personal MCP servers per user"
+            )));
+        }
+        let secret = encryption_secret(&ctx);
+        let (auth_token_encrypted, token_fingerprint) = match &token {
+            Some(plain) => (
+                Some(encrypt_api_key(&secret, plain)),
+                Some(key_fingerprint(plain)),
+            ),
+            None => (None, None),
+        };
+        let now = Utc::now();
+        let server = AiUserMcpServer {
+            id: Uuid::now_v7(),
+            user_id,
+            name,
+            endpoint_url: endpoint.to_string(),
+            auth_token_encrypted,
+            token_fingerprint,
+            enabled: input.enabled.unwrap_or(true),
+            created_at: now,
+            updated_at: now,
+        };
+        state
+            .personal_mcp_servers
+            .insert(server.id, server.clone());
+        Ok(server.view())
+    })();
+    match result {
+        Ok(view) => created(view),
+        Err(error) => err(error, debug),
+    }
+}
+
+async fn get_my_mcp(
+    ctx: web::Data<Arc<AppContext>>,
+    state: web::Data<AiState>,
+    req: HttpRequest,
+    path: web::Path<String>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let result: UnifiedResult<AiUserMcpServerView> = (|| {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_AI_USE)?;
+        let user_id = own_user_id(&caller)?;
+        let id = parse_uuid(&path.into_inner(), "personal MCP server")?;
+        Ok(load_own_mcp_server(&state, user_id, id)?.view())
+    })();
+    match result {
+        Ok(view) => ok(view),
+        Err(error) => err(error, debug),
+    }
+}
+
+async fn update_my_mcp(
+    ctx: web::Data<Arc<AppContext>>,
+    state: web::Data<AiState>,
+    req: HttpRequest,
+    path: web::Path<String>,
+    body: web::Json<UpdatePersonalMcpInput>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let input = body.into_inner();
+    let result: UnifiedResult<AiUserMcpServerView> = (|| {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_AI_USE)?;
+        let user_id = own_user_id(&caller)?;
+        let id = parse_uuid(&path.into_inner(), "personal MCP server")?;
+        let mut server = load_own_mcp_server(&state, user_id, id)?;
+        if let Some(name) = &input.name {
+            server.name = require_text(name, "name", MAX_MCP_NAME_LEN)?;
+        }
+        if let Some(endpoint_url) = &input.endpoint_url {
+            server.endpoint_url = validate_mcp_endpoint_url(endpoint_url)?.to_string();
+        }
+        if let Some(token_change) = &input.auth_token {
+            let secret = encryption_secret(&ctx);
+            match token_change {
+                None => {
+                    server.auth_token_encrypted = None;
+                    server.token_fingerprint = None;
+                }
+                Some(plain) if plain.trim().is_empty() => {
+                    server.auth_token_encrypted = None;
+                    server.token_fingerprint = None;
+                }
+                Some(plain) => {
+                    let plain = plain.trim();
+                    if plain.len() > MAX_SECRET_LEN {
+                        return Err(UnifiedError::bad_request(format!(
+                            "auth_token must be at most {MAX_SECRET_LEN} characters"
+                        )));
+                    }
+                    server.auth_token_encrypted = Some(encrypt_api_key(&secret, plain));
+                    server.token_fingerprint = Some(key_fingerprint(plain));
+                }
+            }
+        }
+        if let Some(enabled) = input.enabled {
+            server.enabled = enabled;
+        }
+        server.updated_at = Utc::now();
+        state
+            .personal_mcp_servers
+            .insert(server.id, server.clone());
+        Ok(server.view())
+    })();
+    match result {
+        Ok(view) => ok(view),
+        Err(error) => err(error, debug),
+    }
+}
+
+async fn delete_my_mcp(
+    ctx: web::Data<Arc<AppContext>>,
+    state: web::Data<AiState>,
+    req: HttpRequest,
+    path: web::Path<String>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let result: UnifiedResult<Value> = (|| {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_AI_USE)?;
+        let user_id = own_user_id(&caller)?;
+        let id = parse_uuid(&path.into_inner(), "personal MCP server")?;
+        let _server = load_own_mcp_server(&state, user_id, id)?;
+        state.personal_mcp_servers.remove(&id);
+        Ok(json!({ "deleted": true, "server_id": id.to_string() }))
+    })();
+    match result {
+        Ok(data) => ok(data),
+        Err(error) => err(error, debug),
+    }
+}
+
+async fn usage_by_user(
+    ctx: web::Data<Arc<AppContext>>,
+    state: web::Data<AiState>,
+    req: HttpRequest,
+    query: web::Query<PaginationParams>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let result: UnifiedResult<Value> = (|| {
+        let caller = caller(&req)?;
+        // Usage readers may query any user; everyone else sees only
+        // their own records.
+        let can_read_usage = check_capability(&ctx, &caller.role, PERM_AI_READ_USAGE);
+        if !can_read_usage {
+            require_permission(&ctx, &caller.role, PERM_AI_USE)?;
+        }
+        let params = query.into_inner();
+        let own_id = caller_user_id(&caller);
+        let target = match params.filters.get("user_id") {
+            Some(raw) => {
+                let target = parse_uuid(raw, "user")?;
+                if Some(target) != own_id {
+                    if !can_read_usage {
+                        return Err(UnifiedError::forbidden(
+                            "Reading another user's AI usage requires ai:read_usage",
+                        ));
+                    }
+                    if let Some(company) = resolve_caller_company(&ctx, &req, &caller) {
+                        match state.user_policies.get(&target) {
+                            Some(policy) if policy.company_id == company => {}
+                            _ => {
+                                return Err(UnifiedError::forbidden(
+                                    "AI usage of a user outside your company is not visible",
+                                ))
+                            }
+                        }
+                    }
+                }
+                target
+            }
+            None => own_id.ok_or_else(|| {
+                UnifiedError::bad_request("Caller id is not a user id")
+            })?,
+        };
+        let mut items: Vec<AiUsageRecord> = state
+            .usage
+            .iter()
+            .map(|entry| entry.value().clone())
+            .filter(|record| record.user_id == Some(target) && usage_matches(record, &params))
+            .collect();
+        let sort = params.allowed_sort(&["created_at", "model", "use_case"], "created_at");
+        let descending = params.normalized().order == "desc";
+        items.sort_by(|a, b| {
+            let ordering = match sort.as_str() {
+                "model" => a.model.cmp(&b.model),
+                "use_case" => a.use_case.cmp(&b.use_case),
+                _ => a.created_at.cmp(&b.created_at),
+            };
+            if descending {
+                ordering.reverse()
+            } else {
+                ordering
+            }
+        });
+        Ok(paginate(items, &params).to_json())
+    })();
+    match result {
+        Ok(data) => ok(data),
+        Err(error) => err(error, debug),
+    }
+}
+
+async fn usage_by_company(
+    ctx: web::Data<Arc<AppContext>>,
+    state: web::Data<AiState>,
+    req: HttpRequest,
+    query: web::Query<PaginationParams>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let result: UnifiedResult<Value> = (|| {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_AI_READ_USAGE)?;
+        let params = query.into_inner();
+        // A company-scoped caller is pinned to their own company; a
+        // platform usage reader names the company in the query.
+        let target = match resolve_caller_company(&ctx, &req, &caller) {
+            Some(company) => company,
+            None => {
+                let raw = params.filters.get("company_id").ok_or_else(|| {
+                    UnifiedError::bad_request(
+                        "company_id query parameter is required for platform usage readers",
+                    )
+                })?;
+                parse_uuid(raw, "company")?
+            }
+        };
+        let mut items: Vec<AiUsageRecord> = state
+            .usage
+            .iter()
+            .map(|entry| entry.value().clone())
+            .filter(|record| record.company_id == Some(target) && usage_matches(record, &params))
+            .collect();
+        let sort = params.allowed_sort(&["created_at", "model", "use_case"], "created_at");
+        let descending = params.normalized().order == "desc";
+        items.sort_by(|a, b| {
+            let ordering = match sort.as_str() {
+                "model" => a.model.cmp(&b.model),
+                "use_case" => a.use_case.cmp(&b.use_case),
+                _ => a.created_at.cmp(&b.created_at),
+            };
+            if descending {
+                ordering.reverse()
+            } else {
+                ordering
+            }
+        });
+        Ok(paginate(items, &params).to_json())
+    })();
+    match result {
+        Ok(data) => ok(data),
         Err(error) => err(error, debug),
     }
 }

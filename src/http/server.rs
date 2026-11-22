@@ -5,7 +5,12 @@
 // pause / maintenance middleware returns 503 for every other route
 // while the daemon is paused or in maintenance mode. Plain TCP listeners
 // come from `app.tcp`; TLS listeners come from `app.ssl.listen` and use
-// the TLS configuration built from `crate::http::tls::SslStorage`.
+// the TLS configuration built from `crate::http::tls::SslStorage`
+// through the `crate::http::cert_swap::CertStoreSwap` holder, so
+// per-certificate swaps (`ssl.swap`) take effect on new handshakes
+// while a whole-store swap only reaches ServerConfigs built after
+// it (the running listener keeps its captured store — see the wiring
+// comment at the TLS branch).
 // The server runs until Ctrl-C or SIGTERM, then shuts down gracefully.
 
 use crate::cli::daemon::update_status_file;
@@ -17,7 +22,9 @@ use crate::core::hardening::{
 };
 use crate::core::hooks::{events, HookBus};
 use crate::core::json;
-use crate::core::middleware::MiddlewareManager;
+use crate::core::middleware::{
+    MiddlewareManager, TenantResolutionConfig, TenantResolutionMiddleware,
+};
 use crate::http::acme::AcmeClient;
 use crate::http::tls::SslStorage;
 use crate::modules::network::connection_stats;
@@ -87,7 +94,23 @@ pub async fn run_server(ctx: Arc<AppContext>) -> UnifiedResult<()> {
             .ssl
             .clone();
         let storage = crate::http::tls::SslStorage::from_config(&ssl)?;
-        let config = crate::http::tls::server_config(&storage)?;
+        // CertStoreSwap (batch 8): the swap holder is the single
+        // place holding the current store. The TLS config is built
+        // from the holder (`server_config_from_swap`), and the
+        // `ssl.swap` request handler is registered on the hook bus,
+        // so per-certificate swaps take effect on new handshakes
+        // (the storage's DashMaps are read every handshake) and a
+        // whole-store swap takes effect for every ServerConfig
+        // built after it. Honest limit: the running listener keeps
+        // the store Arc its config captured at bind time, so a
+        // whole-store swap alone does NOT change live traffic —
+        // there is no listener rebuild. Per-certificate swaps
+        // (`swap_certificate`) are the live path; a whole-store
+        // swap needs a restart (or a future rebuild that calls
+        // `server_config_from_swap` again) to reach the listener.
+        let swap = Arc::new(crate::http::cert_swap::CertStoreSwap::new(storage.clone()));
+        let config = crate::http::cert_swap::server_config_from_swap(&swap)?;
+        crate::http::cert_swap::register_cert_swap_hooks(&ctx.hooks, swap.clone());
         (Some(config), Some(storage))
     };
 
@@ -121,10 +144,14 @@ pub async fn run_server(ctx: Arc<AppContext>) -> UnifiedResult<()> {
         let mut middleware_manager = MiddlewareManager::new();
         ctx.modules.register_all_middleware(&mut middleware_manager);
         // Security hardening middleware, ordered by priority (highest
-        // first): security headers (1000) -> IP blocklist (900) ->
-        // rate limiting (800) -> request-size guard (700) -> module
-        // middleware. The dispatcher sorts by priority, so this order
-        // holds regardless of registration order.
+        // first): security headers (1000) -> tenant resolution (950)
+        // -> IP blocklist (900) -> rate limiting (800) ->
+        // request-size guard (700) -> module middleware. The
+        // dispatcher sorts by priority, so this order holds
+        // regardless of registration order. Tenant resolution runs
+        // before the IP filter and rate limiter so routing is decided
+        // before any route dispatch, and after the security headers so
+        // its short-circuit responses still carry them.
         // The ACME HTTP-01 challenge route is exempt from the
         // blocklist and rate limiting inside the middleware: a blocked
         // or throttled challenge would break certificate issuance and
@@ -134,6 +161,18 @@ pub async fn run_server(ctx: Arc<AppContext>) -> UnifiedResult<()> {
         // an abuse vector.
         let hardening = crate::core::hardening::shared_state();
         middleware_manager.register(SecurityHeadersMiddleware::new(hardening.clone()));
+        // Tenant resolution (batch 8): resolves the Host header to a
+        // tenant through the `tenant.resolve_requested` hook, attaches
+        // the tenant context, and blocks control-plane paths on tenant
+        // hosts. Its config (main host, blocked paths, tenant header,
+        // fallback policies) is built from the environment mapped to
+        // the `saas.*` config keys — see `TenantResolutionConfig` —
+        // and this is the single construction site: when the typed
+        // `[saas]` config section lands, it plugs in here.
+        middleware_manager.register(TenantResolutionMiddleware::new(
+            ctx.clone(),
+            TenantResolutionConfig::from_environment(),
+        ));
         middleware_manager.register(IpFilterMiddleware::new(hardening.clone()));
         middleware_manager.register(RateLimitMiddleware::new(hardening.clone()));
         middleware_manager.register(RequestSizeMiddleware::new(hardening.clone()));

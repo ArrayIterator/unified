@@ -21,7 +21,54 @@
 //   GET    /runs/{run_id}           get one run
 //   POST   /runs/{run_id}/verify    recompute and compare the checksum
 //   POST   /runs/{run_id}/restore   restore from one run
+//   POST   /runs/{run_id}/drill     restore drill: verify the archive and
+//                                   extract it to a throwaway sandbox
+//                                   directory, then delete the sandbox.
+//                                   Live data is never touched.
+//   POST   /jobs/{id}/drill         drill the latest completed run
 //   DELETE /runs/{run_id}           delete one run and its stored archive
+//   POST   /maintenance/verify      verify every completed run whose last
+//                                   verification is older than
+//                                   backup.verify_interval_hours
+//   POST   /maintenance/prune       enforce retention for every job
+//
+// Capability checks: every route requires `X-User-Id` and `X-Role`
+// headers and a role holding `backup:view` (reads) or `backup:manage`
+// (writes), resolved through the `role.check` hook, failing closed
+// exactly like the ai module. Hook-driven runs (scheduler dispatch)
+// are system actors and carry no HTTP caller.
+//
+// Per-tenant scoping: jobs and runs carry the owning `company_id`
+// taken from the `X-Company-Id` header at creation (same header
+// trust model as `X-User-Id` / `X-Role`). A caller with a company
+// only sees that company's jobs and runs; a caller with no company
+// is a platform admin and sees everything. Cross-company access to
+// a single job or run answers 404 so existence is never leaked.
+//
+// Integrity: verification recomputes the archive checksum AND
+// verifies the embedded manifest (job id, kind, and the SHA-256 of
+// every listed file). Restores verify checksum + manifest first and
+// fail closed on any mismatch. Verification outcomes are recorded
+// on the run (`verified`, `last_verified_at`, `manifest_verified`,
+// `verification_error`) so the scheduled sweep can skip fresh runs.
+//
+// Encryption at rest: archives are plain tar.gz files. The
+// `backup.encryption` setting records the configured mode
+// (default `none`); any other value refuses to run, honestly,
+// because no AEAD crate is in the dependency tree and the storage
+// provider upload API carries no server-side-encryption flag, so a
+// claim of encryption would be false. At-rest encryption is OPEN
+// work: add an AEAD crate (or an SSE flag on
+// `StorageProvider::upload`) and envelope-encrypt before upload.
+//
+// Configuration: the `backup` section is read from the serialized
+// application configuration (`base_dir`, `max_total_bytes`,
+// `max_file_bytes`, `default_retention_keep_last`,
+// `default_retention_keep_days`, `pg_dump_bin`, `psql_bin`,
+// `drill_dir`, `verify_interval_hours`, `encryption`). NOTE: the
+// section only takes effect once `AppConfig` gains a `backup`
+// field; today every value falls back to the defaults below (see
+// the integrator notes in the module report for the exact snippet).
 //
 // Archives are gzip-compressed tar files containing `manifest.json` plus
 // the payload (`dump.sql` for database backups, the captured files for
@@ -44,7 +91,15 @@
 //
 // Hooks emitted: `backup.started`, `backup.completed`, `backup.failed`,
 // `backup.restored`, `backup.verified`, plus `backup.created` and
-// `backup.deleted` for the audit log.
+// `backup.deleted` for the audit log. Verification and drill
+// failures additionally emit `backup.verification_failed` and
+// `backup.drill_failed`, and a `notification.requested` alert to
+// the `system` user (high priority) so failures are surfaced even
+// when the notifications module has no listener for the new events.
+// The module also handles `backup.verify_requested` and
+// `backup.prune_requested` (emitted by the scheduler once it
+// dispatches `backup.verify` / `backup.prune`) for the scheduled
+// integrity sweep and retention enforcement.
 
 use crate::core::config::AppConfig;
 use crate::core::context::AppContext;
@@ -54,7 +109,7 @@ use crate::core::json;
 use crate::core::modules::{Module, ModuleRegistry, RouteInfo};
 use crate::core::pagination::{PageResult, PaginationParams};
 use crate::core::storage::StorageRegistry;
-use actix_web::{web, HttpResponse};
+use actix_web::{web, HttpRequest, HttpResponse};
 use chrono::{DateTime, Utc};
 use dashmap::DashMap;
 use flate2::read::GzDecoder;
@@ -85,9 +140,20 @@ pub const BACKUP_VERIFIED: &str = "backup.verified";
 pub const BACKUP_CREATED: &str = "backup.created";
 pub const BACKUP_DELETED: &str = "backup.deleted";
 pub const BACKUP_RUN_REQUESTED: &str = "backup.run_requested";
+pub const BACKUP_VERIFY_REQUESTED: &str = "backup.verify_requested";
+pub const BACKUP_PRUNE_REQUESTED: &str = "backup.prune_requested";
+pub const BACKUP_VERIFICATION_FAILED: &str = "backup.verification_failed";
+pub const BACKUP_DRILL_COMPLETED: &str = "backup.drill_completed";
+pub const BACKUP_DRILL_FAILED: &str = "backup.drill_failed";
+pub const NOTIFICATION_REQUESTED: &str = "notification.requested";
 pub const STORAGE_SYNC_COMPLETED: &str = "storage.sync.completed";
 pub const SCHEDULER_ENQUEUE: &str = "scheduler.enqueue";
 pub const BACKUP_RUN_KIND: &str = "backup.run";
+
+/// Permissions checked on every route through the `role.check` hook.
+/// Reads need `backup:view`; every write needs `backup:manage`.
+pub const PERM_BACKUP_VIEW: &str = "backup:view";
+pub const PERM_BACKUP_MANAGE: &str = "backup:manage";
 
 const MANIFEST_NAME: &str = "manifest.json";
 const CONFIG_NAME: &str = "config.json";
@@ -180,6 +246,11 @@ pub struct BackupJob {
     pub id: String,
     pub name: String,
     pub kind: BackupKind,
+    /// Owning company id (UUID string) from the `X-Company-Id`
+    /// header at creation. `None` means created by a platform admin
+    /// with no company; only platform admins can see such jobs.
+    #[serde(default)]
+    pub company_id: Option<String>,
     /// Database name to dump. Empty means the configured database.
     #[serde(default)]
     pub database_name: String,
@@ -228,6 +299,9 @@ pub struct BackupRun {
     pub id: String,
     pub job_id: String,
     pub job_name: String,
+    /// Owning company id, copied from the job at run creation.
+    #[serde(default)]
+    pub company_id: Option<String>,
     pub kind: BackupKind,
     pub target: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -239,6 +313,25 @@ pub struct BackupRun {
     pub size_bytes: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub file_count: Option<u64>,
+    /// Outcome of the last integrity verification: `None` means the
+    /// run has never been verified.
+    #[serde(default)]
+    pub verified: Option<bool>,
+    #[serde(default)]
+    pub last_verified_at: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub manifest_verified: Option<bool>,
+    #[serde(default)]
+    pub verification_error: Option<String>,
+    /// Outcome of the last restore drill (`None` = never drilled).
+    #[serde(default)]
+    pub last_drill_at: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub drill_verified: Option<bool>,
+    /// Encryption mode recorded at run time (see the module header:
+    /// only `none` is implemented today).
+    #[serde(default)]
+    pub encryption: Option<String>,
     pub started_at: DateTime<Utc>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub finished_at: Option<DateTime<Utc>>,
@@ -255,10 +348,13 @@ struct BackupSummary {
     runs_by_status: BTreeMap<String, u64>,
     targets: Vec<String>,
     base_dir: String,
+    drill_dir: String,
     max_total_bytes: u64,
     max_file_bytes: u64,
     default_retention_keep_last: u32,
     default_retention_keep_days: u32,
+    verify_interval_hours: u64,
+    encryption: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -270,6 +366,46 @@ struct VerifyView {
     expected_checksum: Option<String>,
     actual_checksum: String,
     size_bytes: u64,
+    manifest_verified: bool,
+    manifest_job_matches: bool,
+    files_checked: u64,
+    files_mismatched: Vec<String>,
+    dump_present: bool,
+    config_present: bool,
+}
+
+/// Outcome of a restore drill: the archive was verified and
+/// extracted to a throwaway sandbox directory that was deleted
+/// afterwards. Live data is never written.
+#[derive(Debug, Clone, Serialize)]
+struct DrillView {
+    run_id: String,
+    job_id: String,
+    target: String,
+    verified: bool,
+    checksum_verified: bool,
+    manifest_verified: bool,
+    files_checked: u64,
+    files_mismatched: Vec<String>,
+    dump_present: bool,
+    config_present: bool,
+    sandbox_removed: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct MaintenanceVerifyView {
+    checked: u64,
+    verified: u64,
+    failed: u64,
+    failures: Vec<Value>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct MaintenancePruneView {
+    jobs_checked: u64,
+    runs_pruned: u64,
+    archives_failed: u64,
+    per_job: Vec<Value>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -347,13 +483,25 @@ struct RestoreRequest {
 
 /// Backup settings, read from the `backup` section of the application
 /// configuration with safe defaults when the section is absent.
+/// NOTE: the section is only honoured once `AppConfig` gains a
+/// `backup` field; until then every value is the default below.
 #[derive(Debug, Clone)]
 struct BackupSettings {
     base_dir: String,
+    /// Throwaway parent directory for restore drills. Deliberately
+    /// separate from `base_dir`: drill output must never land where
+    /// a restore could read it as live data.
+    drill_dir: String,
     max_total_bytes: u64,
     max_file_bytes: u64,
     default_retention_keep_last: u32,
     default_retention_keep_days: u32,
+    /// Hours between scheduled integrity verifications of the same
+    /// run; runs verified more recently are skipped by the sweep.
+    verify_interval_hours: u64,
+    /// Configured at-rest encryption mode. Only `none` is
+    /// implemented; any other value refuses to run (fail closed).
+    encryption: String,
     pg_dump_bin: String,
     psql_bin: String,
 }
@@ -362,10 +510,13 @@ impl Default for BackupSettings {
     fn default() -> Self {
         Self {
             base_dir: "data/backups".to_string(),
+            drill_dir: "data/backup-drills".to_string(),
             max_total_bytes: 256 * 1024 * 1024,
             max_file_bytes: 64 * 1024 * 1024,
             default_retention_keep_last: 7,
             default_retention_keep_days: 30,
+            verify_interval_hours: 24,
+            encryption: "none".to_string(),
             pg_dump_bin: "pg_dump".to_string(),
             psql_bin: "psql".to_string(),
         }
@@ -647,6 +798,149 @@ fn valid_config_key(key: &str) -> bool {
 }
 
 // ---------------------------------------------------------------------------
+// Helpers: caller, capabilities, company scoping.
+// ---------------------------------------------------------------------------
+
+/// The caller, from the headers every module in this codebase uses:
+/// `X-User-Id` identifies the actor, `X-Role` carries the role slug
+/// the capability check runs against, and `X-Company-Id` (optional)
+/// scopes the caller to one company. Same header-identity trust
+/// model as the ai module: the trusted edge sets these headers.
+struct Caller {
+    actor: String,
+    role: String,
+    company_id: Option<String>,
+}
+
+fn caller(req: &HttpRequest) -> UnifiedResult<Caller> {
+    let actor = req
+        .headers()
+        .get("x-user-id")
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+        .ok_or_else(|| UnifiedError::unauthorized("Missing X-User-Id header"))?;
+    let role = req
+        .headers()
+        .get("x-role")
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+        .ok_or_else(|| UnifiedError::unauthorized("Missing X-Role header"))?;
+    let company_id = match req
+        .headers()
+        .get("x-company-id")
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        Some(raw) => {
+            Uuid::parse_str(raw).map_err(|_| {
+                UnifiedError::bad_request("Invalid X-Company-Id header: must be a UUID")
+            })?;
+            Some(raw.to_string())
+        }
+        None => None,
+    };
+    Ok(Caller {
+        actor,
+        role,
+        company_id,
+    })
+}
+
+/// Ask the roles module whether `role` holds `permission` through
+/// the `role.check` hook. Fails closed: no answer means not allowed.
+/// (Same fail-closed shape as the ai module's capability check.)
+fn check_capability(ctx: &AppContext, role: &str, permission: &str) -> bool {
+    let context = ctx.hooks.emit(
+        "role.check",
+        json!({ "role": role, "permission": permission, "allowed": false }),
+    );
+    context
+        .get("allowed")
+        .and_then(|value| value.as_bool())
+        .unwrap_or(false)
+}
+
+fn require_permission(ctx: &AppContext, role: &str, permission: &str) -> UnifiedResult<()> {
+    if check_capability(ctx, role, permission) {
+        Ok(())
+    } else {
+        Err(UnifiedError::forbidden(format!(
+            "Role \"{role}\" does not hold permission \"{permission}\""
+        )))
+    }
+}
+
+/// A job is visible to the caller when the caller is a platform
+/// admin (no company) or the job belongs to the caller's company.
+/// Jobs with no company are platform-admin jobs and are invisible
+/// to company callers.
+fn job_visible(job: &BackupJob, company: &Option<String>) -> bool {
+    match company {
+        None => true,
+        Some(company_id) => job.company_id.as_deref() == Some(company_id.as_str()),
+    }
+}
+
+fn run_visible(run: &BackupRun, company: &Option<String>) -> bool {
+    match company {
+        None => true,
+        Some(company_id) => run.company_id.as_deref() == Some(company_id.as_str()),
+    }
+}
+
+/// Load one job the caller may see; cross-company or missing jobs
+/// both answer 404 so existence is never leaked.
+fn visible_job(state: &BackupState, id: &str, company: &Option<String>) -> UnifiedResult<BackupJob> {
+    let job = state
+        .jobs
+        .get(id)
+        .map(|entry| entry.value().clone())
+        .ok_or_else(|| UnifiedError::not_found("Backup job not found"))?;
+    if job_visible(&job, company) {
+        Ok(job)
+    } else {
+        Err(UnifiedError::not_found("Backup job not found"))
+    }
+}
+
+fn visible_run(state: &BackupState, id: &str, company: &Option<String>) -> UnifiedResult<BackupRun> {
+    let run = state
+        .runs
+        .get(id)
+        .map(|entry| entry.value().clone())
+        .ok_or_else(|| UnifiedError::not_found("Backup run not found"))?;
+    if run_visible(&run, company) {
+        Ok(run)
+    } else {
+        Err(UnifiedError::not_found("Backup run not found"))
+    }
+}
+
+/// Emit a `notification.requested` alert to the `system` user, the
+/// same payload shape the certificates module uses for expiry
+/// alerts. Used for verification and drill failures, which the
+/// notifications module has no listener for yet.
+fn notify_system(hooks: &HookBus, kind: &str, title: String, body: String) {
+    hooks.emit(
+        NOTIFICATION_REQUESTED,
+        json!({
+            "kind": kind,
+            "user_id": "system",
+            "title": title,
+            "body": body,
+            "module": "backup",
+            "category": "backup",
+            "priority": "high",
+        }),
+    );
+}
+
+// ---------------------------------------------------------------------------
 // Helpers: settings, redaction, paths.
 // ---------------------------------------------------------------------------
 
@@ -683,6 +977,7 @@ fn backup_settings(config: &AppConfig) -> BackupSettings {
     };
     BackupSettings {
         base_dir: get_string("base_dir", &defaults.base_dir),
+        drill_dir: get_string("drill_dir", &defaults.drill_dir),
         max_total_bytes: get_u64("max_total_bytes", defaults.max_total_bytes),
         max_file_bytes: get_u64("max_file_bytes", defaults.max_file_bytes),
         default_retention_keep_last: get_u32(
@@ -693,6 +988,11 @@ fn backup_settings(config: &AppConfig) -> BackupSettings {
             "default_retention_keep_days",
             defaults.default_retention_keep_days,
         ),
+        verify_interval_hours: get_u64(
+            "verify_interval_hours",
+            defaults.verify_interval_hours,
+        ),
+        encryption: get_string("encryption", &defaults.encryption),
         pg_dump_bin: get_string("pg_dump_bin", &defaults.pg_dump_bin),
         psql_bin: get_string("psql_bin", &defaults.psql_bin),
     }
@@ -826,18 +1126,20 @@ fn truncate_stderr(stderr: &[u8]) -> String {
 // Archive building (blocking work).
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct ManifestFile {
     path: String,
     size_bytes: u64,
     sha256: String,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct Manifest {
     job_id: String,
     kind: String,
     created_at: String,
+    #[serde(default)]
+    encryption: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     database: Option<Value>,
     files: Vec<ManifestFile>,
@@ -999,6 +1301,7 @@ fn build_archive(input: ArchiveInput) -> UnifiedResult<ArchiveOutput> {
         job_id: input.job_id.clone(),
         kind: input.kind.as_str().to_string(),
         created_at: now().to_rfc3339(),
+        encryption: input.settings.encryption.clone(),
         database: None,
         files: Vec::new(),
         config: None,
@@ -1164,6 +1467,7 @@ fn start_run(executor: &BackupExecutor, job_id: &str) -> UnifiedResult<BackupRun
         id: new_id(),
         job_id: job.id.clone(),
         job_name: job.name.clone(),
+        company_id: job.company_id.clone(),
         kind: job.kind,
         target: job.target.clone(),
         storage_key: None,
@@ -1171,6 +1475,13 @@ fn start_run(executor: &BackupExecutor, job_id: &str) -> UnifiedResult<BackupRun
         checksum: None,
         size_bytes: None,
         file_count: None,
+        verified: None,
+        last_verified_at: None,
+        manifest_verified: None,
+        verification_error: None,
+        last_drill_at: None,
+        drill_verified: None,
+        encryption: Some(executor.settings.encryption.clone()),
         started_at,
         finished_at: None,
         error: None,
@@ -1207,7 +1518,8 @@ fn fail_run(executor: &BackupExecutor, run_id: &str, job_id: &str, message: Stri
 /// Delete completed runs beyond the retention policy: keep the newest
 /// `retention_keep_last` runs and drop runs older than
 /// `retention_keep_days`. Stored archives are deleted best-effort.
-async fn prune_retention(executor: &BackupExecutor, job: &BackupJob) {
+/// Returns `(runs_pruned, archive_deletes_failed)`.
+async fn prune_retention(executor: &BackupExecutor, job: &BackupJob) -> (u64, u64) {
     let mut runs: Vec<BackupRun> = executor
         .state
         .runs
@@ -1236,15 +1548,21 @@ async fn prune_retention(executor: &BackupExecutor, job: &BackupJob) {
         }
     }
     if stale.is_empty() {
-        return;
+        return (0, 0);
     }
     let provider = executor.provider_for(&job.target);
+    let mut pruned: u64 = 0;
+    let mut failed: u64 = 0;
     for run in stale {
         if let (Some(key), Ok(provider)) = (&run.storage_key, &provider) {
-            let _ = provider.delete(key).await;
+            if provider.delete(key).await.is_err() {
+                failed += 1;
+            }
         }
         executor.state.runs.remove(&run.id);
+        pruned += 1;
     }
+    (pruned, failed)
 }
 
 async fn execute_run_inner(
@@ -1262,6 +1580,22 @@ async fn execute_run_inner(
         BACKUP_STARTED,
         audit_payload(&job, None, json!({ "run_id": run_id })),
     );
+
+    // At-rest encryption is not implemented (see the module header):
+    // refuse to write a plaintext archive while configured otherwise
+    // instead of silently storing it unencrypted.
+    if executor.settings.encryption != "none" {
+        let message = format!(
+            "Backup encryption mode \"{}\" is configured but not implemented: archives are stored unencrypted. Set backup.encryption to \"none\" or add an AEAD provider.",
+            executor.settings.encryption
+        );
+        fail_run(executor, run_id, job_id, message.clone());
+        executor.hooks.emit(
+            BACKUP_FAILED,
+            audit_payload(&job, None, json!({ "run_id": run_id, "error": message })),
+        );
+        return Err(UnifiedError::unprocessable(message));
+    }
 
     let database_name = if job.database_name.trim().is_empty() {
         executor.db.database.clone()
@@ -1335,6 +1669,7 @@ async fn execute_run_inner(
         id: run_id.to_string(),
         job_id: job.id.clone(),
         job_name: job.name.clone(),
+        company_id: job.company_id.clone(),
         kind: job.kind,
         target: job.target.clone(),
         storage_key: Some(storage_key.clone()),
@@ -1342,6 +1677,13 @@ async fn execute_run_inner(
         checksum: Some(checksum.clone()),
         size_bytes: Some(size_bytes),
         file_count: Some(output.file_count),
+        verified: None,
+        last_verified_at: None,
+        manifest_verified: None,
+        verification_error: None,
+        last_drill_at: None,
+        drill_verified: None,
+        encryption: Some(executor.settings.encryption.clone()),
         started_at: job.started_at.unwrap_or(now()),
         finished_at: Some(finished_at),
         error: None,
@@ -1402,8 +1744,108 @@ where
     }
 }
 
-/// Recompute the checksum of a stored archive and compare it with the
-/// recorded one. The archive bytes are downloaded in full; the size is
+/// Result of inspecting one stored archive: the checksum comparison
+/// plus the manifest cross-check (job id, kind, and the SHA-256 of
+/// every listed file). `entries` is the extracted archive, reused by
+/// restore and drill so the archive is downloaded and parsed once.
+struct ArchiveInspection {
+    actual_checksum: String,
+    checksum_verified: bool,
+    manifest_verified: bool,
+    manifest_job_matches: bool,
+    files_checked: u64,
+    files_mismatched: Vec<String>,
+    dump_present: bool,
+    config_present: bool,
+    entries: Vec<(String, Vec<u8>)>,
+}
+
+/// Inspect archive bytes: recompute the checksum, parse `manifest.json`,
+/// and verify every file the manifest lists against the archive
+/// entries. Blocking work: run it on a blocking thread.
+fn inspect_archive_bytes(bytes: &[u8], run: &BackupRun) -> UnifiedResult<ArchiveInspection> {
+    let actual = sha256_hex(bytes);
+    let checksum_verified = run.checksum.as_deref() == Some(actual.as_str());
+    let entries = extract_archive(bytes)?;
+    let mut mismatched: Vec<String> = Vec::new();
+    let dump_present = entries.iter().any(|(path, _)| path == DUMP_NAME);
+    let config_present = entries.iter().any(|(path, _)| path == CONFIG_NAME);
+    let Some((_, manifest_bytes)) = entries.iter().find(|(path, _)| path == MANIFEST_NAME)
+    else {
+        return Err(UnifiedError::unprocessable(
+            "Archive manifest is missing: the archive is not a backup produced by this module",
+        ));
+    };
+    let manifest: Manifest = serde_json::from_slice(manifest_bytes).map_err(|error| {
+        UnifiedError::unprocessable(format!("Archive manifest is unreadable: {error}"))
+    })?;
+    let manifest_job_matches =
+        manifest.job_id == run.job_id && manifest.kind == run.kind.as_str();
+    if !manifest_job_matches {
+        mismatched.push(format!(
+            "manifest belongs to job \"{}\" (kind \"{}\"), not this run",
+            manifest.job_id, manifest.kind
+        ));
+    }
+    if run.kind.includes_database() && !dump_present {
+        mismatched.push(format!("{DUMP_NAME} is missing from the archive"));
+    }
+    if run.kind.includes_config() && !config_present {
+        mismatched.push(format!("{CONFIG_NAME} is missing from the archive"));
+    }
+    for listed in &manifest.files {
+        match entries.iter().find(|(path, _)| *path == listed.path) {
+            None => mismatched.push(format!("missing file: {}", listed.path)),
+            Some((_, data)) => {
+                if data.len() as u64 != listed.size_bytes {
+                    mismatched.push(format!("size mismatch: {}", listed.path));
+                } else if sha256_hex(data) != listed.sha256 {
+                    mismatched.push(format!("checksum mismatch: {}", listed.path));
+                }
+            }
+        }
+    }
+    for (path, _) in &entries {
+        if path == MANIFEST_NAME || path == CONFIG_NAME || path == DUMP_NAME {
+            continue;
+        }
+        if !manifest.files.iter().any(|listed| &listed.path == path) {
+            mismatched.push(format!("unexpected entry: {path}"));
+        }
+    }
+    let manifest_verified = manifest_job_matches && mismatched.is_empty();
+    Ok(ArchiveInspection {
+        actual_checksum: actual,
+        checksum_verified,
+        manifest_verified,
+        manifest_job_matches,
+        files_checked: manifest.files.len() as u64,
+        files_mismatched: mismatched,
+        dump_present,
+        config_present,
+        entries,
+    })
+}
+
+/// Record a verification outcome on the run so the scheduled sweep
+/// can skip freshly verified runs.
+fn record_verification(
+    state: &BackupState,
+    run_id: &str,
+    verified: bool,
+    manifest_verified: bool,
+    error: Option<String>,
+) {
+    if let Some(mut run) = state.runs.get_mut(run_id) {
+        run.verified = Some(verified);
+        run.last_verified_at = Some(now());
+        run.manifest_verified = Some(manifest_verified);
+        run.verification_error = error;
+    }
+}
+
+/// Recompute the checksum of a stored archive and verify its
+/// manifest. The archive bytes are downloaded in full; the size is
 /// bounded by the backup size cap enforced at creation time.
 async fn verify_run_archive(
     executor: &BackupExecutor,
@@ -1419,16 +1861,332 @@ async fn verify_run_archive(
     }
     let provider = executor.provider_for(&run.target)?;
     let bytes = provider.download(&storage_key).await?;
-    let actual = sha256_hex(&bytes);
+    let archive_len = bytes.len() as u64;
+    let run_for_inspect = run.clone();
+    let inspection = tokio::task::spawn_blocking(move || {
+        inspect_archive_bytes(&bytes, &run_for_inspect)
+    })
+    .await
+    .map_err(|error| UnifiedError::internal(format!("Verification worker failed: {error}")))?;
+    let inspection = match inspection {
+        Ok(inspection) => inspection,
+        Err(error) => {
+            record_verification(
+                &executor.state,
+                &run.id,
+                false,
+                false,
+                Some(error.message.clone()),
+            );
+            return Err(error);
+        }
+    };
+    let verified = inspection.checksum_verified && inspection.manifest_verified;
+    let error = if verified {
+        None
+    } else if !inspection.checksum_verified {
+        Some("Archive checksum does not match the recorded checksum".to_string())
+    } else {
+        Some(inspection.files_mismatched.join("; "))
+    };
+    record_verification(
+        &executor.state,
+        &run.id,
+        verified,
+        inspection.manifest_verified,
+        error,
+    );
     Ok(VerifyView {
         run_id: run.id.clone(),
         job_id: run.job_id.clone(),
         target: run.target.clone(),
-        verified: run.checksum.as_deref() == Some(actual.as_str()),
+        verified,
         expected_checksum: run.checksum.clone(),
-        actual_checksum: actual,
-        size_bytes: bytes.len() as u64,
+        actual_checksum: inspection.actual_checksum,
+        size_bytes: archive_len,
+        manifest_verified: inspection.manifest_verified,
+        manifest_job_matches: inspection.manifest_job_matches,
+        files_checked: inspection.files_checked,
+        files_mismatched: inspection.files_mismatched,
+        dump_present: inspection.dump_present,
+        config_present: inspection.config_present,
     })
+}
+
+// ---------------------------------------------------------------------------
+// Restore drill (blocking parts).
+// ---------------------------------------------------------------------------
+
+/// Extract an archive into a throwaway sandbox directory, check the
+/// payload is usable (dump non-empty, config parses), then delete
+/// the sandbox. Returns `(dump_present, config_present,
+/// sandbox_removed)`. Any failure best-effort removes the sandbox
+/// before the error propagates, so a drill never leaves data behind.
+fn drill_extract_blocking(
+    entries: &[(String, Vec<u8>)],
+    drill_dir: &str,
+    run_id: &str,
+) -> UnifiedResult<(bool, bool, bool)> {
+    let sandbox = PathBuf::from(drill_dir).join(format!("drill-{run_id}"));
+    let result: UnifiedResult<(bool, bool)> = (|| {
+        std::fs::create_dir_all(&sandbox)?;
+        let canonical_sandbox = std::fs::canonicalize(&sandbox)?;
+        let mut dump_present = false;
+        let mut config_present = false;
+        for (path, bytes) in entries {
+            if path == DUMP_NAME {
+                if bytes.is_empty() {
+                    return Err(UnifiedError::unprocessable(
+                        "Archive database dump is empty",
+                    ));
+                }
+                dump_present = true;
+                continue;
+            }
+            if path == CONFIG_NAME {
+                serde_json::from_slice::<Value>(bytes).map_err(|error| {
+                    UnifiedError::unprocessable(format!(
+                        "Archive configuration snapshot is unreadable: {error}"
+                    ))
+                })?;
+                config_present = true;
+                continue;
+            }
+            if path == MANIFEST_NAME {
+                continue;
+            }
+            let relative = Path::new(path);
+            if relative.is_absolute()
+                || relative.components().any(|component| {
+                    matches!(component, Component::ParentDir | Component::RootDir)
+                })
+            {
+                return Err(UnifiedError::forbidden(format!(
+                    "Archive entry \"{path}\" escapes the drill sandbox"
+                )));
+            }
+            let destination = canonical_sandbox.join(relative);
+            if let Some(parent) = destination.parent() {
+                std::fs::create_dir_all(parent)?;
+                let canonical_parent = std::fs::canonicalize(parent)?;
+                if !canonical_parent.starts_with(&canonical_sandbox) {
+                    return Err(UnifiedError::forbidden(format!(
+                        "Archive entry \"{path}\" escapes the drill sandbox"
+                    )));
+                }
+            }
+            std::fs::write(&destination, bytes)?;
+        }
+        Ok((dump_present, config_present))
+    })();
+    // The sandbox is always removed, on success and on failure.
+    let removed = std::fs::remove_dir_all(&sandbox).is_ok() || !sandbox.exists();
+    let (dump_present, config_present) = result?;
+    Ok((dump_present, config_present, removed))
+}
+
+/// Run a restore drill for one completed run: verify checksum +
+/// manifest, then extract to a throwaway sandbox and delete it.
+/// Live data is never touched. The outcome is recorded on the run.
+async fn drill_run_archive(
+    executor: &BackupExecutor,
+    run: &BackupRun,
+) -> UnifiedResult<DrillView> {
+    let storage_key = run.storage_key.clone().ok_or_else(|| {
+        UnifiedError::unprocessable("Run has no stored archive to drill")
+    })?;
+    if run.status != BackupStatus::Completed {
+        return Err(UnifiedError::unprocessable(
+            "Only completed runs can be drilled",
+        ));
+    }
+    let provider = executor.provider_for(&run.target)?;
+    let bytes = provider.download(&storage_key).await?;
+    let run_for_drill = run.clone();
+    let drill_dir = executor.settings.drill_dir.clone();
+    let outcome = tokio::task::spawn_blocking(move || {
+        let inspection = inspect_archive_bytes(&bytes, &run_for_drill)?;
+        let (dump_present, config_present, sandbox_removed) =
+            drill_extract_blocking(&inspection.entries, &drill_dir, &run_for_drill.id)?;
+        Ok::<_, UnifiedError>((
+            inspection.checksum_verified,
+            inspection.manifest_verified,
+            inspection.files_checked,
+            inspection.files_mismatched,
+            dump_present,
+            config_present,
+            sandbox_removed,
+        ))
+    })
+    .await
+    .map_err(|error| UnifiedError::internal(format!("Drill worker failed: {error}")))?;
+    let outcome = match outcome {
+        Ok(outcome) => outcome,
+        Err(error) => {
+            if let Some(mut stored) = executor.state.runs.get_mut(&run.id) {
+                stored.last_drill_at = Some(now());
+                stored.drill_verified = Some(false);
+            }
+            return Err(error);
+        }
+    };
+    let (
+        checksum_verified,
+        manifest_verified,
+        files_checked,
+        files_mismatched,
+        dump_present,
+        config_present,
+        sandbox_removed,
+    ) = outcome;
+    let verified = checksum_verified && manifest_verified && sandbox_removed;
+    if let Some(mut stored) = executor.state.runs.get_mut(&run.id) {
+        stored.last_drill_at = Some(now());
+        stored.drill_verified = Some(verified);
+    }
+    Ok(DrillView {
+        run_id: run.id.clone(),
+        job_id: run.job_id.clone(),
+        target: run.target.clone(),
+        verified,
+        checksum_verified,
+        manifest_verified,
+        files_checked,
+        files_mismatched,
+        dump_present,
+        config_present,
+        sandbox_removed,
+    })
+}
+
+/// Verify every completed run whose last verification is older than
+/// the configured interval (or never verified). Failures emit
+/// `backup.verification_failed` and a `system` alert.
+async fn verify_stale_runs(
+    executor: &BackupExecutor,
+    company: &Option<String>,
+) -> MaintenanceVerifyView {
+    let interval = chrono::Duration::hours(executor.settings.verify_interval_hours as i64);
+    let cutoff = now() - interval;
+    let mut runs: Vec<BackupRun> = executor
+        .state
+        .runs
+        .iter()
+        .map(|entry| entry.value().clone())
+        .filter(|run| {
+            run.status == BackupStatus::Completed
+                && run_visible(run, company)
+                && run
+                    .last_verified_at
+                    .is_none_or(|verified_at| verified_at < cutoff)
+        })
+        .collect();
+    runs.sort_by(|a, b| a.started_at.cmp(&b.started_at));
+    let mut checked: u64 = 0;
+    let mut verified_count: u64 = 0;
+    let mut failed: u64 = 0;
+    let mut failures: Vec<Value> = Vec::new();
+    for run in runs {
+        checked += 1;
+        match verify_run_archive(executor, &run).await {
+            Ok(view) if view.verified => verified_count += 1,
+            Ok(view) => {
+                failed += 1;
+                let detail = if view.files_mismatched.is_empty() {
+                    "checksum mismatch".to_string()
+                } else {
+                    view.files_mismatched.join("; ")
+                };
+                failures.push(json!({
+                    "run_id": run.id,
+                    "job_id": run.job_id,
+                    "error": detail,
+                }));
+                fail_alert(executor, &run, "verification", &detail);
+            }
+            Err(error) => {
+                failed += 1;
+                failures.push(json!({
+                    "run_id": run.id,
+                    "job_id": run.job_id,
+                    "error": error.message,
+                }));
+                fail_alert(executor, &run, "verification", &error.message);
+            }
+        }
+    }
+    MaintenanceVerifyView {
+        checked,
+        verified: verified_count,
+        failed,
+        failures,
+    }
+}
+
+/// Emit the failure hook and the `system` alert for a verification
+/// or drill failure.
+fn fail_alert(executor: &BackupExecutor, run: &BackupRun, what: &str, detail: &str) {
+    let event = if what == "drill" {
+        BACKUP_DRILL_FAILED
+    } else {
+        BACKUP_VERIFICATION_FAILED
+    };
+    executor.hooks.emit(
+        event,
+        json!({
+            "run_id": run.id,
+            "job_id": run.job_id,
+            "job_name": run.job_name,
+            "target": run.target,
+            "error": detail,
+        }),
+    );
+    let kind = format!("backup.{what}_failed");
+    notify_system(
+        &executor.hooks,
+        &kind,
+        format!("Backup {what} failed: {}", run.job_name),
+        format!(
+            "Backup {what} for job {} ({}) failed: {detail}",
+            run.job_name, run.job_id
+        ),
+    );
+}
+
+/// Enforce retention for every job the caller may see. Returns the
+/// per-job outcome.
+async fn prune_all_jobs(
+    executor: &BackupExecutor,
+    company: &Option<String>,
+) -> MaintenancePruneView {
+    let mut jobs: Vec<BackupJob> = executor
+        .state
+        .jobs
+        .iter()
+        .map(|entry| entry.value().clone())
+        .filter(|job| job_visible(job, company))
+        .collect();
+    jobs.sort_by(|a, b| a.name.cmp(&b.name));
+    let mut runs_pruned: u64 = 0;
+    let mut archives_failed: u64 = 0;
+    let mut per_job: Vec<Value> = Vec::new();
+    for job in &jobs {
+        let (pruned, failed) = prune_retention(executor, job).await;
+        runs_pruned += pruned;
+        archives_failed += failed;
+        per_job.push(json!({
+            "job_id": job.id,
+            "job_name": job.name,
+            "runs_pruned": pruned,
+            "archives_failed": failed,
+        }));
+    }
+    MaintenancePruneView {
+        jobs_checked: jobs.len() as u64,
+        runs_pruned,
+        archives_failed,
+        per_job,
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1719,57 +2477,93 @@ fn validate_common(
 // ---------------------------------------------------------------------------
 
 async fn get_summary(
+    req: HttpRequest,
     ctx: web::Data<Arc<AppContext>>,
     state: web::Data<Arc<BackupState>>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<BackupSummary> = (|| {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_BACKUP_VIEW)?;
+        let company = caller.company_id;
         let config = ctx.config.read().expect("config lock poisoned");
         let settings = backup_settings(&config);
         let mut jobs_by_status: BTreeMap<String, u64> = BTreeMap::new();
         for entry in state.jobs.iter() {
+            if !job_visible(entry.value(), &company) {
+                continue;
+            }
             *jobs_by_status
                 .entry(entry.value().status.as_str().to_string())
                 .or_default() += 1;
         }
         let mut runs_by_status: BTreeMap<String, u64> = BTreeMap::new();
         for entry in state.runs.iter() {
+            if !run_visible(entry.value(), &company) {
+                continue;
+            }
             *runs_by_status
                 .entry(entry.value().status.as_str().to_string())
                 .or_default() += 1;
         }
+        let jobs_total: u64 = jobs_by_status.values().sum();
+        let runs_total: u64 = runs_by_status.values().sum();
         Ok(BackupSummary {
-            jobs_total: state.jobs.len() as u64,
+            jobs_total,
             jobs_by_status,
-            runs_total: state.runs.len() as u64,
+            runs_total,
             runs_by_status,
             targets: ctx.storage_registry.list(),
             base_dir: settings.base_dir,
+            drill_dir: settings.drill_dir,
             max_total_bytes: settings.max_total_bytes,
             max_file_bytes: settings.max_file_bytes,
             default_retention_keep_last: settings.default_retention_keep_last,
             default_retention_keep_days: settings.default_retention_keep_days,
+            verify_interval_hours: settings.verify_interval_hours,
+            encryption: settings.encryption,
         })
     })();
     json::respond(result, debug)
 }
 
-async fn list_targets(ctx: web::Data<Arc<AppContext>>) -> HttpResponse {
-    let targets = ctx.storage_registry.list();
-    json::success_response(json!({ "targets": targets }), 200)
+async fn list_targets(req: HttpRequest, ctx: web::Data<Arc<AppContext>>) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let result: UnifiedResult<Vec<String>> = (|| {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_BACKUP_VIEW)?;
+        Ok(ctx.storage_registry.list())
+    })();
+    match result {
+        Ok(targets) => json::success_response(json!({ "targets": targets }), 200),
+        Err(error) => json::error_response(&error, debug),
+    }
 }
 
 async fn list_jobs(
+    req: HttpRequest,
+    ctx: web::Data<Arc<AppContext>>,
     state: web::Data<Arc<BackupState>>,
     query: web::Query<PaginationParams>,
 ) -> HttpResponse {
+    let debug = ctx.is_debug();
     let params = query.into_inner();
+    let caller = match (|| {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_BACKUP_VIEW)?;
+        Ok::<Caller, UnifiedError>(caller)
+    })() {
+        Ok(caller) => caller,
+        Err(error) => return json::error_response(&error, debug),
+    };
+    let company = caller.company_id;
     let mut items: Vec<BackupJob> = state
         .jobs
         .iter()
         .map(|entry| entry.value().clone())
         .filter(|job| {
-            matches_search(&format!("{} {}", job.name, job.target), &params)
+            job_visible(job, &company)
+                && matches_search(&format!("{} {}", job.name, job.target), &params)
                 && params
                     .filters
                     .get("kind")
@@ -1801,12 +2595,15 @@ async fn list_jobs(
 }
 
 async fn create_job(
+    req: HttpRequest,
     ctx: web::Data<Arc<AppContext>>,
     state: web::Data<Arc<BackupState>>,
     body: web::Json<CreateBackupJob>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<BackupJob> = (|| {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_BACKUP_MANAGE)?;
         let input = body.into_inner();
         let config = ctx.config.read().expect("config lock poisoned");
         let settings = backup_settings(&config);
@@ -1844,6 +2641,7 @@ async fn create_job(
         let mut job = BackupJob {
             id: new_id(),
             name: input.name.trim().to_string(),
+            company_id: caller.company_id.clone(),
             kind: input.kind,
             database_name: database_name.trim().to_string(),
             paths,
@@ -1883,20 +2681,22 @@ async fn create_job(
 }
 
 async fn get_job(
+    req: HttpRequest,
     ctx: web::Data<Arc<AppContext>>,
     state: web::Data<Arc<BackupState>>,
     path: web::Path<String>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
-    let result: UnifiedResult<BackupJob> = state
-        .jobs
-        .get(path.as_str())
-        .map(|entry| entry.value().clone())
-        .ok_or_else(|| UnifiedError::not_found("Backup job not found"));
+    let result: UnifiedResult<BackupJob> = (|| {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_BACKUP_VIEW)?;
+        visible_job(&state, path.as_str(), &caller.company_id)
+    })();
     json::respond(result, debug)
 }
 
 async fn update_job(
+    req: HttpRequest,
     ctx: web::Data<Arc<AppContext>>,
     state: web::Data<Arc<BackupState>>,
     path: web::Path<String>,
@@ -1904,16 +2704,15 @@ async fn update_job(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<BackupJob> = (|| {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_BACKUP_MANAGE)?;
         let input = body.into_inner();
         let config = ctx.config.read().expect("config lock poisoned");
         let settings = backup_settings(&config);
         // Work on a clone so a failed validation never leaves a
-        // half-updated job in the store.
-        let mut job = state
-            .jobs
-            .get(path.as_str())
-            .map(|entry| entry.value().clone())
-            .ok_or_else(|| UnifiedError::not_found("Backup job not found"))?;
+        // half-updated job in the store. Cross-company jobs answer
+        // 404 here, exactly like get.
+        let mut job = visible_job(&state, path.as_str(), &caller.company_id)?;
         if let Some(name) = input.name {
             if name.trim().is_empty() || name.len() > MAX_NAME_LEN {
                 return Err(UnifiedError::bad_request(
@@ -1990,18 +2789,17 @@ async fn update_job(
 }
 
 async fn delete_job(
+    req: HttpRequest,
     ctx: web::Data<Arc<AppContext>>,
     state: web::Data<Arc<BackupState>>,
     path: web::Path<String>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| async {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_BACKUP_MANAGE)?;
         let job_id = path.into_inner();
-        let job = state
-            .jobs
-            .get(&job_id)
-            .map(|entry| entry.value().clone())
-            .ok_or_else(|| UnifiedError::not_found("Backup job not found"))?;
+        let job = visible_job(&state, &job_id, &caller.company_id)?;
         if state.running.contains_key(&job_id) {
             return Err(UnifiedError::conflict(
                 "Backup job is running and cannot be deleted yet",
@@ -2047,14 +2845,19 @@ async fn delete_job(
 }
 
 async fn run_job_now(
+    req: HttpRequest,
     ctx: web::Data<Arc<AppContext>>,
     state: web::Data<Arc<BackupState>>,
     path: web::Path<String>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<BackupRun> = (|| {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_BACKUP_MANAGE)?;
         let executor = BackupExecutor::from_context(&ctx, state.clone().into_inner())?;
         let job_id = path.into_inner();
+        // Cross-company jobs answer 404 before any run starts.
+        visible_job(&state, &job_id, &caller.company_id)?;
         let run = start_run(&executor, &job_id)?;
         let run_id = run.id.clone();
         let worker_executor = executor.clone();
@@ -2070,13 +2873,22 @@ async fn run_job_now(
 }
 
 async fn list_job_runs(
+    req: HttpRequest,
+    ctx: web::Data<Arc<AppContext>>,
     state: web::Data<Arc<BackupState>>,
     path: web::Path<String>,
     query: web::Query<PaginationParams>,
 ) -> HttpResponse {
     let params = query.into_inner();
     let job_id = path.into_inner();
-    if !state.jobs.contains_key(&job_id) {
+    let caller = match caller(&req).and_then(|caller| {
+        require_permission(&ctx, &caller.role, PERM_BACKUP_VIEW)?;
+        Ok(caller)
+    }) {
+        Ok(caller) => caller,
+        Err(error) => return json::error_response(&error, ctx.is_debug()),
+    };
+    if visible_job(&state, &job_id, &caller.company_id).is_err() {
         return json::error_response(&UnifiedError::not_found("Backup job not found"), false);
     }
     let mut items: Vec<BackupRun> = state
@@ -2085,6 +2897,7 @@ async fn list_job_runs(
         .map(|entry| entry.value().clone())
         .filter(|run| {
             run.job_id == job_id
+                && run_visible(run, &caller.company_id)
                 && params
                     .filters
                     .get("status")
@@ -2100,16 +2913,27 @@ async fn list_job_runs(
 }
 
 async fn list_runs(
+    req: HttpRequest,
+    ctx: web::Data<Arc<AppContext>>,
     state: web::Data<Arc<BackupState>>,
     query: web::Query<PaginationParams>,
 ) -> HttpResponse {
     let params = query.into_inner();
+    let caller = match caller(&req).and_then(|caller| {
+        require_permission(&ctx, &caller.role, PERM_BACKUP_VIEW)?;
+        Ok(caller)
+    }) {
+        Ok(caller) => caller,
+        Err(error) => return json::error_response(&error, ctx.is_debug()),
+    };
+    let company = caller.company_id;
     let mut items: Vec<BackupRun> = state
         .runs
         .iter()
         .map(|entry| entry.value().clone())
         .filter(|run| {
-            matches_search(&format!("{} {}", run.job_id, run.target), &params)
+            run_visible(run, &company)
+                && matches_search(&format!("{} {}", run.job_id, run.target), &params)
                 && params
                     .filters
                     .get("job_id")
@@ -2141,38 +2965,46 @@ async fn list_runs(
 }
 
 async fn get_run(
+    req: HttpRequest,
     ctx: web::Data<Arc<AppContext>>,
     state: web::Data<Arc<BackupState>>,
     path: web::Path<String>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
-    let result: UnifiedResult<BackupRun> = state
-        .runs
-        .get(path.as_str())
-        .map(|entry| entry.value().clone())
-        .ok_or_else(|| UnifiedError::not_found("Backup run not found"));
+    let result: UnifiedResult<BackupRun> = (|| {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_BACKUP_VIEW)?;
+        visible_run(&state, path.as_str(), &caller.company_id)
+    })();
     json::respond(result, debug)
 }
 
 async fn verify_run(
+    req: HttpRequest,
     ctx: web::Data<Arc<AppContext>>,
     state: web::Data<Arc<BackupState>>,
     path: web::Path<String>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<VerifyView> = (|| async {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_BACKUP_MANAGE)?;
         let executor = BackupExecutor::from_context(&ctx, state.clone().into_inner())?;
-        let run = state
-            .runs
-            .get(path.as_str())
-            .map(|entry| entry.value().clone())
-            .ok_or_else(|| UnifiedError::not_found("Backup run not found"))?;
+        let run = visible_run(&state, path.as_str(), &caller.company_id)?;
         let view = verify_run_archive(&executor, &run).await?;
         if let Some(job) = state.jobs.get(&run.job_id) {
             ctx.hooks.emit(
                 BACKUP_VERIFIED,
                 audit_payload(&job, Some(&run), json!({ "verified": view.verified })),
             );
+        }
+        if !view.verified {
+            let detail = if view.files_mismatched.is_empty() {
+                "checksum mismatch".to_string()
+            } else {
+                view.files_mismatched.join("; ")
+            };
+            fail_alert(&executor, &run, "verification", &detail);
         }
         Ok(view)
     })()
@@ -2181,14 +3013,18 @@ async fn verify_run(
 }
 
 async fn verify_job(
+    req: HttpRequest,
     ctx: web::Data<Arc<AppContext>>,
     state: web::Data<Arc<BackupState>>,
     path: web::Path<String>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<VerifyView> = (|| async {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_BACKUP_MANAGE)?;
         let executor = BackupExecutor::from_context(&ctx, state.clone().into_inner())?;
         let job_id = path.into_inner();
+        visible_job(&state, &job_id, &caller.company_id)?;
         let mut runs: Vec<BackupRun> = state
             .runs
             .iter()
@@ -2211,7 +3047,128 @@ async fn verify_job(
                 audit_payload(&job, Some(&run), json!({ "verified": view.verified })),
             );
         }
+        if !view.verified {
+            let detail = if view.files_mismatched.is_empty() {
+                "checksum mismatch".to_string()
+            } else {
+                view.files_mismatched.join("; ")
+            };
+            fail_alert(&executor, &run, "verification", &detail);
+        }
         Ok(view)
+    })()
+    .await;
+    json::respond(result, debug)
+}
+
+/// Drill the latest completed run of a job: verify it and extract it
+/// to a throwaway sandbox that is deleted afterwards.
+async fn drill_job(
+    req: HttpRequest,
+    ctx: web::Data<Arc<AppContext>>,
+    state: web::Data<Arc<BackupState>>,
+    path: web::Path<String>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let result: UnifiedResult<DrillView> = (|| async {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_BACKUP_MANAGE)?;
+        let executor = BackupExecutor::from_context(&ctx, state.clone().into_inner())?;
+        let job_id = path.into_inner();
+        visible_job(&state, &job_id, &caller.company_id)?;
+        let run = resolve_restore_run(&state, &job_id, None)?;
+        drill_one(&ctx, &executor, &run).await
+    })()
+    .await;
+    json::respond(result, debug)
+}
+
+/// Drill one run: verify it and extract it to a throwaway sandbox
+/// that is deleted afterwards. Live data is never touched.
+async fn drill_run(
+    req: HttpRequest,
+    ctx: web::Data<Arc<AppContext>>,
+    state: web::Data<Arc<BackupState>>,
+    path: web::Path<String>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let result: UnifiedResult<DrillView> = (|| async {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_BACKUP_MANAGE)?;
+        let executor = BackupExecutor::from_context(&ctx, state.clone().into_inner())?;
+        let run = visible_run(&state, path.as_str(), &caller.company_id)?;
+        if run.status != BackupStatus::Completed {
+            return Err(UnifiedError::unprocessable(
+                "Only completed runs can be drilled",
+            ));
+        }
+        drill_one(&ctx, &executor, &run).await
+    })()
+    .await;
+    json::respond(result, debug)
+}
+
+/// Shared drill tail: run the drill, emit the outcome hook, and alert
+/// on failure.
+async fn drill_one(
+    ctx: &AppContext,
+    executor: &BackupExecutor,
+    run: &BackupRun,
+) -> UnifiedResult<DrillView> {
+    match drill_run_archive(executor, run).await {
+        Ok(view) => {
+            if let Some(job) = executor.state.jobs.get(&run.job_id) {
+                ctx.hooks.emit(
+                    BACKUP_DRILL_COMPLETED,
+                    audit_payload(&job, Some(run), json!({ "verified": view.verified })),
+                );
+            }
+            if !view.verified {
+                fail_alert(
+                    executor,
+                    run,
+                    "drill",
+                    "drill extraction did not fully verify (see manifest mismatches)",
+                );
+            }
+            Ok(view)
+        }
+        Err(error) => {
+            fail_alert(executor, run, "drill", &error.message);
+            Err(error)
+        }
+    }
+}
+
+/// Verify every stale completed run (scheduled integrity sweep).
+async fn maintenance_verify(
+    req: HttpRequest,
+    ctx: web::Data<Arc<AppContext>>,
+    state: web::Data<Arc<BackupState>>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let result: UnifiedResult<MaintenanceVerifyView> = (|| async {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_BACKUP_MANAGE)?;
+        let executor = BackupExecutor::from_context(&ctx, state.clone().into_inner())?;
+        Ok(verify_stale_runs(&executor, &caller.company_id).await)
+    })()
+    .await;
+    json::respond(result, debug)
+}
+
+/// Enforce retention for every job (scheduled retention sweep).
+async fn maintenance_prune(
+    req: HttpRequest,
+    ctx: web::Data<Arc<AppContext>>,
+    state: web::Data<Arc<BackupState>>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let result: UnifiedResult<MaintenancePruneView> = (|| async {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_BACKUP_MANAGE)?;
+        let executor = BackupExecutor::from_context(&ctx, state.clone().into_inner())?;
+        Ok(prune_all_jobs(&executor, &caller.company_id).await)
     })()
     .await;
     json::respond(result, debug)
@@ -2274,9 +3231,41 @@ async fn perform_restore(
         UnifiedError::unprocessable("Run has no stored archive to restore")
     })?;
     let bytes = provider.download(&storage_key).await?;
-    let entries = tokio::task::spawn_blocking(move || extract_archive(&bytes))
-        .await
-        .map_err(|error| UnifiedError::internal(format!("Restore worker failed: {error}")))?;
+    // Verify checksum + manifest BEFORE touching live data. A
+    // corrupt or foreign archive fails closed here; nothing is
+    // written, and the failure is recorded on the run.
+    let run_for_inspect = run.clone();
+    let inspection = tokio::task::spawn_blocking(move || {
+        inspect_archive_bytes(&bytes, &run_for_inspect)
+    })
+    .await
+    .map_err(|error| UnifiedError::internal(format!("Restore worker failed: {error}")))?;
+    let inspection = match inspection {
+        Ok(inspection) => inspection,
+        Err(error) => {
+            record_verification(&state, &run.id, false, false, Some(error.message.clone()));
+            return Err(error);
+        }
+    };
+    if !inspection.checksum_verified || !inspection.manifest_verified {
+        let detail = if !inspection.checksum_verified {
+            "Archive checksum does not match the recorded checksum".to_string()
+        } else {
+            inspection.files_mismatched.join("; ")
+        };
+        record_verification(
+            &state,
+            &run.id,
+            false,
+            inspection.manifest_verified,
+            Some(detail.clone()),
+        );
+        return Err(UnifiedError::unprocessable(format!(
+            "Backup archive failed integrity verification and was not restored: {detail}"
+        )));
+    }
+    record_verification(&state, &run.id, true, true, None);
+    let entries = inspection.entries;
 
     let wants_database = run.kind.includes_database();
     let wants_files = run.kind.includes_files();
@@ -2392,6 +3381,7 @@ async fn perform_restore(
 }
 
 async fn restore_job(
+    req: HttpRequest,
     ctx: web::Data<Arc<AppContext>>,
     state: web::Data<Arc<BackupState>>,
     path: web::Path<String>,
@@ -2399,10 +3389,10 @@ async fn restore_job(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<RestoreView> = (|| async {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_BACKUP_MANAGE)?;
         let job_id = path.into_inner();
-        if !state.jobs.contains_key(&job_id) {
-            return Err(UnifiedError::not_found("Backup job not found"));
-        }
+        visible_job(&state, &job_id, &caller.company_id)?;
         let request = body.into_inner();
         let run = resolve_restore_run(&state, &job_id, request.run_id.as_deref())?;
         perform_restore(&ctx, &state, &run, &request).await
@@ -2412,6 +3402,7 @@ async fn restore_job(
 }
 
 async fn restore_run(
+    req: HttpRequest,
     ctx: web::Data<Arc<AppContext>>,
     state: web::Data<Arc<BackupState>>,
     path: web::Path<String>,
@@ -2419,12 +3410,10 @@ async fn restore_run(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<RestoreView> = (|| async {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_BACKUP_MANAGE)?;
         let request = body.into_inner();
-        let run = state
-            .runs
-            .get(path.as_str())
-            .map(|entry| entry.value().clone())
-            .ok_or_else(|| UnifiedError::not_found("Backup run not found"))?;
+        let run = visible_run(&state, path.as_str(), &caller.company_id)?;
         if run.status != BackupStatus::Completed {
             return Err(UnifiedError::unprocessable(
                 "Only completed runs can be restored",
@@ -2437,18 +3426,17 @@ async fn restore_run(
 }
 
 async fn delete_run(
+    req: HttpRequest,
     ctx: web::Data<Arc<AppContext>>,
     state: web::Data<Arc<BackupState>>,
     path: web::Path<String>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| async {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_BACKUP_MANAGE)?;
         let run_id = path.into_inner();
-        let run = state
-            .runs
-            .get(&run_id)
-            .map(|entry| entry.value().clone())
-            .ok_or_else(|| UnifiedError::not_found("Backup run not found"))?;
+        let run = visible_run(&state, &run_id, &caller.company_id)?;
         if run.status == BackupStatus::Running {
             return Err(UnifiedError::conflict(
                 "Backup run is in progress and cannot be deleted yet",
@@ -2505,7 +3493,7 @@ impl Module for BackupModule {
     }
 
     fn description(&self) -> &'static str {
-        "Backup jobs for database, files, configuration, or full snapshots, stored in a configured storage target with verification, retention, and restore."
+        "Backup jobs for database, files, configuration, or full snapshots, stored in a configured storage target with checksum and manifest verification, scheduled integrity sweeps, retention enforcement, restore drills, and restore."
     }
 
     fn dependencies(&self) -> Vec<&'static str> {
@@ -2582,6 +3570,67 @@ impl Module for BackupModule {
                         ctx.add_result(json!({ "error": error.message }));
                     }
                 }
+            }),
+        );
+
+        // Scheduled integrity sweep: verify every stale completed run
+        // when the scheduler dispatches `backup.verify`. System actor:
+        // platform scope (no company filter).
+        let state = self.state.clone();
+        bus.register(
+            BACKUP_VERIFY_REQUESTED,
+            "backup",
+            Arc::new(move |ctx: &mut HookContext| {
+                let executor = match BackupExecutor::from_state(state.clone()) {
+                    Ok(executor) => executor,
+                    Err(error) => {
+                        ctx.add_result(json!({ "error": error.message }));
+                        return;
+                    }
+                };
+                spawn_backup_worker(async move {
+                    let view = verify_stale_runs(&executor, &None).await;
+                    executor.hooks.emit(
+                        BACKUP_VERIFIED,
+                        json!({
+                            "checked": view.checked,
+                            "verified": view.verified,
+                            "failed": view.failed,
+                        }),
+                    );
+                });
+                ctx.add_result(json!({ "verify_started": true }));
+            }),
+        );
+
+        // Scheduled retention enforcement: prune every job when the
+        // scheduler dispatches `backup.prune`. System actor:
+        // platform scope (no company filter).
+        let state = self.state.clone();
+        bus.register(
+            BACKUP_PRUNE_REQUESTED,
+            "backup",
+            Arc::new(move |ctx: &mut HookContext| {
+                let executor = match BackupExecutor::from_state(state.clone()) {
+                    Ok(executor) => executor,
+                    Err(error) => {
+                        ctx.add_result(json!({ "error": error.message }));
+                        return;
+                    }
+                };
+                spawn_backup_worker(async move {
+                    let view = prune_all_jobs(&executor, &None).await;
+                    executor.hooks.emit(
+                        BACKUP_DELETED,
+                        json!({
+                            "action": "backup.prune",
+                            "jobs_checked": view.jobs_checked,
+                            "runs_pruned": view.runs_pruned,
+                            "archives_failed": view.archives_failed,
+                        }),
+                    );
+                });
+                ctx.add_result(json!({ "prune_started": true }));
             }),
         );
 
@@ -2681,12 +3730,16 @@ impl Module for BackupModule {
                 .route("/jobs/{id}/run", web::post().to(run_job_now))
                 .route("/jobs/{id}/verify", web::post().to(verify_job))
                 .route("/jobs/{id}/restore", web::post().to(restore_job))
+                .route("/jobs/{id}/drill", web::post().to(drill_job))
                 .route("/jobs/{id}/runs", web::get().to(list_job_runs))
                 .route("/runs", web::get().to(list_runs))
                 .route("/runs/{run_id}", web::get().to(get_run))
                 .route("/runs/{run_id}", web::delete().to(delete_run))
                 .route("/runs/{run_id}/verify", web::post().to(verify_run))
-                .route("/runs/{run_id}/restore", web::post().to(restore_run)),
+                .route("/runs/{run_id}/restore", web::post().to(restore_run))
+                .route("/runs/{run_id}/drill", web::post().to(drill_run))
+                .route("/maintenance/verify", web::post().to(maintenance_verify))
+                .route("/maintenance/prune", web::post().to(maintenance_prune)),
         );
     }
 
@@ -2702,12 +3755,16 @@ impl Module for BackupModule {
             RouteInfo { method: "POST", path: "/api/v1/backup/jobs/{id}/run", owner: "backup", description: "Run a backup job now, in the background." },
             RouteInfo { method: "POST", path: "/api/v1/backup/jobs/{id}/verify", owner: "backup", description: "Verify the latest completed run of a job." },
             RouteInfo { method: "POST", path: "/api/v1/backup/jobs/{id}/restore", owner: "backup", description: "Restore from the latest completed run of a job." },
+            RouteInfo { method: "POST", path: "/api/v1/backup/jobs/{id}/drill", owner: "backup", description: "Restore drill for the latest completed run of a job: verify and extract to a throwaway sandbox, then delete it." },
             RouteInfo { method: "GET", path: "/api/v1/backup/jobs/{id}/runs", owner: "backup", description: "List the run history of one backup job." },
             RouteInfo { method: "GET", path: "/api/v1/backup/runs", owner: "backup", description: "List all backup runs with pagination and filters." },
             RouteInfo { method: "GET", path: "/api/v1/backup/runs/{run_id}", owner: "backup", description: "Get one backup run." },
             RouteInfo { method: "DELETE", path: "/api/v1/backup/runs/{run_id}", owner: "backup", description: "Delete one backup run and its stored archive." },
             RouteInfo { method: "POST", path: "/api/v1/backup/runs/{run_id}/verify", owner: "backup", description: "Recompute and compare the checksum of a stored backup." },
             RouteInfo { method: "POST", path: "/api/v1/backup/runs/{run_id}/restore", owner: "backup", description: "Restore from one backup run." },
+            RouteInfo { method: "POST", path: "/api/v1/backup/runs/{run_id}/drill", owner: "backup", description: "Restore drill for one backup run: verify and extract to a throwaway sandbox, then delete it." },
+            RouteInfo { method: "POST", path: "/api/v1/backup/maintenance/verify", owner: "backup", description: "Verify every completed run whose last verification is stale." },
+            RouteInfo { method: "POST", path: "/api/v1/backup/maintenance/prune", owner: "backup", description: "Enforce retention for every backup job." },
         ]
     }
 }

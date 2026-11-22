@@ -15,7 +15,7 @@ use crate::core::hooks::events;
 use crate::core::json;
 use crate::core::modules::{Module, ModuleRegistry, RouteInfo};
 use crate::core::pagination::{PageResult, PaginationParams};
-use actix_web::{web, HttpResponse};
+use actix_web::{web, HttpRequest, HttpResponse};
 use base64::Engine;
 use chrono::{DateTime, Utc};
 use dashmap::DashMap;
@@ -28,6 +28,68 @@ use std::sync::{Arc, OnceLock, RwLock};
 use uuid::Uuid;
 
 type HmacSha256 = Hmac<Sha256>;
+
+/// Capabilities enforced on the admin endpoints of this module (device
+/// list/get/revoke). Device-facing endpoints (`register`, `sync/push`,
+/// `sync/pull`) authenticate with the HMAC device token instead; the
+/// register call is the onboarding step that issues that token.
+pub const PERM_APP_SYNC_VIEW: &str = "app-sync:view";
+pub const PERM_APP_SYNC_MANAGE: &str = "app-sync:manage";
+
+/// Caller identity: `X-User-Id` plus `X-Role`, exactly like the other
+/// modules. The role is checked through the `role.check` hook and the
+/// check fails closed: no answer means not allowed.
+struct Caller {
+    role: String,
+}
+
+fn caller(req: &HttpRequest) -> UnifiedResult<Caller> {
+    let actor = req
+        .headers()
+        .get("x-user-id")
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)
+        .filter(|value| !value.is_empty());
+    if actor.is_none() {
+        return Err(UnifiedError::unauthorized("Missing X-User-Id header"));
+    }
+    let role = req
+        .headers()
+        .get("x-role")
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+        .ok_or_else(|| UnifiedError::unauthorized("Missing X-Role header"))?;
+    Ok(Caller { role })
+}
+
+fn check_capability(ctx: &AppContext, role: &str, permission: &str) -> bool {
+    let context = ctx.hooks.emit(
+        "role.check",
+        serde_json::json!({ "role": role, "permission": permission, "allowed": false }),
+    );
+    context
+        .get("allowed")
+        .and_then(|value| value.as_bool())
+        .unwrap_or(false)
+}
+
+fn require_permission(
+    ctx: &AppContext,
+    req: &HttpRequest,
+    permission: &str,
+) -> UnifiedResult<()> {
+    let who = caller(req)?;
+    if check_capability(ctx, &who.role, permission) {
+        Ok(())
+    } else {
+        Err(UnifiedError::forbidden(format!(
+            "Role \"{}\" does not hold permission \"{}\"",
+            who.role, permission
+        )))
+    }
+}
 
 // ---------------------------------------------------------------------------
 // Device and sync-record state.
@@ -80,9 +142,17 @@ pub struct SyncRecord {
 
 static DEVICES: OnceLock<DashMap<Uuid, Arc<DeviceState>>> = OnceLock::new();
 static SYNC_RECORDS: OnceLock<DashMap<Uuid, Vec<SyncRecord>>> = OnceLock::new();
+/// Idempotent push results: (device id, client idempotency key) ->
+/// the record created by the first push. A replayed push returns the
+/// stored record instead of appending a duplicate.
+static PUSH_IDEMPOTENCY: OnceLock<DashMap<(Uuid, String), SyncRecord>> = OnceLock::new();
 
 fn devices_store() -> &'static DashMap<Uuid, Arc<DeviceState>> {
     DEVICES.get_or_init(DashMap::new)
+}
+
+fn push_idempotency_store() -> &'static DashMap<(Uuid, String), SyncRecord> {
+    PUSH_IDEMPOTENCY.get_or_init(DashMap::new)
 }
 
 fn sync_store() -> &'static DashMap<Uuid, Vec<SyncRecord>> {
@@ -172,6 +242,10 @@ fn default_platform() -> String {
 struct SyncPushRequest {
     device_token: String,
     payload: Value,
+    /// Optional client-chosen key: replaying a push with the same key
+    /// returns the original record instead of appending a duplicate.
+    #[serde(default)]
+    idempotency_key: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -247,9 +321,13 @@ async fn register_device(
 
 async fn list_devices(
     ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
     params: web::Query<PaginationParams>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
+    if let Err(error) = require_permission(&ctx, &req, PERM_APP_SYNC_VIEW) {
+        return json::error_response(&error, debug);
+    }
     let result: UnifiedResult<Value> = (|| {
         let mut items: Vec<DeviceView> = devices_store()
             .iter()
@@ -275,8 +353,15 @@ async fn list_devices(
     json::respond(result, debug)
 }
 
-async fn get_device(ctx: web::Data<Arc<AppContext>>, id: web::Path<Uuid>) -> HttpResponse {
+async fn get_device(
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+    id: web::Path<Uuid>,
+) -> HttpResponse {
     let debug = ctx.is_debug();
+    if let Err(error) = require_permission(&ctx, &req, PERM_APP_SYNC_VIEW) {
+        return json::error_response(&error, debug);
+    }
     let result: UnifiedResult<DeviceView> = (|| {
         devices_store()
             .get(&id.into_inner())
@@ -286,8 +371,15 @@ async fn get_device(ctx: web::Data<Arc<AppContext>>, id: web::Path<Uuid>) -> Htt
     json::respond(result, debug)
 }
 
-async fn revoke_device(ctx: web::Data<Arc<AppContext>>, id: web::Path<Uuid>) -> HttpResponse {
+async fn revoke_device(
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+    id: web::Path<Uuid>,
+) -> HttpResponse {
     let debug = ctx.is_debug();
+    if let Err(error) = require_permission(&ctx, &req, PERM_APP_SYNC_MANAGE) {
+        return json::error_response(&error, debug);
+    }
     let result: UnifiedResult<DeviceView> = (|| {
         let device = devices_store()
             .get(&id.into_inner())
@@ -319,11 +411,38 @@ async fn sync_push(
     body: web::Json<SyncPushRequest>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
-    let result: UnifiedResult<SyncRecord> = (|| {
+    let result: UnifiedResult<(SyncRecord, bool)> = (|| {
         if body.payload.is_null() {
             return Err(UnifiedError::bad_request("payload is required"));
         }
+        let idempotency_key = match &body.idempotency_key {
+            Some(key) => {
+                let key = key.trim();
+                if key.is_empty() {
+                    return Err(UnifiedError::bad_request(
+                        "idempotency_key must not be empty",
+                    ));
+                }
+                if key.len() > 128 {
+                    return Err(UnifiedError::bad_request(
+                        "idempotency_key is too long (maximum 128 characters)",
+                    ));
+                }
+                if key.contains(char::is_whitespace) {
+                    return Err(UnifiedError::bad_request(
+                        "idempotency_key must not contain whitespace",
+                    ));
+                }
+                Some(key.to_string())
+            }
+            None => None,
+        };
         let device = validate_device_token(&ctx, &body.device_token)?;
+        if let Some(key) = &idempotency_key {
+            if let Some(stored) = push_idempotency_store().get(&(device.id, key.clone())) {
+                return Ok((stored.clone(), true));
+            }
+        }
         let version = device.version.fetch_add(1, Ordering::SeqCst) + 1;
         let record = SyncRecord {
             id: Uuid::now_v7(),
@@ -343,11 +462,16 @@ async fn sync_push(
                 records.drain(..excess);
             }
         }
+        if let Some(key) = &idempotency_key {
+            push_idempotency_store().insert((device.id, key.clone()), record.clone());
+        }
         mark_synced(&ctx, &device);
-        Ok(record)
+        Ok((record, false))
     })();
     match result {
-        Ok(record) => json::success_response(record, 201),
+        // A replayed push answers 200 with the original record; a fresh
+        // push answers 201.
+        Ok((record, replayed)) => json::success_response(record, if replayed { 200 } else { 201 }),
         Err(error) => json::error_response(&error, debug),
     }
 }
@@ -402,7 +526,7 @@ impl Module for AppSyncModule {
     }
 
     fn description(&self) -> &'static str {
-        "Desktop-app integration: HMAC-signed device tokens and versioned push/pull sync per device."
+        "Desktop-app integration: HMAC-signed device tokens and versioned push/pull sync per device. Push accepts an optional idempotency_key so a retried push returns the original record instead of appending a duplicate."
     }
 
     fn route_info(&self) -> Vec<RouteInfo> {
@@ -411,7 +535,7 @@ impl Module for AppSyncModule {
             RouteInfo { method: "GET", path: "/api/v1/app-sync/devices", owner: "app-sync", description: "List devices" },
             RouteInfo { method: "GET", path: "/api/v1/app-sync/devices/{id}", owner: "app-sync", description: "Get device" },
             RouteInfo { method: "POST", path: "/api/v1/app-sync/devices/{id}/revoke", owner: "app-sync", description: "Revoke device" },
-            RouteInfo { method: "POST", path: "/api/v1/app-sync/sync/push", owner: "app-sync", description: "Sync push" },
+            RouteInfo { method: "POST", path: "/api/v1/app-sync/sync/push", owner: "app-sync", description: "Sync push (optional idempotency_key in the body; a replay returns the original record with HTTP 200)." },
             RouteInfo { method: "POST", path: "/api/v1/app-sync/sync/pull", owner: "app-sync", description: "Sync pull" },
         ]
     }

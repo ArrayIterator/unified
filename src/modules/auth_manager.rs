@@ -15,14 +15,21 @@
 // schema, and settings storage only; their outbound exchange is still
 // a documented next milestone.
 
+use crate::auth::{password as auth_password, totp as auth_totp};
 use crate::core::context::AppContext;
 use crate::core::error::UnifiedError;
+use crate::core::hardening::{shared_state, trusted_client_ip_for_http_request};
 use crate::core::hooks::events;
 use crate::core::json as api_json;
 use crate::core::modules::{Module, ModuleRegistry, RouteInfo};
+use crate::db::models::User;
+use crate::db::DbPool;
+use actix_web::http::header;
+use actix_web::{web, HttpRequest, HttpResponse};
 use base64::Engine;
 use chrono::{DateTime, Utc};
 use dashmap::DashMap;
+use diesel::prelude::*;
 use hmac::{Hmac, Mac};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
@@ -449,6 +456,12 @@ pub struct AuthManagerState {
     /// hashes are stored; the plaintext codes are shown exactly once,
     /// at generation time, and never again.
     pub recovery_codes: Arc<DashMap<String, Vec<RecoveryCodeRecord>>>,
+    /// Pending TOTP enrolments, keyed by user id: a generated secret
+    /// that is not active until the user proves possession with a
+    /// valid code (`totp.confirm`). Pending secrets expire after
+    /// `PENDING_TOTP_TTL_MINUTES` and are never written to the users
+    /// table until confirmed.
+    pub pending_totp: Arc<DashMap<String, PendingTotp>>,
     /// Fallback signing secret, used when no application secret is
     /// configured. Random per process, so tokens do not survive a restart
     /// unless the application secret key is set.
@@ -469,6 +482,7 @@ impl Default for AuthManagerState {
             google_oauth_states: Arc::new(DashMap::new()),
             google_drive_links: Arc::new(DashMap::new()),
             recovery_codes: Arc::new(DashMap::new()),
+            pending_totp: Arc::new(DashMap::new()),
             secret: Arc::new(rand::random::<[u8; 32]>()),
         }
     }
@@ -708,14 +722,291 @@ async fn update_provider_settings(
 }
 
 // ---------------------------------------------------------------------------
+// Password login helpers
+//
+// `POST /api/v1/auth-manager/jwt/issue` is the password login
+// endpoint: it verifies the caller's email + Argon2 password (+ TOTP
+// when enabled) against the users table and only then mints a token.
+// It never mints a token for an arbitrary user id, and the scopes on
+// the token come only from the user's database roles — callers can
+// never request scopes. A failed login feeds the hardening
+// brute-force engine (per IP and per account) and a successful one
+// resets it.
+// ---------------------------------------------------------------------------
+
+/// Minutes a pending TOTP enrolment stays usable.
+const PENDING_TOTP_TTL_MINUTES: i64 = 15;
+
+/// One pending TOTP enrolment: a generated secret awaiting proof of
+/// possession through `totp.confirm`.
+#[derive(Debug, Clone)]
+pub struct PendingTotp {
+    pub secret: String,
+    pub created_at: DateTime<Utc>,
+}
+
+/// Syntactically valid Argon2id PHC string for an unknown password,
+/// used to verify a password for an unknown or disabled account so
+/// the timing matches a real verification and the account's existence
+/// is never revealed by response time.
+const DUMMY_PASSWORD_HASH: &str = "$argon2id$v=19$m=19456,t=2,p=1$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+
+/// Client IP for brute-force accounting: the trusted client IP
+/// (forwarded headers only from configured trusted proxies).
+fn client_ip_text(req: &HttpRequest, ctx: &AppContext) -> Option<String> {
+    let settings = ctx
+        .config
+        .read()
+        .expect("config lock poisoned")
+        .security
+        .clone();
+    trusted_client_ip_for_http_request(req, &settings).map(|ip| ip.to_string())
+}
+
+/// The single generic login failure: the same message whether the
+/// account does not exist, is disabled, or the password is wrong, so
+/// the response never reveals which one it was.
+fn login_failed_error() -> UnifiedError {
+    UnifiedError::unauthorized("Invalid email or password")
+        .with_metadata("kind", json!("invalid_credentials"))
+}
+
+/// Run blocking Diesel work off the async worker threads.
+async fn run_blocking<F, T>(pool: DbPool, work: F) -> UnifiedResult<T>
+where
+    F: FnOnce(&mut diesel::PgConnection) -> UnifiedResult<T> + Send + 'static,
+    T: Send + 'static,
+{
+    tokio::task::spawn_blocking(move || {
+        let mut connection = pool.get().map_err(|error| {
+            UnifiedError::internal(format!("Cannot borrow a database connection: {error}"))
+        })?;
+        work(&mut connection)
+    })
+    .await
+    .map_err(|error| UnifiedError::internal(format!("Database task failed: {error}")))?
+}
+
+/// Mintable scopes from one role permission map
+/// (`{resource: [actions]}`): one `resource:action` scope per action.
+/// A literal `"*": ["*"]` entry mints the wildcard scope `*`. Only
+/// strings read from the database are ever minted.
+fn scopes_from_permissions(permissions: &Value) -> Vec<String> {
+    let mut scopes = Vec::new();
+    let Some(map) = permissions.as_object() else {
+        return scopes;
+    };
+    for (resource, actions) in map {
+        let Some(actions) = actions.as_array() else {
+            continue;
+        };
+        for action in actions {
+            let Some(action) = action.as_str() else {
+                continue;
+            };
+            if resource == "*" && action == "*" {
+                scopes.push("*".to_string());
+            } else if !resource.is_empty() && !action.is_empty() {
+                scopes.push(format!("{resource}:{action}"));
+            }
+        }
+    }
+    scopes
+}
+
+/// One row of `roles.permissions`, read as text: Diesel here has no
+/// `serde_json` feature, so a `Value` cannot be loaded from the
+/// `jsonb` column directly (same shape as the dashboards module).
+#[derive(Debug, QueryableByName)]
+struct PermissionRow {
+    #[diesel(sql_type = diesel::sql_types::Text)]
+    permissions: String,
+}
+
+/// The user row plus the scopes their database roles grant, for a
+/// login attempt. `needs_rehash` is true when the stored Argon2 hash
+/// was produced with parameters other than the current defaults.
+struct LoginUser {
+    user: User,
+    scopes: Vec<String>,
+    needs_rehash: bool,
+}
+
+/// Load a user by (lowercased) email with the scopes their roles
+/// grant. Returns `Ok(None)` when no such user exists.
+async fn load_login_user(pool: DbPool, email: &str) -> UnifiedResult<Option<LoginUser>> {
+    let email = email.to_string();
+    run_blocking(pool, move |connection| {
+        use crate::db::schema::user_roles::dsl as user_roles_dsl;
+        use crate::db::schema::users::dsl as users_dsl;
+        let user = users_dsl::users
+            .filter(users_dsl::email.eq(&email))
+            .select(User::as_select())
+            .first::<User>(connection)
+            .optional()
+            .map_err(UnifiedError::from)?;
+        let Some(user) = user else {
+            return Ok(None);
+        };
+        let needs_rehash = auth_password::needs_rehash(&user.password_hash);
+        let role_ids: Vec<Uuid> = user_roles_dsl::user_roles
+            .filter(user_roles_dsl::user_id.eq(user.id))
+            .select(user_roles_dsl::role_id)
+            .load::<Uuid>(connection)
+            .map_err(UnifiedError::from)?;
+        let mut scopes: Vec<String> = Vec::new();
+        if !role_ids.is_empty() {
+            let rows = diesel::sql_query(
+                "SELECT permissions::text AS permissions FROM roles WHERE id = ANY($1)",
+            )
+            .bind::<diesel::sql_types::Array<diesel::sql_types::Uuid>, _>(role_ids)
+            .load::<PermissionRow>(connection)
+            .map_err(UnifiedError::from)?;
+            for row in rows {
+                if let Ok(value) = serde_json::from_str::<Value>(&row.permissions) {
+                    scopes.extend(scopes_from_permissions(&value));
+                }
+            }
+        }
+        scopes.sort();
+        scopes.dedup();
+        Ok(Some(LoginUser {
+            user,
+            scopes,
+            needs_rehash,
+        }))
+    })
+    .await
+}
+
+/// Load one user row by id.
+async fn load_user_by_id(pool: DbPool, user_id: Uuid) -> UnifiedResult<Option<User>> {
+    run_blocking(pool, move |connection| {
+        use crate::db::schema::users::dsl as users_dsl;
+        users_dsl::users
+            .find(user_id)
+            .select(User::as_select())
+            .first::<User>(connection)
+            .optional()
+            .map_err(UnifiedError::from)
+    })
+    .await
+}
+
+/// Re-hash a password with the current Argon2 parameters after a
+/// successful login whose stored hash was stale. Best effort: the
+/// caller ignores a failure so a rehash problem never blocks a valid
+/// login.
+async fn rehash_password(pool: DbPool, user_id: Uuid, password: &str) -> UnifiedResult<()> {
+    let hash = auth_password::hash(password)?;
+    run_blocking(pool, move |connection| {
+        use crate::db::schema::users::dsl as users_dsl;
+        diesel::update(users_dsl::users.find(user_id))
+            .set(users_dsl::password_hash.eq(hash))
+            .execute(connection)
+            .map_err(UnifiedError::from)?;
+        Ok(())
+    })
+    .await
+}
+
+/// Try to consume one recovery code for `user_id`. Returns true only
+/// when an unused code matched; a consumed code is marked used.
+fn try_consume_recovery_code(
+    state: &AuthManagerState,
+    user_id: &str,
+    code: &str,
+) -> bool {
+    let normalized = normalize_recovery_code(code);
+    if normalized.len() != 12 {
+        return false;
+    }
+    let candidate_hash = recovery_code_hash(&normalized);
+    let Some(mut records) = state.recovery_codes.get_mut(user_id) else {
+        return false;
+    };
+    for record in records.iter_mut() {
+        if !record.used && constant_time_eq(&record.code_hash, &candidate_hash) {
+            record.used = true;
+            record.used_at = Some(Utc::now());
+            return true;
+        }
+    }
+    false
+}
+
+/// Extract a Bearer token from the `Authorization` header, falling
+/// back to the session cookie (`app.session_name`).
+fn extract_bearer_token(req: &HttpRequest, session_cookie_name: &str) -> Option<String> {
+    if let Some(header_value) = req.headers().get(header::AUTHORIZATION) {
+        if let Ok(value) = header_value.to_str() {
+            let trimmed = value.trim();
+            if let Some(token) = trimmed
+                .strip_prefix("Bearer ")
+                .or_else(|| trimmed.strip_prefix("bearer "))
+            {
+                if !token.trim().is_empty() {
+                    return Some(token.trim().to_string());
+                }
+            }
+        }
+    }
+    let header = req.headers().get(header::COOKIE)?.to_str().ok()?;
+    for part in header.split(';') {
+        let part = part.trim();
+        if let Some((key, value)) = part.split_once('=') {
+            if key.trim() == session_cookie_name && !value.trim().is_empty() {
+                return Some(value.trim().to_string());
+            }
+        }
+    }
+    None
+}
+
+/// Verify the caller's Bearer token and return the caller user id
+/// (`sub`) and scopes. Used to authorize self-service recovery-code
+/// and TOTP endpoints.
+fn caller_from_request(
+    state: &AuthManagerState,
+    ctx: &AppContext,
+    req: &HttpRequest,
+) -> UnifiedResult<(String, Vec<String>)> {
+    let session_name = {
+        let config = ctx.config.read().expect("config lock poisoned");
+        config.app.session_name.clone()
+    };
+    let token = extract_bearer_token(req, &session_name).ok_or_else(|| {
+        UnifiedError::unauthorized("Authentication required: provide a Bearer token")
+    })?;
+    let claims = verify_token(state, ctx, &token)?;
+    Ok((claims.sub, claims.scopes))
+}
+
+/// True when the caller may manage `target_user_id`: the account is
+/// their own, or they hold an admin capability.
+fn caller_may_manage_user(scopes: &[String], caller_id: &str, target_user_id: &str) -> bool {
+    caller_id == target_user_id
+        || scopes
+            .iter()
+            .any(|scope| scope == "*" || scope == "admin:access" || scope == "users:manage")
+}
+
+// ---------------------------------------------------------------------------
 // JWT handlers
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct IssueTokenInput {
-    pub user_id: String,
+    pub email: String,
+    pub password: String,
+    /// TOTP code, required when the account has TOTP enabled.
+    #[serde(default)]
+    pub totp_code: Option<String>,
+    /// Single-use recovery code, accepted instead of a TOTP code when
+    /// the account has TOTP enabled.
+    #[serde(default)]
+    pub recovery_code: Option<String>,
     pub expires_in_seconds: Option<u64>,
-    pub scopes: Option<Vec<String>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -723,31 +1014,144 @@ pub struct TokenInput {
     pub token: String,
 }
 
+/// Password login: verify `email` + Argon2 `password` (+ TOTP when
+/// the account has it enabled) against the users table, then mint a
+/// JWT whose scopes come only from the user's database roles.
+///
+/// This endpoint never mints a token for an arbitrary user id and
+/// never accepts caller-supplied scopes: both used to be accepted
+/// here with no credential at all, which let anyone mint a token for
+/// any user with any scopes. The response never reveals whether the
+/// account exists, is disabled, or the password was wrong. Failed
+/// attempts feed the hardening brute-force engine (per IP and per
+/// account) and a locked IP or account gets 429 before any password
+/// check runs; a successful login resets both counters.
 async fn issue_token(
+    req: HttpRequest,
     state: web::Data<AuthManagerState>,
     ctx: web::Data<Arc<AppContext>>,
     input: web::Json<IssueTokenInput>,
 ) -> HttpResponse {
+    let debug = ctx.is_debug();
     let input = input.into_inner();
     if !state.is_enabled("jwt") {
         return api_json::error_response(
             &UnifiedError::forbidden("the JWT provider is disabled"),
-            ctx.is_debug(),
+            debug,
         );
     }
-    let user_id = input.user_id.trim();
-    if user_id.is_empty() {
+    let email = input.email.trim().to_lowercase();
+    if email.is_empty() || email.chars().count() > 256 {
         return api_json::error_response(
-            &UnifiedError::bad_request("user_id must not be empty"),
-            ctx.is_debug(),
+            &UnifiedError::bad_request("email must not be empty and at most 256 characters"),
+            debug,
         );
     }
-    if user_id.chars().count() > 256 {
+    if input.password.is_empty() || input.password.chars().count() > 128 {
         return api_json::error_response(
-            &UnifiedError::bad_request("user_id must be at most 256 characters"),
-            ctx.is_debug(),
+            &UnifiedError::bad_request("password must not be empty and at most 128 characters"),
+            debug,
         );
     }
+    let ip = client_ip_text(&req, &ctx);
+    let hardening = shared_state();
+    if let Some(ip_text) = &ip {
+        if hardening.is_locked("ip", ip_text) || hardening.is_locked("account", &email) {
+            return api_json::error_response(
+                &UnifiedError::new(
+                    "Too many failed login attempts; the account or address is temporarily locked",
+                    429,
+                )
+                .with_metadata("reason", json!("account_locked")),
+                debug,
+            );
+        }
+    }
+    let pool = match ctx.db.read().expect("db lock poisoned").clone() {
+        Some(pool) => pool,
+        None => {
+            return api_json::error_response(
+                &UnifiedError::new(
+                    "Database is not configured: password login needs a database connection",
+                    503,
+                )
+                .with_metadata("kind", json!("database_not_configured")),
+                debug,
+            );
+        }
+    };
+    let loaded = match load_login_user(pool.clone(), &email).await {
+        Ok(loaded) => loaded,
+        Err(error) => return api_json::error_response(&error, debug),
+    };
+    // Unknown account: run a dummy verification so the timing matches
+    // a real password check, then fail exactly like a wrong password.
+    let Some(loaded) = loaded else {
+        let _ = auth_password::verify(&input.password, DUMMY_PASSWORD_HASH);
+        hardening.record_login_failure(ip.as_deref(), Some(&email));
+        ctx.hooks.emit(
+            events::AUTH_FAILED,
+            json!({
+                "provider": "jwt",
+                "ip": ip,
+                "account": email,
+                "reason": "invalid_credentials",
+            }),
+        );
+        return api_json::error_response(&login_failed_error(), debug);
+    };
+    let user = loaded.user;
+    if !user.is_active || !auth_password::verify(&input.password, &user.password_hash) {
+        hardening.record_login_failure(ip.as_deref(), Some(&email));
+        ctx.hooks.emit(
+            events::AUTH_FAILED,
+            json!({
+                "provider": "jwt",
+                "ip": ip,
+                "user_id": user.id.to_string(),
+                "account": email,
+                "reason": "invalid_credentials",
+            }),
+        );
+        return api_json::error_response(&login_failed_error(), debug);
+    }
+    // Second factor when the account has TOTP enabled: a valid TOTP
+    // code, or one single-use recovery code (consumed on use).
+    if user.totp_enabled {
+        let totp_ok = match (&user.totp_secret, &input.totp_code) {
+            (Some(secret), Some(code)) => auth_totp::verify(secret, code),
+            _ => false,
+        };
+        let recovery_ok = match &input.recovery_code {
+            Some(code) => try_consume_recovery_code(&state, &user.id.to_string(), code),
+            None => false,
+        };
+        if !totp_ok && !recovery_ok {
+            hardening.record_login_failure(ip.as_deref(), Some(&email));
+            ctx.hooks.emit(
+                events::AUTH_FAILED,
+                json!({
+                    "provider": "jwt",
+                    "ip": ip,
+                    "user_id": user.id.to_string(),
+                    "account": email,
+                    "reason": "totp_required",
+                }),
+            );
+            return api_json::error_response(
+                &UnifiedError::unauthorized(
+                    "Two-factor authentication is required: provide a valid TOTP code or recovery code",
+                )
+                .with_metadata("kind", json!("totp_required")),
+                debug,
+            );
+        }
+    }
+    if loaded.needs_rehash {
+        let _ = rehash_password(pool, user.id, &input.password).await;
+    }
+    let user_id = user.id.to_string();
+    let scopes = loaded.scopes;
     let ttl = input.expires_in_seconds.unwrap_or(3600).clamp(60, 86_400);
     let now = Utc::now();
     let issuer = state
@@ -759,12 +1163,12 @@ async fn issue_token(
         })
         .unwrap_or_else(|| "unified".to_string());
     let claims = JwtClaims {
-        sub: user_id.to_string(),
+        sub: user_id.clone(),
         iss: issuer,
         iat: now.timestamp(),
         exp: (now + chrono::Duration::seconds(ttl as i64)).timestamp(),
         jti: Uuid::now_v7().to_string(),
-        scopes: input.scopes.unwrap_or_default(),
+        scopes: scopes.clone(),
     };
     let header = JwtHeader {
         alg: "HS256".to_string(),
@@ -783,11 +1187,13 @@ async fn issue_token(
     let signing_input = format!("{header_part}.{payload_part}");
     let signature = base64url_encode(&hmac_sign(&state.signing_key(&ctx), &signing_input));
     let token = format!("{signing_input}.{signature}");
+    hardening.record_login_success(ip.as_deref(), Some(&email));
     ctx.hooks.emit(
         events::AUTH_LOGIN,
         json!({
             "user_id": user_id,
             "provider": "jwt",
+            "ip": ip,
             "jti": claims.jti,
         }),
     );
@@ -798,6 +1204,7 @@ async fn issue_token(
             "expires_in": ttl,
             "expires_at": claims.exp,
             "user_id": user_id,
+            "scopes": scopes,
         }),
         200,
     )
@@ -814,6 +1221,18 @@ fn verify_token(
     if parts.len() != 3 {
         return Err(UnifiedError::bad_request(
             "token must have three base64url segments",
+        ));
+    }
+    // The header is part of the signed input, but the algorithm must
+    // still be pinned: only HS256 is ever issued, and any other `alg`
+    // (including `none`) is rejected before the signature is checked.
+    let header_bytes = base64url_decode(parts[0])?;
+    let header: Value = serde_json::from_slice(&header_bytes).map_err(|_| {
+        UnifiedError::bad_request("token header is not valid JSON")
+    })?;
+    if header.get("alg").and_then(|value| value.as_str()) != Some("HS256") {
+        return Err(UnifiedError::unauthorized(
+            "token algorithm must be HS256",
         ));
     }
     let signing_input = format!("{}.{}", parts[0], parts[1]);
@@ -1031,11 +1450,26 @@ struct RecoveryCodeUserQuery {
 }
 
 async fn generate_recovery_codes(
+    req: HttpRequest,
     state: web::Data<AuthManagerState>,
     ctx: web::Data<Arc<AppContext>>,
     input: web::Json<RecoveryCodeUserInput>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
+    // The plaintext codes are returned exactly once: only the account
+    // owner (or an admin) may generate them. This used to be
+    // unauthenticated for any user id, which let anyone mint and read
+    // another user's recovery codes.
+    let (caller_id, scopes) = match caller_from_request(&state, &ctx, &req) {
+        Ok(caller) => caller,
+        Err(error) => return api_json::error_response(&error, debug),
+    };
+    if !caller_may_manage_user(&scopes, &caller_id, input.user_id.trim()) {
+        return api_json::error_response(
+            &UnifiedError::forbidden("Recovery codes can only be managed for your own account"),
+            debug,
+        );
+    }
     let result: UnifiedResult<Value> = (|| {
         let user_id = validate_recovery_user_id(&input.user_id)?;
         let previous = state
@@ -1079,11 +1513,33 @@ async fn generate_recovery_codes(
 }
 
 async fn verify_recovery_code(
+    req: HttpRequest,
     state: web::Data<AuthManagerState>,
     ctx: web::Data<Arc<AppContext>>,
     input: web::Json<VerifyRecoveryCodeInput>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
+    // A recovery code is a login factor: brute-force guessing feeds
+    // the same lockout engine as password login, and a locked IP or
+    // account gets 429 before any code is checked.
+    let lockout_user_id = input.user_id.trim().to_string();
+    let ip = client_ip_text(&req, &ctx);
+    if !lockout_user_id.is_empty() {
+        let hardening = shared_state();
+        let ip_locked = ip
+            .as_deref()
+            .is_some_and(|ip| hardening.is_locked("ip", ip));
+        if ip_locked || hardening.is_locked("account", &lockout_user_id) {
+            return api_json::error_response(
+                &UnifiedError::new(
+                    "Too many failed attempts; try again later",
+                    429,
+                )
+                .with_metadata("reason", json!("account_locked")),
+                debug,
+            );
+        }
+    }
     let result: UnifiedResult<Value> = (|| {
         let user_id = validate_recovery_user_id(&input.user_id)?;
         let normalized = normalize_recovery_code(&input.code);
@@ -1132,9 +1588,15 @@ async fn verify_recovery_code(
     match result {
         Ok(data) => api_json::success_response(data, 200),
         Err(error) => {
+            shared_state().record_login_failure(ip.as_deref(), Some(&lockout_user_id));
             ctx.hooks.emit(
                 events::AUTH_FAILED,
-                json!({ "provider": "recovery-code", "reason": error.message }),
+                json!({
+                    "provider": "recovery-code",
+                    "ip": ip,
+                    "user_id": lockout_user_id,
+                    "reason": error.message,
+                }),
             );
             api_json::error_response(&error, debug)
         }
@@ -1142,6 +1604,7 @@ async fn verify_recovery_code(
 }
 
 async fn regenerate_recovery_codes(
+    req: HttpRequest,
     state: web::Data<AuthManagerState>,
     ctx: web::Data<Arc<AppContext>>,
     input: web::Json<RecoveryCodeUserInput>,
@@ -1149,15 +1612,26 @@ async fn regenerate_recovery_codes(
     // Regeneration is generation with invalidation: the new set
     // replaces the old one, so every previously issued code stops
     // working immediately.
-    generate_recovery_codes(state, ctx, input).await
+    generate_recovery_codes(req, state, ctx, input).await
 }
 
 async fn remaining_recovery_codes_handler(
+    req: HttpRequest,
     state: web::Data<AuthManagerState>,
     ctx: web::Data<Arc<AppContext>>,
     query: web::Query<RecoveryCodeUserQuery>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
+    let (caller_id, scopes) = match caller_from_request(&state, &ctx, &req) {
+        Ok(caller) => caller,
+        Err(error) => return api_json::error_response(&error, debug),
+    };
+    if !caller_may_manage_user(&scopes, &caller_id, query.user_id.trim()) {
+        return api_json::error_response(
+            &UnifiedError::forbidden("Recovery codes can only be managed for your own account"),
+            debug,
+        );
+    }
     let result: UnifiedResult<Value> = (|| {
         let user_id = validate_recovery_user_id(&query.user_id)?;
         let total = state
@@ -1176,11 +1650,22 @@ async fn remaining_recovery_codes_handler(
 }
 
 async fn revoke_recovery_codes(
+    req: HttpRequest,
     state: web::Data<AuthManagerState>,
     ctx: web::Data<Arc<AppContext>>,
     input: web::Json<RecoveryCodeUserInput>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
+    let (caller_id, scopes) = match caller_from_request(&state, &ctx, &req) {
+        Ok(caller) => caller,
+        Err(error) => return api_json::error_response(&error, debug),
+    };
+    if !caller_may_manage_user(&scopes, &caller_id, input.user_id.trim()) {
+        return api_json::error_response(
+            &UnifiedError::forbidden("Recovery codes can only be managed for your own account"),
+            debug,
+        );
+    }
     let result: UnifiedResult<Value> = (|| {
         let user_id = validate_recovery_user_id(&input.user_id)?;
         let removed = state
@@ -1199,6 +1684,257 @@ async fn revoke_recovery_codes(
         }))
     })();
     api_json::respond(result, debug)
+}
+
+// ---------------------------------------------------------------------------
+// TOTP enrolment
+//
+// TOTP secrets live in the `users` table (`totp_secret`,
+// `totp_enabled`) — the columns already existed, but no endpoint ever
+// wrote them, so TOTP could never be enabled through the API and the
+// `auth::totp` helpers were unwired. These three endpoints close
+// that gap: `setup` generates a secret and holds it pending (never
+// persisted), `confirm` activates it after the user proves possession
+// with a valid code, and `disable` clears it after a password check
+// plus a valid code or recovery code. All three require the caller's
+// own valid JWT.
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Deserialize)]
+struct TotpCodeInput {
+    pub code: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct TotpDisableInput {
+    pub password: String,
+    #[serde(default)]
+    pub code: Option<String>,
+    #[serde(default)]
+    pub recovery_code: Option<String>,
+}
+
+/// Start TOTP enrolment: generate a secret, hold it pending for
+/// `PENDING_TOTP_TTL_MINUTES`, and return the secret plus the
+/// `otpauth://` provisioning URI (shown once, for a QR code). The
+/// secret is not active until `totp.confirm` proves possession.
+async fn totp_setup(
+    req: HttpRequest,
+    state: web::Data<AuthManagerState>,
+    ctx: web::Data<Arc<AppContext>>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let (caller_id, _) = match caller_from_request(&state, &ctx, &req) {
+        Ok(caller) => caller,
+        Err(error) => return api_json::error_response(&error, debug),
+    };
+    if ctx.db.read().expect("db lock poisoned").is_none() {
+        return api_json::error_response(
+            &UnifiedError::new(
+                "Database is not configured: TOTP enrolment needs a database connection",
+                503,
+            )
+            .with_metadata("kind", json!("database_not_configured")),
+            debug,
+        );
+    }
+    let secret = auth_totp::generate_secret();
+    let uri = auth_totp::provisioning_uri(&secret, &caller_id, "Unified");
+    state.pending_totp.insert(
+        caller_id.clone(),
+        PendingTotp {
+            secret: secret.clone(),
+            created_at: Utc::now(),
+        },
+    );
+    api_json::success_response(
+        json!({
+            "user_id": caller_id,
+            "secret": secret,
+            "provisioning_uri": uri,
+            "issuer": "Unified",
+            "expires_in_minutes": PENDING_TOTP_TTL_MINUTES,
+            "warning": "Store this secret in your authenticator app now. It is shown exactly once and is not active until confirmed.",
+        }),
+        200,
+    )
+}
+
+/// Confirm TOTP enrolment: a valid code for the pending secret
+/// activates TOTP on the account. A wrong code leaves the pending
+/// secret in place so a typo does not force a restart; an expired
+/// pending secret must be set up again.
+async fn totp_confirm(
+    req: HttpRequest,
+    state: web::Data<AuthManagerState>,
+    ctx: web::Data<Arc<AppContext>>,
+    input: web::Json<TotpCodeInput>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let (caller_id, _) = match caller_from_request(&state, &ctx, &req) {
+        Ok(caller) => caller,
+        Err(error) => return api_json::error_response(&error, debug),
+    };
+    let Some((_, pending)) = state.pending_totp.remove(&caller_id) else {
+        return api_json::error_response(
+            &UnifiedError::bad_request("No TOTP setup is pending for this account; call totp/setup first"),
+            debug,
+        );
+    };
+    if pending.created_at + chrono::Duration::minutes(PENDING_TOTP_TTL_MINUTES)
+        < Utc::now()
+    {
+        return api_json::error_response(
+            &UnifiedError::bad_request("The pending TOTP setup has expired; call totp/setup again"),
+            debug,
+        );
+    }
+    if !auth_totp::verify(&pending.secret, input.code.trim()) {
+        state.pending_totp.insert(caller_id.clone(), pending);
+        return api_json::error_response(
+            &UnifiedError::unauthorized("The TOTP code is invalid"),
+            debug,
+        );
+    }
+    let Ok(user_id) = Uuid::parse_str(&caller_id) else {
+        return api_json::error_response(
+            &UnifiedError::unauthorized("Token subject is not a user id"),
+            debug,
+        );
+    };
+    let pool = match ctx.db.read().expect("db lock poisoned").clone() {
+        Some(pool) => pool,
+        None => {
+            return api_json::error_response(
+                &UnifiedError::new(
+                    "Database is not configured: TOTP enrolment needs a database connection",
+                    503,
+                )
+                .with_metadata("kind", json!("database_not_configured")),
+                debug,
+            );
+        }
+    };
+    let secret = pending.secret;
+    let stored = run_blocking(pool, move |connection| {
+        use crate::db::schema::users::dsl as users_dsl;
+        diesel::update(users_dsl::users.find(user_id))
+            .set((
+                users_dsl::totp_secret.eq(Some(secret)),
+                users_dsl::totp_enabled.eq(true),
+            ))
+            .execute(connection)
+            .map_err(UnifiedError::from)?;
+        Ok(())
+    })
+    .await;
+    match stored {
+        Ok(()) => {
+            ctx.hooks.emit(
+                "auth.totp.enabled",
+                json!({ "user_id": caller_id }),
+            );
+            api_json::success_response(
+                json!({ "user_id": caller_id, "totp_enabled": true }),
+                200,
+            )
+        }
+        Err(error) => api_json::error_response(&error, debug),
+    }
+}
+
+/// Disable TOTP: requires the account password plus a valid TOTP
+/// code (or a single-use recovery code, consumed on use), so a
+/// stolen session token alone cannot strip the second factor.
+async fn totp_disable(
+    req: HttpRequest,
+    state: web::Data<AuthManagerState>,
+    ctx: web::Data<Arc<AppContext>>,
+    input: web::Json<TotpDisableInput>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let (caller_id, _) = match caller_from_request(&state, &ctx, &req) {
+        Ok(caller) => caller,
+        Err(error) => return api_json::error_response(&error, debug),
+    };
+    let Ok(user_id) = Uuid::parse_str(&caller_id) else {
+        return api_json::error_response(
+            &UnifiedError::unauthorized("Token subject is not a user id"),
+            debug,
+        );
+    };
+    let pool = match ctx.db.read().expect("db lock poisoned").clone() {
+        Some(pool) => pool,
+        None => {
+            return api_json::error_response(
+                &UnifiedError::new(
+                    "Database is not configured: TOTP management needs a database connection",
+                    503,
+                )
+                .with_metadata("kind", json!("database_not_configured")),
+                debug,
+            );
+        }
+    };
+    let user = match load_user_by_id(pool.clone(), user_id).await {
+        Ok(user) => user,
+        Err(error) => return api_json::error_response(&error, debug),
+    };
+    let Some(user) = user else {
+        return api_json::error_response(
+            &UnifiedError::unauthorized("Authenticated user does not exist"),
+            debug,
+        );
+    };
+    if input.password.is_empty() || !auth_password::verify(&input.password, &user.password_hash)
+    {
+        return api_json::error_response(
+            &UnifiedError::unauthorized("Invalid password"),
+            debug,
+        );
+    }
+    let totp_ok = match (&user.totp_secret, &input.code) {
+        (Some(secret), Some(code)) => auth_totp::verify(secret, code),
+        _ => false,
+    };
+    let recovery_ok = match &input.recovery_code {
+        Some(code) => try_consume_recovery_code(&state, &caller_id, code),
+        None => false,
+    };
+    if !totp_ok && !recovery_ok {
+        return api_json::error_response(
+            &UnifiedError::unauthorized(
+                "A valid TOTP code or recovery code is required to disable two-factor authentication",
+            )
+            .with_metadata("kind", json!("totp_required")),
+            debug,
+        );
+    }
+    let cleared = run_blocking(pool, move |connection| {
+        use crate::db::schema::users::dsl as users_dsl;
+        diesel::update(users_dsl::users.find(user_id))
+            .set((
+                users_dsl::totp_secret.eq(None::<String>),
+                users_dsl::totp_enabled.eq(false),
+            ))
+            .execute(connection)
+            .map_err(UnifiedError::from)?;
+        Ok(())
+    })
+    .await;
+    match cleared {
+        Ok(()) => {
+            ctx.hooks.emit(
+                "auth.totp.disabled",
+                json!({ "user_id": caller_id }),
+            );
+            api_json::success_response(
+                json!({ "user_id": caller_id, "totp_enabled": false }),
+                200,
+            )
+        }
+        Err(error) => api_json::error_response(&error, debug),
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -2073,9 +2809,12 @@ impl Module for AuthManagerModule {
             RouteInfo { method: "POST", path: "/api/v1/auth-manager/providers/{id}/{action}", owner: "auth-manager", description: "Set provider enabled" },
             RouteInfo { method: "GET", path: "/api/v1/auth-manager/providers/{id}/settings", owner: "auth-manager", description: "Get provider settings" },
             RouteInfo { method: "PUT", path: "/api/v1/auth-manager/providers/{id}/settings", owner: "auth-manager", description: "Update provider settings" },
-            RouteInfo { method: "POST", path: "/api/v1/auth-manager/jwt/issue", owner: "auth-manager", description: "Issue token" },
+            RouteInfo { method: "POST", path: "/api/v1/auth-manager/jwt/issue", owner: "auth-manager", description: "Login with email and password (plus TOTP when enabled) and issue a token; scopes come only from the user's database roles" },
             RouteInfo { method: "POST", path: "/api/v1/auth-manager/jwt/verify", owner: "auth-manager", description: "Verify token handler" },
             RouteInfo { method: "POST", path: "/api/v1/auth-manager/jwt/revoke", owner: "auth-manager", description: "Revoke token handler" },
+            RouteInfo { method: "POST", path: "/api/v1/auth-manager/jwt/totp/setup", owner: "auth-manager", description: "Start TOTP enrolment: generate a pending secret and provisioning URI" },
+            RouteInfo { method: "POST", path: "/api/v1/auth-manager/jwt/totp/confirm", owner: "auth-manager", description: "Confirm TOTP enrolment with a valid code; activates TOTP on the account" },
+            RouteInfo { method: "POST", path: "/api/v1/auth-manager/jwt/totp/disable", owner: "auth-manager", description: "Disable TOTP after a password check plus a valid code or recovery code" },
             RouteInfo { method: "POST", path: "/api/v1/auth-manager/recovery-codes/generate", owner: "auth-manager", description: "Generate recovery codes" },
             RouteInfo { method: "POST", path: "/api/v1/auth-manager/recovery-codes/verify", owner: "auth-manager", description: "Verify recovery code" },
             RouteInfo { method: "POST", path: "/api/v1/auth-manager/recovery-codes/regenerate", owner: "auth-manager", description: "Regenerate recovery codes" },
@@ -2112,6 +2851,9 @@ impl Module for AuthManagerModule {
                 .route("/jwt/issue", web::post().to(issue_token))
                 .route("/jwt/verify", web::post().to(verify_token_handler))
                 .route("/jwt/revoke", web::post().to(revoke_token_handler))
+                .route("/jwt/totp/setup", web::post().to(totp_setup))
+                .route("/jwt/totp/confirm", web::post().to(totp_confirm))
+                .route("/jwt/totp/disable", web::post().to(totp_disable))
                 .route(
                     "/recovery-codes/generate",
                     web::post().to(generate_recovery_codes),

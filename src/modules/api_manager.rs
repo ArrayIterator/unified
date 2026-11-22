@@ -600,6 +600,39 @@ impl ApiManagerState {
         self.ensure_seeded_versions_from_config(&config.api);
     }
 
+    /// Seed the access rules from `DEFAULT_ACCESS_RULES`.
+    /// Idempotent: a rule whose key already exists (seeded earlier,
+    /// loaded from the database by `load_access_from_db`, or created
+    /// by an admin) is left untouched, so admin edits survive
+    /// restarts. Rules are inserted into the in-memory map only;
+    /// persistence to `api_access_rules` happens through the normal
+    /// `persist_access_rule` path when a rule is later edited, and
+    /// the seed rows are re-created from this constant on every
+    /// restart until then. Callers should run this after
+    /// `load_access_from_db` so database rows win over seeds.
+    pub fn ensure_seeded_access_rules(&self) {
+        let now = Utc::now();
+        for (method, path, version, public_access, source) in DEFAULT_ACCESS_RULES {
+            let key = Self::access_rule_key(method, path, Some(version));
+            if self.access_rules.contains_key(&key) {
+                continue;
+            }
+            let rule = ApiAccessRule {
+                id: Uuid::now_v7(),
+                method: method.to_string(),
+                path: path.to_string(),
+                version: Some(version.to_string()),
+                allowed: true,
+                public_access: *public_access,
+                actor: "seed".to_string(),
+                reason: Some(format!("Seeded access rule ({source})")),
+                created_at: now,
+                updated_at: now,
+            };
+            self.access_rules.insert(key, rule);
+        }
+    }
+
     /// Attach the database pool (if any) so rule and audit writes
     /// can persist. Called once from `init`.
     pub fn set_db_pool(&self, pool: Option<DbPool>) {
@@ -947,6 +980,79 @@ const MAX_ACCESS_AUDIT_ENTRIES: usize = 1000;
 /// convention across the codebase).
 const API_KEY_HEADER: &str = "x-api-key";
 
+/// Maximum number of per-minute rate-limit counter entries kept in
+/// `ApiManagerState::rate_counters`. Counters are never evicted by a
+/// timer; this bound is the eviction trigger instead (see
+/// `ApiManagerState::prune_rate_counters`): once the map grows past
+/// it, entries from finished minutes are dropped. Configurable
+/// default: raise it only when the sustained distinct-subject rate
+/// genuinely needs more room; the per-minute windows stay fixed.
+const MAX_RATE_COUNTER_ENTRIES: usize = 10_000;
+
+/// Build the standard-envelope error response for a 429, carrying
+/// the same `Retry-After` and `X-RateLimit-*` headers the hardening
+/// rate limiter sets (see
+/// `crate::core::hardening::rate_limited_response`). Non-429 errors
+/// pass through unchanged. Header values come from the error
+/// metadata (`retry_after_secs`, `limit`, `remaining`,
+/// `reset_in_secs`); a missing value leaves that header unset.
+fn rate_limited_error_response(error: &UnifiedError, debug: bool) -> HttpResponse {
+    let mut response = api_json::error_response(error, debug);
+    if error.code != 429 {
+        return response;
+    }
+    let headers = response.headers_mut();
+    if let Some(retry_after) = error
+        .metadata
+        .get("retry_after_secs")
+        .and_then(|value| value.as_u64())
+    {
+        if let Ok(value) =
+            actix_web::http::header::HeaderValue::from_str(&retry_after.to_string())
+        {
+            headers.insert(actix_web::http::header::RETRY_AFTER, value);
+        }
+    }
+    if let Some(limit) = error.metadata.get("limit").and_then(|value| value.as_u64()) {
+        if let Ok(value) = actix_web::http::header::HeaderValue::from_str(&limit.to_string()) {
+            headers.insert(
+                actix_web::http::header::HeaderName::from_static("x-ratelimit-limit"),
+                value,
+            );
+        }
+    }
+    if let Some(remaining) = error
+        .metadata
+        .get("remaining")
+        .and_then(|value| value.as_u64())
+    {
+        if let Ok(value) =
+            actix_web::http::header::HeaderValue::from_str(&remaining.to_string())
+        {
+            headers.insert(
+                actix_web::http::header::HeaderName::from_static("x-ratelimit-remaining"),
+                value,
+            );
+        }
+    }
+    if let Some(reset_in_secs) = error
+        .metadata
+        .get("reset_in_secs")
+        .and_then(|value| value.as_u64())
+    {
+        let reset_at = Utc::now().timestamp() + reset_in_secs as i64;
+        if let Ok(value) =
+            actix_web::http::header::HeaderValue::from_str(&reset_at.to_string())
+        {
+            headers.insert(
+                actix_web::http::header::HeaderName::from_static("x-ratelimit-reset"),
+                value,
+            );
+        }
+    }
+    response
+}
+
 /// One admin-managed rule governing public access to a single
 /// endpoint template, optionally restricted to one API version
 /// (`version: None` means every version). Persisted by migration
@@ -1081,6 +1187,223 @@ struct AccessAuditRow {
     #[diesel(sql_type = diesel::sql_types::Timestamptz)]
     created_at: DateTime<Utc>,
 }
+
+/// Seeded access rules: `(method, path template, version,
+/// public_access, source)`. `allowed` is always `true` for a seed —
+/// the seed only opens the endpoint to the gate the notes describe;
+/// the module behind the endpoint still enforces its own
+/// authentication, capability, and tenant checks.
+///
+/// `public_access = true` means the endpoint may be called without
+/// an API key (the module verifies its own credential, if any: a
+/// public token, an HMAC signature, a signed link, or a license
+/// key). `public_access = false` means a valid in-scope API key (or
+/// a session, where the gate allows it) is required in addition to
+/// the module's own checks.
+///
+/// Sources, per the integration notes:
+/// - batch 2: the five events public routes (`public_access: true`).
+/// - batch 4: the public routes of affiliates, portals, forms,
+///   recruitment, community, surveys, vault, and workflows
+///   (`public_access: true`).
+/// - batch 5: the sharing public link, the logistics tracking
+///   route, and the four properties public routes
+///   (`public_access: true`).
+/// - batch 6: the web3 public ledger (`public_access: true`).
+/// - batch 7: the six licensing public-facing endpoints. The
+///   verify and git-access endpoints take an API key
+///   (`public_access: false`); offline-verify, the git webhook,
+///   and the release download/file endpoints carry their own
+///   credential (signed offline token, provider HMAC, license key
+///   + instance, HMAC signed link), so they are keyless at this
+///   gate (`public_access: true`).
+/// - batch 9: the whitelabel public branding route
+///   (`public_access: true`).
+/// - batch 10: the e-learning certificate verification route, the
+///   four appointments public routes, and the three digital
+///   storefront reads plus the sample download
+///   (`public_access: true`).
+/// - batch 15: the 20 entitlements routes and the 58 pricing
+///   routes, all keyed (`public_access: false`).
+/// - batch 16: the 12 calendar routes and the 27 holidays routes,
+///   all keyed (`public_access: false`). The calendar public feed
+///   `GET /api/v1/calendar/feed/{token}` is deliberately NOT
+///   seeded: it is token-gated, not key-gated.
+/// - Cards (batch 18) have no public endpoints, so no card rows
+///   are seeded here.
+pub const DEFAULT_ACCESS_RULES: &[(&str, &str, &str, bool, &str)] = &[
+    // Batch 2 — events public routes.
+    ("GET", "/api/v1/events/public", "v1", true, "batch-2 events public"),
+    ("GET", "/api/v1/events/public/{slug}", "v1", true, "batch-2 events public"),
+    ("GET", "/api/v1/events/public/{slug}/ics", "v1", true, "batch-2 events public"),
+    ("GET", "/api/v1/events/public/calendar.ics", "v1", true, "batch-2 events public"),
+    ("GET", "/api/v1/events/public/calendar.json", "v1", true, "batch-2 events public"),
+    // Batch 4 — public routes.
+    ("POST", "/api/v1/affiliates/track", "v1", true, "batch-4 affiliates public"),
+    ("GET", "/api/v1/portals/public/{slug}", "v1", true, "batch-4 portals public"),
+    ("GET", "/api/v1/forms/public/{slug}", "v1", true, "batch-4 forms public"),
+    ("POST", "/api/v1/forms/public/{slug}/submit", "v1", true, "batch-4 forms public"),
+    ("GET", "/api/v1/recruitment/public/jobs", "v1", true, "batch-4 recruitment public"),
+    ("GET", "/api/v1/recruitment/public/jobs/{id}", "v1", true, "batch-4 recruitment public"),
+    ("POST", "/api/v1/recruitment/public/jobs/{id}/apply", "v1", true, "batch-4 recruitment public"),
+    ("GET", "/api/v1/community/public/topics", "v1", true, "batch-4 community public"),
+    ("GET", "/api/v1/community/public/topics/{id}", "v1", true, "batch-4 community public"),
+    ("GET", "/api/v1/surveys/public/{token}", "v1", true, "batch-4 surveys public"),
+    ("POST", "/api/v1/surveys/public/{token}", "v1", true, "batch-4 surveys public"),
+    ("GET", "/api/v1/vault/shared/{token}", "v1", true, "batch-4 vault public"),
+    ("POST", "/api/v1/workflows/hooks/{token}", "v1", true, "batch-4 workflows public"),
+    // Batch 5 — sharing, logistics tracking, properties public.
+    ("GET", "/api/v1/sharing/public/{token}", "v1", true, "batch-5 sharing public"),
+    ("GET", "/api/v1/logistics/track/{tracking_number}", "v1", true, "batch-5 logistics public"),
+    ("GET", "/api/v1/properties/public", "v1", true, "batch-5 properties public"),
+    ("GET", "/api/v1/properties/public/{slug}", "v1", true, "batch-5 properties public"),
+    ("GET", "/api/v1/properties/public/{slug}/plans/{plan_id}/svg", "v1", true, "batch-5 properties public"),
+    ("GET", "/api/v1/properties/public/{slug}/plans/{plan_id}/print", "v1", true, "batch-5 properties public"),
+    // Batch 6 — web3 public ledger.
+    ("GET", "/api/v1/web3/public/ledger", "v1", true, "batch-6 web3 public"),
+    // Batch 7 — licensing public-facing endpoints.
+    ("POST", "/api/v1/licensing/public/verify", "v1", false, "batch-7 licensing public"),
+    ("POST", "/api/v1/licensing/offline-verify", "v1", true, "batch-7 licensing public"),
+    ("GET", "/api/v1/licensing/distribute/git/{product}/access", "v1", false, "batch-7 licensing public"),
+    ("POST", "/api/v1/licensing/distribute/git/{product}/webhook", "v1", true, "batch-7 licensing public"),
+    ("GET", "/api/v1/licensing/distribute/releases/{release_id}/download", "v1", true, "batch-7 licensing public"),
+    ("GET", "/api/v1/licensing/distribute/releases/{release_id}/file", "v1", true, "batch-7 licensing public"),
+    // Batch 9 — whitelabel public branding.
+    ("GET", "/api/v1/whitelabel/public/branding/{company_id}", "v1", true, "batch-9 whitelabel public"),
+    // Batch 10 — e-learning certificate verification, appointments
+    // public routes, digital storefront reads + sample.
+    ("GET", "/api/v1/elearning/certificates/verify/{code}", "v1", true, "batch-10 elearning public"),
+    ("GET", "/api/v1/appointments/public/services", "v1", true, "batch-10 appointments public"),
+    ("GET", "/api/v1/appointments/public/services/{id}/slots", "v1", true, "batch-10 appointments public"),
+    ("POST", "/api/v1/appointments/public/book", "v1", true, "batch-10 appointments public"),
+    ("GET", "/api/v1/appointments/public/bookings/{code}", "v1", true, "batch-10 appointments public"),
+    ("GET", "/api/v1/store/digital", "v1", true, "batch-10 digital storefront"),
+    ("GET", "/api/v1/store/digital/{id}", "v1", true, "batch-10 digital storefront"),
+    ("GET", "/api/v1/store/digital/{id}/previews", "v1", true, "batch-10 digital storefront"),
+    ("GET", "/api/v1/store/digital/{id}/sample", "v1", true, "batch-10 digital storefront"),
+    // Batch 15 — entitlements routes (all keyed).
+    ("GET", "/api/v1/entitlements/my-modules", "v1", false, "batch-15 entitlements"),
+    ("GET", "/api/v1/entitlements/modules/{module_id}/access", "v1", false, "batch-15 entitlements"),
+    ("POST", "/api/v1/entitlements/modules/{module_id}/enable", "v1", false, "batch-15 entitlements"),
+    ("POST", "/api/v1/entitlements/modules/{module_id}/disable", "v1", false, "batch-15 entitlements"),
+    ("POST", "/api/v1/entitlements/package-changes/apply", "v1", false, "batch-15 entitlements"),
+    ("GET", "/api/v1/entitlements/package-changes", "v1", false, "batch-15 entitlements"),
+    ("GET", "/api/v1/entitlements/package-changes/{id}", "v1", false, "batch-15 entitlements"),
+    ("POST", "/api/v1/entitlements/package-changes/{id}/confirm", "v1", false, "batch-15 entitlements"),
+    ("POST", "/api/v1/entitlements/ai/suggest", "v1", false, "batch-15 entitlements"),
+    ("GET", "/api/v1/entitlements/ai/capabilities", "v1", false, "batch-15 entitlements"),
+    ("GET", "/api/v1/entitlements/history", "v1", false, "batch-15 entitlements"),
+    ("GET", "/api/v1/entitlements/denied-attempts", "v1", false, "batch-15 entitlements"),
+    ("GET", "/api/v1/entitlements/settings", "v1", false, "batch-15 entitlements"),
+    ("PUT", "/api/v1/entitlements/settings", "v1", false, "batch-15 entitlements"),
+    ("POST", "/api/v1/entitlements/sweep", "v1", false, "batch-15 entitlements"),
+    ("POST", "/api/v1/entitlements/grants", "v1", false, "batch-15 entitlements"),
+    ("GET", "/api/v1/entitlements", "v1", false, "batch-15 entitlements"),
+    ("GET", "/api/v1/entitlements/{id}", "v1", false, "batch-15 entitlements"),
+    ("PATCH", "/api/v1/entitlements/{id}", "v1", false, "batch-15 entitlements"),
+    ("DELETE", "/api/v1/entitlements/{id}", "v1", false, "batch-15 entitlements"),
+    // Batch 15 — pricing routes (all keyed).
+    ("POST", "/api/v1/pricing/recommendations/cost-plus", "v1", false, "batch-15 pricing"),
+    ("POST", "/api/v1/pricing/recommendations/tiered", "v1", false, "batch-15 pricing"),
+    ("POST", "/api/v1/pricing/recommendations/bundle", "v1", false, "batch-15 pricing"),
+    ("GET", "/api/v1/pricing/recommendations", "v1", false, "batch-15 pricing"),
+    ("GET", "/api/v1/pricing/recommendations/{id}", "v1", false, "batch-15 pricing"),
+    ("POST", "/api/v1/pricing/recommendations/{id}/confirm", "v1", false, "batch-15 pricing"),
+    ("GET", "/api/v1/pricing/recommendations/{id}/narrative", "v1", false, "batch-15 pricing"),
+    ("GET", "/api/v1/pricing/rules", "v1", false, "batch-15 pricing"),
+    ("POST", "/api/v1/pricing/rules", "v1", false, "batch-15 pricing"),
+    ("GET", "/api/v1/pricing/rules/{id}", "v1", false, "batch-15 pricing"),
+    ("PUT", "/api/v1/pricing/rules/{id}", "v1", false, "batch-15 pricing"),
+    ("DELETE", "/api/v1/pricing/rules/{id}", "v1", false, "batch-15 pricing"),
+    ("GET", "/api/v1/pricing/coupons", "v1", false, "batch-15 pricing"),
+    ("POST", "/api/v1/pricing/coupons", "v1", false, "batch-15 pricing"),
+    ("GET", "/api/v1/pricing/coupons/{id}", "v1", false, "batch-15 pricing"),
+    ("PUT", "/api/v1/pricing/coupons/{id}", "v1", false, "batch-15 pricing"),
+    ("DELETE", "/api/v1/pricing/coupons/{id}", "v1", false, "batch-15 pricing"),
+    ("POST", "/api/v1/pricing/coupons/{id}/redeem", "v1", false, "batch-15 pricing"),
+    ("GET", "/api/v1/pricing/coupons/{id}/redemptions", "v1", false, "batch-15 pricing"),
+    ("POST", "/api/v1/pricing/discounts/evaluate", "v1", false, "batch-15 pricing"),
+    ("GET", "/api/v1/pricing/reference-prices", "v1", false, "batch-15 pricing"),
+    ("POST", "/api/v1/pricing/reference-prices", "v1", false, "batch-15 pricing"),
+    ("GET", "/api/v1/pricing/reference-prices/summary", "v1", false, "batch-15 pricing"),
+    ("GET", "/api/v1/pricing/reference-prices/{id}", "v1", false, "batch-15 pricing"),
+    ("DELETE", "/api/v1/pricing/reference-prices/{id}", "v1", false, "batch-15 pricing"),
+    ("GET", "/api/v1/pricing/price-versions", "v1", false, "batch-15 pricing"),
+    ("POST", "/api/v1/pricing/price-versions", "v1", false, "batch-15 pricing"),
+    ("GET", "/api/v1/pricing/price-versions/{id}", "v1", false, "batch-15 pricing"),
+    ("POST", "/api/v1/pricing/price-versions/{id}/submit", "v1", false, "batch-15 pricing"),
+    ("POST", "/api/v1/pricing/price-versions/{id}/approve", "v1", false, "batch-15 pricing"),
+    ("POST", "/api/v1/pricing/price-versions/{id}/reject", "v1", false, "batch-15 pricing"),
+    ("POST", "/api/v1/pricing/price-versions/{id}/activate", "v1", false, "batch-15 pricing"),
+    ("GET", "/api/v1/pricing/price-versions/{id}/approvals", "v1", false, "batch-15 pricing"),
+    ("GET", "/api/v1/pricing/tiers", "v1", false, "batch-15 pricing"),
+    ("POST", "/api/v1/pricing/tiers", "v1", false, "batch-15 pricing"),
+    ("GET", "/api/v1/pricing/tiers/price", "v1", false, "batch-15 pricing"),
+    ("DELETE", "/api/v1/pricing/tiers/{id}", "v1", false, "batch-15 pricing"),
+    ("GET", "/api/v1/pricing/bundles", "v1", false, "batch-15 pricing"),
+    ("POST", "/api/v1/pricing/bundles", "v1", false, "batch-15 pricing"),
+    ("GET", "/api/v1/pricing/bundles/{id}", "v1", false, "batch-15 pricing"),
+    ("POST", "/api/v1/pricing/bundles/{id}/price", "v1", false, "batch-15 pricing"),
+    ("POST", "/api/v1/pricing/proration/compute", "v1", false, "batch-15 pricing"),
+    ("GET", "/api/v1/pricing/proration", "v1", false, "batch-15 pricing"),
+    ("GET", "/api/v1/pricing/proration/{id}", "v1", false, "batch-15 pricing"),
+    ("POST", "/api/v1/pricing/invoices/preview", "v1", false, "batch-15 pricing"),
+    ("POST", "/api/v1/pricing/invoices/reconcile", "v1", false, "batch-15 pricing"),
+    ("GET", "/api/v1/pricing/reconciliations", "v1", false, "batch-15 pricing"),
+    ("GET", "/api/v1/pricing/reconciliations/{id}", "v1", false, "batch-15 pricing"),
+    ("GET", "/api/v1/pricing/credit-notes", "v1", false, "batch-15 pricing"),
+    ("POST", "/api/v1/pricing/credit-notes", "v1", false, "batch-15 pricing"),
+    ("GET", "/api/v1/pricing/credit-notes/{id}", "v1", false, "batch-15 pricing"),
+    ("POST", "/api/v1/pricing/credit-notes/{id}/reconcile", "v1", false, "batch-15 pricing"),
+    ("GET", "/api/v1/pricing/settings", "v1", false, "batch-15 pricing"),
+    ("PUT", "/api/v1/pricing/settings", "v1", false, "batch-15 pricing"),
+    ("GET", "/api/v1/pricing/currencies", "v1", false, "batch-15 pricing"),
+    ("POST", "/api/v1/pricing/currencies", "v1", false, "batch-15 pricing"),
+    ("PUT", "/api/v1/pricing/currencies/{code}", "v1", false, "batch-15 pricing"),
+    ("POST", "/api/v1/pricing/convert", "v1", false, "batch-15 pricing"),
+    // Batch 16 — calendar routes (all keyed; the public iCal feed
+    // is token-gated and is deliberately not seeded).
+    ("GET", "/api/v1/calendar", "v1", false, "batch-16 calendar"),
+    ("GET", "/api/v1/calendar/items", "v1", false, "batch-16 calendar"),
+    ("POST", "/api/v1/calendar/create-intent", "v1", false, "batch-16 calendar"),
+    ("GET", "/api/v1/calendar/settings", "v1", false, "batch-16 calendar"),
+    ("PUT", "/api/v1/calendar/settings", "v1", false, "batch-16 calendar"),
+    ("GET", "/api/v1/calendar/sources", "v1", false, "batch-16 calendar"),
+    ("PUT", "/api/v1/calendar/sources", "v1", false, "batch-16 calendar"),
+    ("POST", "/api/v1/calendar/feeds", "v1", false, "batch-16 calendar"),
+    ("GET", "/api/v1/calendar/feeds", "v1", false, "batch-16 calendar"),
+    ("DELETE", "/api/v1/calendar/feeds/{id}", "v1", false, "batch-16 calendar"),
+    ("POST", "/api/v1/calendar/ai/summarize-day", "v1", false, "batch-16 calendar"),
+    ("POST", "/api/v1/calendar/ai/whats-next", "v1", false, "batch-16 calendar"),
+    // Batch 16 — holidays routes (all keyed).
+    ("GET", "/api/v1/holidays/providers", "v1", false, "batch-16 holidays"),
+    ("POST", "/api/v1/holidays/providers", "v1", false, "batch-16 holidays"),
+    ("GET", "/api/v1/holidays/providers/{id}", "v1", false, "batch-16 holidays"),
+    ("PATCH", "/api/v1/holidays/providers/{id}", "v1", false, "batch-16 holidays"),
+    ("DELETE", "/api/v1/holidays/providers/{id}", "v1", false, "batch-16 holidays"),
+    ("POST", "/api/v1/holidays/providers/{id}/test", "v1", false, "batch-16 holidays"),
+    ("GET", "/api/v1/holidays/countries", "v1", false, "batch-16 holidays"),
+    ("POST", "/api/v1/holidays/countries", "v1", false, "batch-16 holidays"),
+    ("PATCH", "/api/v1/holidays/countries/{code}", "v1", false, "batch-16 holidays"),
+    ("DELETE", "/api/v1/holidays/countries/{code}", "v1", false, "batch-16 holidays"),
+    ("GET", "/api/v1/holidays/configs", "v1", false, "batch-16 holidays"),
+    ("POST", "/api/v1/holidays/configs", "v1", false, "batch-16 holidays"),
+    ("GET", "/api/v1/holidays/configs/{id}", "v1", false, "batch-16 holidays"),
+    ("PATCH", "/api/v1/holidays/configs/{id}", "v1", false, "batch-16 holidays"),
+    ("DELETE", "/api/v1/holidays/configs/{id}", "v1", false, "batch-16 holidays"),
+    ("POST", "/api/v1/holidays/configs/{id}/sync", "v1", false, "batch-16 holidays"),
+    ("POST", "/api/v1/holidays/sync-all", "v1", false, "batch-16 holidays"),
+    ("GET", "/api/v1/holidays/sync-runs", "v1", false, "batch-16 holidays"),
+    ("GET", "/api/v1/holidays/sync-runs/{id}", "v1", false, "batch-16 holidays"),
+    ("GET", "/api/v1/holidays", "v1", false, "batch-16 holidays"),
+    ("GET", "/api/v1/holidays/is-holiday", "v1", false, "batch-16 holidays"),
+    ("GET", "/api/v1/holidays/non-working-days", "v1", false, "batch-16 holidays"),
+    ("GET", "/api/v1/holidays/overrides", "v1", false, "batch-16 holidays"),
+    ("POST", "/api/v1/holidays/overrides", "v1", false, "batch-16 holidays"),
+    ("GET", "/api/v1/holidays/overrides/{id}", "v1", false, "batch-16 holidays"),
+    ("PATCH", "/api/v1/holidays/overrides/{id}", "v1", false, "batch-16 holidays"),
+    ("DELETE", "/api/v1/holidays/overrides/{id}", "v1", false, "batch-16 holidays"),
+];
 
 impl ApiManagerState {
     /// Map key for a rule: `"<METHOD> <path template>@<version|*>"`.
@@ -1302,21 +1625,46 @@ impl ApiManagerState {
         .execute(&mut conn);
     }
 
+    /// Drop rate-counter entries from finished minutes once the map
+    /// grows past `MAX_RATE_COUNTER_ENTRIES`. Counter keys end in
+    /// `:<unix-minute>`; an entry is kept when its minute is the
+    /// current minute or the one before it, so an in-flight window
+    /// is never pruned mid-minute.
+    fn prune_rate_counters(&self, current_minute: u64) {
+        if self.rate_counters.len() <= MAX_RATE_COUNTER_ENTRIES {
+            return;
+        }
+        self.rate_counters.retain(|key, _| {
+            key.rsplit(':')
+                .next()
+                .and_then(|minute| minute.parse::<u64>().ok())
+                .is_some_and(|minute| minute + 1 >= current_minute)
+        });
+    }
+
     /// Fixed-window per-minute check for public-API access, reusing
     /// the module's `rate_counters` map. Returns 429 once the
     /// subject has spent its allowance for this endpoint and minute.
-    /// Shares the map's existing caveat: counters are never evicted
-    /// (see the `rate_counters` field docs).
+    /// The 429 metadata uses the same keys as the hardening rate
+    /// limiter (`retry_after_secs`, `limit`, `remaining`,
+    /// `reset_in_secs`), so every 429 in the application carries
+    /// one shape; `limit_per_minute` is kept as an alias for the
+    /// previous metadata key.
     fn check_access_rate_limit(
         &self,
         subject: &str,
         row: &RegistryRow,
         limit: u32,
     ) -> Result<(), UnifiedError> {
-        let minute = SystemTime::now()
+        let now_secs = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .map(|elapsed| elapsed.as_secs() / 60)
+            .map(|elapsed| elapsed.as_secs())
             .unwrap_or(0);
+        let minute = now_secs / 60;
+        // Seconds left in the current fixed window: the retry delay
+        // and the reset timestamp, so callers can back off exactly.
+        let reset_in_secs = 60 - (now_secs % 60);
+        self.prune_rate_counters(minute);
         let counter_key = format!(
             "access:{subject}:{} {}@{}:{minute}",
             row.method, row.path, row.version
@@ -1332,8 +1680,11 @@ impl ApiManagerState {
                 429,
             )
             .with_metadata("reason", json!("rate_limited"))
+            .with_metadata("limit", json!(limit))
             .with_metadata("limit_per_minute", json!(limit))
-            .with_metadata("retry_after_seconds", json!(60)));
+            .with_metadata("remaining", json!(0))
+            .with_metadata("retry_after_secs", json!(reset_in_secs))
+            .with_metadata("reset_in_secs", json!(reset_in_secs)));
         }
         Ok(())
     }
@@ -1387,9 +1738,23 @@ impl ApiManagerState {
         // Not a registry endpoint (unknown path, disabled version,
         // method not allowed, not in this version): leave the
         // decision to normal routing, which returns its own 404.
+        // One exception: a key presented to an internal route is
+        // still validated, so a revoked or forged key is rejected
+        // with 401 instead of silently passing through to the
+        // handler unchecked.
         let resolved = match self.resolve_endpoint(method, &version, &relative_path) {
             Ok(resolved) => resolved,
-            Err(_) => return Ok(None),
+            Err(_) => {
+                if raw_path.starts_with("/api/v1/") {
+                    if let Some(key) = presented_key
+                        .map(str::trim)
+                        .filter(|key| !key.is_empty())
+                    {
+                        crate::modules::apikeys::authenticate_key(key)?;
+                    }
+                }
+                return Ok(None);
+            }
         };
         let row = &resolved.endpoint;
         // Default deny: no rule, or an explicit deny rule, rejects
@@ -1521,7 +1886,7 @@ impl Middleware for PublicApiAccessMiddleware {
         match state.check_public_access(&method, &path, presented_key.as_deref(), ip) {
             Ok(_) => Box::pin(async move { next(req).await }),
             Err(error) => {
-                let response = api_json::error_response(&error, false);
+                let response = rate_limited_error_response(&error, false);
                 Box::pin(async move { Ok(req.into_response(response)) })
             }
         }
@@ -2343,8 +2708,13 @@ async fn execute_endpoint(
             ctx.is_debug(),
         );
     }
-    // Per-endpoint per-minute rate limit.
-    let minute = Utc::now().timestamp() / 60;
+    // Per-endpoint per-minute rate limit. The 429 carries the same
+    // metadata keys and `Retry-After` / `X-RateLimit-*` headers as
+    // the access-control rate limit (see `check_access_rate_limit`).
+    let now_secs = Utc::now().timestamp().max(0) as u64;
+    let minute = now_secs / 60;
+    let reset_in_secs = 60 - (now_secs % 60);
+    state.prune_rate_counters(minute);
     let counter_key = format!("{id}:{minute}");
     let count = {
         let mut counter = state.rate_counters.entry(counter_key).or_insert(0);
@@ -2352,7 +2722,7 @@ async fn execute_endpoint(
         *counter
     };
     if count > u64::from(endpoint.rate_limit) {
-        return api_json::error_response(
+        return rate_limited_error_response(
             &UnifiedError::new(
                 format!(
                     "rate limit exceeded: at most {} requests per minute for this endpoint",
@@ -2360,8 +2730,13 @@ async fn execute_endpoint(
                 ),
                 429,
             )
+            .with_metadata("reason", json!("rate_limited"))
             .with_metadata("endpoint_id", json!(id.to_string()))
-            .with_metadata("rate_limit", json!(endpoint.rate_limit)),
+            .with_metadata("rate_limit", json!(endpoint.rate_limit))
+            .with_metadata("limit", json!(endpoint.rate_limit))
+            .with_metadata("remaining", json!(0))
+            .with_metadata("retry_after_secs", json!(reset_in_secs))
+            .with_metadata("reset_in_secs", json!(reset_in_secs)),
             ctx.is_debug(),
         );
     }
@@ -2400,7 +2775,15 @@ async fn execute_endpoint(
     )
 }
 
-async fn list_versions(state: web::Data<ApiManagerState>) -> HttpResponse {
+/// Legacy grouped overview of custom endpoints by version string.
+/// Paginated over the version groups (the per-group endpoint lists
+/// stay complete: this endpoint is superseded by the paginated
+/// `/registry`, which is the per-version view to use).
+async fn list_versions(
+    state: web::Data<ApiManagerState>,
+    query: web::Query<PaginationParams>,
+) -> HttpResponse {
+    let params = query.into_inner();
     let mut grouped: std::collections::BTreeMap<String, Vec<Value>> =
         std::collections::BTreeMap::new();
     for entry in state.endpoints.iter() {
@@ -2428,7 +2811,15 @@ async fn list_versions(state: web::Data<ApiManagerState>) -> HttpResponse {
             })
         })
         .collect();
-    api_json::success_response(json!({ "versions": versions }), 200)
+    let pagination = params.normalized();
+    let total = versions.len() as u64;
+    let start = ((pagination.page - 1) * pagination.per_page) as usize;
+    let page_items: Vec<Value> = versions
+        .into_iter()
+        .skip(start)
+        .take(pagination.per_page as usize)
+        .collect();
+    api_json::success_response(PageResult::new(page_items, total, &pagination).to_json(), 200)
 }
 
 // ---------------------------------------------------------------------------
@@ -3180,7 +3571,7 @@ async fn resolve_public(
             if let Err(error) =
                 state.check_public_access(&method, &public_path, presented_key, client_ip)
             {
-                return api_json::error_response(&error, ctx.is_debug());
+                return rate_limited_error_response(&error, ctx.is_debug());
             }
             api_json::success_response(
             json!({
@@ -3408,7 +3799,11 @@ fn on_apikey_rotated(state: &ApiManagerState, ctx: &mut HookContext) {
 // and limit.
 // ---------------------------------------------------------------------------
 
-async fn list_access_rules(state: web::Data<ApiManagerState>) -> HttpResponse {
+async fn list_access_rules(
+    state: web::Data<ApiManagerState>,
+    query: web::Query<PaginationParams>,
+) -> HttpResponse {
+    let params = query.into_inner();
     let mut rules: Vec<ApiAccessRule> = state
         .access_rules
         .iter()
@@ -3420,7 +3815,15 @@ async fn list_access_rules(state: web::Data<ApiManagerState>) -> HttpResponse {
             .then(a.path.cmp(&b.path))
             .then(a.version.cmp(&b.version))
     });
-    api_json::success_response(json!({ "rules": rules }), 200)
+    let pagination = params.normalized();
+    let total = rules.len() as u64;
+    let start = ((pagination.page - 1) * pagination.per_page) as usize;
+    let page_items: Vec<ApiAccessRule> = rules
+        .into_iter()
+        .skip(start)
+        .take(pagination.per_page as usize)
+        .collect();
+    api_json::success_response(PageResult::new(page_items, total, &pagination).to_json(), 200)
 }
 
 async fn create_access_rule(
@@ -3775,8 +4178,11 @@ impl Module for ApiManagerModule {
         // from migration 000004 (`api_access_rules`,
         // `api_access_audit`): the tables exist only once that
         // migration has run, and the in-memory state stays
-        // authoritative until then.
+        // authoritative until then. Seeded rules fill only the gaps
+        // the database did not already cover, so admin edits and
+        // persisted rows always win over seeds.
         let _ = self.state.load_access_from_db();
+        self.state.ensure_seeded_access_rules();
         Ok(())
     }
 
@@ -3848,7 +4254,7 @@ impl Module for ApiManagerModule {
             RouteInfo { method: "DELETE", path: "/api/v1/api-manager/keys/{id}", owner: "api-manager", description: "Revoke an API key." },
             RouteInfo { method: "GET", path: "/api/v1/api-manager/keys/{id}/access", owner: "api-manager", description: "Get one API key's access: scopes, rate tier, and per-minute limit." },
             RouteInfo { method: "PUT", path: "/api/v1/api-manager/keys/{id}/access", owner: "api-manager", description: "Update one API key's scopes, rate tier, and per-minute limit." },
-            RouteInfo { method: "GET", path: "/api/v1/api-manager/access/rules", owner: "api-manager", description: "List public-access rules (per endpoint and version)." },
+            RouteInfo { method: "GET", path: "/api/v1/api-manager/access/rules", owner: "api-manager", description: "List public-access rules (per endpoint and version, paginated)." },
             RouteInfo { method: "POST", path: "/api/v1/api-manager/access/rules", owner: "api-manager", description: "Create a public-access rule; rejected with 409 when the rule already exists." },
             RouteInfo { method: "PUT", path: "/api/v1/api-manager/access/rules/{id}", owner: "api-manager", description: "Update a public-access rule (allow, public access, actor, reason)." },
             RouteInfo { method: "DELETE", path: "/api/v1/api-manager/access/rules/{id}", owner: "api-manager", description: "Delete a public-access rule." },
