@@ -29,12 +29,28 @@ use uuid::Uuid;
 pub struct Job {
     pub id: String,
     pub name: String,
-    /// `mail.send`, `geo.update`, `ssl.renew`, `cleanup`,
-    /// `backup.run`, `cluster.health`, `cluster.sync`,
+    /// One of `KNOWN_KINDS` (see below), for example `mail.send`,
+    /// `geo.update`, `ssl.renew`, `cleanup`, `backup.run`,
+    /// `backup.verify`, `backup.prune`, `cluster.health`,
+    /// `cluster.sync`, `cluster.sync.retry_due`,
     /// `payment.subscription.renew`, `report.generate`,
     /// `newsletter.send`, `notification.digest`,
     /// `notification.digest.send`, `meeting.start`,
-    /// `announcement.publish_due`, `ticket.sla.check`.
+    /// `announcement.publish_due`, `ticket.sla.check`,
+    /// `export.run`, `webinar.start`, `webinar.reminder`,
+    /// `appointments.reminders.send`, `marketing.campaign.send`,
+    /// `marketing.sequence.process_due`,
+    /// `field_service.plans.check`, `calendar.feeds.prune`,
+    /// `holidays.sync`, `holidays.sync_all`,
+    /// `tenant.destroy_due`, `approvals.sweep_expiry`,
+    /// `license.expiry.check`, `auditors.expire`,
+    /// `logistics.maintenance.remind`, `web3.poll`,
+    /// `timetracker.screenshots.purge`, `storage.lifecycle.run`,
+    /// `storage.byo.health_check`, `events.reminders.send`,
+    /// `todos.reminders.send`, `saas_domains.reservations.expire`,
+    /// `ssl.cloudflare.recheck`, `advisor.evaluate`,
+    /// `billing.subscriptions.scan`,
+    /// `saas.product_subdomain.expire_grace`.
     pub kind: String,
     /// Interval in seconds (`"300"`) or a cron-like expression
     /// (`"*/5 * * * *"`).
@@ -163,14 +179,23 @@ fn matches_search(haystack: &str, params: &PaginationParams) -> bool {
 }
 
 /// Known job kinds. Anything else is rejected with 422 when it is run.
+///
+/// Each kind has a dispatch arm in `dispatch` below. Most arms emit
+/// the `<kind>_requested` event the owning module listens to; a few
+/// kinds name the event directly (the owning module registered a
+/// handler for the kind name itself), and those arms emit the kind
+/// name unchanged — see the arm comments.
 const KNOWN_KINDS: &[&str] = &[
     "mail.send",
     "geo.update",
     "ssl.renew",
     "cleanup",
     "backup.run",
+    "backup.verify",
+    "backup.prune",
     "cluster.health",
     "cluster.sync",
+    "cluster.sync.retry_due",
     "payment.subscription.renew",
     "report.generate",
     "newsletter.send",
@@ -179,6 +204,32 @@ const KNOWN_KINDS: &[&str] = &[
     "meeting.start",
     "announcement.publish_due",
     "ticket.sla.check",
+    "export.run",
+    "webinar.start",
+    "webinar.reminder",
+    "appointments.reminders.send",
+    "marketing.campaign.send",
+    "marketing.sequence.process_due",
+    "field_service.plans.check",
+    "calendar.feeds.prune",
+    "holidays.sync",
+    "holidays.sync_all",
+    "tenant.destroy_due",
+    "approvals.sweep_expiry",
+    "license.expiry.check",
+    "auditors.expire",
+    "logistics.maintenance.remind",
+    "web3.poll",
+    "timetracker.screenshots.purge",
+    "storage.lifecycle.run",
+    "storage.byo.health_check",
+    "events.reminders.send",
+    "todos.reminders.send",
+    "saas_domains.reservations.expire",
+    "ssl.cloudflare.recheck",
+    "advisor.evaluate",
+    "billing.subscriptions.scan",
+    "saas.product_subdomain.expire_grace",
 ];
 
 /// Known job kinds as a comma-separated list for error messages.
@@ -386,6 +437,195 @@ fn dispatch(state: &Arc<SchedulerState>, kind: &str, payload: &Value) -> Unified
             state.emit("ticket.sla.check_requested", payload.clone());
             Ok(json!({ "dispatched": true, "event": "ticket.sla.check_requested" }))
         }
+        "backup.verify" => {
+            // The Backup module listens to `backup.verify_requested`
+            // and verifies runs stale per `backup.verify_interval_hours`.
+            state.emit("backup.verify_requested", payload.clone());
+            Ok(json!({ "dispatched": true, "event": "backup.verify_requested" }))
+        }
+        "backup.prune" => {
+            // The Backup module listens to `backup.prune_requested`.
+            state.emit("backup.prune_requested", payload.clone());
+            Ok(json!({ "dispatched": true, "event": "backup.prune_requested" }))
+        }
+        "export.run" => {
+            // The Import/Export module listens to
+            // `export.run_requested` and runs the stored schedule
+            // named by `export_schedule_id` / `job_id`.
+            state.emit("export.run_requested", payload.clone());
+            Ok(json!({ "dispatched": true, "event": "export.run_requested" }))
+        }
+        "cluster.sync.retry_due" => {
+            // The Clusters module registered a handler for this
+            // exact name (`cluster.sync.retry_due`), not a
+            // `_requested` spelling, so the kind itself is emitted.
+            state.emit("cluster.sync.retry_due", payload.clone());
+            Ok(json!({ "dispatched": true, "event": "cluster.sync.retry_due" }))
+        }
+        "webinar.start" => {
+            // The Webinars module listens to `webinar.start_requested`.
+            state.emit("webinar.start_requested", payload.clone());
+            Ok(json!({ "dispatched": true, "event": "webinar.start_requested" }))
+        }
+        "webinar.reminder" => {
+            // The Webinars module listens to
+            // `webinar.reminder_requested`.
+            state.emit("webinar.reminder_requested", payload.clone());
+            Ok(json!({ "dispatched": true, "event": "webinar.reminder_requested" }))
+        }
+        "appointments.reminders.send" => {
+            // The Appointments module listens to
+            // `appointments.reminders.send_requested` and sends the
+            // due reminder through `notification.requested`.
+            state.emit("appointments.reminders.send_requested", payload.clone());
+            Ok(json!({ "dispatched": true, "event": "appointments.reminders.send_requested" }))
+        }
+        "marketing.campaign.send" => {
+            // The Marketing module registered a handler for this
+            // exact name, so the kind itself is emitted.
+            state.emit("marketing.campaign.send", payload.clone());
+            Ok(json!({ "dispatched": true, "event": "marketing.campaign.send" }))
+        }
+        "marketing.sequence.process_due" => {
+            // The Marketing module registered a handler for this
+            // exact name, so the kind itself is emitted.
+            state.emit("marketing.sequence.process_due", payload.clone());
+            Ok(json!({ "dispatched": true, "event": "marketing.sequence.process_due" }))
+        }
+        "field_service.plans.check" => {
+            // The Field Service module listens to
+            // `field_service.plans.check_requested`.
+            state.emit("field_service.plans.check_requested", payload.clone());
+            Ok(json!({ "dispatched": true, "event": "field_service.plans.check_requested" }))
+        }
+        "calendar.feeds.prune" => {
+            // The Calendar module listens to
+            // `calendar.feeds.prune_requested` and deletes expired
+            // tokens plus revoked tokens older than 30 days.
+            state.emit("calendar.feeds.prune_requested", payload.clone());
+            Ok(json!({ "dispatched": true, "event": "calendar.feeds.prune_requested" }))
+        }
+        "holidays.sync" => {
+            // The Holidays module listens to `holidays.sync_requested`.
+            state.emit("holidays.sync_requested", payload.clone());
+            Ok(json!({ "dispatched": true, "event": "holidays.sync_requested" }))
+        }
+        "holidays.sync_all" => {
+            // The Holidays module listens to
+            // `holidays.sync_all_requested`.
+            state.emit("holidays.sync_all_requested", payload.clone());
+            Ok(json!({ "dispatched": true, "event": "holidays.sync_all_requested" }))
+        }
+        "tenant.destroy_due" => {
+            // The Tenant Destroy module registered a handler for
+            // this exact name; it lists the due destroy requests.
+            // NOTE: listing is all the handler does — actually
+            // dropping a tenant still needs
+            // `tenant_destroy::process_due_destroys`, which needs an
+            // AppContext the scheduler dispatch does not have.
+            state.emit("tenant.destroy_due", payload.clone());
+            Ok(json!({ "dispatched": true, "event": "tenant.destroy_due" }))
+        }
+        "approvals.sweep_expiry" => {
+            // No listener exists yet in the Approvals module: the
+            // sweep today runs only through
+            // `POST /requests/sweep-expiry`. The conventional
+            // `_requested` event is emitted so a listener can be
+            // added without changing this arm.
+            state.emit("approvals.sweep_expiry_requested", payload.clone());
+            Ok(json!({ "dispatched": true, "event": "approvals.sweep_expiry_requested" }))
+        }
+        "license.expiry.check" => {
+            // The Licensing module listens to
+            // `license.expiry.check_requested`; renewal reminders
+            // and grace alerts ride on that scan.
+            state.emit("license.expiry.check_requested", payload.clone());
+            Ok(json!({ "dispatched": true, "event": "license.expiry.check_requested" }))
+        }
+        "auditors.expire" => {
+            // The Auditors module listens to
+            // `auditors.expire_requested`.
+            state.emit("auditors.expire_requested", payload.clone());
+            Ok(json!({ "dispatched": true, "event": "auditors.expire_requested" }))
+        }
+        "logistics.maintenance.remind" => {
+            // The Logistics module listens to
+            // `logistics.maintenance.remind_requested`.
+            state.emit("logistics.maintenance.remind_requested", payload.clone());
+            Ok(json!({ "dispatched": true, "event": "logistics.maintenance.remind_requested" }))
+        }
+        "web3.poll" => {
+            // OPEN: no listener exists yet in the Web3 module. The
+            // real poll is the async `poll_watched_addresses`, which
+            // needs the Web3 state and the encryption secret the
+            // scheduler dispatch does not have (see the doc comment
+            // above it in `src/modules/web3.rs`). The conventional
+            // `_requested` event is emitted so a listener can be
+            // added without changing this arm.
+            state.emit("web3.poll_requested", payload.clone());
+            Ok(json!({ "dispatched": true, "event": "web3.poll_requested" }))
+        }
+        "timetracker.screenshots.purge" => {
+            // The TimeTracker module listens to
+            // `timetracker.screenshots.purge_requested`.
+            state.emit("timetracker.screenshots.purge_requested", payload.clone());
+            Ok(json!({ "dispatched": true, "event": "timetracker.screenshots.purge_requested" }))
+        }
+        "storage.lifecycle.run" => {
+            // The Storage Manager listens to
+            // `storage.lifecycle.run_requested`.
+            state.emit("storage.lifecycle.run_requested", payload.clone());
+            Ok(json!({ "dispatched": true, "event": "storage.lifecycle.run_requested" }))
+        }
+        "storage.byo.health_check" => {
+            // The Storage Manager listens to
+            // `storage.byo.health_check_requested`.
+            state.emit("storage.byo.health_check_requested", payload.clone());
+            Ok(json!({ "dispatched": true, "event": "storage.byo.health_check_requested" }))
+        }
+        "events.reminders.send" => {
+            // The Events module listens to
+            // `events.reminders.send_requested`.
+            state.emit("events.reminders.send_requested", payload.clone());
+            Ok(json!({ "dispatched": true, "event": "events.reminders.send_requested" }))
+        }
+        "todos.reminders.send" => {
+            // The Todos module listens to
+            // `todos.reminders.send_requested`.
+            state.emit("todos.reminders.send_requested", payload.clone());
+            Ok(json!({ "dispatched": true, "event": "todos.reminders.send_requested" }))
+        }
+        "saas_domains.reservations.expire" => {
+            // The SaaS Domains module registered a handler for this
+            // exact name, so the kind itself is emitted.
+            state.emit("saas_domains.reservations.expire", payload.clone());
+            Ok(json!({ "dispatched": true, "event": "saas_domains.reservations.expire" }))
+        }
+        "ssl.cloudflare.recheck" => {
+            // The Certificates module registered a handler for this
+            // exact name, so the kind itself is emitted.
+            state.emit("ssl.cloudflare.recheck", payload.clone());
+            Ok(json!({ "dispatched": true, "event": "ssl.cloudflare.recheck" }))
+        }
+        "advisor.evaluate" => {
+            // The Advisor module listens to
+            // `advisor.evaluate_requested`.
+            state.emit("advisor.evaluate_requested", payload.clone());
+            Ok(json!({ "dispatched": true, "event": "advisor.evaluate_requested" }))
+        }
+        "billing.subscriptions.scan" => {
+            // The Billing module registered a handler for this exact
+            // name, so the kind itself is emitted.
+            state.emit("billing.subscriptions.scan", payload.clone());
+            Ok(json!({ "dispatched": true, "event": "billing.subscriptions.scan" }))
+        }
+        "saas.product_subdomain.expire_grace" => {
+            // The SaaS Domains module registered a handler for this
+            // exact name (the product-subdomain grace sweep), so the
+            // kind itself is emitted.
+            state.emit("saas.product_subdomain.expire_grace", payload.clone());
+            Ok(json!({ "dispatched": true, "event": "saas.product_subdomain.expire_grace" }))
+        }
         other => Err(UnifiedError::unprocessable(format!(
             "Unknown job kind: {other}. Known kinds: {}",
             known_kinds_list()
@@ -496,6 +736,51 @@ fn on_scheduler_enqueue(state: Arc<SchedulerState>, ctx: &mut HookContext) {
                     "meeting.start_requested" => "meeting.start".to_string(),
                     "announcement.publish_due" => "announcement.publish_due".to_string(),
                     "ticket.sla.check_requested" => "ticket.sla.check".to_string(),
+                    "backup.verify_requested" => "backup.verify".to_string(),
+                    "backup.prune_requested" => "backup.prune".to_string(),
+                    "export.run_requested" => "export.run".to_string(),
+                    "cluster.sync.retry_due" => "cluster.sync.retry_due".to_string(),
+                    "webinar.start_requested" => "webinar.start".to_string(),
+                    "webinar.reminder_requested" => "webinar.reminder".to_string(),
+                    "appointments.reminders.send_requested" => {
+                        "appointments.reminders.send".to_string()
+                    }
+                    "marketing.campaign.send" => "marketing.campaign.send".to_string(),
+                    "marketing.sequence.process_due" => {
+                        "marketing.sequence.process_due".to_string()
+                    }
+                    "field_service.plans.check_requested" => {
+                        "field_service.plans.check".to_string()
+                    }
+                    "calendar.feeds.prune_requested" => "calendar.feeds.prune".to_string(),
+                    "holidays.sync_requested" => "holidays.sync".to_string(),
+                    "holidays.sync_all_requested" => "holidays.sync_all".to_string(),
+                    "tenant.destroy_due" => "tenant.destroy_due".to_string(),
+                    "approvals.sweep_expiry_requested" => "approvals.sweep_expiry".to_string(),
+                    "license.expiry.check_requested" => "license.expiry.check".to_string(),
+                    "auditors.expire_requested" => "auditors.expire".to_string(),
+                    "logistics.maintenance.remind_requested" => {
+                        "logistics.maintenance.remind".to_string()
+                    }
+                    "web3.poll_requested" => "web3.poll".to_string(),
+                    "timetracker.screenshots.purge_requested" => {
+                        "timetracker.screenshots.purge".to_string()
+                    }
+                    "storage.lifecycle.run_requested" => "storage.lifecycle.run".to_string(),
+                    "storage.byo.health_check_requested" => {
+                        "storage.byo.health_check".to_string()
+                    }
+                    "events.reminders.send_requested" => "events.reminders.send".to_string(),
+                    "todos.reminders.send_requested" => "todos.reminders.send".to_string(),
+                    "saas_domains.reservations.expire" => {
+                        "saas_domains.reservations.expire".to_string()
+                    }
+                    "ssl.cloudflare.recheck" => "ssl.cloudflare.recheck".to_string(),
+                    "advisor.evaluate_requested" => "advisor.evaluate".to_string(),
+                    "billing.subscriptions.scan" => "billing.subscriptions.scan".to_string(),
+                    "saas.product_subdomain.expire_grace" => {
+                        "saas.product_subdomain.expire_grace".to_string()
+                    }
                     other => other.to_string(),
                 })
         })

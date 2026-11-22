@@ -20,6 +20,28 @@
 // fields are masked (see `StorageTargetConfig::masked_config`).
 // Object downloads return raw bytes, not the JSON envelope, because
 // the envelope cannot carry a binary body.
+//
+// Capability checks: every handler requires the caller identity
+// (`X-User-Id` + `X-Role` headers) and one capability, checked
+// through the `role.check` hook (fails closed): `storage.read` for
+// reads, `storage.write` for object uploads / deletes / signed URLs,
+// `storage.manage_targets` for target create / delete / test.
+//
+// Integrity: every upload records the SHA-256 of the bytes (returned
+// in the response and in the `storage.object.uploaded` event). A
+// download with `?expected_sha256=` verifies the bytes against that
+// digest and refuses corrupt bytes instead of serving them; local
+// and SFTP providers additionally verify against their durable
+// sidecar on every plain download.
+//
+// Quotas: this is the raw provider API — it has no owner or tenant
+// scope, so the hub quotas (storage-manager) cannot apply here.
+// Targets created through this API may carry an optional
+// `quota_bytes` / `max_objects` in their config, enforced here on
+// every upload (409 on exceed, overwrite counts only the size
+// delta). Quota-sensitive uploads with an owner scope must go
+// through the storage-manager hub instead. Targets declared in
+// configuration carry no target-level quota here.
 
 use crate::core::context::AppContext;
 use crate::core::error::{UnifiedError, UnifiedResult};
@@ -27,9 +49,9 @@ use crate::core::json;
 use crate::core::modules::{Module, ModuleRegistry, RouteInfo};
 use crate::core::pagination::{PageResult, PaginationParams};
 use crate::core::storage::{
-    provider_from_config, validate_target_name, StorageKind, StorageTargetConfig,
+    provider_from_config, sha256_hex, validate_target_name, StorageKind, StorageTargetConfig,
 };
-use actix_web::{http::header, web, HttpResponse};
+use actix_web::{http::header, web, HttpRequest, HttpResponse};
 use chrono::{DateTime, Utc};
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
@@ -47,6 +69,51 @@ const DEFAULT_SIGNED_URL_SECS: u64 = 3600;
 const MAX_SIGNED_URL_SECS: u64 = 604_800;
 
 // ---------------------------------------------------------------------------
+// Capabilities (checked through the `role.check` hook; fails closed).
+// ---------------------------------------------------------------------------
+
+const PERM_READ: &str = "storage.read";
+const PERM_WRITE: &str = "storage.write";
+const PERM_MANAGE_TARGETS: &str = "storage.manage_targets";
+
+fn authorize(ctx: &AppContext, req: &HttpRequest, permission: &str) -> UnifiedResult<()> {
+    let role = req
+        .headers()
+        .get("x-role")
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| UnifiedError::unauthorized("Missing X-Role header"))?;
+    // The actor header is required (anonymous callers are refused)
+    // but the capability check runs on the role only.
+    let actor_present = req
+        .headers()
+        .get("x-user-id")
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .is_some();
+    if !actor_present {
+        return Err(UnifiedError::unauthorized("Missing X-User-Id header"));
+    }
+    let context = ctx.hooks.emit(
+        "role.check",
+        serde_json::json!({ "role": role, "permission": permission, "allowed": false }),
+    );
+    let allowed = context
+        .get("allowed")
+        .and_then(|value| value.as_bool())
+        .unwrap_or(false);
+    if allowed {
+        Ok(())
+    } else {
+        Err(UnifiedError::forbidden(format!(
+            "Role \"{role}\" does not hold permission \"{permission}\""
+        )))
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Target metadata store (in-memory, like the downloader job store).
 // ---------------------------------------------------------------------------
 
@@ -56,6 +123,12 @@ struct StoredTarget {
     kind: StorageKind,
     /// Target configuration with secret fields masked.
     config: Value,
+    /// Optional hard quota for this target, in bytes (`None` means
+    /// no target-level limit). Enforced on every upload.
+    quota_bytes: Option<i64>,
+    /// Optional hard quota for this target, in objects (`None`
+    /// means no target-level limit).
+    max_objects: Option<i64>,
     created_at: DateTime<Utc>,
 }
 
@@ -63,6 +136,34 @@ static TARGETS: OnceLock<DashMap<String, StoredTarget>> = OnceLock::new();
 
 fn targets_store() -> &'static DashMap<String, StoredTarget> {
     TARGETS.get_or_init(DashMap::new)
+}
+
+/// Recorded usage per target, for the optional target-level quota:
+/// total bytes and object count of objects uploaded through this
+/// module. Keys are target names.
+#[derive(Debug, Clone, Copy, Default)]
+struct TargetUsage {
+    bytes: i64,
+    objects: i64,
+}
+
+static TARGET_USAGE: OnceLock<DashMap<String, TargetUsage>> = OnceLock::new();
+
+fn target_usage_store() -> &'static DashMap<String, TargetUsage> {
+    TARGET_USAGE.get_or_init(DashMap::new)
+}
+
+/// Recorded size per object uploaded through this module, keyed by
+/// `{target}\n{key}`. Lets overwrites count only the size delta
+/// against the quota instead of double-counting.
+static OBJECT_SIZES: OnceLock<DashMap<String, i64>> = OnceLock::new();
+
+fn object_sizes_store() -> &'static DashMap<String, i64> {
+    OBJECT_SIZES.get_or_init(DashMap::new)
+}
+
+fn object_size_key(target: &str, key: &str) -> String {
+    format!("{target}\n{key}")
 }
 
 // ---------------------------------------------------------------------------
@@ -91,6 +192,11 @@ struct CreateTargetRequest {
 #[derive(Debug, Deserialize)]
 struct ObjectQuery {
     key: String,
+    /// Optional expected SHA-256 hex digest: when present the
+    /// download is verified against it and corrupt bytes are
+    /// refused instead of served.
+    #[serde(default)]
+    expected_sha256: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -151,8 +257,11 @@ fn provider_for(
 // Handlers.
 // ---------------------------------------------------------------------------
 
-async fn get_status(ctx: web::Data<Arc<AppContext>>) -> HttpResponse {
+async fn get_status(ctx: web::Data<Arc<AppContext>>, req: HttpRequest) -> HttpResponse {
     let debug = ctx.is_debug();
+    if let Err(error) = authorize(&ctx, &req, PERM_READ) {
+        return json::error_response(&error, debug);
+    }
     let result: UnifiedResult<StorageStatusView> = (|| {
         Ok(StorageStatusView {
             kinds: StorageKind::all()
@@ -168,9 +277,13 @@ async fn get_status(ctx: web::Data<Arc<AppContext>>) -> HttpResponse {
 
 async fn list_targets(
     ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
     params: web::Query<PaginationParams>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
+    if let Err(error) = authorize(&ctx, &req, PERM_READ) {
+        return json::error_response(&error, debug);
+    }
     let result: UnifiedResult<Value> = (|| {
         let mut items: Vec<StoredTarget> = targets_store()
             .iter()
@@ -198,9 +311,13 @@ async fn list_targets(
 
 async fn create_target(
     ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
     body: web::Json<CreateTargetRequest>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
+    if let Err(error) = authorize(&ctx, &req, PERM_MANAGE_TARGETS) {
+        return json::error_response(&error, debug);
+    }
     let result: UnifiedResult<StoredTarget> = (|| {
         let config = target_config_from_request(&body)?;
         if targets_store().contains_key(&config.name)
@@ -222,6 +339,8 @@ async fn create_target(
             name: config.name.clone(),
             kind: config.kind,
             config: config.masked_config(),
+            quota_bytes: config.quota_bytes,
+            max_objects: config.max_objects,
             created_at: Utc::now(),
         };
         targets_store().insert(stored.name.clone(), stored.clone());
@@ -237,8 +356,15 @@ async fn create_target(
     }
 }
 
-async fn get_target(ctx: web::Data<Arc<AppContext>>, name: web::Path<String>) -> HttpResponse {
+async fn get_target(
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+    name: web::Path<String>,
+) -> HttpResponse {
     let debug = ctx.is_debug();
+    if let Err(error) = authorize(&ctx, &req, PERM_READ) {
+        return json::error_response(&error, debug);
+    }
     let result: UnifiedResult<StoredTarget> = (|| {
         let name = name.into_inner();
         targets_store()
@@ -253,9 +379,13 @@ async fn get_target(ctx: web::Data<Arc<AppContext>>, name: web::Path<String>) ->
 
 async fn delete_target(
     ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
     name: web::Path<String>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
+    if let Err(error) = authorize(&ctx, &req, PERM_MANAGE_TARGETS) {
+        return json::error_response(&error, debug);
+    }
     let result: UnifiedResult<Value> = (|| {
         let name = name.into_inner();
         if !targets_store().contains_key(&name)
@@ -266,6 +396,10 @@ async fn delete_target(
             )));
         }
         targets_store().remove(&name);
+        // Usage records go with the target so a later target under
+        // the same name starts from a clean quota.
+        target_usage_store().remove(&name);
+        object_sizes_store().retain(|key, _| !key.starts_with(&format!("{name}\n")));
         ctx.storage_registry.remove(&name);
         ctx.hooks.emit(
             crate::core::storage::events::TARGET_DELETED,
@@ -276,8 +410,15 @@ async fn delete_target(
     json::respond(result, debug)
 }
 
-async fn test_target(ctx: web::Data<Arc<AppContext>>, name: web::Path<String>) -> HttpResponse {
+async fn test_target(
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+    name: web::Path<String>,
+) -> HttpResponse {
     let debug = ctx.is_debug();
+    if let Err(error) = authorize(&ctx, &req, PERM_MANAGE_TARGETS) {
+        return json::error_response(&error, debug);
+    }
     let result: UnifiedResult<Value> = (|| async {
         let name = name.into_inner();
         let provider = provider_for(&ctx, &name)?;
@@ -294,11 +435,15 @@ async fn test_target(ctx: web::Data<Arc<AppContext>>, name: web::Path<String>) -
 
 async fn upload_object(
     ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
     name: web::Path<String>,
     query: web::Query<ObjectQuery>,
     body: web::Bytes,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
+    if let Err(error) = authorize(&ctx, &req, PERM_WRITE) {
+        return json::error_response(&error, debug);
+    }
     let result: UnifiedResult<Value> = (|| async {
         let name = name.into_inner();
         if body.len() > MAX_UPLOAD_BYTES {
@@ -309,15 +454,65 @@ async fn upload_object(
                 413,
             ));
         }
+        let size_bytes = body.len() as i64;
+        let checksum = sha256_hex(&body);
+        // Target-level quota (runtime targets only; see the module
+        // header). An overwrite counts only the size delta, and a
+        // new object counts one object.
+        let size_key = object_size_key(&name, &query.key);
+        let previous_size = object_sizes_store()
+            .get(&size_key)
+            .map(|entry| *entry.value())
+            .unwrap_or(0);
+        let is_new = !object_sizes_store().contains_key(&size_key);
+        let delta_bytes = size_bytes - previous_size;
+        let delta_objects = i64::from(is_new);
+        if let Some(target) = targets_store().get(&name) {
+            let usage = target_usage_store()
+                .get(&name)
+                .map(|entry| *entry.value())
+                .unwrap_or_default();
+            if let Some(limit) = target.quota_bytes {
+                if usage.bytes + delta_bytes > limit {
+                    return Err(UnifiedError::conflict(format!(
+                        "Storage target \"{name}\" quota exceeded: used {} + {delta_bytes} exceeds the limit of {limit} bytes",
+                        usage.bytes
+                    ))
+                    .with_metadata("quota_exceeded", Value::Bool(true))
+                    .with_metadata("target", Value::String(name.clone())));
+                }
+            }
+            if let Some(limit) = target.max_objects {
+                if usage.objects + delta_objects > limit {
+                    return Err(UnifiedError::conflict(format!(
+                        "Storage target \"{name}\" object quota exceeded: used {} + {delta_objects} exceeds the limit of {limit} objects",
+                        usage.objects
+                    ))
+                    .with_metadata("quota_exceeded", Value::Bool(true))
+                    .with_metadata("target", Value::String(name.clone())));
+                }
+            }
+        }
         let provider = provider_for(&ctx, &name)?;
         let stored_key = provider
             .upload(&query.key, body.to_vec())
             .await?;
+        object_sizes_store().insert(size_key, size_bytes);
+        target_usage_store()
+            .entry(name.clone())
+            .and_modify(|usage| {
+                usage.bytes += delta_bytes;
+                usage.objects += delta_objects;
+            })
+            .or_insert(TargetUsage {
+                bytes: delta_bytes,
+                objects: delta_objects,
+            });
         ctx.hooks.emit(
             crate::core::storage::events::OBJECT_UPLOADED,
-            serde_json::json!({ "target": name, "key": query.key, "stored_key": stored_key }),
+            serde_json::json!({ "target": name, "key": query.key, "stored_key": stored_key, "size_bytes": size_bytes, "sha256_hex": checksum }),
         );
-        Ok(serde_json::json!({ "target": name, "key": query.key, "stored_key": stored_key }))
+        Ok(serde_json::json!({ "target": name, "key": query.key, "stored_key": stored_key, "size_bytes": size_bytes, "sha256_hex": checksum }))
     })()
     .await;
     match result {
@@ -328,16 +523,35 @@ async fn upload_object(
 
 async fn download_object(
     ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
     name: web::Path<String>,
     query: web::Query<ObjectQuery>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
+    if let Err(error) = authorize(&ctx, &req, PERM_READ) {
+        return json::error_response(&error, debug);
+    }
     let name = name.into_inner();
     let provider = match provider_for(&ctx, &name) {
         Ok(provider) => provider,
         Err(error) => return json::error_response(&error, debug),
     };
-    match provider.download(&query.key).await {
+    let downloaded = match &query.expected_sha256 {
+        Some(expected) => {
+            let expected = expected.trim().to_ascii_lowercase();
+            if expected.len() != 64 || !expected.chars().all(|c| c.is_ascii_hexdigit()) {
+                return json::error_response(
+                    &UnifiedError::bad_request(
+                        "expected_sha256 must be a 64-character lowercase hex digest",
+                    ),
+                    debug,
+                );
+            }
+            provider.download_verified(&query.key, &expected).await
+        }
+        None => provider.download(&query.key).await,
+    };
+    match downloaded {
         Ok(bytes) => {
             let file_name = query
                 .key
@@ -359,14 +573,25 @@ async fn download_object(
 
 async fn delete_object(
     ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
     name: web::Path<String>,
     query: web::Query<ObjectQuery>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
+    if let Err(error) = authorize(&ctx, &req, PERM_WRITE) {
+        return json::error_response(&error, debug);
+    }
     let result: UnifiedResult<Value> = (|| async {
         let name = name.into_inner();
         let provider = provider_for(&ctx, &name)?;
         provider.delete(&query.key).await?;
+        let size_key = object_size_key(&name, &query.key);
+        if let Some((_, size)) = object_sizes_store().remove(&size_key) {
+            if let Some(mut usage) = target_usage_store().get_mut(&name) {
+                usage.bytes = (usage.bytes - size).max(0);
+                usage.objects = (usage.objects - 1).max(0);
+            }
+        }
         ctx.hooks.emit(
             crate::core::storage::events::OBJECT_DELETED,
             serde_json::json!({ "target": name, "key": query.key }),
@@ -379,10 +604,14 @@ async fn delete_object(
 
 async fn signed_url(
     ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
     name: web::Path<String>,
     body: web::Json<SignedUrlRequest>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
+    if let Err(error) = authorize(&ctx, &req, PERM_WRITE) {
+        return json::error_response(&error, debug);
+    }
     let result: UnifiedResult<Value> = (|| async {
         let name = name.into_inner();
         let expires_secs = body
@@ -439,16 +668,16 @@ impl Module for StorageModule {
 
     fn route_info(&self) -> Vec<RouteInfo> {
         vec![
-            RouteInfo { method: "GET", path: "/api/v1/storage", owner: "storage", description: "Storage status: supported kinds and registered targets." },
-            RouteInfo { method: "GET", path: "/api/v1/storage/targets", owner: "storage", description: "List storage targets (paginated, secrets masked)." },
-            RouteInfo { method: "POST", path: "/api/v1/storage/targets", owner: "storage", description: "Add a storage target (secrets write-only)." },
-            RouteInfo { method: "GET", path: "/api/v1/storage/targets/{name}", owner: "storage", description: "Get one storage target (secrets masked)." },
-            RouteInfo { method: "DELETE", path: "/api/v1/storage/targets/{name}", owner: "storage", description: "Delete a storage target." },
-            RouteInfo { method: "POST", path: "/api/v1/storage/targets/{name}/test", owner: "storage", description: "Test a storage target connection." },
-            RouteInfo { method: "POST", path: "/api/v1/storage/targets/{name}/objects", owner: "storage", description: "Upload object bytes through a target (?key=)." },
-            RouteInfo { method: "GET", path: "/api/v1/storage/targets/{name}/objects", owner: "storage", description: "Download object bytes through a target (?key=)." },
-            RouteInfo { method: "DELETE", path: "/api/v1/storage/targets/{name}/objects", owner: "storage", description: "Delete an object through a target (?key=)." },
-            RouteInfo { method: "POST", path: "/api/v1/storage/targets/{name}/signed-url", owner: "storage", description: "Generate a signed URL for an object." },
+            RouteInfo { method: "GET", path: "/api/v1/storage", owner: "storage", description: "Storage status: supported kinds and registered targets (capability storage.read)." },
+            RouteInfo { method: "GET", path: "/api/v1/storage/targets", owner: "storage", description: "List storage targets (paginated, secrets masked, capability storage.read)." },
+            RouteInfo { method: "POST", path: "/api/v1/storage/targets", owner: "storage", description: "Add a storage target (secrets write-only, optional quota_bytes / max_objects, capability storage.manage_targets)." },
+            RouteInfo { method: "GET", path: "/api/v1/storage/targets/{name}", owner: "storage", description: "Get one storage target (secrets masked, capability storage.read)." },
+            RouteInfo { method: "DELETE", path: "/api/v1/storage/targets/{name}", owner: "storage", description: "Delete a storage target (capability storage.manage_targets)." },
+            RouteInfo { method: "POST", path: "/api/v1/storage/targets/{name}/test", owner: "storage", description: "Test a storage target connection (capability storage.manage_targets)." },
+            RouteInfo { method: "POST", path: "/api/v1/storage/targets/{name}/objects", owner: "storage", description: "Upload object bytes through a target (?key=, SHA-256 recorded, target quota enforced, capability storage.write)." },
+            RouteInfo { method: "GET", path: "/api/v1/storage/targets/{name}/objects", owner: "storage", description: "Download object bytes through a target (?key=, ?expected_sha256= verifies, capability storage.read)." },
+            RouteInfo { method: "DELETE", path: "/api/v1/storage/targets/{name}/objects", owner: "storage", description: "Delete an object through a target (?key=, capability storage.write)." },
+            RouteInfo { method: "POST", path: "/api/v1/storage/targets/{name}/signed-url", owner: "storage", description: "Generate a signed URL for an object (capability storage.write)." },
         ]
     }
 }

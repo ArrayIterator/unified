@@ -6,6 +6,10 @@
 // emits a `config.validate` event, and any handler may mark the value
 // invalid (by setting `valid: false` on the payload or contributing a
 // result with `valid: false`); the write is then refused with 422.
+// After a successful write or delete the module emits a
+// `settings.changed` event (`{ namespace, key, type?, value?,
+// deleted }`) so owning modules can keep their effective-value
+// mirrors in sync.
 
 use crate::core::context::AppContext;
 use crate::core::error::{UnifiedError, UnifiedResult};
@@ -297,7 +301,24 @@ fn put_setting(
         Ok(record)
     })();
     match result {
-        Ok(record) => success_response(record, 200),
+        Ok(record) => {
+            // Batch 18: tell owning modules the value changed so
+            // their effective-value mirrors stay in sync (the
+            // payments module listens for `cards.*` /
+            // `reference_id.*` here). Emitted only after the write
+            // lands; a refused write emits nothing.
+            ctx.hooks.emit(
+                "settings.changed",
+                json!({
+                    "namespace": record.namespace.clone(),
+                    "key": record.key.clone(),
+                    "type": record.value_type.clone(),
+                    "value": record.value.clone(),
+                    "deleted": false,
+                }),
+            );
+            success_response(record, 200)
+        }
         Err(error) => error_response(&error, debug),
     }
 }
@@ -310,10 +331,18 @@ fn delete_setting(
     let debug = ctx.is_debug();
     let (namespace, key) = path.into_inner();
     match store.remove(&(namespace.clone(), key.clone())) {
-        Some(_) => success_response(
-            json!({ "deleted": true, "namespace": namespace, "key": key }),
-            200,
-        ),
+        Some(_) => {
+            // Batch 18: see `put_setting` — a delete reverts the
+            // key to its compiled-in default in listening modules.
+            ctx.hooks.emit(
+                "settings.changed",
+                json!({ "namespace": namespace.clone(), "key": key.clone(), "deleted": true }),
+            );
+            success_response(
+                json!({ "deleted": true, "namespace": namespace, "key": key }),
+                200,
+            )
+        }
         None => error_response(
             &UnifiedError::not_found(format!("Setting \"{namespace}/{key}\" not found")),
             debug,

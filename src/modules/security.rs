@@ -15,14 +15,32 @@ use crate::core::hooks::{events, HookBus};
 use crate::core::json::{error_response, success_response};
 use crate::core::modules::{Module, ModuleRegistry, RouteInfo};
 use crate::core::pagination::{PageResult, PaginationParams};
-use actix_web::{web, HttpResponse};
+use crate::db::models::User;
+use crate::db::DbPool;
+use actix_web::http::header;
+use actix_web::{web, HttpRequest, HttpResponse};
+use base64::Engine;
 use dashmap::DashMap;
+use diesel::prelude::*;
+use hmac::{Hmac, Mac};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
+use serde_json::{json, Value};
+use sha2::Sha256;
 use std::net::{TcpStream, ToSocketAddrs};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
+use uuid::Uuid;
+
+type HmacSha256 = Hmac<Sha256>;
+
+/// Capability that grants read access to the security surface
+/// (checks, policy, failed logins, and every hardening status list).
+pub const CAP_SECURITY_VIEW: &str = "security:view";
+/// Capability that grants write access to the security surface
+/// (network scan, settings and header updates, unlock, IP-list
+/// changes, reputation flagging).
+pub const CAP_SECURITY_MANAGE: &str = "security:manage";
 
 /// Password policy enforced by the application. User creation and password
 /// changes must satisfy these rules.
@@ -164,14 +182,226 @@ pub struct ScanResponse {
     pub scanned_at: chrono::DateTime<chrono::Utc>,
 }
 
-fn policy() -> HttpResponse {
+// ---------------------------------------------------------------------------
+// Caller authentication and capability enforcement.
+//
+// Every endpoint in this module requires a valid Auth Manager JWT
+// (Bearer header or session cookie) and a security capability:
+// `security:view` for reads, `security:manage` for writes. The
+// wildcard scope `*` and `admin:access` grant both, matching the
+// dashboards module's capability semantics. Scopes are trustworthy
+// here because the Auth Manager mints them only from the caller's
+// database roles (see `issue_token`); a token can never carry a
+// capability its owner does not hold in the database.
+//
+// Defence in depth: when a database pool is attached, the token's
+// user must still exist and be active; a deleted or disabled user's
+// token stops working immediately instead of living until expiry.
+// Without a pool there is no user row to check, so the token scopes
+// are the only check — deployments without a database must not
+// expose this surface.
+// ---------------------------------------------------------------------------
+
+/// Claims of an Auth Manager JWT, mirroring the issuer exactly.
+#[derive(Debug, Clone, Deserialize)]
+struct JwtClaims {
+    sub: String,
+    #[allow(dead_code)]
+    iss: String,
+    #[allow(dead_code)]
+    iat: i64,
+    exp: i64,
+    #[allow(dead_code)]
+    jti: String,
+    #[serde(default)]
+    scopes: Vec<String>,
+}
+
+/// Extract a Bearer token from the `Authorization` header, falling
+/// back to the session cookie (`app.session_name`).
+fn extract_token(req: &HttpRequest, session_cookie_name: &str) -> Option<String> {
+    if let Some(header_value) = req.headers().get(header::AUTHORIZATION) {
+        if let Ok(value) = header_value.to_str() {
+            let trimmed = value.trim();
+            if let Some(token) = trimmed
+                .strip_prefix("Bearer ")
+                .or_else(|| trimmed.strip_prefix("bearer "))
+            {
+                if !token.trim().is_empty() {
+                    return Some(token.trim().to_string());
+                }
+            }
+        }
+    }
+    cookie_value(req, session_cookie_name)
+}
+
+/// Read one cookie value from the raw `Cookie` header.
+fn cookie_value(req: &HttpRequest, name: &str) -> Option<String> {
+    let header = req.headers().get(header::COOKIE)?.to_str().ok()?;
+    for part in header.split(';') {
+        let part = part.trim();
+        if let Some((key, value)) = part.split_once('=') {
+            if key.trim() == name && !value.trim().is_empty() {
+                return Some(value.trim().to_string());
+            }
+        }
+    }
+    None
+}
+
+/// Verify an Auth Manager JWT: three base64url segments, `alg`
+/// `HS256`, HMAC-SHA256 over `header.payload` with signing key
+/// `"{secret_key}:{salt_key}"`, and an unexpired `exp`. Every
+/// failure is a 401.
+fn verify_jwt(token: &str, secret_key: &str, salt_key: &str) -> UnifiedResult<JwtClaims> {
+    if secret_key.is_empty() || salt_key.is_empty() {
+        return Err(UnifiedError::unauthorized(
+            "Security authentication is not configured: app.secret_key and app.salt_key must both be set",
+        )
+        .with_metadata("kind", json!("auth_not_configured")));
+    }
+    let parts: Vec<&str> = token.split('.').collect();
+    if parts.len() != 3 {
+        return Err(UnifiedError::unauthorized(
+            "Token must have three base64url segments",
+        ));
+    }
+    let header_bytes = base64::engine::general_purpose::URL_SAFE_NO_PAD
+        .decode(parts[0])
+        .map_err(|_| UnifiedError::unauthorized("Token header is not valid base64url"))?;
+    let header: Value = serde_json::from_slice(&header_bytes)
+        .map_err(|_| UnifiedError::unauthorized("Token header is not valid JSON"))?;
+    if header.get("alg").and_then(|value| value.as_str()) != Some("HS256") {
+        return Err(UnifiedError::unauthorized(
+            "Token algorithm must be HS256",
+        ));
+    }
+    let signing_key = format!("{secret_key}:{salt_key}");
+    let signing_input = format!("{}.{}", parts[0], parts[1]);
+    let provided = base64::engine::general_purpose::URL_SAFE_NO_PAD
+        .decode(parts[2])
+        .map_err(|_| UnifiedError::unauthorized("Token signature is not valid base64url"))?;
+    let mut mac = HmacSha256::new_from_slice(signing_key.as_bytes())
+        .map_err(|error| UnifiedError::internal(format!("HMAC initialisation failed: {error}")))?;
+    mac.update(signing_input.as_bytes());
+    mac.verify_slice(&provided)
+        .map_err(|_| UnifiedError::unauthorized("Token signature is invalid"))?;
+    let payload_bytes = base64::engine::general_purpose::URL_SAFE_NO_PAD
+        .decode(parts[1])
+        .map_err(|_| UnifiedError::unauthorized("Token payload is not valid base64url"))?;
+    let claims: JwtClaims = serde_json::from_slice(&payload_bytes)
+        .map_err(|_| UnifiedError::unauthorized("Token payload is not valid JSON"))?;
+    if claims.exp <= chrono::Utc::now().timestamp() {
+        return Err(UnifiedError::unauthorized("Token has expired"));
+    }
+    Ok(claims)
+}
+
+/// True when the token scope set grants `capability`. The wildcard
+/// scope `*` grants everything; `admin:access` is the admin
+/// baseline and grants every security capability.
+fn has_security_capability(scopes: &[String], capability: &str) -> bool {
+    scopes.iter().any(|scope| {
+        scope == "*" || scope == "admin:access" || scope == capability
+    })
+}
+
+/// Run blocking Diesel work off the async worker threads.
+async fn run_blocking<F, T>(pool: DbPool, work: F) -> UnifiedResult<T>
+where
+    F: FnOnce(&mut diesel::PgConnection) -> UnifiedResult<T> + Send + 'static,
+    T: Send + 'static,
+{
+    tokio::task::spawn_blocking(move || {
+        let mut connection = pool.get().map_err(|error| {
+            UnifiedError::internal(format!("Cannot borrow a database connection: {error}"))
+        })?;
+        work(&mut connection)
+    })
+    .await
+    .map_err(|error| UnifiedError::internal(format!("Database task failed: {error}")))?
+}
+
+/// True when the user exists and is active. Without a database pool
+/// there is no row to check, so this returns true and the token
+/// scopes are the only check (see the section header).
+async fn db_user_is_active(ctx: &AppContext, user_id: Uuid) -> UnifiedResult<bool> {
+    let pool = match ctx.db.read().expect("db lock poisoned").clone() {
+        Some(pool) => pool,
+        None => return Ok(true),
+    };
+    run_blocking(pool, move |connection| {
+        use crate::db::schema::users::dsl as users_dsl;
+        let user = users_dsl::users
+            .find(user_id)
+            .select(User::as_select())
+            .first::<User>(connection)
+            .optional()
+            .map_err(UnifiedError::from)?;
+        Ok(user.is_some_and(|user| user.is_active))
+    })
+    .await
+}
+
+/// Enforce authentication plus one security capability for a
+/// handler. Returns an error `HttpResponse` (standard envelope) on
+/// failure; handlers return it directly.
+async fn require_security_capability(
+    req: &HttpRequest,
+    ctx: &AppContext,
+    capability: &str,
+) -> Result<(), HttpResponse> {
+    let debug = ctx.is_debug();
+    let fail = |error: UnifiedError| error_response(&error, debug);
+    let (secret_key, salt_key, session_name) = {
+        let config = ctx.config.read().expect("config lock poisoned");
+        (
+            config.app.secret_key.clone(),
+            config.app.salt_key.clone(),
+            config.app.session_name.clone(),
+        )
+    };
+    let token = extract_token(req, &session_name)
+        .ok_or_else(|| fail(UnifiedError::unauthorized("Authentication required: provide a Bearer token")))?;
+    let claims = verify_jwt(&token, &secret_key, &salt_key).map_err(fail)?;
+    let user_id = Uuid::parse_str(claims.sub.trim()).map_err(|_| {
+        fail(UnifiedError::unauthorized("Token subject is not a user id")
+            .with_metadata("kind", json!("invalid_subject")))
+    })?;
+    if !has_security_capability(&claims.scopes, capability) {
+        return Err(fail(
+            UnifiedError::forbidden(format!(
+                "Capability \"{capability}\" is required for this security endpoint"
+            ))
+            .with_metadata("capability", json!(capability)),
+        ));
+    }
+    match db_user_is_active(ctx, user_id).await {
+        Ok(true) => Ok(()),
+        Ok(false) => Err(fail(UnifiedError::unauthorized(
+            "Authenticated user does not exist or is disabled",
+        )
+        .with_metadata("kind", json!("unknown_user")))),
+        Err(error) => Err(fail(error)),
+    }
+}
+
+async fn policy(req: HttpRequest, ctx: web::Data<Arc<AppContext>>) -> HttpResponse {
+    if let Err(response) = require_security_capability(&req, &ctx, CAP_SECURITY_VIEW).await {
+        return response;
+    }
     success_response(PasswordPolicy::default(), 200)
 }
 
 async fn checks(
+    req: HttpRequest,
     ctx: web::Data<Arc<AppContext>>,
     store: web::Data<Arc<DashMap<String, u64>>>,
 ) -> HttpResponse {
+    if let Err(response) = require_security_capability(&req, &ctx, CAP_SECURITY_VIEW).await {
+        return response;
+    }
     let config = ctx
         .config
         .read()
@@ -420,9 +650,14 @@ async fn checks(
 }
 
 async fn failed_logins(
+    req: HttpRequest,
+    ctx: web::Data<Arc<AppContext>>,
     store: web::Data<Arc<DashMap<String, u64>>>,
     query: web::Query<PaginationParams>,
 ) -> HttpResponse {
+    if let Err(response) = require_security_capability(&req, &ctx, CAP_SECURITY_VIEW).await {
+        return response;
+    }
     let pagination = query.normalized();
     let mut entries: Vec<FailedLoginEntry> = store
         .iter()
@@ -489,7 +724,14 @@ fn port_open(host: &str, port: u16, timeout: Duration) -> (bool, u64) {
     (open, started.elapsed().as_millis() as u64)
 }
 
-async fn scan(ctx: web::Data<Arc<AppContext>>, body: web::Json<ScanRequest>) -> HttpResponse {
+async fn scan(
+    req: HttpRequest,
+    ctx: web::Data<Arc<AppContext>>,
+    body: web::Json<ScanRequest>,
+) -> HttpResponse {
+    if let Err(response) = require_security_capability(&req, &ctx, CAP_SECURITY_MANAGE).await {
+        return response;
+    }
     let debug = ctx.is_debug();
     let host = match parse_target(&body.target) {
         Ok(host) => host,
@@ -571,7 +813,7 @@ impl Module for SecurityModule {
     }
 
     fn description(&self) -> &'static str {
-        "Runs security checks, exposes the password policy, scans targets for TLS presence, and serves the hardening surface: brute-force status and unlock, rate-limit status, IP allow/block lists, security headers, and failed-auth alerts."
+        "Runs security checks, exposes the password policy, scans targets for TLS presence, and serves the hardening surface: brute-force status and unlock, rate-limit status, IP allow/block lists, security headers, and failed-auth alerts. Every endpoint requires a valid Auth Manager JWT and a security capability (`security:view` for reads, `security:manage` for writes)."
     }
 
     fn register_hooks(&self, bus: &HookBus) {
@@ -729,7 +971,13 @@ fn matches_search(haystack: &str, search: &Option<String>) -> bool {
 /// `GET /api/v1/security/hardening/settings`: the live hardening
 /// settings plus live counts (list sizes, current lockouts, flagged
 /// IPs, failed-auth clusters).
-async fn get_hardening_settings() -> HttpResponse {
+async fn get_hardening_settings(
+    req: HttpRequest,
+    ctx: web::Data<Arc<AppContext>>,
+) -> HttpResponse {
+    if let Err(response) = require_security_capability(&req, &ctx, CAP_SECURITY_VIEW).await {
+        return response;
+    }
     let state = shared_state();
     let settings = state.settings();
     let counts = state.overview_counts();
@@ -744,9 +992,13 @@ async fn get_hardening_settings() -> HttpResponse {
 /// are validated and nothing changes on failure. Updates the runtime
 /// copy only and does not rewrite the configuration file.
 async fn update_hardening_settings(
+    req: HttpRequest,
     ctx: web::Data<Arc<AppContext>>,
     body: web::Json<SecuritySettingsUpdate>,
 ) -> HttpResponse {
+    if let Err(response) = require_security_capability(&req, &ctx, CAP_SECURITY_MANAGE).await {
+        return response;
+    }
     let debug = ctx.is_debug();
     let state = shared_state();
     match state.update_settings(body.into_inner()) {
@@ -761,7 +1013,14 @@ async fn update_hardening_settings(
 /// `GET /api/v1/security/hardening/brute-force`: paginated lockout /
 /// attempt status per IP and per account. Filters: `kind` (`ip` or
 /// `account`), `locked` (`true` / `false`); `search` matches the key.
-async fn list_brute_force_status(query: web::Query<PaginationParams>) -> HttpResponse {
+async fn list_brute_force_status(
+    req: HttpRequest,
+    ctx: web::Data<Arc<AppContext>>,
+    query: web::Query<PaginationParams>,
+) -> HttpResponse {
+    if let Err(response) = require_security_capability(&req, &ctx, CAP_SECURITY_VIEW).await {
+        return response;
+    }
     let pagination = query.normalized();
     let mut statuses: Vec<LockoutStatus> = shared_state().lockout_statuses();
     if let Some(kind) = pagination.filters.get("kind") {
@@ -785,9 +1044,13 @@ pub struct UnlockRequest {
 /// clear a lockout / attempt record for one IP (`kind: "ip"`) or one
 /// account (`kind: "account"`). Emits `security.bruteforce.unlocked`.
 async fn unlock_brute_force(
+    req: HttpRequest,
     ctx: web::Data<Arc<AppContext>>,
     body: web::Json<UnlockRequest>,
 ) -> HttpResponse {
+    if let Err(response) = require_security_capability(&req, &ctx, CAP_SECURITY_MANAGE).await {
+        return response;
+    }
     let debug = ctx.is_debug();
     let kind = body.kind.trim();
     if kind != "ip" && kind != "account" {
@@ -818,7 +1081,14 @@ async fn unlock_brute_force(
 /// `GET /api/v1/security/hardening/rate-limit`: paginated tracked
 /// rate-limit windows. Filters: `scope` (`ip`, `user`, or
 /// `endpoint`); `search` matches the window key.
-async fn list_rate_limit_status(query: web::Query<PaginationParams>) -> HttpResponse {
+async fn list_rate_limit_status(
+    req: HttpRequest,
+    ctx: web::Data<Arc<AppContext>>,
+    query: web::Query<PaginationParams>,
+) -> HttpResponse {
+    if let Err(response) = require_security_capability(&req, &ctx, CAP_SECURITY_VIEW).await {
+        return response;
+    }
     let pagination = query.normalized();
     let mut entries: Vec<RateLimitEntry> = shared_state().rate_limit_entries();
     if let Some(scope) = pagination.filters.get("scope") {
@@ -831,7 +1101,14 @@ async fn list_rate_limit_status(query: web::Query<PaginationParams>) -> HttpResp
 /// `GET /api/v1/security/hardening/ip-lists`: paginated allow/block
 /// list entries. Filter: `list` (`allow` or `block`); `search`
 /// matches the CIDR text.
-async fn list_ip_entries(query: web::Query<PaginationParams>) -> HttpResponse {
+async fn list_ip_entries(
+    req: HttpRequest,
+    ctx: web::Data<Arc<AppContext>>,
+    query: web::Query<PaginationParams>,
+) -> HttpResponse {
+    if let Err(response) = require_security_capability(&req, &ctx, CAP_SECURITY_VIEW).await {
+        return response;
+    }
     let pagination = query.normalized();
     let state = shared_state();
     let mut entries: Vec<IpListEntry> = Vec::new();
@@ -858,9 +1135,13 @@ pub struct IpListAddRequest {
 /// bare IP to the allowlist or the blocklist. CIDR notation is
 /// validated for IPv4 and IPv6; a bare IP becomes a host route.
 async fn add_ip_entry(
+    req: HttpRequest,
     ctx: web::Data<Arc<AppContext>>,
     body: web::Json<IpListAddRequest>,
 ) -> HttpResponse {
+    if let Err(response) = require_security_capability(&req, &ctx, CAP_SECURITY_MANAGE).await {
+        return response;
+    }
     let debug = ctx.is_debug();
     match shared_state().add_ip_entry(body.list.trim(), body.cidr.trim()) {
         Ok(entry) => success_response(entry, 201),
@@ -878,9 +1159,13 @@ pub struct IpListRemoveQuery {
 /// remove one entry from the allowlist or the blocklist. Removing a
 /// missing entry is a 404.
 async fn remove_ip_entry(
+    req: HttpRequest,
     ctx: web::Data<Arc<AppContext>>,
     query: web::Query<IpListRemoveQuery>,
 ) -> HttpResponse {
+    if let Err(response) = require_security_capability(&req, &ctx, CAP_SECURITY_MANAGE).await {
+        return response;
+    }
     let debug = ctx.is_debug();
     let (Some(list), Some(cidr)) = (query.list.clone(), query.cidr.clone()) else {
         return error_response(
@@ -905,7 +1190,13 @@ async fn remove_ip_entry(
 
 /// `GET /api/v1/security/hardening/headers`: the configured security
 /// header values (empty means that header is disabled).
-async fn get_headers_config() -> HttpResponse {
+async fn get_headers_config(
+    req: HttpRequest,
+    ctx: web::Data<Arc<AppContext>>,
+) -> HttpResponse {
+    if let Err(response) = require_security_capability(&req, &ctx, CAP_SECURITY_VIEW).await {
+        return response;
+    }
     let settings = shared_state().settings();
     success_response(
         json!({
@@ -923,7 +1214,14 @@ async fn get_headers_config() -> HttpResponse {
 /// `PUT /api/v1/security/hardening/headers`: partial header update.
 /// Only the fields present are changed; an empty string disables
 /// that header.
-async fn update_headers_config(body: web::Json<HeadersUpdate>) -> HttpResponse {
+async fn update_headers_config(
+    req: HttpRequest,
+    ctx: web::Data<Arc<AppContext>>,
+    body: web::Json<HeadersUpdate>,
+) -> HttpResponse {
+    if let Err(response) = require_security_capability(&req, &ctx, CAP_SECURITY_MANAGE).await {
+        return response;
+    }
     let settings = shared_state().update_headers(body.into_inner());
     success_response(
         json!({
@@ -941,7 +1239,14 @@ async fn update_headers_config(body: web::Json<HeadersUpdate>) -> HttpResponse {
 /// `GET /api/v1/security/hardening/failed-auth-alerts`: paginated
 /// failed-auth clusters (repeated failures grouped by IP + account),
 /// most recently active first. `search` matches the IP or account.
-async fn list_failed_auth_alerts(query: web::Query<PaginationParams>) -> HttpResponse {
+async fn list_failed_auth_alerts(
+    req: HttpRequest,
+    ctx: web::Data<Arc<AppContext>>,
+    query: web::Query<PaginationParams>,
+) -> HttpResponse {
+    if let Err(response) = require_security_capability(&req, &ctx, CAP_SECURITY_VIEW).await {
+        return response;
+    }
     let pagination = query.normalized();
     let mut clusters: Vec<FailedAuthCluster> = shared_state().failed_auth_clusters();
     clusters.retain(|cluster| {
@@ -959,7 +1264,14 @@ async fn list_failed_auth_alerts(query: web::Query<PaginationParams>) -> HttpRes
 /// `GET /api/v1/security/hardening/reputation`: paginated IP
 /// reputation records, highest score first. Filter: `flagged`
 /// (`true` / `false`); `search` matches the IP.
-async fn list_reputation(query: web::Query<PaginationParams>) -> HttpResponse {
+async fn list_reputation(
+    req: HttpRequest,
+    ctx: web::Data<Arc<AppContext>>,
+    query: web::Query<PaginationParams>,
+) -> HttpResponse {
+    if let Err(response) = require_security_capability(&req, &ctx, CAP_SECURITY_VIEW).await {
+        return response;
+    }
     let pagination = query.normalized();
     let mut entries: Vec<ReputationEntry> = shared_state().reputation_entries();
     if let Some(flagged) = pagination.filters.get("flagged") {
@@ -979,9 +1291,13 @@ pub struct ReputationFlagRequest {
 /// `POST /api/v1/security/hardening/reputation/flag`: manually flag
 /// an IP with a reason. Emits `security.ip.flagged`.
 async fn flag_reputation(
+    req: HttpRequest,
     ctx: web::Data<Arc<AppContext>>,
     body: web::Json<ReputationFlagRequest>,
 ) -> HttpResponse {
+    if let Err(response) = require_security_capability(&req, &ctx, CAP_SECURITY_MANAGE).await {
+        return response;
+    }
     let debug = ctx.is_debug();
     match shared_state().flag_ip(body.ip.trim(), body.reason.clone()) {
         Ok(entry) => success_response(entry, 200),
@@ -997,9 +1313,13 @@ pub struct ReputationUnflagRequest {
 /// `POST /api/v1/security/hardening/reputation/unflag`: manually
 /// unflag an IP and reset its score. Emits `security.ip.unflagged`.
 async fn unflag_reputation(
+    req: HttpRequest,
     ctx: web::Data<Arc<AppContext>>,
     body: web::Json<ReputationUnflagRequest>,
 ) -> HttpResponse {
+    if let Err(response) = require_security_capability(&req, &ctx, CAP_SECURITY_MANAGE).await {
+        return response;
+    }
     let debug = ctx.is_debug();
     match shared_state().unflag_ip(body.ip.trim()) {
         Ok(entry) => success_response(entry, 200),

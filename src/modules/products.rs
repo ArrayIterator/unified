@@ -6,7 +6,11 @@
 // (digital, physical, service, subscription, bundle, meeting,
 // hosting), variants and options, bundles of products with bundle
 // pricing rules, pricing (tiers, per-seat, usage-based, one-time /
-// subscription, regional pricing, taxes), inventory for physical
+// subscription, regional pricing, taxes), subscription plan fields
+// on subscription products (trial, proration policy, grace period,
+// dunning settings — read back through
+// `GET /api/v1/products/{id}/subscription-plan` and snapshotted
+// into subscriptions by the store at checkout), inventory for physical
 // goods with low-stock alerts, product files and versions that only
 // reference Software Manager records (this module never handles
 // files itself), product groups / categories / tags mirroring the
@@ -40,9 +44,9 @@ use crate::core::context::AppContext;
 use crate::core::error::{UnifiedError, UnifiedResult};
 use crate::core::hooks::{HookBus, HookContext};
 use crate::core::json;
-use crate::core::modules::{Module, ModuleRegistry};
+use crate::core::modules::{Module, ModuleRegistry, ProductCategory};
 use crate::core::pagination::{PageResult, PaginationParams};
-use actix_web::{web, HttpResponse};
+use actix_web::{web, HttpRequest, HttpResponse};
 use chrono::{DateTime, Utc};
 use dashmap::DashMap;
 use semver::Version;
@@ -72,6 +76,23 @@ pub const PRICING_MODELS: [&str; 4] = ["one_time", "subscription", "usage", "per
 /// Billing periods for subscriptions.
 pub const BILLING_PERIODS: [&str; 3] = ["monthly", "yearly", "weekly"];
 
+/// Proration policies for mid-cycle plan changes on subscription
+/// products: `prorate` charges the new plan for the remaining time
+/// and credits the unused time on the old plan, `no_prorate` applies
+/// the change at the next period end with no mid-cycle charge or
+/// credit, and `credit_only` credits the unused time on the old plan
+/// and applies the new price from the next period.
+pub const PRORATION_POLICIES: [&str; 3] = ["prorate", "no_prorate", "credit_only"];
+
+/// Maximum failed-payment (dunning) retries for a subscription.
+pub const MAX_DUNNING_RETRIES: u32 = 10;
+
+/// Maximum grace period in days after a failed renewal payment.
+pub const MAX_GRACE_PERIOD_DAYS: u32 = 90;
+
+/// Maximum days between dunning retries.
+pub const MAX_DUNNING_RETRY_INTERVAL_DAYS: u32 = 30;
+
 /// Bundle pricing rules: `sum` charges the sum of the children,
 /// `fixed` charges the bundle's own base price, `discount_percent`
 /// charges the sum less the configured discount.
@@ -79,6 +100,10 @@ pub const BUNDLE_RULES: [&str; 3] = ["sum", "fixed", "discount_percent"];
 
 /// Taxonomy node kinds, mirroring the software module.
 pub const TAXONOMY_KINDS: [&str; 2] = ["group", "category"];
+
+/// May read the product catalogue, including the module offerings
+/// list. Checked through the `role.check` hook; fail closed.
+pub const PERM_PRODUCTS_READ: &str = "products:read";
 
 // ---------------------------------------------------------------------------
 // Money (integer minor units; never f64)
@@ -287,6 +312,27 @@ pub struct Product {
     /// Free trial length in days (0 means no trial).
     #[serde(default)]
     pub trial_days: u32,
+    /// Mid-cycle plan-change policy: `prorate`, `no_prorate`, or
+    /// `credit_only` (see `PRORATION_POLICIES`). Only meaningful
+    /// for subscription products; the store and billing modules read
+    /// it when a subscription changes plan mid-cycle.
+    #[serde(default = "default_proration_policy")]
+    pub proration_policy: String,
+    /// Days of continued access after a failed renewal payment
+    /// before the subscription is cancelled (0 means cancel as soon
+    /// as dunning is exhausted). Only meaningful for subscription
+    /// products.
+    #[serde(default)]
+    pub grace_period_days: u32,
+    /// Maximum failed-payment (dunning) retries before the
+    /// subscription is cancelled. Only meaningful for subscription
+    /// products.
+    #[serde(default = "default_dunning_max_retries")]
+    pub dunning_max_retries: u32,
+    /// Days between dunning retries. Only meaningful for
+    /// subscription products.
+    #[serde(default = "default_dunning_retry_interval_days")]
+    pub dunning_retry_interval_days: u32,
     /// Owning vendor company id (UUID string); validated against the
     /// company module through the `company.exists` hook when a handler
     /// is registered, otherwise accepted as a plain reference.
@@ -350,6 +396,18 @@ pub struct CreateProduct {
     pub renewal_price: Option<MoneyInput>,
     #[serde(default)]
     pub trial_days: Option<u32>,
+    /// Subscription plan fields (see `Product`): proration policy,
+    /// grace period in days, dunning retry count and interval.
+    /// Non-default values are only accepted for subscription
+    /// products.
+    #[serde(default)]
+    pub proration_policy: Option<String>,
+    #[serde(default)]
+    pub grace_period_days: Option<u32>,
+    #[serde(default)]
+    pub dunning_max_retries: Option<u32>,
+    #[serde(default)]
+    pub dunning_retry_interval_days: Option<u32>,
     #[serde(default)]
     pub vendor_company_id: Option<String>,
     #[serde(default)]
@@ -372,8 +430,37 @@ pub struct CreateProduct {
     pub tag_ids: Vec<String>,
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct SubscriptionPlanView {
+    pub product_id: String,
+    pub pricing_model: String,
+    pub billing_period: Option<String>,
+    pub trial_days: u32,
+    /// Base price in integer minor units.
+    pub price_minor: i64,
+    /// Renewal price in integer minor units (base price when unset).
+    pub renewal_price_minor: i64,
+    pub currency: String,
+    pub proration_policy: String,
+    pub grace_period_days: u32,
+    pub dunning_max_retries: u32,
+    pub dunning_retry_interval_days: u32,
+}
+
 fn default_pricing_model() -> String {
     "one_time".to_string()
+}
+
+fn default_proration_policy() -> String {
+    "prorate".to_string()
+}
+
+fn default_dunning_max_retries() -> u32 {
+    3
+}
+
+fn default_dunning_retry_interval_days() -> u32 {
+    3
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -396,6 +483,14 @@ pub struct UpdateProduct {
     pub renewal_price: Option<MoneyInput>,
     #[serde(default)]
     pub trial_days: Option<u32>,
+    #[serde(default)]
+    pub proration_policy: Option<String>,
+    #[serde(default)]
+    pub grace_period_days: Option<u32>,
+    #[serde(default)]
+    pub dunning_max_retries: Option<u32>,
+    #[serde(default)]
+    pub dunning_retry_interval_days: Option<u32>,
     #[serde(default)]
     pub vendor_company_id: Option<String>,
     #[serde(default)]
@@ -1522,6 +1617,65 @@ fn validate_billing_period(period: &str) -> UnifiedResult<()> {
     }
 }
 
+fn validate_proration_policy(policy: &str) -> UnifiedResult<()> {
+    if PRORATION_POLICIES.contains(&policy) {
+        Ok(())
+    } else {
+        Err(UnifiedError::bad_request(format!(
+            "Proration policy must be one of: {}",
+            PRORATION_POLICIES.join(", ")
+        )))
+    }
+}
+
+/// Validate the subscription plan fields and resolve them to
+/// concrete values. Range checks always apply; a non-default value
+/// on a product whose pricing model is not `subscription` is
+/// rejected, following the bundle-rule precedent (plan fields only
+/// take effect for subscription products). Returns
+/// `(proration_policy, grace_period_days, dunning_max_retries,
+/// dunning_retry_interval_days)`.
+fn resolve_subscription_settings(
+    pricing_model: &str,
+    proration_policy: Option<String>,
+    grace_period_days: Option<u32>,
+    dunning_max_retries: Option<u32>,
+    dunning_retry_interval_days: Option<u32>,
+) -> UnifiedResult<(String, u32, u32, u32)> {
+    let policy = proration_policy.unwrap_or_else(default_proration_policy);
+    validate_proration_policy(&policy)?;
+    let grace = grace_period_days.unwrap_or(0);
+    if grace > MAX_GRACE_PERIOD_DAYS {
+        return Err(UnifiedError::bad_request(format!(
+            "Grace period must be at most {MAX_GRACE_PERIOD_DAYS} days"
+        )));
+    }
+    let max_retries = dunning_max_retries.unwrap_or_else(default_dunning_max_retries);
+    if max_retries > MAX_DUNNING_RETRIES {
+        return Err(UnifiedError::bad_request(format!(
+            "Dunning max retries must be at most {MAX_DUNNING_RETRIES}"
+        )));
+    }
+    let interval =
+        dunning_retry_interval_days.unwrap_or_else(default_dunning_retry_interval_days);
+    if interval == 0 || interval > MAX_DUNNING_RETRY_INTERVAL_DAYS {
+        return Err(UnifiedError::bad_request(format!(
+            "Dunning retry interval must be between 1 and {MAX_DUNNING_RETRY_INTERVAL_DAYS} days"
+        )));
+    }
+    if pricing_model != "subscription"
+        && (policy != default_proration_policy()
+            || grace != 0
+            || max_retries != default_dunning_max_retries()
+            || interval != default_dunning_retry_interval_days())
+    {
+        return Err(UnifiedError::bad_request(
+            "Subscription plan fields (proration policy, grace period, dunning settings) only apply to subscription products",
+        ));
+    }
+    Ok((policy, grace, max_retries, interval))
+}
+
 fn validate_bundle_rule(rule: &str) -> UnifiedResult<()> {
     if BUNDLE_RULES.contains(&rule) {
         Ok(())
@@ -1875,6 +2029,14 @@ async fn create_product(
                 "Trial days must be at most 3650",
             ));
         }
+        let (proration_policy, grace_period_days, dunning_max_retries, dunning_retry_interval_days) =
+            resolve_subscription_settings(
+                &input.pricing_model,
+                input.proration_policy,
+                input.grace_period_days,
+                input.dunning_max_retries,
+                input.dunning_retry_interval_days,
+            )?;
         let product = Product {
             id: new_id(),
             slug,
@@ -1887,6 +2049,10 @@ async fn create_product(
             price,
             renewal_price,
             trial_days: input.trial_days.unwrap_or(0),
+            proration_policy,
+            grace_period_days,
+            dunning_max_retries,
+            dunning_retry_interval_days,
             vendor_company_id: input.vendor_company_id,
             group_id: input.group_id,
             category_id: input.category_id,
@@ -2032,6 +2198,37 @@ async fn update_product(
                 ));
             }
         }
+        // Subscription plan fields resolve against the effective
+        // pricing model. When the model stays (or becomes)
+        // `subscription`, unset fields keep the stored values; when
+        // it is anything else, only caller-supplied values are
+        // validated (non-default values are rejected) and the stored
+        // plan resets to its defaults.
+        let (new_proration_policy, new_grace_period_days, new_dunning_max_retries, new_dunning_retry_interval_days) =
+            if effective_model == "subscription" {
+                resolve_subscription_settings(
+                    effective_model,
+                    input
+                        .proration_policy
+                        .clone()
+                        .or(Some(existing.proration_policy.clone())),
+                    input.grace_period_days.or(Some(existing.grace_period_days)),
+                    input
+                        .dunning_max_retries
+                        .or(Some(existing.dunning_max_retries)),
+                    input
+                        .dunning_retry_interval_days
+                        .or(Some(existing.dunning_retry_interval_days)),
+                )?
+            } else {
+                resolve_subscription_settings(
+                    effective_model,
+                    input.proration_policy.clone(),
+                    input.grace_period_days,
+                    input.dunning_max_retries,
+                    input.dunning_retry_interval_days,
+                )?
+            };
         let effective_kind = input.kind.as_deref().unwrap_or(existing.kind.as_str());
         if effective_kind != "bundle"
             && (input.bundle_rule.is_some() || input.bundle_discount_bps.is_some())
@@ -2099,6 +2296,10 @@ async fn update_product(
         if let Some(trial_days) = input.trial_days {
             product.trial_days = trial_days;
         }
+        product.proration_policy = new_proration_policy;
+        product.grace_period_days = new_grace_period_days;
+        product.dunning_max_retries = new_dunning_max_retries;
+        product.dunning_retry_interval_days = new_dunning_retry_interval_days;
         if let Some(vendor) = input.vendor_company_id {
             product.vendor_company_id = Some(vendor);
         }
@@ -2405,6 +2606,44 @@ async fn get_license_template(
     json::respond(result, false)
 }
 
+/// Read the subscription plan of a product: billing period, trial,
+/// renewal price, proration policy, grace period, and dunning
+/// settings. This is the plan the store snapshots into a
+/// subscription at checkout and billing enforces over the
+/// subscription lifecycle. Non-subscription products report their
+/// stored defaults with `pricing_model` unchanged, so callers can
+/// tell a plan apart from a one-time price by the model.
+async fn get_subscription_plan(
+    state: web::Data<Arc<ProductsState>>,
+    path: web::Path<String>,
+) -> HttpResponse {
+    let result: UnifiedResult<SubscriptionPlanView> = state
+        .products
+        .get(path.as_str())
+        .map(|entry| {
+            let product = entry.value();
+            SubscriptionPlanView {
+                product_id: product.id.clone(),
+                pricing_model: product.pricing_model.clone(),
+                billing_period: product.billing_period.clone(),
+                trial_days: product.trial_days,
+                price_minor: product.price.amount_minor,
+                renewal_price_minor: product
+                    .renewal_price
+                    .as_ref()
+                    .map(|price| price.amount_minor)
+                    .unwrap_or(product.price.amount_minor),
+                currency: product.price.currency.clone(),
+                proration_policy: product.proration_policy.clone(),
+                grace_period_days: product.grace_period_days,
+                dunning_max_retries: product.dunning_max_retries,
+                dunning_retry_interval_days: product.dunning_retry_interval_days,
+            }
+        })
+        .ok_or_else(|| UnifiedError::not_found("Product not found"));
+    json::respond(result, false)
+}
+
 /// Open a support ticket for a product. The ticket is created by the
 /// tickets module through the `ticket.create_requested` hook, routed
 /// to this product's support department.
@@ -2473,6 +2712,119 @@ async fn entitlement_check(
     let input = body.into_inner();
     let result = state.check_entitlement(&input.product_id, &input.user_id);
     json::success_response(result, 200)
+}
+
+// ---------------------------------------------------------------------------
+// Module offerings: capability check and handler.
+// ---------------------------------------------------------------------------
+
+/// The caller, from the headers every capability-checked module in
+/// this codebase uses: `X-User-Id` identifies the actor, `X-Role`
+/// carries the role slug or id the capability check runs against.
+/// This module previously had no capability helper — its handlers
+/// take no caller identity — so this endpoint adds the same
+/// header-based shape the AI module uses instead of inventing a new
+/// auth scheme.
+struct Caller {
+    #[allow(dead_code)]
+    actor: String,
+    role: String,
+}
+
+fn caller(req: &HttpRequest) -> UnifiedResult<Caller> {
+    let actor = req
+        .headers()
+        .get("x-user-id")
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+        .ok_or_else(|| UnifiedError::unauthorized("Missing X-User-Id header"))?;
+    let role = req
+        .headers()
+        .get("x-role")
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+        .ok_or_else(|| UnifiedError::unauthorized("Missing X-Role header"))?;
+    Ok(Caller { actor, role })
+}
+
+/// Ask the roles module whether `role` holds `permission` through
+/// the `role.check` hook. Fails closed: no answer means not allowed.
+/// (Same fail-closed shape as the AI module's capability check.)
+fn check_capability(ctx: &AppContext, role: &str, permission: &str) -> bool {
+    let context = ctx.hooks.emit(
+        "role.check",
+        json!({ "role": role, "permission": permission, "allowed": false }),
+    );
+    context
+        .get("allowed")
+        .and_then(|value| value.as_bool())
+        .unwrap_or(false)
+}
+
+fn require_permission(ctx: &AppContext, role: &str, permission: &str) -> UnifiedResult<()> {
+    if check_capability(ctx, role, permission) {
+        Ok(())
+    } else {
+        Err(UnifiedError::forbidden(format!(
+            "Role \"{role}\" does not hold permission \"{permission}\""
+        )))
+    }
+}
+
+/// List the sellable modules as product offerings
+/// (`GET /api/v1/products/module-offerings`). The offerings are
+/// derived from the module registry in memory — no database row
+/// backs them — so this endpoint reads nothing from the product
+/// catalogue. Requires the `products:read` permission (fail-closed
+/// through the `role.check` hook). Supports the standard pagination
+/// parameters plus an exact `category` filter, which is validated
+/// against the closed `ProductCategory` set and rejected with 400
+/// when unknown.
+async fn list_module_offerings(
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+    query: web::Query<PaginationParams>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let result: UnifiedResult<Value> = (|| {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_PRODUCTS_READ)?;
+        let params = query.into_inner();
+        let mut offerings = ctx.modules.product_offerings();
+        if let Some(category) = params.filters.get("category") {
+            let category = ProductCategory::from_str(category).ok_or_else(|| {
+                UnifiedError::bad_request(format!(
+                    "Unknown product category \"{category}\" (expected one of: {})",
+                    ProductCategory::ALL.join(", ")
+                ))
+            })?;
+            offerings.retain(|offering| offering.category == category.as_str());
+        }
+        offerings.retain(|offering| {
+            matches_search(
+                &format!("{} {} {}", offering.id, offering.name, offering.description),
+                &params,
+            )
+        });
+        let sort = params.allowed_sort(&["name", "id", "category", "version"], "name");
+        match sort.as_str() {
+            "id" => offerings.sort_by(|a, b| a.id.cmp(b.id)),
+            "category" => {
+                offerings.sort_by(|a, b| a.category.cmp(b.category).then(a.name.cmp(b.name)))
+            }
+            "version" => offerings.sort_by(|a, b| a.version.cmp(b.version)),
+            _ => offerings.sort_by(|a, b| a.name.cmp(b.name)),
+        }
+        if params.normalized().order == "desc" {
+            offerings.reverse();
+        }
+        Ok(paginate(offerings, &params).to_json())
+    })();
+    json::respond(result, debug)
 }
 
 // ---------------------------------------------------------------------------
@@ -4385,8 +4737,10 @@ async fn tag_cloud(
 async fn list_product_tags(
     state: web::Data<Arc<ProductsState>>,
     path: web::Path<String>,
+    query: web::Query<PaginationParams>,
 ) -> HttpResponse {
-    let result: UnifiedResult<Vec<Tag>> = state
+    let params = query.into_inner();
+    let result: UnifiedResult<PageResult<Tag>> = state
         .products
         .get(path.as_str())
         .map(|_| {
@@ -4400,7 +4754,7 @@ async fn list_product_tags(
                 .filter_map(|id| state.tags.get(id).map(|entry| entry.value().clone()))
                 .collect();
             tags.sort_by(|a, b| a.name.cmp(&b.name));
-            tags
+            paginate(tags, &params)
         })
         .ok_or_else(|| UnifiedError::not_found("Product not found"));
     json::respond(result, false)
@@ -4725,6 +5079,7 @@ impl Module for ProductsModule {
                 .route("/tax-rules/{id}", web::put().to(update_tax_rule))
                 .route("/tax-rules/{id}", web::delete().to(delete_tax_rule))
                 .route("/entitlement-check", web::post().to(entitlement_check))
+                .route("/module-offerings", web::get().to(list_module_offerings))
                 .route("/inventory/low-stock", web::get().to(list_low_stock))
                 .route("", web::get().to(list_products))
                 .route("", web::post().to(create_product))
@@ -4736,6 +5091,7 @@ impl Module for ProductsModule {
                 .route("/{id}/delist", web::post().to(delist_product))
                 .route("/{id}/price-quote", web::post().to(price_quote))
                 .route("/{id}/license-template", web::get().to(get_license_template))
+                .route("/{id}/subscription-plan", web::get().to(get_subscription_plan))
                 .route("/{id}/support-ticket", web::post().to(create_support_ticket))
                 .route("/{id}/variants", web::get().to(list_variants))
                 .route("/{id}/variants", web::post().to(create_variant))
@@ -4788,8 +5144,10 @@ impl Module for ProductsModule {
             crate::core::modules::RouteInfo { method: "POST", path: "/api/v1/products/{id}/delist", owner: "products", description: "Remove a product from the store (emits product.delisted)." },
             crate::core::modules::RouteInfo { method: "POST", path: "/api/v1/products/{id}/price-quote", owner: "products", description: "Exact price quote with tax, in integer minor units." },
             crate::core::modules::RouteInfo { method: "GET", path: "/api/v1/products/{id}/license-template", owner: "products", description: "License terms declared by a product." },
+            crate::core::modules::RouteInfo { method: "GET", path: "/api/v1/products/{id}/subscription-plan", owner: "products", description: "Subscription plan of a product: billing period, trial, renewal price, proration policy, grace period, and dunning settings." },
             crate::core::modules::RouteInfo { method: "POST", path: "/api/v1/products/{id}/support-ticket", owner: "products", description: "Open a support ticket routed to the product's department." },
             crate::core::modules::RouteInfo { method: "POST", path: "/api/v1/products/entitlement-check", owner: "products", description: "Check whether a user holds an active entitlement for a product." },
+            crate::core::modules::RouteInfo { method: "GET", path: "/api/v1/products/module-offerings", owner: "products", description: "List sellable modules as product offerings (paginated, filter by category)." },
             crate::core::modules::RouteInfo { method: "GET", path: "/api/v1/products/tax-rules", owner: "products", description: "List tax rules." },
             crate::core::modules::RouteInfo { method: "POST", path: "/api/v1/products/tax-rules", owner: "products", description: "Create a tax rule (rate in basis points)." },
             crate::core::modules::RouteInfo { method: "GET", path: "/api/v1/products/inventory/low-stock", owner: "products", description: "List inventory records at or below their low-stock threshold." },
@@ -4797,6 +5155,54 @@ impl Module for ProductsModule {
             crate::core::modules::RouteInfo { method: "GET", path: "/api/v1/products/taxonomy/tree", owner: "products", description: "Product taxonomy as a tree." },
             crate::core::modules::RouteInfo { method: "GET", path: "/api/v1/products/tags", owner: "products", description: "List product tags." },
             crate::core::modules::RouteInfo { method: "GET", path: "/api/v1/products/tags/cloud", owner: "products", description: "Tag cloud with product counts." },
+            crate::core::modules::RouteInfo { method: "POST", path: "/api/v1/products/taxonomy", owner: "products", description: "Create a taxonomy node (group or category)." },
+            crate::core::modules::RouteInfo { method: "GET", path: "/api/v1/products/taxonomy/{id}", owner: "products", description: "Get one taxonomy node." },
+            crate::core::modules::RouteInfo { method: "PUT", path: "/api/v1/products/taxonomy/{id}", owner: "products", description: "Update a taxonomy node." },
+            crate::core::modules::RouteInfo { method: "DELETE", path: "/api/v1/products/taxonomy/{id}", owner: "products", description: "Delete a taxonomy node with no children or products." },
+            crate::core::modules::RouteInfo { method: "POST", path: "/api/v1/products/taxonomy/{id}/move", owner: "products", description: "Move a taxonomy node under another parent." },
+            crate::core::modules::RouteInfo { method: "GET", path: "/api/v1/products/taxonomy/{id}/children", owner: "products", description: "List the child nodes of one taxonomy node (paginated)." },
+            crate::core::modules::RouteInfo { method: "POST", path: "/api/v1/products/tags", owner: "products", description: "Create a product tag." },
+            crate::core::modules::RouteInfo { method: "GET", path: "/api/v1/products/tags/{id}", owner: "products", description: "Get one product tag." },
+            crate::core::modules::RouteInfo { method: "PUT", path: "/api/v1/products/tags/{id}", owner: "products", description: "Update a product tag." },
+            crate::core::modules::RouteInfo { method: "DELETE", path: "/api/v1/products/tags/{id}", owner: "products", description: "Delete a product tag." },
+            crate::core::modules::RouteInfo { method: "PUT", path: "/api/v1/products/tax-rules/{id}", owner: "products", description: "Update a tax rule." },
+            crate::core::modules::RouteInfo { method: "DELETE", path: "/api/v1/products/tax-rules/{id}", owner: "products", description: "Delete a tax rule." },
+            crate::core::modules::RouteInfo { method: "GET", path: "/api/v1/products/{id}/variants", owner: "products", description: "List the variants of one product (paginated, filter by status)." },
+            crate::core::modules::RouteInfo { method: "POST", path: "/api/v1/products/{id}/variants", owner: "products", description: "Create a variant for one product." },
+            crate::core::modules::RouteInfo { method: "GET", path: "/api/v1/products/variants/{id}", owner: "products", description: "Get one product variant." },
+            crate::core::modules::RouteInfo { method: "PUT", path: "/api/v1/products/variants/{id}", owner: "products", description: "Update a product variant." },
+            crate::core::modules::RouteInfo { method: "DELETE", path: "/api/v1/products/variants/{id}", owner: "products", description: "Delete a product variant." },
+            crate::core::modules::RouteInfo { method: "GET", path: "/api/v1/products/{id}/options", owner: "products", description: "List the options of one product (paginated)." },
+            crate::core::modules::RouteInfo { method: "POST", path: "/api/v1/products/{id}/options", owner: "products", description: "Create an option for one product." },
+            crate::core::modules::RouteInfo { method: "DELETE", path: "/api/v1/products/options/{id}", owner: "products", description: "Delete a product option." },
+            crate::core::modules::RouteInfo { method: "GET", path: "/api/v1/products/{id}/bundle", owner: "products", description: "List the bundle items of one product (paginated)." },
+            crate::core::modules::RouteInfo { method: "PUT", path: "/api/v1/products/{id}/bundle", owner: "products", description: "Update the bundle rule of one product." },
+            crate::core::modules::RouteInfo { method: "POST", path: "/api/v1/products/{id}/bundle/items", owner: "products", description: "Add an item to a product bundle." },
+            crate::core::modules::RouteInfo { method: "DELETE", path: "/api/v1/products/bundle-items/{id}", owner: "products", description: "Delete a bundle item." },
+            crate::core::modules::RouteInfo { method: "GET", path: "/api/v1/products/{id}/tiers", owner: "products", description: "List the pricing tiers of one product (paginated)." },
+            crate::core::modules::RouteInfo { method: "POST", path: "/api/v1/products/{id}/tiers", owner: "products", description: "Create a pricing tier for one product." },
+            crate::core::modules::RouteInfo { method: "GET", path: "/api/v1/products/tiers/{id}", owner: "products", description: "Get one pricing tier." },
+            crate::core::modules::RouteInfo { method: "PUT", path: "/api/v1/products/tiers/{id}", owner: "products", description: "Update a pricing tier." },
+            crate::core::modules::RouteInfo { method: "DELETE", path: "/api/v1/products/tiers/{id}", owner: "products", description: "Delete a pricing tier." },
+            crate::core::modules::RouteInfo { method: "GET", path: "/api/v1/products/{id}/regional-prices", owner: "products", description: "List the regional prices of one product (paginated)." },
+            crate::core::modules::RouteInfo { method: "POST", path: "/api/v1/products/{id}/regional-prices", owner: "products", description: "Create a regional price for one product." },
+            crate::core::modules::RouteInfo { method: "PUT", path: "/api/v1/products/regional-prices/{id}", owner: "products", description: "Update a regional price." },
+            crate::core::modules::RouteInfo { method: "DELETE", path: "/api/v1/products/regional-prices/{id}", owner: "products", description: "Delete a regional price." },
+            crate::core::modules::RouteInfo { method: "GET", path: "/api/v1/products/{id}/usage-prices", owner: "products", description: "List the usage prices of one product (paginated)." },
+            crate::core::modules::RouteInfo { method: "POST", path: "/api/v1/products/{id}/usage-prices", owner: "products", description: "Create a usage price for one product." },
+            crate::core::modules::RouteInfo { method: "PUT", path: "/api/v1/products/usage-prices/{id}", owner: "products", description: "Update a usage price." },
+            crate::core::modules::RouteInfo { method: "DELETE", path: "/api/v1/products/usage-prices/{id}", owner: "products", description: "Delete a usage price." },
+            crate::core::modules::RouteInfo { method: "GET", path: "/api/v1/products/{id}/inventory", owner: "products", description: "List the inventory records of one product (paginated)." },
+            crate::core::modules::RouteInfo { method: "POST", path: "/api/v1/products/{id}/inventory/adjust", owner: "products", description: "Adjust the inventory of one product." },
+            crate::core::modules::RouteInfo { method: "GET", path: "/api/v1/products/{id}/files", owner: "products", description: "List the files of one product (paginated)." },
+            crate::core::modules::RouteInfo { method: "POST", path: "/api/v1/products/{id}/files", owner: "products", description: "Attach a file to one product." },
+            crate::core::modules::RouteInfo { method: "DELETE", path: "/api/v1/products/files/{id}", owner: "products", description: "Delete a product file." },
+            crate::core::modules::RouteInfo { method: "GET", path: "/api/v1/products/{id}/versions", owner: "products", description: "List the versions of one product (paginated)." },
+            crate::core::modules::RouteInfo { method: "POST", path: "/api/v1/products/{id}/versions", owner: "products", description: "Create a version of one product." },
+            crate::core::modules::RouteInfo { method: "DELETE", path: "/api/v1/products/versions/{id}", owner: "products", description: "Delete a product version." },
+            crate::core::modules::RouteInfo { method: "GET", path: "/api/v1/products/{id}/tags", owner: "products", description: "List the tags attached to one product (paginated)." },
+            crate::core::modules::RouteInfo { method: "POST", path: "/api/v1/products/{id}/tags", owner: "products", description: "Attach a tag to one product." },
+            crate::core::modules::RouteInfo { method: "DELETE", path: "/api/v1/products/{id}/tags/{tag_id}", owner: "products", description: "Detach a tag from one product." },
         ]
     }
 }

@@ -56,7 +56,30 @@ pub const EVENT_PAGE_PUBLISHED: &str = "site.page_published";
 pub const EVENT_PAGE_UNPUBLISHED: &str = "site.page_unpublished";
 
 /// Block types the server-side renderer knows how to render.
-pub const BLOCK_TYPES: &[&str] = &["hero", "text", "image", "gallery", "form", "custom"];
+///
+/// `pricing_table` embeds a pricing table by id: its content carries
+/// `pricing_table_id` (the `pricing_tables` module id) and the block
+/// renders a placeholder section carrying that id; the live data is
+/// fetched from the pricing tables render endpoint
+/// (`GET /api/v1/pricing-tables/tables/{id}/render`).
+/// `marketplace_storefront` embeds a marketplace storefront: its
+/// content carries `vendor_slug` (or `vendor_id`) and the block
+/// renders a placeholder section carrying that reference; the live
+/// data comes from the marketplace storefront endpoint
+/// (`GET /api/v1/pricing-tables/marketplace/storefronts/{slug}`).
+/// Both blocks render placeholders only — no pricing or vendor data
+/// is resolved here, so the Site Builder never depends on the
+/// pricing tables module's store.
+pub const BLOCK_TYPES: &[&str] = &[
+    "hero",
+    "text",
+    "image",
+    "gallery",
+    "form",
+    "custom",
+    "pricing_table",
+    "marketplace_storefront",
+];
 /// Section layouts.
 pub const SECTION_LAYOUTS: &[&str] = &[
     "full",
@@ -367,6 +390,32 @@ fn render_block_default(block: &Block) -> String {
             html
         }
         "custom" => content_str(content, "html").unwrap_or_default(),
+        "pricing_table" => {
+            // Placeholder only: the page fetches the structured data
+            // from the pricing tables render endpoint. The id is
+            // escaped; an empty id still renders an empty placeholder
+            // rather than leaking anything.
+            let table_id = content_str(content, "pricing_table_id")
+                .or_else(|| content_str(content, "table_id"))
+                .unwrap_or_default();
+            format!(
+                "<section class=\"sb-pricing-table\" data-pricing-table-id=\"{}\" data-render-url=\"/api/v1/pricing-tables/tables/{}/render\"></section>",
+                escape_html(&table_id),
+                escape_html(&table_id)
+            )
+        }
+        "marketplace_storefront" => {
+            // Placeholder only: the page fetches the storefront data
+            // from the marketplace storefront endpoint.
+            let vendor_slug = content_str(content, "vendor_slug")
+                .or_else(|| content_str(content, "vendor_id"))
+                .unwrap_or_default();
+            format!(
+                "<section class=\"sb-marketplace-storefront\" data-vendor-slug=\"{}\" data-storefront-url=\"/api/v1/pricing-tables/marketplace/storefronts/{}\"></section>",
+                escape_html(&vendor_slug),
+                escape_html(&vendor_slug)
+            )
+        }
         other => format!("<!-- unknown block type: {} -->", escape_html(other)),
     }
 }
