@@ -1079,9 +1079,12 @@ fn render_page_response(
     let mut response = HttpResponse::Ok()
         .content_type("text/html; charset=utf-8")
         .body(html);
-    let session_name = {
+    let (session_name, tls_configured) = {
         let config = ctx.config.read().expect("config lock poisoned");
-        config.app.session_name.clone()
+        (
+            config.app.session_name.clone(),
+            !config.app.ssl.listen.is_empty() || !config.app.ssl.cert.is_empty(),
+        )
     };
     if let Some(header_value) = req.headers().get(header::AUTHORIZATION) {
         if let Ok(value) = header_value.to_str() {
@@ -1090,8 +1093,14 @@ fn render_page_response(
                 .strip_prefix("Bearer ")
                 .or_else(|| value.trim().strip_prefix("bearer "))
             {
+                // The cookie carries a bearer token: `Secure` is set
+                // whenever TLS is configured, so the token can never
+                // leak over plain HTTP. Plain-HTTP deployments keep a
+                // working cookie by omitting it only when no TLS
+                // listener or certificate is configured at all.
+                let secure = if tls_configured { "; Secure" } else { "" };
                 let cookie = format!(
-                    "{session_name}={token}; Path=/; HttpOnly; SameSite=Lax"
+                    "{session_name}={token}; Path=/; HttpOnly; SameSite=Lax{secure}"
                 );
                 response.headers_mut().insert(
                     header::SET_COOKIE,

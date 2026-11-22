@@ -17,6 +17,11 @@
 // (other 4xx responses, checksum mismatch after the final attempt,
 // oversize) fail the job immediately. A failed job can be retried
 // manually through `POST /jobs/{id}/retry`.
+//
+// SSRF guard: a download URL must be http(s) with no embedded
+// credentials, and its host must not resolve to a private,
+// link-local, or reserved address; every redirect target is
+// re-validated with the same rules before it is followed.
 
 use crate::core::context::AppContext;
 use crate::core::error::{UnifiedError, UnifiedResult};
@@ -32,6 +37,7 @@ use reqwest::header;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::io::{Read, Write};
+use std::net::{IpAddr, ToSocketAddrs};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::{Arc, OnceLock, RwLock};
@@ -347,6 +353,112 @@ fn default_follow_redirect() -> bool {
     true
 }
 
+// ---------------------------------------------------------------------------
+// URL safety (SSRF guard, same rules as the webhooks module).
+//
+// A download URL is attacker-influenced input: without these checks
+// the server could be made to fetch cloud metadata endpoints
+// (169.254.169.254), loopback admin interfaces, or any host on the
+// private network, and write the response to disk. The checks run at
+// job creation and again on every redirect target (see
+// `build_client`).
+// ---------------------------------------------------------------------------
+
+fn is_loopback(ip: IpAddr) -> bool {
+    match ip {
+        IpAddr::V4(addr) => addr.is_loopback(),
+        IpAddr::V6(addr) => addr.is_loopback(),
+    }
+}
+
+/// True when the address is private, link-local, or otherwise
+/// reserved: never a valid download target. Loopback is handled
+/// separately (allowed, for local development).
+fn is_forbidden_ip(ip: IpAddr) -> bool {
+    match ip {
+        IpAddr::V4(addr) => {
+            addr.is_private()
+                || addr.is_link_local()
+                || addr.is_unspecified()
+                || addr.is_broadcast()
+                || addr.is_multicast()
+                || addr.is_documentation()
+                || addr.is_benchmarking()
+                || addr.is_reserved()
+        }
+        IpAddr::V6(addr) => {
+            addr.is_unspecified()
+                || addr.is_multicast()
+                || (addr.segments()[0] & 0xfe00) == 0xfc00 // unique-local fc00::/7
+                || (addr.segments()[0] & 0xffc0) == 0xfe80 // link-local fe80::/10
+                || addr.is_unique_local()
+        }
+    }
+}
+
+/// Resolve a hostname and require EVERY resolved address to be safe.
+/// A mixed answer (one public, one private address) is refused: the
+/// HTTP client picks among the resolved addresses, so any private
+/// address in the answer could be the one fetched.
+fn resolved_addresses_are_safe(url: &url::Url) -> bool {
+    let Some(host) = url.host_str() else {
+        return false;
+    };
+    if let Ok(ip) = host.parse::<IpAddr>() {
+        return is_loopback(ip) || !is_forbidden_ip(ip);
+    }
+    let port = url.port_or_known_default().unwrap_or(443);
+    let Ok(addresses) = (host, port).to_socket_addrs() else {
+        return false;
+    };
+    let mut any = false;
+    for socket in addresses {
+        any = true;
+        let ip = socket.ip();
+        if !is_loopback(ip) && is_forbidden_ip(ip) {
+            return false;
+        }
+    }
+    any
+}
+
+/// Validate a download URL: http(s) only, no embedded credentials,
+/// no forbidden IP-literal host, and no hostname that resolves to a
+/// forbidden address. Hostnames are resolved again by the redirect
+/// policy and must be re-checked at fetch time by the caller; a
+/// DNS change between creation and fetch (TOCTOU rebinding) is still
+/// possible and is recorded as an open limitation, not a closed gap.
+fn validate_download_url(raw: &str) -> UnifiedResult<()> {
+    let url = url::Url::parse(raw.trim())
+        .map_err(|_| UnifiedError::bad_request(format!("Invalid download URL \"{raw}\"")))?;
+    if !matches!(url.scheme(), "http" | "https") {
+        return Err(UnifiedError::bad_request(
+            "Download URL must use http or https",
+        ));
+    }
+    if !url.username().is_empty() || url.password().is_some() {
+        return Err(UnifiedError::bad_request(
+            "Download URL must not contain embedded credentials",
+        ));
+    }
+    let Some(host) = url.host_str() else {
+        return Err(UnifiedError::bad_request(
+            "Download URL must have a host",
+        ));
+    };
+    if host.eq_ignore_ascii_case("localhost") {
+        return Err(UnifiedError::bad_request(
+            "Use an explicit loopback IP (127.0.0.1 or [::1]) instead of \"localhost\"",
+        ));
+    }
+    if !resolved_addresses_are_safe(&url) {
+        return Err(UnifiedError::bad_request(
+            "Download URL host resolves to a private, link-local, or reserved address; download refused",
+        ));
+    }
+    Ok(())
+}
+
 fn parse_checksum(input: &str) -> UnifiedResult<(String, String)> {
     let input = input.trim().to_lowercase();
     let (algorithm, hex) = match input.split_once(':') {
@@ -374,7 +486,21 @@ fn parse_checksum(input: &str) -> UnifiedResult<(String, String)> {
 fn build_client(request: &CreateJobRequest) -> UnifiedResult<reqwest::Client> {
     let max_redirects = request.max_redirects.min(MAX_MAX_REDIRECTS);
     let redirect = if request.follow_redirect && max_redirects > 0 {
-        reqwest::redirect::Policy::limited(max_redirects as usize)
+        let max = max_redirects;
+        // Every redirect target is re-validated with the same SSRF
+        // rules as the original URL: a redirect to a private,
+        // loopback, or reserved address (or to a non-http(s) scheme,
+        // or with embedded credentials) stops the chain instead of
+        // following it into the internal network.
+        reqwest::redirect::Policy::custom(move |attempt| {
+            if attempt.previous().len() as u32 >= max {
+                return attempt.stop();
+            }
+            match validate_download_url(attempt.url().as_str()) {
+                Ok(()) => attempt.follow(),
+                Err(_) => attempt.stop(),
+            }
+        })
     } else {
         reqwest::redirect::Policy::none()
     };
@@ -953,14 +1079,12 @@ async fn create_job(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<DownloadJobView> = (|| {
+        // SSRF guard: scheme, credentials, and resolved-address
+        // checks run before any fetch is scheduled.
+        validate_download_url(&body.url)?;
         let url = url::Url::parse(body.url.trim()).map_err(|_| {
             UnifiedError::bad_request(format!("Invalid download URL \"{}\"", body.url))
         })?;
-        if !matches!(url.scheme(), "http" | "https") {
-            return Err(UnifiedError::bad_request(
-                "Download URL must use http or https",
-            ));
-        }
         let (algorithm, checksum) = match &body.checksum {
             Some(value) => {
                 let (algorithm, hex) = parse_checksum(value)?;

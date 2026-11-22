@@ -25,12 +25,41 @@
 //   POST   /{domain}/revoke         revoke a certificate (body: {"reason": ...})
 //   POST   /{domain}/swap           swap the live certificate (validated first)
 //   POST   /{domain}/rollback       restore the previous live certificate
+//   GET    /cert-modes              list per-domain certificate modes (paginated)
+//   GET    /cert-modes/definitions  certificate-mode registry (admin-extensible)
+//   PUT    /cert-modes/definitions  replace the certificate-mode registry (admin)
+//   GET    /cloudflare-ranges       stored Cloudflare IP-range snapshot (data + date)
+//   POST   /cloudflare-ranges/refresh  refresh the IP-range snapshot from Cloudflare
+//   GET    /{domain}/cert-mode      one domain's certificate mode + mode history
+//   PUT    /{domain}/cert-mode      set a domain's certificate mode
+//   POST   /{domain}/cert-mode/custom-upload  upload a custom cert (validated first)
+//   POST   /{domain}/detect-cloudflare        detect Cloudflare for a domain
+//   GET    /{domain}/cloudflare-detection     stored detection result
+//   POST   /{domain}/cloudflare-detection/recheck  re-run detection
+//
+// Certificate modes are a data-driven registry, not a hard-coded list:
+// the built-in definitions (`letsencrypt`, `custom`, `cloudflare`) are
+// seed data in `default_cert_mode_definitions`, editable through
+// `PUT /cert-modes/definitions`. The custom-upload minimum remaining
+// validity (`custom_min_validity_days`, default 7) and the Cloudflare
+// detection toggles / range-list URLs are settings (`PUT /settings`),
+// not constants. The Cloudflare IP ranges are stored data with a
+// fetch date (`GET /cloudflare-ranges`) and are refreshable; no range
+// list is baked into the code. ACME provider choice keeps using the
+// existing provider registry (`AcmeConfig::resolve_provider`).
 //
 // Events emitted (see `cert_events` below): `ssl.renewed`,
 // `ssl.renew_failed`, `ssl.revoked`, `ssl.swapped`, `ssl.expiring`,
-// `ssl.installed`. The module also listens to the core `ssl.renew`
-// event (dispatched by the scheduler and the Domains module) and to
-// `ssl.swap` completions (emitted by the server ACME listener).
+// `ssl.installed`, `ssl.cert_mode.changed`, `ssl.cloudflare.detected`.
+// The module also listens to the core `ssl.renew` event (dispatched by
+// the scheduler and the Domains module), to `ssl.swap` completions
+// (emitted by the server ACME listener), and to
+// `ssl.cloudflare.recheck` (scheduled re-check of stored detections).
+// Hook contracts this module RELIES on (answered by other modules):
+// `cloudflare.zone.lookup` (the Cloudflare module answers whether a
+// domain's zone exists there and which SSL mode it uses) and
+// `domain.ownership.check` (the SaaS/domains side answers whether a
+// tenant user owns a domain); both fail closed when unanswered.
 // Expiry alerts go out as `notification.requested` (user `system`)
 // and as `ssl.expiring` events, so the audit log and the
 // Notifications module observe them through the hook bus.
@@ -57,14 +86,17 @@ use crate::http::tls::{
     status_for, validate_config_entry, validate_pem_pair, validate_ssl_config,
     CertificateInfo, CertificateValidation, SslStorage,
 };
-use actix_web::{web, HttpResponse};
+use crate::modules::network::DnsVerifier;
+use actix_web::{web, HttpRequest, HttpResponse};
 use chrono::{DateTime, Utc};
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::net::IpAddr;
 use std::sync::{Arc, RwLock};
+use std::time::Duration;
 use uuid::Uuid;
 
 // ---------------------------------------------------------------------------
@@ -101,6 +133,30 @@ pub mod cert_events {
     /// Emitted after a custom certificate is installed. Payload:
     /// `domain`, `fingerprint_sha256`, `ssl_expires_at`, `source`.
     pub const SSL_INSTALLED: &str = "ssl.installed";
+    /// Emitted after a domain's certificate mode changes. Payload:
+    /// `domain`, `mode`, `previous_mode`, `provider`, `status`,
+    /// `actor`.
+    pub const SSL_CERT_MODE_CHANGED: &str = "ssl.cert_mode.changed";
+    /// Emitted after a Cloudflare detection run for a domain.
+    /// Payload: `domain`, `detected`, `ssl_mode`,
+    /// `end_to_end_encrypted`, `checked_at`.
+    pub const SSL_CF_DETECTED: &str = "ssl.cloudflare.detected";
+    /// A scheduler (or admin) asks for a Cloudflare re-check.
+    /// Payload: `{"domain"}` for one domain, or no domain to re-check
+    /// every domain with a stored mode. Handled by this module.
+    pub const SSL_CF_RECHECK: &str = "ssl.cloudflare.recheck";
+    /// Hook contract: ask the Cloudflare module whether a domain's
+    /// zone exists there. Request payload: `{"domain", "found": false,
+    /// "zone_id": null, "ssl_mode": null}`; the answering handler sets
+    /// `found` / `zone_id` / `ssl_mode` (`flexible`, `full`, or
+    /// `full_strict`). No answer means "unknown", never "found".
+    pub const CLOUDFLARE_ZONE_LOOKUP: &str = "cloudflare.zone.lookup";
+    /// Hook contract: ask the SaaS/domains side whether a tenant user
+    /// owns a domain. Request payload: `{"domain", "user_id",
+    /// "owned": false}`; the answering handler sets `owned: true`
+    /// when the user owns the (verified) domain. No answer means "not
+    /// owned": tenant-scoped access fails closed.
+    pub const DOMAIN_OWNERSHIP_CHECK: &str = "domain.ownership.check";
 }
 
 // ---------------------------------------------------------------------------
@@ -151,6 +207,18 @@ pub struct RenewalAttempt {
     pub forced: bool,
 }
 
+/// Default published Cloudflare IP-range list URLs. These are the
+/// SOURCE locations the ranges are fetched from, not the ranges
+/// themselves: the ranges are stored data (see `CfIpRanges`) and are
+/// never baked into the code. Overridable via `PUT /settings`
+/// (`cf_ranges_v4_url`, `cf_ranges_v6_url`).
+pub const DEFAULT_CF_RANGES_V4_URL: &str = "https://www.cloudflare.com/ips-v4";
+pub const DEFAULT_CF_RANGES_V6_URL: &str = "https://www.cloudflare.com/ips-v6";
+/// Default minimum remaining validity (days) a custom-uploaded
+/// certificate must have. Overridable via `PUT /settings`
+/// (`custom_min_validity_days`).
+pub const DEFAULT_CUSTOM_MIN_VALIDITY_DAYS: i64 = 7;
+
 /// Runtime certificate settings, seeded from the config file at
 /// startup and adjustable through `PUT /settings`. EAB secrets are
 /// held here and never serialized: the API only ever returns
@@ -162,6 +230,16 @@ pub struct CertModuleSettings {
     pub acme: AcmeConfig,
     /// How often the expiry check runs, in seconds (default 86400).
     pub check_interval_secs: u64,
+    /// Minimum remaining validity (days) for a custom-uploaded
+    /// certificate; uploads expiring sooner are rejected. Default 7.
+    pub custom_min_validity_days: i64,
+    /// Cloudflare detection methods, individually enable/disable-able.
+    pub cf_detect_dns: bool,
+    pub cf_detect_probe: bool,
+    pub cf_detect_api: bool,
+    /// Published Cloudflare IP-range list URLs (fetch sources).
+    pub cf_ranges_v4_url: String,
+    pub cf_ranges_v6_url: String,
 }
 
 impl Default for CertModuleSettings {
@@ -170,6 +248,12 @@ impl Default for CertModuleSettings {
             enabled: false,
             acme: AcmeConfig::default(),
             check_interval_secs: 86_400,
+            custom_min_validity_days: DEFAULT_CUSTOM_MIN_VALIDITY_DAYS,
+            cf_detect_dns: true,
+            cf_detect_probe: true,
+            cf_detect_api: true,
+            cf_ranges_v4_url: DEFAULT_CF_RANGES_V4_URL.to_string(),
+            cf_ranges_v6_url: DEFAULT_CF_RANGES_V6_URL.to_string(),
         }
     }
 }
@@ -180,6 +264,12 @@ impl CertModuleSettings {
             enabled: config.acme.enabled,
             acme: AcmeConfig::from_app_config(config),
             check_interval_secs: 86_400,
+            custom_min_validity_days: DEFAULT_CUSTOM_MIN_VALIDITY_DAYS,
+            cf_detect_dns: true,
+            cf_detect_probe: true,
+            cf_detect_api: true,
+            cf_ranges_v4_url: DEFAULT_CF_RANGES_V4_URL.to_string(),
+            cf_ranges_v6_url: DEFAULT_CF_RANGES_V6_URL.to_string(),
         }
     }
 }
@@ -243,6 +333,346 @@ struct UpdateSettingsRequest {
     alert_thresholds_days: Option<Vec<i64>>,
     #[serde(default)]
     check_interval_secs: Option<u64>,
+    /// Minimum remaining validity (days) for custom uploads.
+    #[serde(default)]
+    custom_min_validity_days: Option<i64>,
+    /// Cloudflare detection toggles (DNS ranges / live probe / API).
+    #[serde(default)]
+    cf_detect_dns: Option<bool>,
+    #[serde(default)]
+    cf_detect_probe: Option<bool>,
+    #[serde(default)]
+    cf_detect_api: Option<bool>,
+    /// Published Cloudflare IP-range list URLs (fetch sources).
+    #[serde(default)]
+    cf_ranges_v4_url: Option<String>,
+    #[serde(default)]
+    cf_ranges_v6_url: Option<String>,
+}
+
+// ---------------------------------------------------------------------------
+// Certificate modes (data-driven registry) and Cloudflare detection.
+// ---------------------------------------------------------------------------
+
+/// One certificate-mode definition in the admin-extensible registry.
+/// The built-in modes are seed data only (see
+/// `default_cert_mode_definitions`); an admin may add, rename, or
+/// disable modes through `PUT /cert-modes/definitions` without a code
+/// change. Behaviour is driven by the flags, never by matching the
+/// mode id in code: `requires_acme` triggers the existing ACME
+/// renewal, `requires_upload` expects a PEM upload, and
+/// `requires_cloudflare` marks the mode as a Cloudflare origin mode.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CertModeDefinition {
+    /// Mode id, for example `letsencrypt`, `custom`, `cloudflare`.
+    pub id: String,
+    pub label: String,
+    pub description: String,
+    /// Setting this mode expects a certificate/key PEM upload.
+    pub requires_upload: bool,
+    /// Setting this mode issues/renews through the ACME provider
+    /// registry (`AcmeConfig::resolve_provider`).
+    pub requires_acme: bool,
+    /// This mode is a Cloudflare origin-certificate mode.
+    pub requires_cloudflare: bool,
+    /// Disabled definitions cannot be newly selected; existing mode
+    /// records that reference one keep their stored value.
+    pub enabled: bool,
+}
+
+/// Seed definitions for the certificate-mode registry. Seed data, not
+/// a closed list: the registry is replaced through
+/// `PUT /cert-modes/definitions`.
+pub fn default_cert_mode_definitions() -> Vec<CertModeDefinition> {
+    vec![
+        CertModeDefinition {
+            id: "letsencrypt".to_string(),
+            label: "Let's Encrypt (automatic)".to_string(),
+            description: "Automatic issuance and renewal through the configured ACME provider.".to_string(),
+            requires_upload: false,
+            requires_acme: true,
+            requires_cloudflare: false,
+            enabled: true,
+        },
+        CertModeDefinition {
+            id: "custom".to_string(),
+            label: "Custom certificate upload".to_string(),
+            description: "Upload a certificate PEM and private key PEM; validated before install.".to_string(),
+            requires_upload: true,
+            requires_acme: false,
+            requires_cloudflare: false,
+            enabled: true,
+        },
+        CertModeDefinition {
+            id: "cloudflare".to_string(),
+            label: "Cloudflare origin certificate".to_string(),
+            description: "Origin-certificate mode for domains served through Cloudflare; an origin certificate is expected and Full (Strict) mode is required for end-to-end encryption.".to_string(),
+            requires_upload: false,
+            requires_acme: false,
+            requires_cloudflare: true,
+            enabled: true,
+        },
+    ]
+}
+
+/// Validate a replacement mode registry: non-empty, unique ids, ids
+/// are lowercase slugs, every definition has a label.
+fn validate_mode_definitions(definitions: &[CertModeDefinition]) -> Result<(), String> {
+    if definitions.is_empty() {
+        return Err("at least one certificate mode definition is required".to_string());
+    }
+    let mut seen: HashSet<String> = HashSet::new();
+    for definition in definitions {
+        let id = definition.id.trim();
+        if id.is_empty()
+            || !id
+                .chars()
+                .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
+        {
+            return Err(format!(
+                "invalid mode id \"{id}\": use lowercase letters, digits, and hyphens"
+            ));
+        }
+        if !seen.insert(id.to_string()) {
+            return Err(format!("duplicate mode id \"{id}\""));
+        }
+        if definition.label.trim().is_empty() {
+            return Err(format!("mode \"{id}\" has an empty label"));
+        }
+    }
+    Ok(())
+}
+
+/// One domain's certificate mode: the current row of the
+/// `domain_cert_modes` table (mode history is the earlier rows for
+/// the same domain). Private keys and PEM material are never stored
+/// here: only fingerprints and metadata.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DomainCertMode {
+    pub domain: String,
+    /// Mode id from the registry (`letsencrypt`, `custom`,
+    /// `cloudflare`, or an admin-defined id).
+    pub mode: String,
+    /// ACME provider key, `custom`, `cloudflare`, or the mode id.
+    pub provider: String,
+    /// SHA-256 fingerprint of the installed certificate, if any.
+    pub fingerprint_sha256: String,
+    pub installed_at: Option<DateTime<Utc>>,
+    pub previous_fingerprint: Option<String>,
+    /// `active`, `pending`, `awaiting_upload`, or `error`.
+    pub status: String,
+    pub last_error: Option<String>,
+    pub updated_at: DateTime<Utc>,
+    pub updated_by: String,
+}
+
+/// Stored Cloudflare IP-range snapshot: DATA, not code. The ranges
+/// are fetched from the published lists (see the settings URLs),
+/// stored with their fetch date, and refreshed through
+/// `POST /cloudflare-ranges/refresh` (or automatically on first use).
+/// Until the first successful fetch the lists are empty and the DNS
+/// detection method honestly reports `ranges_unavailable` instead of
+/// pretending a bundled snapshot is current.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CfIpRanges {
+    pub v4: Vec<String>,
+    pub v6: Vec<String>,
+    pub fetched_at: Option<DateTime<Utc>>,
+    pub source_v4: String,
+    pub source_v6: String,
+    pub fetch_error: Option<String>,
+}
+
+impl Default for CfIpRanges {
+    fn default() -> Self {
+        Self {
+            v4: Vec::new(),
+            v6: Vec::new(),
+            fetched_at: None,
+            source_v4: DEFAULT_CF_RANGES_V4_URL.to_string(),
+            source_v6: DEFAULT_CF_RANGES_V6_URL.to_string(),
+            fetch_error: None,
+        }
+    }
+}
+
+/// One stored Cloudflare detection result for a domain.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CloudflareDetection {
+    pub domain: String,
+    pub detected: bool,
+    /// Per-method results (`dns`, `probe`, `api`), each honest about
+    /// what it checked, found, or could not check.
+    pub methods: Value,
+    /// Cloudflare SSL mode reported by the API check, when known:
+    /// `flexible`, `full`, or `full_strict`.
+    pub ssl_mode: Option<String>,
+    /// `false` in Flexible mode (no origin encryption), `true` in
+    /// Full / Full (Strict) mode, `None` when unconfirmed.
+    pub end_to_end_encrypted: Option<bool>,
+    /// Set whenever end-to-end encryption is absent or unconfirmed,
+    /// so the system NEVER claims full encryption in Flexible mode.
+    pub flexible_warning: Option<String>,
+    pub checked_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Deserialize)]
+struct SetCertModeRequest {
+    mode: String,
+    #[serde(default)]
+    provider: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct CustomUploadRequest {
+    /// Certificate chain in PEM format.
+    cert_pem: String,
+    /// Private key in PEM format. Never logged or returned.
+    key_pem: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct UpdateModeDefinitionsRequest {
+    modes: Vec<CertModeDefinition>,
+}
+
+/// Capability names checked through the `role.check` hook.
+const PERM_CERTIFICATES_VIEW: &str = "certificates.view";
+const PERM_CERTIFICATES_MANAGE: &str = "certificates.manage";
+const PERM_CERTIFICATES_MANAGE_OWN: &str = "certificates.manage_own";
+
+/// Caller identity: `X-User-Id` (required) plus `X-Role` (required
+/// for capability checks), exactly like the properties module.
+struct Caller {
+    actor: String,
+    role: String,
+}
+
+fn caller(req: &HttpRequest) -> UnifiedResult<Caller> {
+    let actor = req
+        .headers()
+        .get("x-user-id")
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+        .ok_or_else(|| UnifiedError::unauthorized("Missing X-User-Id header"))?;
+    let role = req
+        .headers()
+        .get("x-role")
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+        .ok_or_else(|| UnifiedError::unauthorized("Missing X-Role header"))?;
+    Ok(Caller { actor, role })
+}
+
+/// Ask the roles module whether `role` holds `permission` through
+/// the `role.check` hook. Fails closed: no answer means not allowed.
+fn check_capability(ctx: &AppContext, role: &str, permission: &str) -> bool {
+    let context = ctx.hooks.emit(
+        "role.check",
+        json!({ "role": role, "permission": permission, "allowed": false }),
+    );
+    context
+        .get("allowed")
+        .and_then(|value| value.as_bool())
+        .unwrap_or(false)
+}
+
+fn require_permission(ctx: &AppContext, role: &str, permission: &str) -> UnifiedResult<()> {
+    if check_capability(ctx, role, permission) {
+        Ok(())
+    } else {
+        Err(UnifiedError::forbidden(format!(
+            "Role \"{role}\" does not hold permission \"{permission}\""
+        )))
+    }
+}
+
+/// Ask the SaaS/domains side (through the `domain.ownership.check`
+/// hook) whether `actor` owns the verified `domain`. Fails closed:
+/// no answer means not owned.
+fn domain_owned(ctx: &AppContext, actor: &str, domain: &str) -> bool {
+    let context = ctx.hooks.emit(
+        cert_events::DOMAIN_OWNERSHIP_CHECK,
+        json!({ "domain": domain, "user_id": actor, "owned": false }),
+    );
+    context
+        .get("owned")
+        .and_then(|value| value.as_bool())
+        .unwrap_or(false)
+}
+
+/// Authorize one domain-scoped call. An admin (role holding
+/// `certificates.manage`) may act on any domain. A tenant (role
+/// holding `certificates.manage_own` for writes, or
+/// `certificates.view` for reads) may only act on their OWN verified
+/// domains, confirmed through the `domain.ownership.check` hook;
+/// without a confirming answer the call is denied. Fail closed.
+fn authorize_domain(
+    ctx: &AppContext,
+    req: &HttpRequest,
+    domain: &str,
+    write: bool,
+) -> UnifiedResult<Caller> {
+    let caller = caller(req)?;
+    if check_capability(ctx, &caller.role, PERM_CERTIFICATES_MANAGE) {
+        return Ok(caller);
+    }
+    if write {
+        require_permission(ctx, &caller.role, PERM_CERTIFICATES_MANAGE_OWN)?;
+    } else {
+        require_permission(ctx, &caller.role, PERM_CERTIFICATES_VIEW)?;
+    }
+    if domain_owned(ctx, &caller.actor, domain) {
+        Ok(caller)
+    } else {
+        Err(UnifiedError::forbidden(format!(
+            "Domain \"{domain}\" is not owned by the caller; tenant access requires a verified domain"
+        )))
+    }
+}
+
+/// Parse one CIDR notation entry (`192.0.2.0/24`,
+/// `2001:db8::/32`) into (network address, prefix length).
+fn parse_cidr(cidr: &str) -> Option<(IpAddr, u8)> {
+    let (address, prefix) = cidr.trim().split_once('/')?;
+    let network: IpAddr = address.trim().parse().ok()?;
+    let prefix: u8 = prefix.trim().parse().ok()?;
+    match network {
+        IpAddr::V4(_) if prefix > 32 => None,
+        IpAddr::V6(_) if prefix > 128 => None,
+        _ => Some((network, prefix)),
+    }
+}
+
+/// True when `ip` lies inside the `cidr` range. Address families
+/// must match; a malformed range never matches.
+fn cidr_contains(cidr: &str, ip: &IpAddr) -> bool {
+    let Some((network, prefix)) = parse_cidr(cidr) else {
+        return false;
+    };
+    match (network, ip) {
+        (IpAddr::V4(network), IpAddr::V4(address)) => {
+            let mask = if prefix == 0 {
+                0u32
+            } else {
+                u32::MAX << (32 - prefix)
+            };
+            (u32::from(network) & mask) == (u32::from(*address) & mask)
+        }
+        (IpAddr::V6(network), IpAddr::V6(address)) => {
+            let mask = if prefix == 0 {
+                0u128
+            } else {
+                u128::MAX << (128 - prefix)
+            };
+            (u128::from(network) & mask) == (u128::from(*address) & mask)
+        }
+        _ => false,
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -262,6 +692,17 @@ pub struct CertificatesState {
     /// Configured cert/key file paths per domain (`default` for the
     /// default pair), so validation can re-read the files on demand.
     cert_paths: RwLock<HashMap<String, (String, String)>>,
+    /// Per-domain certificate modes (`domain_cert_modes` table).
+    cert_modes: DashMap<String, DomainCertMode>,
+    /// Mode history per domain: earlier `DomainCertMode` rows, most
+    /// recent first (capped at 20 entries per domain).
+    mode_history: DashMap<String, Vec<DomainCertMode>>,
+    /// The certificate-mode registry (admin-extensible definitions).
+    mode_definitions: RwLock<Vec<CertModeDefinition>>,
+    /// Stored Cloudflare detection results per domain.
+    detections: DashMap<String, CloudflareDetection>,
+    /// Stored Cloudflare IP-range snapshot (fetched data + date).
+    cf_ranges: RwLock<CfIpRanges>,
 }
 
 fn new_id() -> String {
@@ -286,6 +727,11 @@ impl CertificatesState {
             settings: RwLock::new(CertModuleSettings::default()),
             alerted_thresholds: DashMap::new(),
             cert_paths: RwLock::new(HashMap::new()),
+            cert_modes: DashMap::new(),
+            mode_history: DashMap::new(),
+            mode_definitions: RwLock::new(default_cert_mode_definitions()),
+            detections: DashMap::new(),
+            cf_ranges: RwLock::new(CfIpRanges::default()),
         }
     }
 
@@ -879,6 +1325,419 @@ impl CertificatesState {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Certificate modes and Cloudflare detection (state methods).
+// ---------------------------------------------------------------------------
+
+impl CertificatesState {
+    fn mode_definitions(&self) -> Vec<CertModeDefinition> {
+        self.mode_definitions
+            .read()
+            .expect("mode definitions lock poisoned")
+            .clone()
+    }
+
+    fn mode_definition(&self, mode: &str) -> Option<CertModeDefinition> {
+        self.mode_definitions()
+            .into_iter()
+            .find(|definition| definition.id == mode)
+    }
+
+    fn cf_ranges_snapshot(&self) -> CfIpRanges {
+        self.cf_ranges
+            .read()
+            .expect("cloudflare ranges lock poisoned")
+            .clone()
+    }
+
+    /// Record a mode change: the previous row moves into the per-domain
+    /// history (capped at 20 entries) and the new row becomes current.
+    fn record_cert_mode(&self, mode: DomainCertMode) {
+        if let Some(previous) = self
+            .cert_modes
+            .get(&mode.domain)
+            .map(|entry| entry.value().clone())
+        {
+            let mut history = self
+                .mode_history
+                .get(&mode.domain)
+                .map(|entry| entry.value().clone())
+                .unwrap_or_default();
+            history.insert(0, previous);
+            history.truncate(20);
+            self.mode_history.insert(mode.domain.clone(), history);
+        }
+        self.cert_modes.insert(mode.domain.clone(), mode);
+    }
+
+    fn mode_history_for(&self, domain: &str) -> Vec<DomainCertMode> {
+        self.mode_history
+            .get(domain)
+            .map(|entry| entry.value().clone())
+            .unwrap_or_default()
+    }
+
+    /// Fetch the published Cloudflare IP-range lists and store them as
+    /// data with the fetch date. The configured source URLs are the
+    /// only fixed values; the ranges themselves are never baked into
+    /// the code. On failure the previously stored snapshot is kept
+    /// untouched and the error is recorded on it.
+    pub async fn refresh_cf_ranges(state: &Arc<Self>) -> UnifiedResult<CfIpRanges> {
+        let settings = state.settings();
+        let client = reqwest::Client::builder()
+            .timeout(Duration::from_secs(10))
+            .user_agent("Unified-CF-Ranges/1.0")
+            .build()
+            .map_err(|error| {
+                UnifiedError::internal(format!("cannot build HTTP client: {error}"))
+            })?;
+        let fetch_list = async |url: &str| -> UnifiedResult<Vec<String>> {
+            let text = client
+                .get(url)
+                .send()
+                .await
+                .map_err(|error| {
+                    UnifiedError::new(
+                        format!("cannot fetch Cloudflare IP range list from {url}: {error}"),
+                        502,
+                    )
+                })?
+                .error_for_status()
+                .map_err(|error| {
+                    UnifiedError::new(
+                        format!("Cloudflare IP range list at {url} returned an error: {error}"),
+                        502,
+                    )
+                })?
+                .text()
+                .await
+                .map_err(|error| {
+                    UnifiedError::new(
+                        format!("cannot read Cloudflare IP range list from {url}: {error}"),
+                        502,
+                    )
+                })?;
+            let mut ranges: Vec<String> = Vec::new();
+            for line in text.lines() {
+                let line = line.trim();
+                if line.is_empty() || line.starts_with('#') {
+                    continue;
+                }
+                if parse_cidr(line).is_none() {
+                    return Err(UnifiedError::new(
+                        format!("Cloudflare IP range list at {url} contains an invalid entry: \"{line}\""),
+                        502,
+                    ));
+                }
+                ranges.push(line.to_string());
+            }
+            if ranges.is_empty() {
+                return Err(UnifiedError::new(
+                    format!("Cloudflare IP range list at {url} is empty"),
+                    502,
+                ));
+            }
+            Ok(ranges)
+        };
+        let v4 = fetch_list(&settings.cf_ranges_v4_url).await;
+        let v6 = fetch_list(&settings.cf_ranges_v6_url).await;
+        let (v4, v6) = match (v4, v6) {
+            (Ok(v4), Ok(v6)) => (v4, v6),
+            (Err(error), _) | (_, Err(error)) => {
+                let mut snapshot = state.cf_ranges_snapshot();
+                snapshot.fetch_error = Some(error.message.clone());
+                *state
+                    .cf_ranges
+                    .write()
+                    .expect("cloudflare ranges lock poisoned") = snapshot;
+                return Err(error);
+            }
+        };
+        let snapshot = CfIpRanges {
+            v4,
+            v6,
+            fetched_at: Some(now()),
+            source_v4: settings.cf_ranges_v4_url.clone(),
+            source_v6: settings.cf_ranges_v6_url.clone(),
+            fetch_error: None,
+        };
+        *state
+            .cf_ranges
+            .write()
+            .expect("cloudflare ranges lock poisoned") = snapshot.clone();
+        Ok(snapshot)
+    }
+
+    /// Detect Cloudflare usage for `domain` and store the result.
+    /// Three methods, each individually enable/disable-able through
+    /// settings, each recorded honestly:
+    ///
+    /// (a) DNS: resolve A/AAAA records and compare them against the
+    /// stored Cloudflare IP ranges (fetched live on first use; when
+    /// the ranges cannot be fetched the method reports
+    /// `ranges_unavailable` instead of guessing).
+    /// (b) Live probe: request the domain over HTTPS and look for
+    /// `CF-Ray`, `CF-Cache-Status`, and `Server: cloudflare`.
+    /// (c) API check: ask the Cloudflare module through the
+    /// `cloudflare.zone.lookup` hook whether the domain's zone exists
+    /// there and which SSL mode it uses; no answer means "unknown".
+    ///
+    /// When Cloudflare is detected the result records the origin
+    /// expectation, and when the SSL mode is Flexible (or unconfirmed)
+    /// it records an explicit warning: end-to-end encryption is NOT
+    /// present between Cloudflare and the origin in Flexible mode.
+    pub async fn detect_cloudflare(state: &Arc<Self>, domain: &str) -> CloudflareDetection {
+        let domain = normalize_domain(domain);
+        let settings = state.settings();
+        let mut methods = serde_json::Map::new();
+
+        // (a) DNS check against the stored Cloudflare IP ranges.
+        if !settings.cf_detect_dns {
+            methods.insert(
+                "dns".to_string(),
+                json!({ "enabled": false, "result": "disabled" }),
+            );
+        } else {
+            let verifier = DnsVerifier::new();
+            match verifier.lookup_ip(&domain).await {
+                Ok(addresses) => {
+                    let mut snapshot = state.cf_ranges_snapshot();
+                    let ranges_available = !snapshot.v4.is_empty() || !snapshot.v6.is_empty();
+                    if !ranges_available {
+                        // First use (or an expired snapshot): fetch the
+                        // published lists now and store them.
+                        match Self::refresh_cf_ranges(state).await {
+                            Ok(fetched) => snapshot = fetched,
+                            Err(error) => {
+                                methods.insert(
+                                    "dns".to_string(),
+                                    json!({
+                                        "enabled": true,
+                                        "checked": true,
+                                        "addresses": addresses.iter().map(|ip| ip.to_string()).collect::<Vec<_>>(),
+                                        "result": "ranges_unavailable",
+                                        "error": error.message,
+                                    }),
+                                );
+                            }
+                        }
+                    }
+                    if !methods.contains_key("dns") {
+                        let mut matched: Vec<String> = Vec::new();
+                        for address in &addresses {
+                            let in_ranges = snapshot
+                                .v4
+                                .iter()
+                                .chain(snapshot.v6.iter())
+                                .any(|range| cidr_contains(range, address));
+                            if in_ranges {
+                                matched.push(address.to_string());
+                            }
+                        }
+                        methods.insert(
+                            "dns".to_string(),
+                            json!({
+                                "enabled": true,
+                                "checked": true,
+                                "addresses": addresses.iter().map(|ip| ip.to_string()).collect::<Vec<_>>(),
+                                "matched_addresses": matched,
+                                "detected": !matched.is_empty(),
+                                "ranges_fetched_at": snapshot.fetched_at.map(|at| at.to_rfc3339()),
+                                "ranges_source_v4": snapshot.source_v4,
+                                "ranges_source_v6": snapshot.source_v6,
+                            }),
+                        );
+                    }
+                }
+                Err(error) => {
+                    methods.insert(
+                        "dns".to_string(),
+                        json!({
+                            "enabled": true,
+                            "checked": false,
+                            "result": "lookup_failed",
+                            "error": error.message,
+                        }),
+                    );
+                }
+            }
+        }
+
+        // (b) Live HTTPS probe for Cloudflare response headers.
+        if !settings.cf_detect_probe {
+            methods.insert(
+                "probe".to_string(),
+                json!({ "enabled": false, "result": "disabled" }),
+            );
+        } else {
+            let client = reqwest::Client::builder()
+                .timeout(Duration::from_secs(10))
+                .user_agent("Unified-CF-Detect/1.0")
+                .build();
+            match client {
+                Ok(client) => {
+                    match client
+                        .get(format!("https://{domain}/"))
+                        .send()
+                        .await
+                    {
+                        Ok(response) => {
+                            let headers = response.headers();
+                            let mut found: Vec<String> = Vec::new();
+                            if headers.contains_key("cf-ray") {
+                                found.push("cf-ray".to_string());
+                            }
+                            if headers.contains_key("cf-cache-status") {
+                                found.push("cf-cache-status".to_string());
+                            }
+                            if headers
+                                .get("server")
+                                .and_then(|value| value.to_str().ok())
+                                .is_some_and(|value| value.eq_ignore_ascii_case("cloudflare"))
+                            {
+                                found.push("server: cloudflare".to_string());
+                            }
+                            let status = response.status().as_u16();
+                            methods.insert(
+                                "probe".to_string(),
+                                json!({
+                                    "enabled": true,
+                                    "checked": true,
+                                    "http_status": status,
+                                    "headers_found": found,
+                                    "detected": !found.is_empty(),
+                                }),
+                            );
+                        }
+                        Err(error) => {
+                            methods.insert(
+                                "probe".to_string(),
+                                json!({
+                                    "enabled": true,
+                                    "checked": false,
+                                    "result": "probe_failed",
+                                    "error": error.to_string(),
+                                }),
+                            );
+                        }
+                    }
+                }
+                Err(error) => {
+                    methods.insert(
+                        "probe".to_string(),
+                        json!({
+                            "enabled": true,
+                            "checked": false,
+                            "result": "probe_failed",
+                            "error": format!("cannot build HTTP client: {error}"),
+                        }),
+                    );
+                }
+            }
+        }
+
+        // (c) Cloudflare API check through the hook bus.
+        let mut ssl_mode: Option<String> = None;
+        if !settings.cf_detect_api {
+            methods.insert(
+                "api".to_string(),
+                json!({ "enabled": false, "result": "disabled" }),
+            );
+        } else {
+            let context = state.bus().emit(
+                cert_events::CLOUDFLARE_ZONE_LOOKUP,
+                json!({ "domain": &domain, "found": false, "zone_id": null, "ssl_mode": null }),
+            );
+            let found = context
+                .get("found")
+                .and_then(|value| value.as_bool())
+                .unwrap_or(false);
+            let zone_id = context
+                .get("zone_id")
+                .and_then(|value| value.as_str())
+                .map(str::to_string);
+            ssl_mode = context
+                .get("ssl_mode")
+                .and_then(|value| value.as_str())
+                .map(str::to_string);
+            let api_note: Value = if context.results.is_empty() {
+                json!("no cloudflare module handler answered the zone lookup; API result is unknown")
+            } else {
+                Value::Null
+            };
+            methods.insert(
+                "api".to_string(),
+                json!({
+                    "enabled": true,
+                    "checked": true,
+                    "handler_answered": !context.results.is_empty(),
+                    "found": found,
+                    "zone_id": zone_id,
+                    "ssl_mode": ssl_mode,
+                    "detected": found,
+                    "note": api_note,
+                }),
+            );
+        }
+
+        let dns_detected = methods
+            .get("dns")
+            .and_then(|value| value.get("detected"))
+            .and_then(|value| value.as_bool())
+            .unwrap_or(false);
+        let probe_detected = methods
+            .get("probe")
+            .and_then(|value| value.get("detected"))
+            .and_then(|value| value.as_bool())
+            .unwrap_or(false);
+        let api_detected = methods
+            .get("api")
+            .and_then(|value| value.get("detected"))
+            .and_then(|value| value.as_bool())
+            .unwrap_or(false);
+        let detected = dns_detected || probe_detected || api_detected;
+        let end_to_end_encrypted = match ssl_mode.as_deref() {
+            Some("flexible") => Some(false),
+            Some("full") | Some("full_strict") => Some(true),
+            _ => None,
+        };
+        let flexible_warning = if ssl_mode.as_deref() == Some("flexible") {
+            Some(
+                "Cloudflare SSL mode is Flexible: traffic between Cloudflare and the origin is NOT encrypted end to end. Switch the zone to Full (Strict) with a valid origin certificate before claiming end-to-end encryption."
+                    .to_string(),
+            )
+        } else if detected && ssl_mode.is_none() {
+            Some(
+                "Cloudflare was detected but the Cloudflare SSL mode could not be confirmed: end-to-end encryption is UNCONFIRMED. Confirm Full (Strict) mode in the Cloudflare dashboard; Flexible mode does NOT encrypt traffic between Cloudflare and the origin."
+                    .to_string(),
+            )
+        } else {
+            None
+        };
+        let detection = CloudflareDetection {
+            domain: domain.clone(),
+            detected,
+            methods: Value::Object(methods),
+            ssl_mode,
+            end_to_end_encrypted,
+            flexible_warning,
+            checked_at: now(),
+        };
+        state.detections.insert(domain.clone(), detection.clone());
+        state.emit(
+            cert_events::SSL_CF_DETECTED,
+            json!({
+                "domain": &domain,
+                "detected": detected,
+                "ssl_mode": &detection.ssl_mode,
+                "end_to_end_encrypted": &detection.end_to_end_encrypted,
+                "checked_at": detection.checked_at.to_rfc3339(),
+            }),
+        );
+        detection
+    }
+}
+
 impl Default for CertificatesState {
     fn default() -> Self {
         Self::new()
@@ -1453,6 +2312,16 @@ async fn get_settings(state: web::Data<Arc<CertificatesState>>) -> HttpResponse 
             "enabled": settings.enabled,
             "acme": settings.acme.redacted(),
             "check_interval_secs": settings.check_interval_secs,
+            "custom_min_validity_days": settings.custom_min_validity_days,
+            "cloudflare_detection": {
+                "dns": settings.cf_detect_dns,
+                "probe": settings.cf_detect_probe,
+                "api": settings.cf_detect_api,
+            },
+            "cloudflare_ranges_urls": {
+                "v4": settings.cf_ranges_v4_url,
+                "v6": settings.cf_ranges_v6_url,
+            },
             "providers": provider_matrix(),
         }),
         200,
@@ -1508,6 +2377,31 @@ async fn update_settings(
         if let Some(interval) = input.check_interval_secs {
             settings.check_interval_secs = interval;
         }
+        if let Some(days) = input.custom_min_validity_days {
+            if !(0..=365).contains(&days) {
+                return Err(UnifiedError::bad_request(
+                    "custom_min_validity_days must be between 0 and 365",
+                ));
+            }
+            settings.custom_min_validity_days = days;
+        }
+        if let Some(enabled) = input.cf_detect_dns {
+            settings.cf_detect_dns = enabled;
+        }
+        if let Some(enabled) = input.cf_detect_probe {
+            settings.cf_detect_probe = enabled;
+        }
+        if let Some(enabled) = input.cf_detect_api {
+            settings.cf_detect_api = enabled;
+        }
+        if let Some(url) = input.cf_ranges_v4_url {
+            validate_ranges_url(&url)?;
+            settings.cf_ranges_v4_url = url;
+        }
+        if let Some(url) = input.cf_ranges_v6_url {
+            validate_ranges_url(&url)?;
+            settings.cf_ranges_v6_url = url;
+        }
         let problems = settings.acme.validate();
         if !problems.is_empty() {
             return Err(UnifiedError::bad_request(format!(
@@ -1524,9 +2418,481 @@ async fn update_settings(
             "enabled": settings.enabled,
             "acme": settings.acme.redacted(),
             "check_interval_secs": settings.check_interval_secs,
+            "custom_min_validity_days": settings.custom_min_validity_days,
+            "cloudflare_detection": {
+                "dns": settings.cf_detect_dns,
+                "probe": settings.cf_detect_probe,
+                "api": settings.cf_detect_api,
+            },
+            "cloudflare_ranges_urls": {
+                "v4": settings.cf_ranges_v4_url,
+                "v6": settings.cf_ranges_v6_url,
+            },
         }))
     })();
     json::respond(result, false)
+}
+
+/// A Cloudflare IP-range list URL must be an HTTPS URL: the ranges
+/// are fetched over the network, so plain HTTP is refused.
+fn validate_ranges_url(url: &str) -> UnifiedResult<()> {
+    let parsed = url::Url::parse(url).map_err(|_| {
+        UnifiedError::bad_request(format!("invalid Cloudflare ranges URL: \"{url}\""))
+    })?;
+    if parsed.scheme() != "https" || parsed.host_str().is_none_or(str::is_empty) {
+        return Err(UnifiedError::bad_request(format!(
+            "Cloudflare ranges URL must be an HTTPS URL with a host: \"{url}\""
+        )));
+    }
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Certificate-mode and Cloudflare-detection handlers.
+// ---------------------------------------------------------------------------
+
+async fn list_cert_modes(
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+    state: web::Data<Arc<CertificatesState>>,
+    query: web::Query<PaginationParams>,
+) -> HttpResponse {
+    let params = query.into_inner();
+    let result: UnifiedResult<PageResult<DomainCertMode>> = (|| {
+        let caller = caller(&req)?;
+        let is_admin = check_capability(&ctx, &caller.role, PERM_CERTIFICATES_MANAGE);
+        if !is_admin {
+            require_permission(&ctx, &caller.role, PERM_CERTIFICATES_VIEW)?;
+        }
+        let mut items: Vec<DomainCertMode> = state
+            .cert_modes
+            .iter()
+            .map(|entry| entry.value().clone())
+            .filter(|mode| {
+                // Tenants only ever see their own verified domains.
+                if is_admin {
+                    true
+                } else {
+                    domain_owned(&ctx, &caller.actor, &mode.domain)
+                }
+            })
+            .filter(|mode| {
+                matches_search(&format!("{} {} {}", mode.domain, mode.mode, mode.status), &params)
+                    && params
+                        .filters
+                        .get("mode")
+                        .is_none_or(|mode_name| mode.mode == *mode_name)
+                    && params
+                        .filters
+                        .get("status")
+                        .is_none_or(|status| mode.status == *status)
+                    && params
+                        .filters
+                        .get("provider")
+                        .is_none_or(|provider| mode.provider == *provider)
+            })
+            .collect();
+        let sort = params.allowed_sort(&["domain", "mode", "status"], "domain");
+        match sort.as_str() {
+            "mode" => items.sort_by(|a, b| a.mode.cmp(&b.mode)),
+            "status" => items.sort_by(|a, b| a.status.cmp(&b.status)),
+            _ => items.sort_by(|a, b| a.domain.cmp(&b.domain)),
+        }
+        if params.normalized().order == "desc" {
+            items.reverse();
+        }
+        Ok(paginate(items, &params))
+    })();
+    json::respond(result, false)
+}
+
+async fn list_mode_definitions(
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+    state: web::Data<Arc<CertificatesState>>,
+) -> HttpResponse {
+    let result: UnifiedResult<Vec<CertModeDefinition>> = (|| {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_CERTIFICATES_VIEW)?;
+        Ok(state.mode_definitions())
+    })();
+    json::respond(result, false)
+}
+
+async fn update_mode_definitions(
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+    state: web::Data<Arc<CertificatesState>>,
+    body: web::Json<UpdateModeDefinitionsRequest>,
+) -> HttpResponse {
+    let result: UnifiedResult<Vec<CertModeDefinition>> = (|| {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_CERTIFICATES_MANAGE)?;
+        let definitions = body.into_inner().modes;
+        validate_mode_definitions(&definitions).map_err(UnifiedError::bad_request)?;
+        *state
+            .mode_definitions
+            .write()
+            .expect("mode definitions lock poisoned") = definitions.clone();
+        Ok(definitions)
+    })();
+    json::respond(result, false)
+}
+
+async fn get_cert_mode(
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+    state: web::Data<Arc<CertificatesState>>,
+    domain: web::Path<String>,
+) -> HttpResponse {
+    let domain = normalize_domain(&domain.into_inner());
+    let result: UnifiedResult<Value> = (|| {
+        authorize_domain(&ctx, &req, &domain, false)?;
+        let mode = state
+            .cert_modes
+            .get(&domain)
+            .map(|entry| entry.value().clone())
+            .ok_or_else(|| {
+                UnifiedError::not_found(format!("no certificate mode set for {domain}"))
+            })?;
+        Ok(json!({
+            "mode": mode,
+            "history": state.mode_history_for(&domain),
+        }))
+    })();
+    json::respond(result, false)
+}
+
+async fn set_cert_mode(
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+    state: web::Data<Arc<CertificatesState>>,
+    domain: web::Path<String>,
+    body: web::Json<SetCertModeRequest>,
+) -> HttpResponse {
+    let domain = normalize_domain(&domain.into_inner());
+    let state = state.into_inner();
+    let caller = match authorize_domain(&ctx, &req, &domain, true) {
+        Ok(caller) => caller,
+        Err(error) => return json::respond(Err::<Value, UnifiedError>(error), false),
+    };
+    let input = body.into_inner();
+    let mode_id = input.mode.trim().to_ascii_lowercase();
+    let definition = match state.mode_definition(&mode_id) {
+        Some(definition) => definition,
+        None => {
+            return json::respond(
+                Err::<Value, UnifiedError>(UnifiedError::bad_request(format!(
+                    "unknown certificate mode \"{mode_id}\"; available modes: {}",
+                    state
+                        .mode_definitions()
+                        .iter()
+                        .filter(|definition| definition.enabled)
+                        .map(|definition| definition.id.clone())
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ))),
+                false,
+            );
+        }
+    };
+    if !definition.enabled {
+        return json::respond(
+            Err::<Value, UnifiedError>(UnifiedError::bad_request(format!(
+                "certificate mode \"{mode_id}\" is disabled"
+            ))),
+            false,
+        );
+    }
+    let provider = match input.provider {
+        Some(provider) if !provider.trim().is_empty() => provider.trim().to_string(),
+        _ if definition.requires_acme => state.settings().acme.provider.clone(),
+        _ if definition.requires_cloudflare => "cloudflare".to_string(),
+        _ if definition.requires_upload => "custom".to_string(),
+        _ => mode_id.clone(),
+    };
+    let previous_mode = state
+        .cert_modes
+        .get(&domain)
+        .map(|entry| entry.value().mode.clone());
+    let previous_fingerprint = state
+        .cert_modes
+        .get(&domain)
+        .map(|entry| entry.value().fingerprint_sha256.clone())
+        .filter(|fingerprint| !fingerprint.is_empty());
+    let mut record = DomainCertMode {
+        domain: domain.clone(),
+        mode: mode_id.clone(),
+        provider: provider.clone(),
+        fingerprint_sha256: previous_fingerprint.clone().unwrap_or_default(),
+        installed_at: None,
+        previous_fingerprint: previous_fingerprint.clone(),
+        status: "active".to_string(),
+        last_error: None,
+        updated_at: now(),
+        updated_by: caller.actor.clone(),
+    };
+    if definition.requires_acme {
+        // ACME issuance through the existing machinery: announce the
+        // issuance on `ssl.renew` (the module's own handler skips
+        // payloads marked `via: cert_mode`, so this does not queue a
+        // second renewal) and run the renewal now.
+        state.emit(
+            events::SSL_RENEW,
+            json!({ "domain": &domain, "force": false, "via": "cert_mode" }),
+        );
+        record.status = "pending".to_string();
+        match CertificatesState::renew_domain(&state, &domain, false).await {
+            Ok(_) => {
+                if let Some(storage) = state.storage() {
+                    if let Some(info) = storage.certificate_info(&domain) {
+                        record.fingerprint_sha256 = info.fingerprint_sha256;
+                        record.installed_at = Some(now());
+                    }
+                }
+                record.status = "active".to_string();
+            }
+            Err(error) => {
+                record.status = "error".to_string();
+                record.last_error = Some(error.message.clone());
+                state.record_cert_mode(record);
+                return json::respond(Err::<Value, UnifiedError>(error), false);
+            }
+        }
+    } else if definition.requires_upload {
+        record.status = "awaiting_upload".to_string();
+    }
+    state.record_cert_mode(record.clone());
+    state.emit(
+        cert_events::SSL_CERT_MODE_CHANGED,
+        json!({
+            "domain": &domain,
+            "mode": &mode_id,
+            "previous_mode": &previous_mode,
+            "provider": &provider,
+            "status": &record.status,
+            "actor": &caller.actor,
+        }),
+    );
+    json::success_response(
+        json!({
+            "mode": record,
+            "history": state.mode_history_for(&domain),
+        }),
+        200,
+    )
+}
+
+async fn upload_custom_cert(
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+    state: web::Data<Arc<CertificatesState>>,
+    domain: web::Path<String>,
+    body: web::Json<CustomUploadRequest>,
+) -> HttpResponse {
+    let domain = normalize_domain(&domain.into_inner());
+    let result: UnifiedResult<Value> = (|| {
+        let caller = authorize_domain(&ctx, &req, &domain, true)?;
+        let storage = state.storage().ok_or_else(|| {
+            UnifiedError::internal("certificate storage is not initialized")
+        })?;
+        let settings = state.settings();
+        // Validate BEFORE installing anything: chain, key match,
+        // coverage, expiry. The minimum remaining validity is a
+        // setting (`custom_min_validity_days`, default 7), not a
+        // constant: uploads expiring sooner are rejected by name.
+        let validation = validate_pem_pair(
+            body.cert_pem.as_bytes(),
+            body.key_pem.as_bytes(),
+            Some(&domain),
+        );
+        if !validation.valid {
+            return Err(UnifiedError::bad_request(format!(
+                "certificate failed validation: {}",
+                validation.reasons.join("; ")
+            ))
+            .with_metadata("reasons", json!(validation.reasons)));
+        }
+        let info = validation.info.as_ref().ok_or_else(|| {
+            UnifiedError::internal("certificate validation produced no certificate info")
+        })?;
+        if info.days_remaining < settings.custom_min_validity_days {
+            return Err(UnifiedError::bad_request(format!(
+                "certificate expires in {} day(s); custom certificates must remain valid for at least {} day(s) (setting custom_min_validity_days)",
+                info.days_remaining, settings.custom_min_validity_days
+            ))
+            .with_metadata(
+                "reasons",
+                json!([format!(
+                    "certificate expires in {} day(s); minimum remaining validity is {} day(s)",
+                    info.days_remaining, settings.custom_min_validity_days
+                )]),
+            ));
+        }
+        let new_fingerprint = info.fingerprint_sha256.clone();
+        let previous_fingerprint = storage
+            .certificate_info(&domain)
+            .map(|live| live.fingerprint_sha256);
+        storage.swap_certificate(&domain, body.cert_pem.as_bytes(), body.key_pem.as_bytes())?;
+        // Post-swap verification with rollback on mismatch, mirroring
+        // the existing swap handler.
+        let live = storage.certificate_info(&domain);
+        let verified = live
+            .as_ref()
+            .is_some_and(|live| live.fingerprint_sha256 == new_fingerprint);
+        if !verified {
+            let _ = storage.rollback_certificate(&domain);
+            return Err(UnifiedError::internal(
+                "certificate swap verification failed: the live certificate is not the new one; rolled back to the previous certificate",
+            ));
+        }
+        let live = live.expect("live certificate must exist after a verified swap");
+        let previous_mode = state
+            .cert_modes
+            .get(&domain)
+            .map(|entry| entry.value().mode.clone());
+        let record = DomainCertMode {
+            domain: domain.clone(),
+            mode: "custom".to_string(),
+            provider: "custom".to_string(),
+            fingerprint_sha256: new_fingerprint.clone(),
+            installed_at: Some(now()),
+            previous_fingerprint: previous_fingerprint.clone(),
+            status: "active".to_string(),
+            last_error: None,
+            updated_at: now(),
+            updated_by: caller.actor.clone(),
+        };
+        state.record_cert_mode(record.clone());
+        state.upsert_record_from_info(&live, "custom");
+        state.emit(
+            cert_events::SSL_SWAPPED,
+            json!({
+                "domain": &domain,
+                "ssl_expires_at": &live.not_after,
+                "fingerprint_sha256": &live.fingerprint_sha256,
+                "previous_fingerprint_sha256": &previous_fingerprint,
+                "rolled_back": false,
+            }),
+        );
+        state.emit(
+            events::SSL_SWAP,
+            json!({
+                "domain": &domain,
+                "ssl_expires_at": &live.not_after,
+                "fingerprint_sha256": &live.fingerprint_sha256,
+                "previous_fingerprint_sha256": &previous_fingerprint,
+                "swapped_at": now().to_rfc3339(),
+                "swapped": true,
+            }),
+        );
+        state.emit(
+            cert_events::SSL_CERT_MODE_CHANGED,
+            json!({
+                "domain": &domain,
+                "mode": "custom",
+                "previous_mode": &previous_mode,
+                "provider": "custom",
+                "status": "active",
+                "actor": &caller.actor,
+            }),
+        );
+        Ok(json!({
+            "domain": domain,
+            "installed": true,
+            "mode": record,
+            "certificate": live,
+            "previous_fingerprint_sha256": previous_fingerprint,
+        }))
+    })();
+    json::respond(result, false)
+}
+
+async fn detect_cloudflare_handler(
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+    state: web::Data<Arc<CertificatesState>>,
+    domain: web::Path<String>,
+) -> HttpResponse {
+    let domain = normalize_domain(&domain.into_inner());
+    let state = state.into_inner();
+    match authorize_domain(&ctx, &req, &domain, true) {
+        Err(error) => json::respond(Err::<CloudflareDetection, UnifiedError>(error), false),
+        Ok(_) => {
+            let detection = CertificatesState::detect_cloudflare(&state, &domain).await;
+            json::success_response(detection, 200)
+        }
+    }
+}
+
+async fn get_cloudflare_detection(
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+    state: web::Data<Arc<CertificatesState>>,
+    domain: web::Path<String>,
+) -> HttpResponse {
+    let domain = normalize_domain(&domain.into_inner());
+    let result: UnifiedResult<CloudflareDetection> = (|| {
+        authorize_domain(&ctx, &req, &domain, false)?;
+        state
+            .detections
+            .get(&domain)
+            .map(|entry| entry.value().clone())
+            .ok_or_else(|| {
+                UnifiedError::not_found(format!(
+                    "no Cloudflare detection stored for {domain}; run POST /detect-cloudflare first"
+                ))
+            })
+    })();
+    json::respond(result, false)
+}
+
+async fn recheck_cloudflare_handler(
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+    state: web::Data<Arc<CertificatesState>>,
+    domain: web::Path<String>,
+) -> HttpResponse {
+    let domain = normalize_domain(&domain.into_inner());
+    let state = state.into_inner();
+    match authorize_domain(&ctx, &req, &domain, true) {
+        Err(error) => json::respond(Err::<CloudflareDetection, UnifiedError>(error), false),
+        Ok(_) => {
+            let detection = CertificatesState::detect_cloudflare(&state, &domain).await;
+            json::success_response(detection, 200)
+        }
+    }
+}
+
+async fn get_cf_ranges(
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+    state: web::Data<Arc<CertificatesState>>,
+) -> HttpResponse {
+    let result: UnifiedResult<CfIpRanges> = (|| {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_CERTIFICATES_VIEW)?;
+        Ok(state.cf_ranges_snapshot())
+    })();
+    json::respond(result, false)
+}
+
+async fn refresh_cf_ranges_handler(
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+    state: web::Data<Arc<CertificatesState>>,
+) -> HttpResponse {
+    let state = state.into_inner();
+    match (|| {
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_CERTIFICATES_MANAGE)
+    })() {
+        Err(error) => json::respond(Err::<CfIpRanges, UnifiedError>(error), false),
+        Ok(()) => {
+            let result = CertificatesState::refresh_cf_ranges(&state).await;
+            json::respond(result, false)
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1542,6 +2908,12 @@ async fn update_settings(
 fn on_ssl_renew(state: Arc<CertificatesState>, ctx: &mut HookContext) {
     let data = ctx.data.clone();
     if data.get("ssl_expires_at").is_some() || data.get("completed").is_some() {
+        return;
+    }
+    // The cert-mode setter announces its own issuance on `ssl.renew`
+    // (so observers see it) and runs the renewal synchronously; do
+    // not queue a second renewal for the same domain here.
+    if data.get("via").and_then(|value| value.as_str()) == Some("cert_mode") {
         return;
     }
     let force = data
@@ -1568,6 +2940,40 @@ fn on_ssl_renew(state: Arc<CertificatesState>, ctx: &mut HookContext) {
             spawn_task(async move {
                 let _summary = state.check_expiry();
                 let _attempts = CertificatesState::renew_all(&state, force).await;
+            });
+            ctx.add_result(json!({ "queued": true, "check": true }));
+        }
+    }
+}
+
+/// Handle the `ssl.cloudflare.recheck` event: a scheduler job (or an
+/// admin) asks for a fresh Cloudflare detection. A payload with a
+/// `domain` re-checks that domain; a payload with no domain re-checks
+/// every domain with a stored certificate mode. Detection runs in a
+/// spawned task because it needs async network I/O.
+fn on_cloudflare_recheck(state: Arc<CertificatesState>, ctx: &mut HookContext) {
+    let data = ctx.data.clone();
+    match data.get("domain").and_then(|value| value.as_str()) {
+        Some(domain) => {
+            let domain = domain.to_string();
+            let state = state.clone();
+            spawn_task(async move {
+                let _detection = CertificatesState::detect_cloudflare(&state, &domain).await;
+            });
+            ctx.add_result(json!({ "queued": true, "domain": domain }));
+        }
+        None => {
+            let state = state.clone();
+            spawn_task(async move {
+                let domains: Vec<String> = state
+                    .cert_modes
+                    .iter()
+                    .map(|entry| entry.key().clone())
+                    .collect();
+                for domain in domains {
+                    let _detection =
+                        CertificatesState::detect_cloudflare(&state, &domain).await;
+                }
             });
             ctx.add_result(json!({ "queued": true, "check": true }));
         }
@@ -1645,7 +3051,7 @@ impl Module for CertificatesModule {
     }
 
     fn description(&self) -> &'static str {
-        "Advanced SSL certificate management: config-first ACME certificates (multi-provider, EAB, HTTP-01), custom certificate install, swap with rollback, revocation, renewal history, and expiry alerts."
+        "Advanced SSL certificate management: config-first ACME certificates (multi-provider, EAB, HTTP-01), custom certificate install, swap with rollback, revocation, renewal history, and expiry alerts. Per-domain certificate modes from an admin-extensible registry (letsencrypt / custom / cloudflare), Cloudflare detection (DNS ranges, live probe, API check) with Flexible-mode warnings, and dynamic SSL swap without restart."
     }
 
     fn dependencies(&self) -> Vec<&'static str> {
@@ -1669,6 +3075,12 @@ impl Module for CertificatesModule {
             events::SSL_RENEW,
             "certificates",
             Arc::new(move |ctx: &mut HookContext| on_ssl_renew(state.clone(), ctx)),
+        );
+        let state = self.state.clone();
+        bus.register(
+            cert_events::SSL_CF_RECHECK,
+            "certificates",
+            Arc::new(move |ctx: &mut HookContext| on_cloudflare_recheck(state.clone(), ctx)),
         );
         for event in [
             events::SSL_SWAP,
@@ -1779,13 +3191,24 @@ impl Module for CertificatesModule {
                 .route("/check-expiry", web::post().to(check_expiry_handler))
                 .route("/settings", web::get().to(get_settings))
                 .route("/settings", web::put().to(update_settings))
+                .route("/cert-modes", web::get().to(list_cert_modes))
+                .route("/cert-modes/definitions", web::get().to(list_mode_definitions))
+                .route("/cert-modes/definitions", web::put().to(update_mode_definitions))
+                .route("/cloudflare-ranges", web::get().to(get_cf_ranges))
+                .route("/cloudflare-ranges/refresh", web::post().to(refresh_cf_ranges_handler))
                 .route("/{domain}", web::get().to(get_certificate))
                 .route("/{domain}/validate", web::post().to(validate_certificate))
                 .route("/{domain}/renew", web::post().to(renew_certificate_handler))
                 .route("/{domain}/force-renew", web::post().to(force_renew_certificate))
                 .route("/{domain}/revoke", web::post().to(revoke_certificate_handler))
                 .route("/{domain}/swap", web::post().to(swap_certificate_handler))
-                .route("/{domain}/rollback", web::post().to(rollback_certificate_handler)),
+                .route("/{domain}/rollback", web::post().to(rollback_certificate_handler))
+                .route("/{domain}/cert-mode", web::get().to(get_cert_mode))
+                .route("/{domain}/cert-mode", web::put().to(set_cert_mode))
+                .route("/{domain}/cert-mode/custom-upload", web::post().to(upload_custom_cert))
+                .route("/{domain}/detect-cloudflare", web::post().to(detect_cloudflare_handler))
+                .route("/{domain}/cloudflare-detection", web::get().to(get_cloudflare_detection))
+                .route("/{domain}/cloudflare-detection/recheck", web::post().to(recheck_cloudflare_handler)),
         );
     }
 
@@ -1807,6 +3230,17 @@ impl Module for CertificatesModule {
             RouteInfo { method: "POST", path: "/api/v1/certificates/{domain}/revoke", owner: "certificates", description: "Revoke one certificate" },
             RouteInfo { method: "POST", path: "/api/v1/certificates/{domain}/swap", owner: "certificates", description: "Swap the live certificate (validated first, rollback on failure)" },
             RouteInfo { method: "POST", path: "/api/v1/certificates/{domain}/rollback", owner: "certificates", description: "Restore the previous live certificate" },
+            RouteInfo { method: "GET", path: "/api/v1/certificates/cert-modes", owner: "certificates", description: "List per-domain certificate modes (paginated, tenant-scoped)" },
+            RouteInfo { method: "GET", path: "/api/v1/certificates/cert-modes/definitions", owner: "certificates", description: "Certificate-mode registry definitions" },
+            RouteInfo { method: "PUT", path: "/api/v1/certificates/cert-modes/definitions", owner: "certificates", description: "Replace the certificate-mode registry (admin)" },
+            RouteInfo { method: "GET", path: "/api/v1/certificates/cloudflare-ranges", owner: "certificates", description: "Stored Cloudflare IP-range snapshot with fetch date" },
+            RouteInfo { method: "POST", path: "/api/v1/certificates/cloudflare-ranges/refresh", owner: "certificates", description: "Refresh the Cloudflare IP-range snapshot from the published lists" },
+            RouteInfo { method: "GET", path: "/api/v1/certificates/{domain}/cert-mode", owner: "certificates", description: "One domain's certificate mode plus mode history" },
+            RouteInfo { method: "PUT", path: "/api/v1/certificates/{domain}/cert-mode", owner: "certificates", description: "Set a domain's certificate mode (ACME issuance for letsencrypt modes)" },
+            RouteInfo { method: "POST", path: "/api/v1/certificates/{domain}/cert-mode/custom-upload", owner: "certificates", description: "Upload a custom certificate for a domain (validated first, rollback on failure)" },
+            RouteInfo { method: "POST", path: "/api/v1/certificates/{domain}/detect-cloudflare", owner: "certificates", description: "Detect Cloudflare usage for a domain (DNS ranges, live probe, API check)" },
+            RouteInfo { method: "GET", path: "/api/v1/certificates/{domain}/cloudflare-detection", owner: "certificates", description: "Stored Cloudflare detection result for a domain" },
+            RouteInfo { method: "POST", path: "/api/v1/certificates/{domain}/cloudflare-detection/recheck", owner: "certificates", description: "Re-run Cloudflare detection for a domain" },
         ]
     }
 }

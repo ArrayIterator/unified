@@ -10,17 +10,39 @@
 // registration or rotation time, and is never logged or returned again.
 // API responses carry only a masked fingerprint of the secret hash.
 //
-// Mutual sync moves versioned items for the domains `config`, `modules`,
-// `software`, `licenses` and `dns_ssl` between nodes. Conflicts are
-// resolved last-write-wins on `updated_at` and every conflict is recorded
-// in the sync log with both versions' timestamps and the winner —
+// Mutual sync moves versioned items for the registered sync domains
+// between nodes. Conflicts are resolved last-write-wins on `updated_at`
+// and every conflict is recorded twice: in the sync log entry and as a
+// first-class conflict record an admin can list, inspect (both
+// payloads) and resolve (`keep_local`, `keep_remote` or `dismiss`) —
 // overwrites are never silent. A dry-run mode reports what would change
 // without applying anything.
 //
+// Reliability: a failed sync domain enters a retry queue with
+// exponential backoff (settings-driven); after the configured maximum
+// attempts it becomes dead-letter — visible to admins, never retried
+// automatically, retryable or discardable by hand. An aggregate sync
+// health endpoint reports node health, failing plans, open conflicts,
+// pending retries and dead-letters at a glance.
+//
+// All behaviour knobs (timeouts, replay window, failure threshold,
+// retention caps, retry backoff, idempotency TTL) live in `SyncSettings`
+// as data, seeded from configurable defaults and editable by admins
+// through `GET/PUT /sync/settings`. The synced domains themselves live
+// in a registry, seeded with the defaults and editable through
+// `/sync/domains`.
+//
+// Admin endpoints require `X-User-Id` and `X-Role` headers and enforce
+// the `clusters:view` / `clusters:manage` capabilities through the
+// `role.check` hook (fail-closed). Node-to-node endpoints authenticate
+// with HMAC signatures instead; the liveness probe is public.
+// Mutating admin calls accept an `Idempotency-Key` header: replaying a
+// request with the same key returns the stored response instead of
+// running the operation again.
+//
 // Routes under `/api/v1/clusters` (see `ClustersModule::route_info` for
-// the full catalog). State is held in memory until the dedicated
-// migration for this module lands; see the integrator notes in the
-// coordinator report for the migration SQL and schema entries.
+// the full catalog). State is held in memory; the matching tables live
+// in migrations `000008_clusters` and `000074_cluster_sync_reliability`.
 
 use crate::core::context::AppContext;
 use crate::core::error::{UnifiedError, UnifiedResult};
@@ -41,24 +63,62 @@ use uuid::Uuid;
 
 type HmacSha256 = Hmac<Sha256>;
 
-/// Sync payload domains. Keep in sync with the integrator migration.
-pub const SYNC_DOMAINS: [&str; 5] = ["config", "modules", "software", "licenses", "dns_ssl"];
+/// Sync payload domains seeded into the domain registry at startup.
+/// The registry is the source of truth at runtime: admins can register
+/// or unregister domains through the API, and these values are only the
+/// configurable defaults. Keep in sync with the integrator migration.
+pub const DEFAULT_SYNC_DOMAINS: [&str; 5] = ["config", "modules", "software", "licenses", "dns_ssl"];
 
 /// Envelope version carried by every node-to-node sync payload.
 pub const SYNC_ENVELOPE_VERSION: u32 = 1;
 
-/// Maximum age in seconds of a signed node-to-node request.
-pub const REPLAY_WINDOW_SECS: i64 = 300;
+/// Configurable defaults for sync behaviour. Every value below is a
+/// default only: the live values live in `SyncSettings` on the module
+/// state and are editable by admins through `GET/PUT /sync/settings`.
+/// Nothing here is a hard-coded rule.
+pub const DEFAULT_REPLAY_WINDOW_SECS: i64 = 300;
 /// HTTP timeout for node health probes.
-pub const HEALTH_TIMEOUT_SECS: u64 = 5;
+pub const DEFAULT_HEALTH_TIMEOUT_SECS: u64 = 5;
 /// HTTP timeout for sync calls between nodes.
-pub const SYNC_TIMEOUT_SECS: u64 = 30;
+pub const DEFAULT_SYNC_TIMEOUT_SECS: u64 = 30;
 /// Consecutive failed probes before a node is `unhealthy`.
-pub const HEALTH_FAILURE_THRESHOLD: u32 = 3;
+pub const DEFAULT_HEALTH_FAILURE_THRESHOLD: u32 = 3;
 /// Maximum sync log entries retained in memory.
-pub const MAX_SYNC_LOGS: usize = 1000;
+pub const DEFAULT_MAX_SYNC_LOGS: usize = 1000;
 /// Maximum health-check history entries retained in memory.
-pub const MAX_HEALTH_HISTORY: usize = 5000;
+pub const DEFAULT_MAX_HEALTH_HISTORY: usize = 5000;
+/// Maximum conflict records retained in memory.
+pub const DEFAULT_MAX_CONFLICTS: usize = 5000;
+/// Maximum retry-queue entries retained in memory.
+pub const DEFAULT_MAX_RETRIES: usize = 5000;
+/// Maximum idempotency records retained in memory.
+pub const DEFAULT_MAX_IDEMPOTENCY_RECORDS: usize = 5000;
+/// Maximum failed attempts before a retry entry becomes dead-letter.
+pub const DEFAULT_RETRY_MAX_ATTEMPTS: u32 = 5;
+/// Base delay in seconds before the first retry.
+pub const DEFAULT_RETRY_BASE_DELAY_SECS: u64 = 60;
+/// Upper bound in seconds for the exponential backoff delay.
+pub const DEFAULT_RETRY_MAX_DELAY_SECS: u64 = 3600;
+/// Backoff multiplier applied per attempt.
+pub const DEFAULT_RETRY_BACKOFF_MULTIPLIER: f64 = 2.0;
+/// How long an idempotency key stays valid, in seconds (24 hours).
+pub const DEFAULT_IDEMPOTENCY_TTL_SECS: i64 = 86_400;
+
+/// Capabilities enforced on the admin endpoints of this module. Reads
+/// require `clusters:view`; every write requires `clusters:manage`.
+/// Node-to-node endpoints (`/sync/receive`, `/sync/export`) do not use
+/// these: they authenticate with HMAC node signatures instead. The
+/// liveness probe (`/health`) is intentionally public.
+pub const PERM_CLUSTERS_VIEW: &str = "clusters:view";
+pub const PERM_CLUSTERS_MANAGE: &str = "clusters:manage";
+
+/// Header carrying a client-chosen idempotency key for mutating admin
+/// calls. Replaying a request with the same key returns the stored
+/// response instead of running the operation again.
+pub const HEADER_IDEMPOTENCY_KEY: &str = "Idempotency-Key";
+pub const HEADER_IDEMPOTENCY_KEY_ALT: &str = "X-Idempotency-Key";
+/// Maximum length of an idempotency key.
+pub const MAX_IDEMPOTENCY_KEY_LEN: usize = 128;
 
 /// Hook events emitted by this module.
 pub const CLUSTER_CREATED: &str = "cluster.created";
@@ -70,6 +130,11 @@ pub const CLUSTER_SYNC_STARTED: &str = "cluster.sync.started";
 pub const CLUSTER_SYNC_COMPLETED: &str = "cluster.sync.completed";
 pub const CLUSTER_SYNC_FAILED: &str = "cluster.sync.failed";
 pub const CLUSTER_SYNC_CONFLICT: &str = "cluster.sync.conflict";
+pub const CLUSTER_SYNC_CONFLICT_RESOLVED: &str = "cluster.sync.conflict.resolved";
+pub const CLUSTER_SYNC_RETRY_QUEUED: &str = "cluster.sync.retry.queued";
+pub const CLUSTER_SYNC_DEAD_LETTER: &str = "cluster.sync.dead_letter";
+pub const CLUSTER_SYNC_RETRY_DUE: &str = "cluster.sync.retry_due";
+pub const CLUSTER_SYNC_SETTINGS_UPDATED: &str = "cluster.sync.settings.updated";
 /// Hook events this module listens to (emitted by the scheduler or by
 /// operators through the hook bus) for background work.
 pub const CLUSTER_HEALTH_CHECK_REQUESTED: &str = "cluster.health.check_requested";
@@ -186,25 +251,41 @@ fn validate_base_url(value: &str) -> UnifiedResult<String> {
     Ok(url.trim_end_matches('/').to_string())
 }
 
-fn validate_domain(domain: &str) -> UnifiedResult<String> {
+/// Validate a sync domain against the registered domain registry
+/// (admin-editable; seeded with `DEFAULT_SYNC_DOMAINS`).
+fn validate_domain(state: &Arc<ClustersState>, domain: &str) -> UnifiedResult<String> {
     let domain = domain.trim().to_string();
-    if !SYNC_DOMAINS.contains(&domain.as_str()) {
+    let known: Vec<String> = {
+        let mut known: Vec<String> = state
+            .domains
+            .read()
+            .expect("domains lock poisoned")
+            .iter()
+            .cloned()
+            .collect();
+        known.sort();
+        known
+    };
+    if !known.iter().any(|known| known == &domain) {
         return Err(UnifiedError::bad_request(format!(
             "Unknown sync domain: {domain}. Known domains: {}",
-            SYNC_DOMAINS.join(", ")
+            known.join(", ")
         )));
     }
     Ok(domain)
 }
 
-fn validate_domains(domains: Vec<String>) -> UnifiedResult<Vec<String>> {
+fn validate_domains(
+    state: &Arc<ClustersState>,
+    domains: Vec<String>,
+) -> UnifiedResult<Vec<String>> {
     if domains.is_empty() {
         return Err(UnifiedError::bad_request("At least one sync domain is required"));
     }
     let mut seen: HashSet<String> = HashSet::new();
     let mut out: Vec<String> = Vec::new();
     for domain in domains {
-        let domain = validate_domain(&domain)?;
+        let domain = validate_domain(state, &domain)?;
         if seen.insert(domain.clone()) {
             out.push(domain);
         }
@@ -247,6 +328,231 @@ fn paginate<T: Serialize + Clone>(items: Vec<T>, params: &PaginationParams) -> P
         .take(pagination.per_page as usize)
         .collect();
     PageResult::new(page_items, total, &pagination)
+}
+
+// ---------------------------------------------------------------------------
+// Caller identity and capability checks.
+//
+// Admin endpoints require `X-User-Id` and `X-Role` headers. The role is
+// checked through the `role.check` hook answered by the roles module.
+// The check fails closed: no answer means not allowed. Node-to-node
+// endpoints do not use this; they authenticate with HMAC signatures.
+// ---------------------------------------------------------------------------
+
+struct Caller {
+    actor: String,
+    role: String,
+}
+
+fn caller(req: &HttpRequest) -> UnifiedResult<Caller> {
+    let actor = req
+        .headers()
+        .get("x-user-id")
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+        .ok_or_else(|| UnifiedError::unauthorized("Missing X-User-Id header"))?;
+    let role = req
+        .headers()
+        .get("x-role")
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+        .ok_or_else(|| UnifiedError::unauthorized("Missing X-Role header"))?;
+    Ok(Caller { actor, role })
+}
+
+fn check_capability(ctx: &AppContext, role: &str, permission: &str) -> bool {
+    let context = ctx.hooks.emit(
+        "role.check",
+        json!({ "role": role, "permission": permission, "allowed": false }),
+    );
+    context
+        .get("allowed")
+        .and_then(|value| value.as_bool())
+        .unwrap_or(false)
+}
+
+fn require_permission(
+    ctx: &AppContext,
+    req: &HttpRequest,
+    permission: &str,
+) -> UnifiedResult<()> {
+    let who = caller(req)?;
+    if check_capability(ctx, &who.role, permission) {
+        Ok(())
+    } else {
+        Err(UnifiedError::forbidden(format!(
+            "Role \"{}\" does not hold permission \"{}\"",
+            who.role, permission
+        )))
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Configurable sync settings.
+//
+// All behaviour knobs live here as data, seeded from the defaults above
+// and editable at runtime through `GET/PUT /api/v1/clusters/sync/settings`.
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SyncSettings {
+    pub replay_window_secs: i64,
+    pub health_timeout_secs: u64,
+    pub sync_timeout_secs: u64,
+    pub health_failure_threshold: u32,
+    pub max_sync_logs: usize,
+    pub max_health_history: usize,
+    pub max_conflicts: usize,
+    pub max_retries: usize,
+    pub max_idempotency_records: usize,
+    pub retry_max_attempts: u32,
+    pub retry_base_delay_secs: u64,
+    pub retry_max_delay_secs: u64,
+    pub retry_backoff_multiplier: f64,
+    pub idempotency_ttl_secs: i64,
+}
+
+impl Default for SyncSettings {
+    fn default() -> Self {
+        Self {
+            replay_window_secs: DEFAULT_REPLAY_WINDOW_SECS,
+            health_timeout_secs: DEFAULT_HEALTH_TIMEOUT_SECS,
+            sync_timeout_secs: DEFAULT_SYNC_TIMEOUT_SECS,
+            health_failure_threshold: DEFAULT_HEALTH_FAILURE_THRESHOLD,
+            max_sync_logs: DEFAULT_MAX_SYNC_LOGS,
+            max_health_history: DEFAULT_MAX_HEALTH_HISTORY,
+            max_conflicts: DEFAULT_MAX_CONFLICTS,
+            max_retries: DEFAULT_MAX_RETRIES,
+            max_idempotency_records: DEFAULT_MAX_IDEMPOTENCY_RECORDS,
+            retry_max_attempts: DEFAULT_RETRY_MAX_ATTEMPTS,
+            retry_base_delay_secs: DEFAULT_RETRY_BASE_DELAY_SECS,
+            retry_max_delay_secs: DEFAULT_RETRY_MAX_DELAY_SECS,
+            retry_backoff_multiplier: DEFAULT_RETRY_BACKOFF_MULTIPLIER,
+            idempotency_ttl_secs: DEFAULT_IDEMPOTENCY_TTL_SECS,
+        }
+    }
+}
+
+impl SyncSettings {
+    /// Delay before attempt `attempt` (1-based) under exponential
+    /// backoff, capped at `retry_max_delay_secs`. Attempt 1 waits the
+    /// base delay; each later attempt multiplies by the backoff factor.
+    fn retry_delay_secs(&self, attempt: u32) -> u64 {
+        if attempt == 0 {
+            return self.retry_base_delay_secs;
+        }
+        let mut delay = self.retry_base_delay_secs as f64;
+        for _ in 1..attempt {
+            delay *= self.retry_backoff_multiplier;
+            if delay >= self.retry_max_delay_secs as f64 {
+                return self.retry_max_delay_secs;
+            }
+        }
+        (delay as u64).min(self.retry_max_delay_secs)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Conflict records, retry-queue entries, idempotency records.
+// ---------------------------------------------------------------------------
+
+/// One sync conflict, stored on its own so an admin can see and resolve
+/// it. Conflicts are also embedded in the sync log entry that produced
+/// them, but the log rotates; this record is the durable view and the
+/// only one the admin resolves. `status` is `open`, `resolved` or
+/// `dismissed`. `resolution` records the admin's choice (`keep_local`,
+/// `keep_remote` or `dismiss`) together with who decided and when.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SyncConflictRecord {
+    pub id: Uuid,
+    pub log_id: Option<Uuid>,
+    pub plan_id: Option<Uuid>,
+    pub cluster_id: Uuid,
+    pub node_id: Option<Uuid>,
+    pub domain: String,
+    pub key: String,
+    pub local_updated_at: Option<DateTime<Utc>>,
+    pub remote_updated_at: Option<DateTime<Utc>>,
+    /// `local` or `remote`: which version won the automatic
+    /// last-write-wins decision.
+    pub winner: String,
+    pub reason: String,
+    /// The payloads that disagreed, kept so a resolution can actually
+    /// apply the losing side instead of only marking the conflict.
+    pub local_payload: Option<Value>,
+    pub remote_payload: Option<Value>,
+    pub status: String,
+    pub resolution: Option<String>,
+    pub resolved_by: Option<String>,
+    pub resolved_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+}
+
+/// One failed sync domain waiting for retry. `status` is `pending`,
+/// `retrying`, `completed`, `dead_letter` or `discarded`. A pending
+/// entry becomes `dead_letter` once `attempt` reaches the configured
+/// maximum; dead-letter entries are visible to admins and are never
+/// retried automatically again — an admin must retry or discard them.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SyncRetryEntry {
+    pub id: Uuid,
+    pub plan_id: Uuid,
+    pub cluster_id: Uuid,
+    pub node_id: Option<Uuid>,
+    pub domain: String,
+    pub direction: String,
+    pub attempt: u32,
+    pub max_attempts: u32,
+    pub next_retry_at: DateTime<Utc>,
+    pub last_error: Option<String>,
+    pub status: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// One stored response for a replayed idempotent request. `scope`
+/// namespaces the key (for example `clusters:create` or
+/// `clusters:sync:run:<plan-id>`), so the same key can be reused safely
+/// across different operations.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IdempotencyRecord {
+    pub scope: String,
+    pub key: String,
+    pub status: u16,
+    pub body: Value,
+    pub created_at: DateTime<Utc>,
+    pub expires_at: DateTime<Utc>,
+}
+
+/// Read and validate the idempotency key from the request headers.
+/// Returns `Ok(None)` when no key was sent (the call runs normally),
+/// `Ok(Some(key))` for a usable key, and an error for a malformed one.
+fn idempotency_key_from(req: &HttpRequest) -> UnifiedResult<Option<String>> {
+    let raw = req
+        .headers()
+        .get(HEADER_IDEMPOTENCY_KEY)
+        .or_else(|| req.headers().get(HEADER_IDEMPOTENCY_KEY_ALT))
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)
+        .filter(|value| !value.is_empty());
+    let Some(key) = raw else {
+        return Ok(None);
+    };
+    if key.len() > MAX_IDEMPOTENCY_KEY_LEN {
+        return Err(UnifiedError::bad_request(
+            "Idempotency-Key is too long (maximum 128 characters)",
+        ));
+    }
+    if key.contains(char::is_whitespace) {
+        return Err(UnifiedError::bad_request(
+            "Idempotency-Key must not contain whitespace",
+        ));
+    }
+    Ok(Some(key.to_string()))
 }
 
 // ---------------------------------------------------------------------------
@@ -384,6 +690,18 @@ pub struct ClustersState {
     local_items: RwLock<HashMap<String, HashMap<String, SyncItem>>>,
     /// Nonces seen within the replay window, for replay protection.
     used_nonces: RwLock<HashMap<String, DateTime<Utc>>>,
+    /// Live sync settings (admin-editable; seeded from the defaults).
+    settings: RwLock<SyncSettings>,
+    /// Registered sync domains. Seeded with `DEFAULT_SYNC_DOMAINS`;
+    /// admins can register or unregister domains through the API.
+    domains: RwLock<HashSet<String>>,
+    /// Conflict records, independent of the rotating sync log.
+    conflicts: RwLock<Vec<SyncConflictRecord>>,
+    /// Failed-sync retry queue, including dead-letter entries.
+    retries: RwLock<Vec<SyncRetryEntry>>,
+    /// Stored responses for idempotent admin writes, keyed by
+    /// (scope, key).
+    idempotency: RwLock<HashMap<(String, String), IdempotencyRecord>>,
 }
 
 impl ClustersState {
@@ -397,6 +715,11 @@ impl ClustersState {
             health_history: RwLock::new(Vec::new()),
             local_items: RwLock::new(HashMap::new()),
             used_nonces: RwLock::new(HashMap::new()),
+            settings: RwLock::new(SyncSettings::default()),
+            domains: RwLock::new(DEFAULT_SYNC_DOMAINS.iter().map(|d| d.to_string()).collect()),
+            conflicts: RwLock::new(Vec::new()),
+            retries: RwLock::new(Vec::new()),
+            idempotency: RwLock::new(HashMap::new()),
         }
     }
 
@@ -420,21 +743,261 @@ impl ClustersState {
         );
     }
 
+    fn settings(&self) -> SyncSettings {
+        self.settings
+            .read()
+            .expect("settings lock poisoned")
+            .clone()
+    }
+
     fn push_log(&self, entry: SyncLogEntry) {
+        let max = self.settings().max_sync_logs;
         let mut logs = self.logs.write().expect("logs lock poisoned");
         logs.push(entry);
-        if logs.len() > MAX_SYNC_LOGS {
-            let excess = logs.len() - MAX_SYNC_LOGS;
+        if logs.len() > max {
+            let excess = logs.len() - max;
             logs.drain(..excess);
         }
     }
 
     fn push_health(&self, entry: HealthCheckEntry) {
+        let max = self.settings().max_health_history;
         let mut history = self.health_history.write().expect("health lock poisoned");
         history.push(entry);
-        if history.len() > MAX_HEALTH_HISTORY {
-            let excess = history.len() - MAX_HEALTH_HISTORY;
+        if history.len() > max {
+            let excess = history.len() - max;
             history.drain(..excess);
+        }
+    }
+
+    /// Look up a stored idempotent response. Expired records are pruned
+    /// on access. Returns the stored status and response body.
+    fn idempotency_lookup(&self, scope: &str, key: &str) -> Option<(u16, Value)> {
+        let mut store = self.idempotency.write().expect("idempotency lock poisoned");
+        let now = Utc::now();
+        store.retain(|_, record| record.expires_at > now);
+        store
+            .get(&(scope.to_string(), key.to_string()))
+            .map(|record| (record.status, record.body.clone()))
+    }
+
+    /// Store the response of an idempotent write for later replays.
+    fn idempotency_store(&self, scope: &str, key: &str, status: u16, body: Value) {
+        let settings = self.settings();
+        let now = Utc::now();
+        let record = IdempotencyRecord {
+            scope: scope.to_string(),
+            key: key.to_string(),
+            status,
+            body,
+            created_at: now,
+            expires_at: now + chrono::Duration::seconds(settings.idempotency_ttl_secs),
+        };
+        let mut store = self.idempotency.write().expect("idempotency lock poisoned");
+        store.insert((scope.to_string(), key.to_string()), record);
+        if store.len() > settings.max_idempotency_records {
+            let mut records: Vec<IdempotencyRecord> =
+                store.values().cloned().collect();
+            records.sort_by(|a, b| a.created_at.cmp(&b.created_at));
+            let excess = store.len() - settings.max_idempotency_records;
+            for stale in records.into_iter().take(excess) {
+                store.remove(&(stale.scope, stale.key));
+            }
+        }
+    }
+
+    /// Record conflicts as first-class records an admin can list and
+    /// resolve. `local_payloads` / `remote_payloads` map conflict keys
+    /// to the payloads that disagreed, when the caller has them.
+    fn record_conflicts(
+        &self,
+        log_id: Option<Uuid>,
+        plan_id: Option<Uuid>,
+        cluster_id: Uuid,
+        node_id: Option<Uuid>,
+        conflicts: &[SyncConflict],
+        local_payloads: &HashMap<String, Value>,
+        remote_payloads: &HashMap<String, Value>,
+    ) {
+        if conflicts.is_empty() {
+            return;
+        }
+        let max = self.settings().max_conflicts;
+        let mut store = self.conflicts.write().expect("conflicts lock poisoned");
+        for conflict in conflicts {
+            store.push(SyncConflictRecord {
+                id: Uuid::now_v7(),
+                log_id,
+                plan_id,
+                cluster_id,
+                node_id,
+                domain: conflict.domain.clone(),
+                key: conflict.key.clone(),
+                local_updated_at: conflict.local_updated_at,
+                remote_updated_at: conflict.remote_updated_at,
+                winner: conflict.winner.clone(),
+                reason: conflict.reason.clone(),
+                local_payload: local_payloads.get(&conflict.key).cloned(),
+                remote_payload: remote_payloads.get(&conflict.key).cloned(),
+                status: "open".to_string(),
+                resolution: None,
+                resolved_by: None,
+                resolved_at: None,
+                created_at: now(),
+            });
+        }
+        if store.len() > max {
+            let excess = store.len() - max;
+            store.drain(..excess);
+        }
+    }
+
+    /// Queue (or re-queue) a failed sync domain for retry with
+    /// exponential backoff. An existing pending entry for the same plan
+    /// and domain is updated in place so a repeatedly failing domain
+    /// keeps one queue entry, not one per failure. Once the attempt
+    /// count reaches the configured maximum the entry becomes
+    /// dead-letter: visible to admins, never retried automatically.
+    fn enqueue_retry(
+        &self,
+        plan_id: Uuid,
+        cluster_id: Uuid,
+        node_id: Option<Uuid>,
+        domain: &str,
+        direction: &str,
+        error: &str,
+    ) -> SyncRetryEntry {
+        let settings = self.settings();
+        let now = now();
+        let mut queue = self.retries.write().expect("retries lock poisoned");
+        if let Some(entry) = queue.iter_mut().find(|entry| {
+            entry.plan_id == plan_id
+                && entry.domain == domain
+                && matches!(entry.status.as_str(), "pending" | "retrying")
+        }) {
+            entry.attempt += 1;
+            entry.last_error = Some(error.to_string());
+            entry.updated_at = now;
+            if entry.attempt >= entry.max_attempts {
+                entry.status = "dead_letter".to_string();
+                entry.next_retry_at = now;
+            } else {
+                entry.status = "pending".to_string();
+                entry.next_retry_at =
+                    now + chrono::Duration::seconds(settings.retry_delay_secs(entry.attempt) as i64);
+            }
+            let updated = entry.clone();
+            drop(queue);
+            if updated.status == "dead_letter" {
+                self.emit(
+                    CLUSTER_SYNC_DEAD_LETTER,
+                    json!({
+                        "retry_id": updated.id,
+                        "plan_id": plan_id,
+                        "cluster_id": cluster_id,
+                        "domain": domain,
+                        "attempt": updated.attempt,
+                        "last_error": error,
+                    }),
+                );
+                self.request_notification(
+                    "Cluster sync dead-letter",
+                    &format!(
+                        "Sync of domain {domain} for plan {plan_id} failed {} times and is now dead-letter: {error}",
+                        updated.attempt
+                    ),
+                    "cluster.sync.dead_letter",
+                );
+            } else {
+                self.emit(
+                    CLUSTER_SYNC_RETRY_QUEUED,
+                    json!({
+                        "retry_id": updated.id,
+                        "plan_id": plan_id,
+                        "cluster_id": cluster_id,
+                        "domain": domain,
+                        "attempt": updated.attempt,
+                        "next_retry_at": updated.next_retry_at,
+                    }),
+                );
+            }
+            return updated;
+        }
+        let attempt: u32 = 1;
+        let entry = SyncRetryEntry {
+            id: Uuid::now_v7(),
+            plan_id,
+            cluster_id,
+            node_id,
+            domain: domain.to_string(),
+            direction: direction.to_string(),
+            attempt,
+            max_attempts: settings.retry_max_attempts,
+            next_retry_at: now
+                + chrono::Duration::seconds(settings.retry_delay_secs(attempt) as i64),
+            last_error: Some(error.to_string()),
+            status: if attempt >= settings.retry_max_attempts {
+                "dead_letter".to_string()
+            } else {
+                "pending".to_string()
+            },
+            created_at: now,
+            updated_at: now,
+        };
+        queue.push(entry.clone());
+        if queue.len() > settings.max_retries {
+            let excess = queue.len() - settings.max_retries;
+            queue.drain(..excess);
+        }
+        drop(queue);
+        if entry.status == "dead_letter" {
+            self.emit(
+                CLUSTER_SYNC_DEAD_LETTER,
+                json!({
+                    "retry_id": entry.id,
+                    "plan_id": plan_id,
+                    "cluster_id": cluster_id,
+                    "domain": domain,
+                    "attempt": entry.attempt,
+                    "last_error": error,
+                }),
+            );
+            self.request_notification(
+                "Cluster sync dead-letter",
+                &format!(
+                    "Sync of domain {domain} for plan {plan_id} failed {} times and is now dead-letter: {error}",
+                    entry.attempt
+                ),
+                "cluster.sync.dead_letter",
+            );
+        } else {
+            self.emit(
+                CLUSTER_SYNC_RETRY_QUEUED,
+                json!({
+                    "retry_id": entry.id,
+                    "plan_id": plan_id,
+                    "cluster_id": cluster_id,
+                    "domain": domain,
+                    "attempt": entry.attempt,
+                    "next_retry_at": entry.next_retry_at,
+                }),
+            );
+        }
+        entry
+    }
+
+    /// Mark the pending retry entry for a plan/domain completed after a
+    /// successful run, so a later failure starts a fresh attempt count.
+    fn complete_retry(&self, plan_id: Uuid, domain: &str) {
+        let mut queue = self.retries.write().expect("retries lock poisoned");
+        for entry in queue.iter_mut() {
+            if entry.plan_id == plan_id
+                && entry.domain == domain
+                && matches!(entry.status.as_str(), "pending" | "retrying")
+            {
+                entry.status = "completed".to_string();
+                entry.updated_at = now();
+            }
         }
     }
 }
@@ -503,13 +1066,13 @@ fn verify_node_request(
     }
 
     let now_unix = Utc::now().timestamp();
-    if (now_unix - timestamp).abs() > REPLAY_WINDOW_SECS {
+    if (now_unix - timestamp).abs() > state.settings().replay_window_secs {
         return Err(UnifiedError::unauthorized("Request timestamp outside the replay window"));
     }
 
     {
         let mut nonces = state.used_nonces.write().expect("nonce lock poisoned");
-        let cutoff = Utc::now() - chrono::Duration::seconds(REPLAY_WINDOW_SECS);
+        let cutoff = Utc::now() - chrono::Duration::seconds(state.settings().replay_window_secs);
         nonces.retain(|_, seen| *seen > cutoff);
         if nonces.contains_key(&nonce) {
             return Err(UnifiedError::unauthorized("Request nonce has already been used"));
@@ -548,7 +1111,7 @@ async fn probe_node(state: &Arc<ClustersState>, node_id: Uuid) -> UnifiedResult<
     }
     let url = join_url(&node.base_url, "/api/v1/clusters/health");
     let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(HEALTH_TIMEOUT_SECS))
+        .timeout(Duration::from_secs(state.settings().health_timeout_secs))
         .build()
         .map_err(|error| UnifiedError::internal(format!("Failed to build HTTP client: {error}")))?;
     let started = Instant::now();
@@ -582,7 +1145,7 @@ async fn probe_node(state: &Arc<ClustersState>, node_id: Uuid) -> UnifiedResult<
             entry.last_latency_ms = Some(latency_ms);
         } else {
             entry.consecutive_failures += 1;
-            if entry.consecutive_failures >= HEALTH_FAILURE_THRESHOLD {
+            if entry.consecutive_failures >= state.settings().health_failure_threshold {
                 entry.health = "unhealthy".to_string();
             } else {
                 entry.health = "degraded".to_string();
@@ -822,7 +1385,7 @@ async fn fetch_remote_export(
     if let Some(since) = since {
         url.push_str(&format!("&since={}", since.to_rfc3339()));
     }
-    let client = http_client(SYNC_TIMEOUT_SECS)?;
+    let client = http_client(state.settings().sync_timeout_secs)?;
     let headers = signed_headers(state, plan, &[])?;
     let mut request = client.get(&url);
     for (name, value) in headers {
@@ -872,7 +1435,7 @@ async fn push_domain(
         "sent_at": Utc::now(),
     });
     let body = serde_json::to_vec(&envelope).unwrap_or_default();
-    let client = match http_client(SYNC_TIMEOUT_SECS) {
+    let client = match http_client(state.settings().sync_timeout_secs) {
         Ok(client) => client,
         Err(error) => return (0, 0, 0, vec![error.message]),
     };
@@ -992,6 +1555,8 @@ async fn execute_sync(
         };
         let mut domain_errors: Vec<String> = Vec::new();
         let mut domain_conflicts: Vec<SyncConflict> = Vec::new();
+        let mut local_payloads: HashMap<String, Value> = HashMap::new();
+        let mut remote_payloads: HashMap<String, Value> = HashMap::new();
 
         if dry_run {
             match fetch_remote_export(state, &plan, &node, domain, None).await {
@@ -1025,6 +1590,13 @@ async fn execute_sync(
                 match fetch_remote_export(state, &plan, &node, domain, plan.last_success_at).await {
                     Ok(remote) => {
                         summary.items_received += remote.len() as u64;
+                        local_payloads = local_items_for_domain(state, domain)
+                            .into_iter()
+                            .map(|item| (item.key, item.payload))
+                            .collect();
+                        for item in &remote {
+                            remote_payloads.insert(item.key.clone(), item.payload.clone());
+                        }
                         let (applied, skipped, conflicts) =
                             apply_incoming_items(state, domain, &remote);
                         summary.items_applied += applied;
@@ -1044,8 +1616,23 @@ async fn execute_sync(
         all_conflicts.extend(domain_conflicts.clone());
         all_errors.extend(domain_errors.clone());
         let finished_at = now();
+        let log_id = Uuid::now_v7();
+        // Real (non-dry-run) conflicts become first-class records an
+        // admin can list and resolve; dry-run conflicts are previews
+        // only and are reported in the run summary, not stored.
+        if !dry_run && !domain_conflicts.is_empty() {
+            state.record_conflicts(
+                Some(log_id),
+                Some(plan.id),
+                plan.cluster_id,
+                Some(node.id),
+                &domain_conflicts,
+                &local_payloads,
+                &remote_payloads,
+            );
+        }
         state.push_log(SyncLogEntry {
-            id: Uuid::now_v7(),
+            id: log_id,
             plan_id: Some(plan.id),
             cluster_id: plan.cluster_id,
             node_id: Some(node.id),
@@ -1066,6 +1653,28 @@ async fn execute_sync(
             started_at: domain_started,
             finished_at,
         });
+        // A failed domain enters the retry queue with exponential
+        // backoff; a successful run clears any pending retry for the
+        // same plan and domain. Dry runs never queue retries.
+        if !dry_run {
+            if summary.status == "failed" {
+                let error_text = if domain_errors.is_empty() {
+                    "Sync failed".to_string()
+                } else {
+                    domain_errors.join("; ")
+                };
+                state.enqueue_retry(
+                    plan.id,
+                    plan.cluster_id,
+                    Some(node.id),
+                    domain,
+                    &plan.direction,
+                    &error_text,
+                );
+            } else {
+                state.complete_retry(plan.id, domain);
+            }
+        }
         domain_summaries.push(summary);
     }
 
@@ -1263,10 +1872,14 @@ struct ExportQuery {
 
 async fn list_clusters(
     ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
     state: web::Data<Arc<ClustersState>>,
     params: web::Query<PaginationParams>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
+    if let Err(error) = require_permission(&ctx, &req, PERM_CLUSTERS_VIEW) {
+        return json::error_response(&error, debug);
+    }
     let result: UnifiedResult<Value> = (|| {
         let mut items: Vec<ClusterState> = state
             .clusters
@@ -1299,10 +1912,24 @@ async fn list_clusters(
 
 async fn create_cluster(
     ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
     state: web::Data<Arc<ClustersState>>,
     body: web::Json<CreateClusterRequest>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
+    if let Err(error) = require_permission(&ctx, &req, PERM_CLUSTERS_MANAGE) {
+        return json::error_response(&error, debug);
+    }
+    let idempotency_key = match idempotency_key_from(&req) {
+        Ok(key) => key,
+        Err(error) => return json::error_response(&error, debug),
+    };
+    let idempotency_scope = "clusters:create";
+    if let Some(key) = &idempotency_key {
+        if let Some((status, body)) = state.idempotency_lookup(idempotency_scope, key) {
+            return json::success_response(body, status);
+        }
+    }
     let result: UnifiedResult<ClusterState> = (|| {
         let name = require_non_empty(&body.name, "name")?;
         if name.len() > 128 {
@@ -1343,17 +1970,31 @@ async fn create_cluster(
         Ok(cluster)
     })();
     match result {
-        Ok(cluster) => json::success_response(cluster, 201),
+        Ok(cluster) => {
+            if let Some(key) = &idempotency_key {
+                state.idempotency_store(
+                    idempotency_scope,
+                    key,
+                    201,
+                    serde_json::to_value(&cluster).unwrap_or(Value::Null),
+                );
+            }
+            json::success_response(cluster, 201)
+        }
         Err(error) => json::error_response(&error, debug),
     }
 }
 
 async fn get_cluster(
     ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
     state: web::Data<Arc<ClustersState>>,
     id: web::Path<Uuid>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
+    if let Err(error) = require_permission(&ctx, &req, PERM_CLUSTERS_VIEW) {
+        return json::error_response(&error, debug);
+    }
     let result: UnifiedResult<ClusterState> = state
         .clusters
         .read()
@@ -1366,11 +2007,15 @@ async fn get_cluster(
 
 async fn update_cluster(
     ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
     state: web::Data<Arc<ClustersState>>,
     id: web::Path<Uuid>,
     body: web::Json<UpdateClusterRequest>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
+    if let Err(error) = require_permission(&ctx, &req, PERM_CLUSTERS_MANAGE) {
+        return json::error_response(&error, debug);
+    }
     let result: UnifiedResult<ClusterState> = (|| {
         let id = id.into_inner();
         let mut clusters = state.clusters.write().expect("clusters lock poisoned");
@@ -1427,10 +2072,14 @@ async fn update_cluster(
 
 async fn delete_cluster(
     ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
     state: web::Data<Arc<ClustersState>>,
     id: web::Path<Uuid>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
+    if let Err(error) = require_permission(&ctx, &req, PERM_CLUSTERS_MANAGE) {
+        return json::error_response(&error, debug);
+    }
     let result: UnifiedResult<Value> = (|| {
         let id = id.into_inner();
         let removed = state
@@ -1457,10 +2106,14 @@ async fn delete_cluster(
 
 async fn cluster_sync_status(
     ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
     state: web::Data<Arc<ClustersState>>,
     id: web::Path<Uuid>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
+    if let Err(error) = require_permission(&ctx, &req, PERM_CLUSTERS_VIEW) {
+        return json::error_response(&error, debug);
+    }
     let result: UnifiedResult<Value> = (|| {
         let id = id.into_inner();
         let cluster = state
@@ -1492,10 +2145,36 @@ async fn cluster_sync_status(
             .filter(|log| log.status == "completed")
             .map(|log| log.finished_at)
             .max();
-        let conflicts_count: u64 = logs
+        // Open conflicts come from the dedicated conflict store, not
+        // from the rotating log, so they stay visible until resolved.
+        let open_conflicts: u64 = state
+            .conflicts
+            .read()
+            .expect("conflicts lock poisoned")
             .iter()
-            .map(|log| log.conflicts.len() as u64)
-            .sum();
+            .filter(|conflict| conflict.cluster_id == id && conflict.status == "open")
+            .count() as u64;
+        let conflicts_count: u64 = state
+            .conflicts
+            .read()
+            .expect("conflicts lock poisoned")
+            .iter()
+            .filter(|conflict| conflict.cluster_id == id)
+            .count() as u64;
+        let pending_retries: u64 = state
+            .retries
+            .read()
+            .expect("retries lock poisoned")
+            .iter()
+            .filter(|entry| entry.cluster_id == id && entry.status == "pending")
+            .count() as u64;
+        let dead_letters: u64 = state
+            .retries
+            .read()
+            .expect("retries lock poisoned")
+            .iter()
+            .filter(|entry| entry.cluster_id == id && entry.status == "dead_letter")
+            .count() as u64;
         let failures: u64 = logs
             .iter()
             .filter(|log| log.status == "failed")
@@ -1535,6 +2214,9 @@ async fn cluster_sync_status(
             "last_success_at": last_success_at,
             "pending_items": pending_items,
             "conflicts_count": conflicts_count,
+            "open_conflicts": open_conflicts,
+            "pending_retries": pending_retries,
+            "dead_letters": dead_letters,
             "failures": failures,
             "plans": plan_summaries,
         }))
@@ -1548,11 +2230,28 @@ async fn cluster_sync_status(
 
 async fn register_node(
     ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
     state: web::Data<Arc<ClustersState>>,
     cluster_id: web::Path<Uuid>,
     body: web::Json<RegisterNodeRequest>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
+    if let Err(error) = require_permission(&ctx, &req, PERM_CLUSTERS_MANAGE) {
+        return json::error_response(&error, debug);
+    }
+    let idempotency_key = match idempotency_key_from(&req) {
+        Ok(key) => key,
+        Err(error) => return json::error_response(&error, debug),
+    };
+    let idempotency_scope = format!(
+        "clusters:{}:nodes:register",
+        req.match_info().get("id").unwrap_or_default()
+    );
+    if let Some(key) = &idempotency_key {
+        if let Some((status, body)) = state.idempotency_lookup(&idempotency_scope, key) {
+            return json::success_response(body, status);
+        }
+    }
     let result: UnifiedResult<Value> = (|| {
         let cluster_id = cluster_id.into_inner();
         if !state
@@ -1632,18 +2331,32 @@ async fn register_node(
         Ok(json!({ "node": node, "secret": secret }))
     })();
     match result {
-        Ok(value) => json::success_response(value, 201),
+        Ok(value) => {
+            if let Some(key) = &idempotency_key {
+                state.idempotency_store(
+                    &idempotency_scope,
+                    key,
+                    201,
+                    serde_json::to_value(&value).unwrap_or(Value::Null),
+                );
+            }
+            json::success_response(value, 201)
+        }
         Err(error) => json::error_response(&error, debug),
     }
 }
 
 async fn list_nodes(
     ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
     state: web::Data<Arc<ClustersState>>,
     cluster_id: web::Path<Uuid>,
     params: web::Query<PaginationParams>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
+    if let Err(error) = require_permission(&ctx, &req, PERM_CLUSTERS_VIEW) {
+        return json::error_response(&error, debug);
+    }
     let result: UnifiedResult<Value> = (|| {
         let cluster_id = cluster_id.into_inner();
         if !state
@@ -1689,10 +2402,14 @@ async fn list_nodes(
 
 async fn get_node(
     ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
     state: web::Data<Arc<ClustersState>>,
     id: web::Path<Uuid>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
+    if let Err(error) = require_permission(&ctx, &req, PERM_CLUSTERS_VIEW) {
+        return json::error_response(&error, debug);
+    }
     let result: UnifiedResult<NodeState> = state
         .nodes
         .read()
@@ -1705,10 +2422,14 @@ async fn get_node(
 
 async fn revoke_node(
     ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
     state: web::Data<Arc<ClustersState>>,
     id: web::Path<Uuid>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
+    if let Err(error) = require_permission(&ctx, &req, PERM_CLUSTERS_MANAGE) {
+        return json::error_response(&error, debug);
+    }
     let result: UnifiedResult<NodeState> = (|| {
         let id = id.into_inner();
         let mut nodes = state.nodes.write().expect("nodes lock poisoned");
@@ -1735,10 +2456,14 @@ async fn revoke_node(
 
 async fn remove_node(
     ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
     state: web::Data<Arc<ClustersState>>,
     id: web::Path<Uuid>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
+    if let Err(error) = require_permission(&ctx, &req, PERM_CLUSTERS_MANAGE) {
+        return json::error_response(&error, debug);
+    }
     let result: UnifiedResult<Value> = (|| {
         let id = id.into_inner();
         let removed = state
@@ -1768,10 +2493,14 @@ async fn remove_node(
 
 async fn rotate_node_secret(
     ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
     state: web::Data<Arc<ClustersState>>,
     id: web::Path<Uuid>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
+    if let Err(error) = require_permission(&ctx, &req, PERM_CLUSTERS_MANAGE) {
+        return json::error_response(&error, debug);
+    }
     let result: UnifiedResult<Value> = (|| {
         let id = id.into_inner();
         let mut nodes = state.nodes.write().expect("nodes lock poisoned");
@@ -1797,21 +2526,29 @@ async fn rotate_node_secret(
 
 async fn health_check_now(
     ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
     state: web::Data<Arc<ClustersState>>,
     id: web::Path<Uuid>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
+    if let Err(error) = require_permission(&ctx, &req, PERM_CLUSTERS_MANAGE) {
+        return json::error_response(&error, debug);
+    }
     let result: UnifiedResult<HealthCheckEntry> = probe_node(&state, id.into_inner()).await;
     json::respond(result, debug)
 }
 
 async fn node_health_history(
     ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
     state: web::Data<Arc<ClustersState>>,
     id: web::Path<Uuid>,
     params: web::Query<PaginationParams>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
+    if let Err(error) = require_permission(&ctx, &req, PERM_CLUSTERS_VIEW) {
+        return json::error_response(&error, debug);
+    }
     let result: UnifiedResult<Value> = (|| {
         let id = id.into_inner();
         if !state
@@ -1864,10 +2601,14 @@ async fn peer_health(ctx: web::Data<Arc<AppContext>>) -> HttpResponse {
 
 async fn list_plans(
     ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
     state: web::Data<Arc<ClustersState>>,
     params: web::Query<PaginationParams>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
+    if let Err(error) = require_permission(&ctx, &req, PERM_CLUSTERS_VIEW) {
+        return json::error_response(&error, debug);
+    }
     let result: UnifiedResult<Value> = (|| {
         let mut items: Vec<SyncPlanState> = state
             .plans
@@ -1900,10 +2641,24 @@ async fn list_plans(
 
 async fn create_plan(
     ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
     state: web::Data<Arc<ClustersState>>,
     body: web::Json<CreatePlanRequest>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
+    if let Err(error) = require_permission(&ctx, &req, PERM_CLUSTERS_MANAGE) {
+        return json::error_response(&error, debug);
+    }
+    let idempotency_key = match idempotency_key_from(&req) {
+        Ok(key) => key,
+        Err(error) => return json::error_response(&error, debug),
+    };
+    let idempotency_scope = "clusters:plans:create";
+    if let Some(key) = &idempotency_key {
+        if let Some((status, body)) = state.idempotency_lookup(idempotency_scope, key) {
+            return json::success_response(body, status);
+        }
+    }
     let result: UnifiedResult<SyncPlanState> = (|| {
         if !state
             .clusters
@@ -1938,7 +2693,7 @@ async fn create_plan(
                 "direction must be push, pull or bidirectional",
             ));
         }
-        let domains = validate_domains(body.domains.clone())?;
+        let domains = validate_domains(&state, body.domains.clone())?;
         if !valid_schedule(&body.schedule) {
             return Err(UnifiedError::bad_request(
                 "schedule must be an interval in seconds or a cron-like expression such as \"*/5 * * * *\"",
@@ -1975,17 +2730,31 @@ async fn create_plan(
         Ok(plan)
     })();
     match result {
-        Ok(plan) => json::success_response(plan, 201),
+        Ok(plan) => {
+            if let Some(key) = &idempotency_key {
+                state.idempotency_store(
+                    idempotency_scope,
+                    key,
+                    201,
+                    serde_json::to_value(&plan).unwrap_or(Value::Null),
+                );
+            }
+            json::success_response(plan, 201)
+        }
         Err(error) => json::error_response(&error, debug),
     }
 }
 
 async fn get_plan(
     ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
     state: web::Data<Arc<ClustersState>>,
     id: web::Path<Uuid>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
+    if let Err(error) = require_permission(&ctx, &req, PERM_CLUSTERS_VIEW) {
+        return json::error_response(&error, debug);
+    }
     let result: UnifiedResult<SyncPlanState> = state
         .plans
         .read()
@@ -1998,11 +2767,15 @@ async fn get_plan(
 
 async fn update_plan(
     ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
     state: web::Data<Arc<ClustersState>>,
     id: web::Path<Uuid>,
     body: web::Json<UpdatePlanRequest>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
+    if let Err(error) = require_permission(&ctx, &req, PERM_CLUSTERS_MANAGE) {
+        return json::error_response(&error, debug);
+    }
     let result: UnifiedResult<SyncPlanState> = (|| {
         let id = id.into_inner();
         let mut plans = state.plans.write().expect("plans lock poisoned");
@@ -2019,7 +2792,7 @@ async fn update_plan(
             plan.direction = direction.to_string();
         }
         if let Some(domains) = &body.domains {
-            plan.domains = validate_domains(domains.clone())?;
+            plan.domains = validate_domains(&state, domains.clone())?;
         }
         if let Some(schedule) = &body.schedule {
             if !valid_schedule(schedule) {
@@ -2048,10 +2821,14 @@ async fn update_plan(
 
 async fn delete_plan(
     ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
     state: web::Data<Arc<ClustersState>>,
     id: web::Path<Uuid>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
+    if let Err(error) = require_permission(&ctx, &req, PERM_CLUSTERS_MANAGE) {
+        return json::error_response(&error, debug);
+    }
     let result: UnifiedResult<Value> = (|| {
         let plan_id = id.into_inner();
         state
@@ -2067,13 +2844,42 @@ async fn delete_plan(
 
 async fn sync_now(
     ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
     state: web::Data<Arc<ClustersState>>,
     id: web::Path<Uuid>,
     body: web::Json<SyncNowRequest>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
+    if let Err(error) = require_permission(&ctx, &req, PERM_CLUSTERS_MANAGE) {
+        return json::error_response(&error, debug);
+    }
+    let idempotency_key = match idempotency_key_from(&req) {
+        Ok(key) => key,
+        Err(error) => return json::error_response(&error, debug),
+    };
+    let idempotency_scope = format!(
+        "clusters:sync:run:{}",
+        req.match_info().get("id").unwrap_or_default()
+    );
+    if let Some(key) = &idempotency_key {
+        if let Some((status, body)) = state.idempotency_lookup(&idempotency_scope, key) {
+            return json::success_response(body, status);
+        }
+    }
     let result: UnifiedResult<SyncRunSummary> =
         execute_sync(&state, id.into_inner(), body.dry_run).await;
+    // Only successful runs are stored: a failed run must be retried
+    // for real, never answered from a stale stored response.
+    if let Ok(summary) = &result {
+        if let Some(key) = &idempotency_key {
+            state.idempotency_store(
+                &idempotency_scope,
+                key,
+                200,
+                serde_json::to_value(summary).unwrap_or(Value::Null),
+            );
+        }
+    }
     json::respond(result, debug)
 }
 
@@ -2083,10 +2889,14 @@ async fn sync_now(
 
 async fn list_sync_logs(
     ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
     state: web::Data<Arc<ClustersState>>,
     params: web::Query<PaginationParams>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
+    if let Err(error) = require_permission(&ctx, &req, PERM_CLUSTERS_VIEW) {
+        return json::error_response(&error, debug);
+    }
     let result: UnifiedResult<Value> = (|| {
         let mut items: Vec<SyncLogEntry> = state
             .logs
@@ -2127,10 +2937,14 @@ async fn list_sync_logs(
 
 async fn get_sync_log(
     ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
     state: web::Data<Arc<ClustersState>>,
     id: web::Path<Uuid>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
+    if let Err(error) = require_permission(&ctx, &req, PERM_CLUSTERS_VIEW) {
+        return json::error_response(&error, debug);
+    }
     let id = id.into_inner();
     let result: UnifiedResult<SyncLogEntry> = state
         .logs
@@ -2171,7 +2985,7 @@ async fn sync_receive(
             .get("domain")
             .and_then(|value| value.as_str())
             .ok_or_else(|| UnifiedError::bad_request("Sync envelope has no domain"))?;
-        let domain = validate_domain(domain)?;
+        let domain = validate_domain(&state, domain)?;
         let cluster_id = envelope
             .get("cluster_id")
             .and_then(|value| value.as_str())
@@ -2188,14 +3002,35 @@ async fn sync_receive(
             .ok_or_else(|| UnifiedError::bad_request("Sync envelope has no items array"))?;
         let started_at = now();
         let received = items.len() as u64;
+        let local_payloads: HashMap<String, Value> = local_items_for_domain(&state, &domain)
+            .into_iter()
+            .map(|item| (item.key, item.payload))
+            .collect();
+        let remote_payloads: HashMap<String, Value> = items
+            .iter()
+            .map(|item| (item.key.clone(), item.payload.clone()))
+            .collect();
         let (applied, skipped, conflicts) = apply_incoming_items(&state, &domain, &items);
         let finished_at = now();
+        let log_id = Uuid::now_v7();
+        let plan_id = envelope
+            .get("plan_id")
+            .and_then(|value| value.as_str())
+            .and_then(|text| text.parse::<Uuid>().ok());
+        if !conflicts.is_empty() {
+            state.record_conflicts(
+                Some(log_id),
+                plan_id,
+                cluster_id,
+                Some(sender.id),
+                &conflicts,
+                &local_payloads,
+                &remote_payloads,
+            );
+        }
         state.push_log(SyncLogEntry {
-            id: Uuid::now_v7(),
-            plan_id: envelope
-                .get("plan_id")
-                .and_then(|value| value.as_str())
-                .and_then(|text| text.parse::<Uuid>().ok()),
+            id: log_id,
+            plan_id,
             cluster_id,
             node_id: Some(sender.id),
             direction: "push".to_string(),
@@ -2260,7 +3095,7 @@ async fn sync_export(
             .domain
             .as_deref()
             .ok_or_else(|| UnifiedError::bad_request("Query parameter domain is required"))?;
-        let domain = validate_domain(domain)?;
+        let domain = validate_domain(&state, domain)?;
         let since: Option<DateTime<Utc>> = match &query.since {
             Some(text) => Some(
                 text.parse::<DateTime<Utc>>().map_err(|_| {
@@ -2292,12 +3127,26 @@ async fn sync_export(
 
 async fn stage_local_item(
     ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
     state: web::Data<Arc<ClustersState>>,
     body: web::Json<StageItemRequest>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
+    if let Err(error) = require_permission(&ctx, &req, PERM_CLUSTERS_MANAGE) {
+        return json::error_response(&error, debug);
+    }
+    let idempotency_key = match idempotency_key_from(&req) {
+        Ok(key) => key,
+        Err(error) => return json::error_response(&error, debug),
+    };
+    let idempotency_scope = "clusters:local-items:stage";
+    if let Some(key) = &idempotency_key {
+        if let Some((status, body)) = state.idempotency_lookup(idempotency_scope, key) {
+            return json::success_response(body, status);
+        }
+    }
     let result: UnifiedResult<SyncItem> = (|| {
-        let domain = validate_domain(&body.domain)?;
+        let domain = validate_domain(&state, &body.domain)?;
         let key = require_non_empty(&body.key, "key")?;
         if key.len() > 256 {
             return Err(UnifiedError::bad_request("key is too long"));
@@ -2321,17 +3170,31 @@ async fn stage_local_item(
         Ok(item)
     })();
     match result {
-        Ok(item) => json::success_response(item, 201),
+        Ok(item) => {
+            if let Some(key) = &idempotency_key {
+                state.idempotency_store(
+                    idempotency_scope,
+                    key,
+                    201,
+                    serde_json::to_value(&item).unwrap_or(Value::Null),
+                );
+            }
+            json::success_response(item, 201)
+        }
         Err(error) => json::error_response(&error, debug),
     }
 }
 
 async fn list_local_items(
     ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
     state: web::Data<Arc<ClustersState>>,
     params: web::Query<PaginationParams>,
 ) -> HttpResponse {
     let debug = ctx.is_debug();
+    if let Err(error) = require_permission(&ctx, &req, PERM_CLUSTERS_VIEW) {
+        return json::error_response(&error, debug);
+    }
     let result: UnifiedResult<Value> = (|| {
         let mut items: Vec<SyncItem> = state
             .local_items
@@ -2356,6 +3219,826 @@ async fn list_local_items(
             items.reverse();
         }
         Ok(paginate(items, &params).to_json())
+    })();
+    json::respond(result, debug)
+}
+
+// ---------------------------------------------------------------------------
+// Sync health overview, conflict visibility, retry queue, settings and
+// the domain registry.
+// ---------------------------------------------------------------------------
+
+async fn sync_health_overview(
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+    state: web::Data<Arc<ClustersState>>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    if let Err(error) = require_permission(&ctx, &req, PERM_CLUSTERS_VIEW) {
+        return json::error_response(&error, debug);
+    }
+    let result: UnifiedResult<Value> = (|| {
+        let nodes: Vec<NodeState> = state
+            .nodes
+            .read()
+            .expect("nodes lock poisoned")
+            .values()
+            .cloned()
+            .collect();
+        let plans: Vec<SyncPlanState> = state
+            .plans
+            .read()
+            .expect("plans lock poisoned")
+            .values()
+            .cloned()
+            .collect();
+        let logs: Vec<SyncLogEntry> = state
+            .logs
+            .read()
+            .expect("logs lock poisoned")
+            .iter()
+            .cloned()
+            .collect();
+        let conflicts: Vec<SyncConflictRecord> = state
+            .conflicts
+            .read()
+            .expect("conflicts lock poisoned")
+            .iter()
+            .cloned()
+            .collect();
+        let retries: Vec<SyncRetryEntry> = state
+            .retries
+            .read()
+            .expect("retries lock poisoned")
+            .iter()
+            .cloned()
+            .collect();
+        let count_health = |health: &str| {
+            nodes.iter().filter(|node| node.health == health).count() as u64
+        };
+        let plans_failed: u64 = plans
+            .iter()
+            .filter(|plan| {
+                plan.last_run_at.is_some()
+                    && plan
+                        .last_success_at
+                        .map_or(true, |success| plan.last_run_at.unwrap() > success)
+            })
+            .count() as u64;
+        let clusters: Vec<ClusterState> = state
+            .clusters
+            .read()
+            .expect("clusters lock poisoned")
+            .values()
+            .cloned()
+            .collect();
+        let per_cluster: Vec<Value> = clusters
+            .iter()
+            .map(|cluster| {
+                let cluster_nodes: Vec<&NodeState> = nodes
+                    .iter()
+                    .filter(|node| node.cluster_id == cluster.id)
+                    .collect();
+                let unhealthy = cluster_nodes
+                    .iter()
+                    .filter(|node| node.health == "unhealthy")
+                    .count() as u64;
+                let open_conflicts = conflicts
+                    .iter()
+                    .filter(|conflict| {
+                        conflict.cluster_id == cluster.id && conflict.status == "open"
+                    })
+                    .count() as u64;
+                let pending_retries = retries
+                    .iter()
+                    .filter(|entry| {
+                        entry.cluster_id == cluster.id && entry.status == "pending"
+                    })
+                    .count() as u64;
+                let dead_letters = retries
+                    .iter()
+                    .filter(|entry| {
+                        entry.cluster_id == cluster.id && entry.status == "dead_letter"
+                    })
+                    .count() as u64;
+                let last_success_at = logs
+                    .iter()
+                    .filter(|log| log.cluster_id == cluster.id && log.status == "completed")
+                    .map(|log| log.finished_at)
+                    .max();
+                json!({
+                    "cluster_id": cluster.id,
+                    "cluster_name": cluster.name,
+                    "status": cluster.status,
+                    "nodes": cluster_nodes.len(),
+                    "nodes_unhealthy": unhealthy,
+                    "open_conflicts": open_conflicts,
+                    "pending_retries": pending_retries,
+                    "dead_letters": dead_letters,
+                    "last_success_at": last_success_at,
+                })
+            })
+            .collect();
+        Ok(json!({
+            "clusters": clusters.len(),
+            "nodes": nodes.len(),
+            "nodes_healthy": count_health("healthy"),
+            "nodes_degraded": count_health("degraded"),
+            "nodes_unhealthy": count_health("unhealthy"),
+            "nodes_unknown": count_health("unknown"),
+            "plans": plans.len(),
+            "plans_enabled": plans.iter().filter(|plan| plan.enabled).count(),
+            "plans_failed": plans_failed,
+            "open_conflicts": conflicts.iter().filter(|conflict| conflict.status == "open").count(),
+            "conflicts": conflicts.len(),
+            "pending_retries": retries.iter().filter(|entry| entry.status == "pending").count(),
+            "dead_letters": retries.iter().filter(|entry| entry.status == "dead_letter").count(),
+            "failed_logs": logs.iter().filter(|log| log.status == "failed").count(),
+            "last_sync_at": logs.iter().map(|log| log.finished_at).max(),
+            "last_success_at": logs.iter().filter(|log| log.status == "completed").map(|log| log.finished_at).max(),
+            "per_cluster": per_cluster,
+        }))
+    })();
+    json::respond(result, debug)
+}
+
+// ---------------------------------------------------------------------------
+// Conflict visibility and resolution.
+// ---------------------------------------------------------------------------
+
+async fn list_conflicts(
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+    state: web::Data<Arc<ClustersState>>,
+    params: web::Query<PaginationParams>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    if let Err(error) = require_permission(&ctx, &req, PERM_CLUSTERS_VIEW) {
+        return json::error_response(&error, debug);
+    }
+    let result: UnifiedResult<Value> = (|| {
+        let mut items: Vec<SyncConflictRecord> = state
+            .conflicts
+            .read()
+            .expect("conflicts lock poisoned")
+            .iter()
+            .cloned()
+            .collect();
+        if let Some(cluster_id) = params.filters.get("cluster_id") {
+            let wanted: Uuid = cluster_id
+                .parse()
+                .map_err(|_| UnifiedError::bad_request("cluster_id must be a UUID"))?;
+            items.retain(|conflict| conflict.cluster_id == wanted);
+        }
+        if let Some(plan_id) = params.filters.get("plan_id") {
+            let wanted: Uuid = plan_id
+                .parse()
+                .map_err(|_| UnifiedError::bad_request("plan_id must be a UUID"))?;
+            items.retain(|conflict| conflict.plan_id == Some(wanted));
+        }
+        if let Some(domain) = params.filters.get("domain") {
+            items.retain(|conflict| conflict.domain == *domain);
+        }
+        if let Some(status) = params.filters.get("status") {
+            items.retain(|conflict| conflict.status == *status);
+        }
+        if let Some(winner) = params.filters.get("winner") {
+            items.retain(|conflict| conflict.winner == *winner);
+        }
+        if let Some(search) = &params.search {
+            let needle = search.to_lowercase();
+            items.retain(|conflict| conflict.key.to_lowercase().contains(&needle));
+        }
+        items.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+        if params.normalized().order == "asc" {
+            items.reverse();
+        }
+        Ok(paginate(items, &params).to_json())
+    })();
+    json::respond(result, debug)
+}
+
+async fn get_conflict(
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+    state: web::Data<Arc<ClustersState>>,
+    id: web::Path<Uuid>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    if let Err(error) = require_permission(&ctx, &req, PERM_CLUSTERS_VIEW) {
+        return json::error_response(&error, debug);
+    }
+    let id = id.into_inner();
+    let result: UnifiedResult<SyncConflictRecord> = state
+        .conflicts
+        .read()
+        .expect("conflicts lock poisoned")
+        .iter()
+        .find(|conflict| conflict.id == id)
+        .cloned()
+        .ok_or_else(|| UnifiedError::not_found("Sync conflict not found"));
+    json::respond(result, debug)
+}
+
+#[derive(Debug, Deserialize)]
+struct ResolveConflictRequest {
+    /// `keep_local`, `keep_remote` or `dismiss`.
+    resolution: String,
+    #[serde(default)]
+    note: String,
+}
+
+async fn resolve_conflict(
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+    state: web::Data<Arc<ClustersState>>,
+    id: web::Path<Uuid>,
+    body: web::Json<ResolveConflictRequest>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    if let Err(error) = require_permission(&ctx, &req, PERM_CLUSTERS_MANAGE) {
+        return json::error_response(&error, debug);
+    }
+    let actor = match caller(&req) {
+        Ok(who) => who.actor,
+        Err(error) => return json::error_response(&error, debug),
+    };
+    let result: UnifiedResult<SyncConflictRecord> = (|| {
+        let id = id.into_inner();
+        let resolution = body.resolution.trim();
+        if !matches!(resolution, "keep_local" | "keep_remote" | "dismiss") {
+            return Err(UnifiedError::bad_request(
+                "resolution must be keep_local, keep_remote or dismiss",
+            ));
+        }
+        if body.note.len() > 1024 {
+            return Err(UnifiedError::bad_request("note is too long"));
+        }
+        let mut conflicts = state.conflicts.write().expect("conflicts lock poisoned");
+        let conflict = conflicts
+            .iter_mut()
+            .find(|conflict| conflict.id == id)
+            .ok_or_else(|| UnifiedError::not_found("Sync conflict not found"))?;
+        if conflict.status != "open" {
+            return Err(UnifiedError::conflict(format!(
+                "Sync conflict is already {}",
+                conflict.status
+            )));
+        }
+        // An admin override applies the chosen payload as the local
+        // item with a fresh timestamp, so the chosen version wins the
+        // next sync instead of losing silently again. `dismiss` changes
+        // no data; it only closes the record.
+        if resolution != "dismiss" {
+            let chosen = if resolution == "keep_local" {
+                conflict.local_payload.clone()
+            } else {
+                conflict.remote_payload.clone()
+            };
+            if let Some(payload) = chosen {
+                let mut items = state.local_items.write().expect("items lock poisoned");
+                items.entry(conflict.domain.clone()).or_default().insert(
+                    conflict.key.clone(),
+                    SyncItem {
+                        domain: conflict.domain.clone(),
+                        key: conflict.key.clone(),
+                        payload,
+                        updated_at: now(),
+                    },
+                );
+            }
+        }
+        conflict.status = if resolution == "dismiss" {
+            "dismissed".to_string()
+        } else {
+            "resolved".to_string()
+        };
+        conflict.resolution = Some(format!(
+            "{resolution}{}",
+            if body.note.trim().is_empty() {
+                String::new()
+            } else {
+                format!(": {}", body.note.trim())
+            }
+        ));
+        conflict.resolved_by = Some(actor.clone());
+        conflict.resolved_at = Some(now());
+        let updated = conflict.clone();
+        drop(conflicts);
+        state.emit(
+            CLUSTER_SYNC_CONFLICT_RESOLVED,
+            json!({
+                "conflict_id": updated.id,
+                "cluster_id": updated.cluster_id,
+                "domain": updated.domain,
+                "key": updated.key,
+                "resolution": resolution,
+                "resolved_by": actor,
+            }),
+        );
+        Ok(updated)
+    })();
+    json::respond(result, debug)
+}
+
+// ---------------------------------------------------------------------------
+// Failed-sync retry queue and dead-letter handling.
+// ---------------------------------------------------------------------------
+
+async fn list_retries(
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+    state: web::Data<Arc<ClustersState>>,
+    params: web::Query<PaginationParams>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    if let Err(error) = require_permission(&ctx, &req, PERM_CLUSTERS_VIEW) {
+        return json::error_response(&error, debug);
+    }
+    let result: UnifiedResult<Value> = (|| {
+        let mut items: Vec<SyncRetryEntry> = state
+            .retries
+            .read()
+            .expect("retries lock poisoned")
+            .iter()
+            .cloned()
+            .collect();
+        if let Some(cluster_id) = params.filters.get("cluster_id") {
+            let wanted: Uuid = cluster_id
+                .parse()
+                .map_err(|_| UnifiedError::bad_request("cluster_id must be a UUID"))?;
+            items.retain(|entry| entry.cluster_id == wanted);
+        }
+        if let Some(plan_id) = params.filters.get("plan_id") {
+            let wanted: Uuid = plan_id
+                .parse()
+                .map_err(|_| UnifiedError::bad_request("plan_id must be a UUID"))?;
+            items.retain(|entry| entry.plan_id == wanted);
+        }
+        if let Some(domain) = params.filters.get("domain") {
+            items.retain(|entry| entry.domain == *domain);
+        }
+        if let Some(status) = params.filters.get("status") {
+            items.retain(|entry| entry.status == *status);
+        }
+        items.sort_by(|a, b| b.next_retry_at.cmp(&a.next_retry_at));
+        if params.normalized().order == "asc" {
+            items.reverse();
+        }
+        Ok(paginate(items, &params).to_json())
+    })();
+    json::respond(result, debug)
+}
+
+async fn get_retry(
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+    state: web::Data<Arc<ClustersState>>,
+    id: web::Path<Uuid>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    if let Err(error) = require_permission(&ctx, &req, PERM_CLUSTERS_VIEW) {
+        return json::error_response(&error, debug);
+    }
+    let id = id.into_inner();
+    let result: UnifiedResult<SyncRetryEntry> = state
+        .retries
+        .read()
+        .expect("retries lock poisoned")
+        .iter()
+        .find(|entry| entry.id == id)
+        .cloned()
+        .ok_or_else(|| UnifiedError::not_found("Sync retry entry not found"));
+    json::respond(result, debug)
+}
+
+/// Re-run the sync plan behind a retry entry right now. The entry is
+/// marked `retrying` first; a successful run completes it through the
+/// normal path, a failed run re-queues it with backoff (or dead-letters
+/// it at the attempt limit) through the normal path.
+async fn retry_entry_now(
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+    state: web::Data<Arc<ClustersState>>,
+    id: web::Path<Uuid>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    if let Err(error) = require_permission(&ctx, &req, PERM_CLUSTERS_MANAGE) {
+        return json::error_response(&error, debug);
+    }
+    let result: UnifiedResult<SyncRetryEntry> = (|| {
+        let id = id.into_inner();
+        let mut queue = state.retries.write().expect("retries lock poisoned");
+        let entry = queue
+            .iter_mut()
+            .find(|entry| entry.id == id)
+            .ok_or_else(|| UnifiedError::not_found("Sync retry entry not found"))?;
+        if !matches!(entry.status.as_str(), "pending" | "dead_letter" | "retrying") {
+            return Err(UnifiedError::conflict(format!(
+                "Sync retry entry is {} and cannot be retried",
+                entry.status
+            )));
+        }
+        entry.status = "retrying".to_string();
+        entry.updated_at = now();
+        Ok(entry.clone())
+    })();
+    let entry = match result {
+        Ok(entry) => entry,
+        Err(error) => return json::error_response(&error, debug),
+    };
+    let run = execute_sync(&state, entry.plan_id, false).await;
+    if let Err(error) = run {
+        return json::error_response(&error, debug);
+    }
+    // `execute_sync` completes or re-queues the entry through the
+    // normal path; re-read it so the caller sees the final status.
+    let stored: UnifiedResult<SyncRetryEntry> = state
+        .retries
+        .read()
+        .expect("retries lock poisoned")
+        .iter()
+        .find(|candidate| candidate.id == entry.id)
+        .cloned()
+        .ok_or_else(|| UnifiedError::not_found("Sync retry entry not found"));
+    json::respond(stored, debug)
+}
+
+async fn discard_retry(
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+    state: web::Data<Arc<ClustersState>>,
+    id: web::Path<Uuid>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    if let Err(error) = require_permission(&ctx, &req, PERM_CLUSTERS_MANAGE) {
+        return json::error_response(&error, debug);
+    }
+    let result: UnifiedResult<SyncRetryEntry> = (|| {
+        let id = id.into_inner();
+        let mut queue = state.retries.write().expect("retries lock poisoned");
+        let entry = queue
+            .iter_mut()
+            .find(|entry| entry.id == id)
+            .ok_or_else(|| UnifiedError::not_found("Sync retry entry not found"))?;
+        if !matches!(
+            entry.status.as_str(),
+            "pending" | "retrying" | "dead_letter"
+        ) {
+            return Err(UnifiedError::conflict(format!(
+                "Sync retry entry is {} and cannot be discarded",
+                entry.status
+            )));
+        }
+        entry.status = "discarded".to_string();
+        entry.updated_at = now();
+        Ok(entry.clone())
+    })();
+    json::respond(result, debug)
+}
+
+/// Run every retry entry whose `next_retry_at` has passed. Dead-letter
+/// entries are never retried here; only pending ones are due.
+async fn process_due_retries(state: &Arc<ClustersState>) -> Vec<Uuid> {
+    let due: Vec<SyncRetryEntry> = {
+        let now = now();
+        state
+            .retries
+            .read()
+            .expect("retries lock poisoned")
+            .iter()
+            .filter(|entry| entry.status == "pending" && entry.next_retry_at <= now)
+            .cloned()
+            .collect()
+    };
+    let mut processed: Vec<Uuid> = Vec::new();
+    for entry in due {
+        {
+            let mut queue = state.retries.write().expect("retries lock poisoned");
+            if let Some(stored) = queue.iter_mut().find(|stored| stored.id == entry.id) {
+                stored.status = "retrying".to_string();
+                stored.updated_at = now();
+            }
+        }
+        // `execute_sync` completes or re-queues the entry through the
+        // normal path, including dead-lettering at the attempt limit.
+        let _ = execute_sync(state, entry.plan_id, false).await;
+        processed.push(entry.id);
+    }
+    processed
+}
+
+async fn process_due_retries_endpoint(
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+    state: web::Data<Arc<ClustersState>>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    if let Err(error) = require_permission(&ctx, &req, PERM_CLUSTERS_MANAGE) {
+        return json::error_response(&error, debug);
+    }
+    let state_clone = state.clone();
+    spawn_background(async move {
+        let _ = process_due_retries(&state_clone).await;
+    });
+    let due: u64 = {
+        let now = now();
+        state
+            .retries
+            .read()
+            .expect("retries lock poisoned")
+            .iter()
+            .filter(|entry| entry.status == "pending" && entry.next_retry_at <= now)
+            .count() as u64
+    };
+    json::respond(
+        Ok::<Value, UnifiedError>(json!({ "queued": true, "due": due })),
+        debug,
+    )
+}
+
+// ---------------------------------------------------------------------------
+// Sync settings and the domain registry.
+// ---------------------------------------------------------------------------
+
+async fn get_settings(
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+    state: web::Data<Arc<ClustersState>>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    if let Err(error) = require_permission(&ctx, &req, PERM_CLUSTERS_VIEW) {
+        return json::error_response(&error, debug);
+    }
+    json::respond(Ok::<SyncSettings, UnifiedError>(state.settings()), debug)
+}
+
+#[derive(Debug, Deserialize)]
+struct UpdateSettingsRequest {
+    replay_window_secs: Option<i64>,
+    health_timeout_secs: Option<u64>,
+    sync_timeout_secs: Option<u64>,
+    health_failure_threshold: Option<u32>,
+    max_sync_logs: Option<usize>,
+    max_health_history: Option<usize>,
+    max_conflicts: Option<usize>,
+    max_retries: Option<usize>,
+    max_idempotency_records: Option<usize>,
+    retry_max_attempts: Option<u32>,
+    retry_base_delay_secs: Option<u64>,
+    retry_max_delay_secs: Option<u64>,
+    retry_backoff_multiplier: Option<f64>,
+    idempotency_ttl_secs: Option<i64>,
+}
+
+async fn update_settings(
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+    state: web::Data<Arc<ClustersState>>,
+    body: web::Json<UpdateSettingsRequest>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    if let Err(error) = require_permission(&ctx, &req, PERM_CLUSTERS_MANAGE) {
+        return json::error_response(&error, debug);
+    }
+    let result: UnifiedResult<SyncSettings> = (|| {
+        let mut settings = state.settings();
+        if let Some(value) = body.replay_window_secs {
+            if !(30..=3600).contains(&value) {
+                return Err(UnifiedError::bad_request(
+                    "replay_window_secs must be between 30 and 3600",
+                ));
+            }
+            settings.replay_window_secs = value;
+        }
+        if let Some(value) = body.health_timeout_secs {
+            if !(1..=300).contains(&value) {
+                return Err(UnifiedError::bad_request(
+                    "health_timeout_secs must be between 1 and 300",
+                ));
+            }
+            settings.health_timeout_secs = value;
+        }
+        if let Some(value) = body.sync_timeout_secs {
+            if !(1..=600).contains(&value) {
+                return Err(UnifiedError::bad_request(
+                    "sync_timeout_secs must be between 1 and 600",
+                ));
+            }
+            settings.sync_timeout_secs = value;
+        }
+        if let Some(value) = body.health_failure_threshold {
+            if !(1..=100).contains(&value) {
+                return Err(UnifiedError::bad_request(
+                    "health_failure_threshold must be between 1 and 100",
+                ));
+            }
+            settings.health_failure_threshold = value;
+        }
+        for (name, value) in [
+            ("max_sync_logs", body.max_sync_logs),
+            ("max_health_history", body.max_health_history),
+            ("max_conflicts", body.max_conflicts),
+            ("max_retries", body.max_retries),
+            ("max_idempotency_records", body.max_idempotency_records),
+        ] {
+            if let Some(value) = value {
+                if !(10..=100_000).contains(&value) {
+                    return Err(UnifiedError::bad_request(format!(
+                        "{name} must be between 10 and 100000"
+                    )));
+                }
+            }
+        }
+        if let Some(value) = body.max_sync_logs {
+            settings.max_sync_logs = value;
+        }
+        if let Some(value) = body.max_health_history {
+            settings.max_health_history = value;
+        }
+        if let Some(value) = body.max_conflicts {
+            settings.max_conflicts = value;
+        }
+        if let Some(value) = body.max_retries {
+            settings.max_retries = value;
+        }
+        if let Some(value) = body.max_idempotency_records {
+            settings.max_idempotency_records = value;
+        }
+        if let Some(value) = body.retry_max_attempts {
+            if !(1..=100).contains(&value) {
+                return Err(UnifiedError::bad_request(
+                    "retry_max_attempts must be between 1 and 100",
+                ));
+            }
+            settings.retry_max_attempts = value;
+        }
+        if let Some(value) = body.retry_base_delay_secs {
+            if !(1..=86_400).contains(&value) {
+                return Err(UnifiedError::bad_request(
+                    "retry_base_delay_secs must be between 1 and 86400",
+                ));
+            }
+            settings.retry_base_delay_secs = value;
+        }
+        if let Some(value) = body.retry_max_delay_secs {
+            if !(1..=86_400).contains(&value) {
+                return Err(UnifiedError::bad_request(
+                    "retry_max_delay_secs must be between 1 and 86400",
+                ));
+            }
+            settings.retry_max_delay_secs = value;
+        }
+        if settings.retry_max_delay_secs < settings.retry_base_delay_secs {
+            return Err(UnifiedError::bad_request(
+                "retry_max_delay_secs must not be smaller than retry_base_delay_secs",
+            ));
+        }
+        if let Some(value) = body.retry_backoff_multiplier {
+            if !value.is_finite() || !(1.0..=10.0).contains(&value) {
+                return Err(UnifiedError::bad_request(
+                    "retry_backoff_multiplier must be between 1.0 and 10.0",
+                ));
+            }
+            settings.retry_backoff_multiplier = value;
+        }
+        if let Some(value) = body.idempotency_ttl_secs {
+            if !(60..=604_800).contains(&value) {
+                return Err(UnifiedError::bad_request(
+                    "idempotency_ttl_secs must be between 60 and 604800",
+                ));
+            }
+            settings.idempotency_ttl_secs = value;
+        }
+        *state
+            .settings
+            .write()
+            .expect("settings lock poisoned") = settings.clone();
+        state.emit(
+            CLUSTER_SYNC_SETTINGS_UPDATED,
+            json!({
+                "replay_window_secs": settings.replay_window_secs,
+                "health_timeout_secs": settings.health_timeout_secs,
+                "sync_timeout_secs": settings.sync_timeout_secs,
+                "health_failure_threshold": settings.health_failure_threshold,
+                "retry_max_attempts": settings.retry_max_attempts,
+                "retry_base_delay_secs": settings.retry_base_delay_secs,
+                "retry_max_delay_secs": settings.retry_max_delay_secs,
+                "retry_backoff_multiplier": settings.retry_backoff_multiplier,
+            }),
+        );
+        Ok(settings)
+    })();
+    json::respond(result, debug)
+}
+
+async fn list_domains(
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+    state: web::Data<Arc<ClustersState>>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    if let Err(error) = require_permission(&ctx, &req, PERM_CLUSTERS_VIEW) {
+        return json::error_response(&error, debug);
+    }
+    let mut domains: Vec<String> = state
+        .domains
+        .read()
+        .expect("domains lock poisoned")
+        .iter()
+        .cloned()
+        .collect();
+    domains.sort();
+    json::respond(
+        Ok::<Value, UnifiedError>(json!({ "domains": domains, "count": domains.len() })),
+        debug,
+    )
+}
+
+#[derive(Debug, Deserialize)]
+struct RegisterDomainRequest {
+    domain: String,
+}
+
+fn valid_domain_name(domain: &str) -> bool {
+    let domain = domain.trim();
+    !domain.is_empty()
+        && domain.len() <= 64
+        && domain
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
+}
+
+async fn register_domain(
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+    state: web::Data<Arc<ClustersState>>,
+    body: web::Json<RegisterDomainRequest>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    if let Err(error) = require_permission(&ctx, &req, PERM_CLUSTERS_MANAGE) {
+        return json::error_response(&error, debug);
+    }
+    let result: UnifiedResult<Value> = (|| {
+        let domain = body.domain.trim().to_string();
+        if !valid_domain_name(&domain) {
+            return Err(UnifiedError::bad_request(
+                "domain must be 1-64 characters of lowercase letters, digits or underscore",
+            ));
+        }
+        let mut domains = state.domains.write().expect("domains lock poisoned");
+        if !domains.insert(domain.clone()) {
+            return Err(UnifiedError::conflict(format!(
+                "Sync domain {domain} is already registered"
+            )));
+        }
+        let mut registered: Vec<String> = domains.iter().cloned().collect();
+        registered.sort();
+        Ok(json!({ "domain": domain, "domains": registered }))
+    })();
+    json::respond(result, debug)
+}
+
+async fn unregister_domain(
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+    state: web::Data<Arc<ClustersState>>,
+    domain: web::Path<String>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    if let Err(error) = require_permission(&ctx, &req, PERM_CLUSTERS_MANAGE) {
+        return json::error_response(&error, debug);
+    }
+    let result: UnifiedResult<Value> = (|| {
+        let domain = domain.into_inner();
+        if !valid_domain_name(&domain) {
+            return Err(UnifiedError::bad_request("Invalid sync domain name"));
+        }
+        let in_use = state
+            .plans
+            .read()
+            .expect("plans lock poisoned")
+            .values()
+            .any(|plan| plan.domains.iter().any(|d| d == &domain));
+        if in_use {
+            return Err(UnifiedError::conflict(format!(
+                "Sync domain {domain} is still used by a sync plan"
+            )));
+        }
+        let mut domains = state.domains.write().expect("domains lock poisoned");
+        if domains.len() <= 1 {
+            return Err(UnifiedError::unprocessable(
+                "At least one sync domain must stay registered",
+            ));
+        }
+        if !domains.remove(&domain) {
+            return Err(UnifiedError::not_found(format!(
+                "Sync domain {domain} is not registered"
+            )));
+        }
+        let mut registered: Vec<String> = domains.iter().cloned().collect();
+        registered.sort();
+        Ok(json!({ "deleted": true, "domain": domain, "domains": registered }))
     })();
     json::respond(result, debug)
 }
@@ -2399,6 +4082,14 @@ fn on_sync_requested(state: Arc<ClustersState>, ctx: &mut HookContext) {
     ctx.add_result(json!({ "queued": true, "plan_id": plan_id, "dry_run": dry_run }));
 }
 
+fn on_sync_retry_due(state: Arc<ClustersState>, ctx: &mut HookContext) {
+    let state_clone = state.clone();
+    spawn_background(async move {
+        let _ = process_due_retries(&state_clone).await;
+    });
+    ctx.add_result(json!({ "queued": true }));
+}
+
 // ---------------------------------------------------------------------------
 // Module definition.
 // ---------------------------------------------------------------------------
@@ -2431,7 +4122,7 @@ impl Module for ClustersModule {
     }
 
     fn description(&self) -> &'static str {
-        "Multi-cluster management: node registration with HMAC authentication, health probing, and mutual sync with last-write-wins conflict handling."
+        "Multi-cluster management: node registration with HMAC authentication, health probing, and mutual sync with last-write-wins conflict handling, visible conflicts with admin resolution, a retry queue with dead-letter handling, idempotent admin writes, and admin-editable sync settings."
     }
 
     fn requires(&self) -> &[&'static str] {
@@ -2466,6 +4157,12 @@ impl Module for ClustersModule {
             "clusters",
             Arc::new(move |ctx: &mut HookContext| on_sync_requested(state.clone(), ctx)),
         );
+        let state = self.state.clone();
+        bus.register(
+            CLUSTER_SYNC_RETRY_DUE,
+            "clusters",
+            Arc::new(move |ctx: &mut HookContext| on_sync_retry_due(state.clone(), ctx)),
+        );
     }
 
     fn route_info(&self) -> Vec<RouteInfo> {
@@ -2490,7 +4187,21 @@ impl Module for ClustersModule {
             RouteInfo { method: "GET", path: "/api/v1/clusters/sync/plans/{id}", owner: "clusters", description: "Get one sync plan." },
             RouteInfo { method: "PUT", path: "/api/v1/clusters/sync/plans/{id}", owner: "clusters", description: "Update a sync plan." },
             RouteInfo { method: "DELETE", path: "/api/v1/clusters/sync/plans/{id}", owner: "clusters", description: "Delete a sync plan." },
-            RouteInfo { method: "POST", path: "/api/v1/clusters/sync/plans/{id}/sync", owner: "clusters", description: "Run a sync plan now; body {dry_run} previews without applying." },
+            RouteInfo { method: "POST", path: "/api/v1/clusters/sync/plans/{id}/sync", owner: "clusters", description: "Run a sync plan now; body {dry_run} previews without applying. Accepts an Idempotency-Key header." },
+            RouteInfo { method: "GET", path: "/api/v1/clusters/sync/health", owner: "clusters", description: "Aggregate sync health: node health counts, failing plans, open conflicts, pending retries and dead-letters." },
+            RouteInfo { method: "GET", path: "/api/v1/clusters/sync/conflicts", owner: "clusters", description: "List sync conflicts (paginated, filter by cluster/plan/domain/status/winner)." },
+            RouteInfo { method: "GET", path: "/api/v1/clusters/sync/conflicts/{id}", owner: "clusters", description: "Get one sync conflict with both payloads." },
+            RouteInfo { method: "POST", path: "/api/v1/clusters/sync/conflicts/{id}/resolve", owner: "clusters", description: "Resolve a conflict: keep_local, keep_remote or dismiss. The chosen payload is applied as the newest local version." },
+            RouteInfo { method: "GET", path: "/api/v1/clusters/sync/retries", owner: "clusters", description: "List failed-sync retry queue entries (paginated, filter by cluster/plan/domain/status)." },
+            RouteInfo { method: "GET", path: "/api/v1/clusters/sync/retries/{id}", owner: "clusters", description: "Get one retry queue entry." },
+            RouteInfo { method: "POST", path: "/api/v1/clusters/sync/retries/{id}/retry", owner: "clusters", description: "Re-run the sync plan behind a retry entry now (works for pending and dead-letter entries)." },
+            RouteInfo { method: "POST", path: "/api/v1/clusters/sync/retries/{id}/discard", owner: "clusters", description: "Discard a retry queue entry so it is never retried." },
+            RouteInfo { method: "POST", path: "/api/v1/clusters/sync/retries/process-due", owner: "clusters", description: "Queue a background run of every retry entry whose next_retry_at has passed." },
+            RouteInfo { method: "GET", path: "/api/v1/clusters/sync/settings", owner: "clusters", description: "Read the live sync settings (timeouts, thresholds, retry backoff, idempotency TTL)." },
+            RouteInfo { method: "PUT", path: "/api/v1/clusters/sync/settings", owner: "clusters", description: "Update the live sync settings (admin-editable; seeded from configurable defaults)." },
+            RouteInfo { method: "GET", path: "/api/v1/clusters/sync/domains", owner: "clusters", description: "List the registered sync domains." },
+            RouteInfo { method: "POST", path: "/api/v1/clusters/sync/domains", owner: "clusters", description: "Register a new sync domain." },
+            RouteInfo { method: "DELETE", path: "/api/v1/clusters/sync/domains/{domain}", owner: "clusters", description: "Unregister a sync domain (refused while a plan uses it, and for the last remaining domain)." },
             RouteInfo { method: "GET", path: "/api/v1/clusters/sync/logs", owner: "clusters", description: "List sync log entries (paginated, filter by cluster/plan/status/domain/direction)." },
             RouteInfo { method: "GET", path: "/api/v1/clusters/sync/logs/{id}", owner: "clusters", description: "Get one sync log entry with its conflicts." },
             RouteInfo { method: "POST", path: "/api/v1/clusters/sync/receive", owner: "clusters", description: "Node-to-node sync receive (HMAC-signed, versioned envelope)." },
@@ -2525,6 +4236,20 @@ impl Module for ClustersModule {
                 .route("/sync/plans/{id}", web::put().to(update_plan))
                 .route("/sync/plans/{id}", web::delete().to(delete_plan))
                 .route("/sync/plans/{id}/sync", web::post().to(sync_now))
+                .route("/sync/health", web::get().to(sync_health_overview))
+                .route("/sync/conflicts", web::get().to(list_conflicts))
+                .route("/sync/conflicts/{id}", web::get().to(get_conflict))
+                .route("/sync/conflicts/{id}/resolve", web::post().to(resolve_conflict))
+                .route("/sync/retries", web::get().to(list_retries))
+                .route("/sync/retries/{id}", web::get().to(get_retry))
+                .route("/sync/retries/{id}/retry", web::post().to(retry_entry_now))
+                .route("/sync/retries/{id}/discard", web::post().to(discard_retry))
+                .route("/sync/retries/process-due", web::post().to(process_due_retries_endpoint))
+                .route("/sync/settings", web::get().to(get_settings))
+                .route("/sync/settings", web::put().to(update_settings))
+                .route("/sync/domains", web::get().to(list_domains))
+                .route("/sync/domains", web::post().to(register_domain))
+                .route("/sync/domains/{domain}", web::delete().to(unregister_domain))
                 .route("/sync/logs", web::get().to(list_sync_logs))
                 .route("/sync/logs/{id}", web::get().to(get_sync_log))
                 .route("/sync/receive", web::post().to(sync_receive))
