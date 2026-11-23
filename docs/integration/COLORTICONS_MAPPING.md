@@ -1,6 +1,11 @@
 # ColorTicons mapping — strict (common & correct only)
 
-Date: 2026-11-23. Status: IMPLEMENTED 2026-11-23 (task 371) — the mapping
+> SUPERSEDED 2026-11-23 (task 372): the module icons are now Icons8
+> Flat Color Icons — ColorTicons was deleted from the repo entirely
+> (user: "Hapus colorticons!! buanh!!"). This doc is history only; the
+> current mapping is `docs/integration/SVGREPO_ICON_SETS.md`.
+
+Date: 2026-11-23. Status: SUPERSEDED 2026-11-23 (was IMPLEMENTED 2026-11-23, task 371) — the mapping
 below was executed: 152 icons vendored, 4 custom-drawn, payments +
 brands added per the category layout. Nothing committed or pushed yet
 (parent does the push).

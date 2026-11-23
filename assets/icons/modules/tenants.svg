@@ -1,10 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-building-community" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-  <path d="M8 9l5 5v7h-5v-4m0 4h-5v-7l5 -5m1 1v-6a1 1 0 0 1 1 -1h10a1 1 0 0 1 1 1v17h-8" />
-  <path d="M13 7l0 .01" />
-  <path d="M17 7l0 .01" />
-  <path d="M17 11l0 .01" />
-  <path d="M17 15l0 .01" />
+<svg version="1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" enable-background="new 0 0 48 48">
+    <path fill="#90CAF9" d="M42,42H6V10c0-2.2,1.8-4,4-4h28c2.2,0,4,1.8,4,4V42z"/>
+    <rect x="6" y="42" fill="#64B5F6" width="36" height="2"/>
+    <g fill="#1565C0">
+        <rect x="31" y="27" width="6" height="5"/>
+        <rect x="21" y="27" width="6" height="5"/>
+        <rect x="11" y="27" width="6" height="5"/>
+        <rect x="31" y="35" width="6" height="5"/>
+        <rect x="11" y="35" width="6" height="5"/>
+        <rect x="31" y="19" width="6" height="5"/>
+        <rect x="21" y="19" width="6" height="5"/>
+        <rect x="11" y="19" width="6" height="5"/>
+        <rect x="31" y="11" width="6" height="5"/>
+        <rect x="21" y="11" width="6" height="5"/>
+        <rect x="11" y="11" width="6" height="5"/>
+        <rect x="21" y="35" width="6" height="9"/>
+    </g>
 </svg>
-
-

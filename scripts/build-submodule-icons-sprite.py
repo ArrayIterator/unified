@@ -10,8 +10,8 @@ see docs/integration/SUBMODULE_ICONS.md for the definition and the
 full name -> Tabler icon mapping.
 
 One <symbol id="submodule-icon-<name>" viewBox="0 0 24 24"> per icon.
-Icons are Tabler 2.11.0 outline icons (ColorTicons, MIT — see
-assets/icons/LICENSE.colorticons), 24x24 grid, stroke width 2,
+Icons are Tabler 2.11.0 outline icons (MIT — see
+assets/icons/LICENSE.tabler), 24x24 grid, stroke width 2,
 single-colour strokes that inherit the surrounding text colour
 (`stroke="currentColor" fill="none"`, round caps and joins). Each
 <symbol> carries the Tabler root attributes so shapes without an

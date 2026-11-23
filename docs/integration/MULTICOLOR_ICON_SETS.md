@@ -430,8 +430,10 @@ which can carry 156 admin modules.
 
 NOTE — this section is a historical record only: it describes the
 IconPark set implemented that morning, which was REMOVED the same
-day, superseded by ColorTicons per user decision (task 371). The
-current set is described in COLORTICONS_MAPPING.md, not here.
+day, superseded by ColorTicons per user decision (task 371), which
+was itself REMOVED 2026-11-23 (task 372) and replaced by Icons8 Flat
+Color Icons. The current set is described in SVGREPO_ICON_SETS.md,
+not here.
 
 Decision: IconPark multi-color (Apache 2.0) adopted as planned in §5.
 151 icons vendored from `@icon-park/svg` 1.4.2 (pinned), theme

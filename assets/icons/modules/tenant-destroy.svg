@@ -1,1 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><title>Tenant Destroy</title><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M2 21h13" /><path d="M4 21v-13a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v13" /><path d="M7.5 10h2" /><path d="M7.5 14h2" /><path d="M10 21v-2.5" /><circle cx="17.5" cy="6" r="3.5" /><path d="M16 4.5l3 3" /><path d="M19 4.5l-3 3" /></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <rect x="7" y="7" width="26" height="37" rx="2" fill="#607D8B"/>
+  <g fill="#ECEFF1">
+    <rect x="12" y="12" width="5" height="6"/>
+    <rect x="21" y="12" width="5" height="6"/>
+    <rect x="12" y="22" width="5" height="6"/>
+    <rect x="21" y="22" width="5" height="6"/>
+  </g>
+  <rect x="16" y="34" width="8" height="10" fill="#37474F"/>
+  <circle cx="36" cy="36" r="10" fill="#F44336"/>
+  <g fill="#FFFFFF">
+    <rect x="31" y="34.4" width="10" height="3.2" rx="1.6" transform="rotate(45 36 36)"/>
+    <rect x="31" y="34.4" width="10" height="3.2" rx="1.6" transform="rotate(-45 36 36)"/>
+  </g>
+</svg>

@@ -1,1 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><title>Load Balancer</title><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 3v4" /><path d="M9 5l3 3 3-3" /><circle cx="12" cy="9.5" r="1" /><path d="M12 10.5 L5.5 14" /><path d="M12 10.5 V14" /><path d="M12 10.5 L18.5 14" /><rect x="2.5" y="14" width="6" height="6" rx="1" /><rect x="9" y="14" width="6" height="6" rx="1" /><rect x="15.5" y="14" width="6" height="6" rx="1" /><path d="M4.5 17h2" /><path d="M11 17h2" /><path d="M17.5 17h2" /></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <path fill="#2196F3" d="M24 3l7 9h-4.5v7h-5v-7H17z"/>
+  <rect x="8" y="23" width="32" height="4" rx="2" fill="#1565C0"/>
+  <g fill="#455A64">
+    <rect x="6" y="31" width="10" height="14" rx="2"/>
+    <rect x="19" y="31" width="10" height="14" rx="2"/>
+    <rect x="32" y="31" width="10" height="14" rx="2"/>
+  </g>
+  <g fill="#CFD8DC">
+    <rect x="8.5" y="34" width="5" height="2" rx="1"/>
+    <rect x="8.5" y="38.5" width="5" height="2" rx="1"/>
+    <rect x="21.5" y="34" width="5" height="2" rx="1"/>
+    <rect x="21.5" y="38.5" width="5" height="2" rx="1"/>
+    <rect x="34.5" y="34" width="5" height="2" rx="1"/>
+    <rect x="34.5" y="38.5" width="5" height="2" rx="1"/>
+  </g>
+</svg>

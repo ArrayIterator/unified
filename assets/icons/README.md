@@ -14,7 +14,8 @@ assets/icons/
   ICONS.md            preview: modules + payments + brands
   SUBMODULES.md       preview: sub-module icons
   README.md           this file (layout, style, provenance)
-  LICENSE.colorticons MIT licence for the module + sub-module icons
+  LICENSE.flat-color-icons  MIT-or-Good-Boy licence for the module icons
+  LICENSE.tabler        MIT licence for the sub-module icons (Tabler)
 ```
 
 Module icons are used with
@@ -30,35 +31,55 @@ they live with the payments module in
 logos live in `src/modules/email_providers/logos/`. Demo copies of
 all three logo sets live in `demo/assets/logos/`.
 
-## Style — Tabler outlines (single colour, inherits text colour)
+## Style — Icons8 Flat Color Icons (multi-tone, fixed palette)
 
-The module and sub-module icons are
-[Tabler 2.11.0](https://github.com/tabler/tabler-icons) outline
-icons, vendored from the
-[ColorTicons](https://github.com/weilanwl/ColorTicons) fork (MIT —
-see `LICENSE.colorticons`), plus 4 custom-drawn gap icons in the
-same visual language:
+The module icons are
+[Icons8 Flat Color Icons](https://github.com/icons8/flat-color-icons)
+(312 free icons, MIT-or-Good-Boy — see `LICENSE.flat-color-icons`),
+plus 13 custom-drawn gap icons in the same visual language:
 
-- 24x24 `viewBox`; stroke width 2, round caps and joins.
-- Single-colour strokes: `stroke="currentColor" fill="none"`.
-  Icons inherit the surrounding text colour, so they adapt to
-  light and dark themes automatically — there is no second dark
-  sprite. To recolour an icon, set CSS `color` on its parent.
-- Every vendored file is a verbatim upstream copy (only the 6
-  `data-animation` attributes were added, see below). Custom files
-  carry an English `<title>` as first child, then the drawing.
+- 48x48 `viewBox`; flat fills, no strokes. Every shape carries its
+  own explicit fill, so an icon renders identically on light and dark
+  backgrounds — there is no second dark sprite and no `currentColor`.
+- Every vendored file is a verbatim upstream copy (only the XML
+  prolog, the SVG 1.1 DOCTYPE line and the Adobe Illustrator generator
+  comment were stripped). Custom files carry no `<title>` (the module
+  id is the label); the drawing is the whole file.
+- A few source icons rely on the default black fill for small details
+  (clock hands in `scheduler`/`timetracker`, the car swoosh stroke in
+  `external-fleet`) — that is the original design, not a missing fill.
+  The sprite builder therefore puts NO `fill`/`stroke` attributes on
+  the `<symbol>` (a symbol-level `fill="none"` would hide those
+  details).
+- 15 of the 143 vendored icons are single-fill shapes (one solid
+  colour, e.g. `like`, `bookmark`, `download`); the set as a whole is
+  multi-tone and every icon is a solid colour shape, not an outline.
 - No gradients. **No Gemini-style sparkles/stars anywhere.** AI
-  concepts use brain / neural-network nodes / circuit motifs (see below).
+  concepts use automation / support / circuit motifs (see below).
+
+The sub-module icons are still Tabler 2.11.0 outlines (see
+`LICENSE.tabler`): 24x24 `viewBox`, stroke width 2, `currentColor` —
+they inherit the surrounding text colour.
 
 ## Custom-drawn icons
 
-4 module gaps had no correct Tabler match, so they were drawn in
-the Tabler style (24 grid, stroke 2, currentColor):
+13 module gaps had no correct Flat Color match, so they were drawn in
+the Flat Color style (48 grid, flat fills, no strokes except the
+megaphone sound arcs):
 
 - `load-balancer` (arrow splitting into 3 server bars),
-- `vault` (safe with dial),
-- `tenant-destroy` (building + X badge),
-- `workflows` (flow diagram: 3 boxes + connectors).
+- `tenant-destroy` (building + red X badge),
+- `site-builder` (browser window + layout blocks),
+- `placeholder` (grey circle + "?"),
+- `calendar` (blue-header calendar — the red-header `calendar` from
+  the set belongs to `appointments`),
+- `geo` (map pin), `email-providers` (envelope),
+- `logs` (terminal window), `notifications` (bell + red badge),
+- `social-marketing` (megaphone), `presets` (sliders),
+- `network-tools` (RJ45 plug), `tickets` (ticket).
+
+`maintenance` was fixed by a better vendored pick instead of a custom
+draw: `support` (a wrench — exact for maintenance).
 
 The sub-module `handlers_balancers` reuses the `load-balancer`
 drawing (same concept). No other sub-module needed a custom drawing:
@@ -69,9 +90,12 @@ full mapping).
 
 ## Provenance
 
-- Module icons: 152 vendored from ColorTicons (Tabler 2.11.0) +
-  4 custom-drawn. Full module → Tabler name mapping:
-  `docs/integration/COLORTICONS_MAPPING.md`.
+- Module icons: 143 vendored from Icons8 Flat Color Icons +
+  13 custom-drawn. Full module → Flat Color name mapping:
+  `docs/integration/SVGREPO_ICON_SETS.md` (§5 + §10 execution record).
+  The previous sets (IconPark, then ColorTicons/Tabler) were removed
+  entirely; see `docs/integration/MULTICOLOR_ICON_SETS.md` and
+  `docs/integration/COLORTICONS_MAPPING.md` (both marked superseded).
 - Sub-module icons: 582 names mapped to 186 Tabler icons (+ 1
   custom reuse). Full mapping:
   `docs/integration/SUBMODULE_ICONS.md`.
@@ -81,21 +105,24 @@ full mapping).
   removed from simple-icons 16.x). See `brands/README.md`.
 - Payment logos: 11 real simple-icons marks + 14 lettermarks.
   See `src/modules/payments/logos/README.md`.
-- Licences: ColorTicons/Tabler MIT (`LICENSE.colorticons`);
-  simple-icons CC0 (brand marks are trademarks of their owners,
-  used only to identify their services; no endorsement implied);
-  flag-icons MIT (`flags/LICENSE.flag-icons`).
+- Licences: Flat Color Icons MIT-or-Good-Boy
+  (`LICENSE.flat-color-icons` — the repo has a `LICENSE.md`, no file
+  literally named `LICENSE`); Tabler MIT for the sub-module icons
+  (`LICENSE.tabler`); simple-icons CC0 (brand marks are trademarks of
+  their owners, used only to identify their services; no endorsement
+  implied); flag-icons MIT (`flags/LICENSE.flag-icons`).
 - The static SVGs are the source of truth; the vendor scripts
-  (`/tmp/vendor_colorticons.py`, `/tmp/vendor_submodules.py`,
+  (`/tmp/vendor_flat_color.py`, `/tmp/vendor_submodules.py`,
   `/tmp/fetch_brand_marks.py`) are not shipped in the repo.
 
-## Colour — one set for light and dark
+## Colour — one fixed palette for light and dark
 
-There is no palette to maintain: strokes are `currentColor`, so an
-icon is whatever colour its surrounding text is. On a light
-background the icons render in the page text colour; on Editorial
-Dark they render in the dark theme's text colour. Verify any new
-icon renders on both backgrounds before reporting done.
+Module icons carry their own fixed fills, so one sprite serves both
+themes: an icon looks the same on a light background and on Editorial
+Dark. Verify any new icon renders on both backgrounds before
+reporting done. (The sub-module icons are the exception: Tabler
+outlines in `currentColor`, so they follow the surrounding text
+colour.)
 
 ## Grayscale mode — retired
 
@@ -108,10 +135,10 @@ on icons. The `--icon-*` variables remain defined in
 
 ## AI family (no sparkles)
 
-- `ai`: brain (Tabler `brain`).
-- `ai-support`: robot (Tabler `robot`), not a star.
-- `advisor`: help (Tabler `help`); never a plain circle.
-- `mcp`: plug (Tabler `plug`); never a star.
+- `ai`: automation (`automatic`).
+- `ai-support`: online support (`online_support`), not a star.
+- `advisor`: assistant (`assistant`); never a plain circle.
+- `mcp`: circuit (`circuit`); never a star.
 
 ## Animation (opt-in, off by default)
 

@@ -1,6 +1,6 @@
 # Sub-module icons preview
 
-All 582 sub-module icons (Tabler 2.11.0 outline icons, ColorTicons MIT — see `LICENSE.colorticons`). Definition and full name → Tabler mapping: `docs/integration/SUBMODULE_ICONS.md`. Built into `submodules-sprite.svg` (`python3 scripts/build-submodule-icons-sprite.py`, 582 symbols).
+All 582 sub-module icons (Tabler 2.11.0 outline icons, MIT — see `LICENSE.tabler`). Definition and full name → Tabler mapping: `docs/integration/SUBMODULE_ICONS.md`. Built into `submodules-sprite.svg` (`python3 scripts/build-submodule-icons-sprite.py`, 582 symbols).
 
 ## Sub-module icons (582)
 
