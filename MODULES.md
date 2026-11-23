@@ -1,6 +1,6 @@
 # Modules
 
-Module catalogue for the Unified Pentagonal Project, moved out of README.md to keep the README short.
+Module catalogue for the Unified Pentagonal Project, moved out of README.md to keep the README short. ([← Back to README](README.md))
 
 - [Core modules](#core-modules)
 - [External modules](#external-modules)

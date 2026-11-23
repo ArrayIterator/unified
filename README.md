@@ -7,7 +7,7 @@ management, and the day-to-day operations around them. One login, one
 dashboard, many modules.
 
 > Project status: 149 modules registered and wired through the hook/event
-> bus (see the list below), 122 Diesel migrations (gapless 000001–000122)
+> bus (full list: [MODULES.md](MODULES.md)), 122 Diesel migrations (gapless 000001–000122)
 > covering 675 tables (1,350 Diesel structs), 732,821 Rust lines under
 > `src/` + `crates/` (counted 2026-11-23; the total grows while
 > external-module crates are being added), payment security re-checked,
@@ -40,7 +40,10 @@ Unified Pentagonal Project is a CRM-like unified management system for:
 
 ## Modules
 
-The full module catalogue lives in [MODULES.md](MODULES.md): 149 core modules grouped by business area (Odoo-style) plus the native external-module crates.
+**Full module catalogue: [MODULES.md](MODULES.md).**
+
+- [Core modules](MODULES.md#core-modules) — 149 modules inside the binary, grouped by business area (Odoo-style, 8 categories).
+- [External modules](MODULES.md#external-modules) — 5 native Rust crates (`crates/external-*`) implementing the same module contract.
 
 ## Integration round 2 (2026-11-22)
 
