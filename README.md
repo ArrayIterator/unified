@@ -6,10 +6,10 @@ One control plane for licensing, downloads, storefront, software and asset
 management, and the day-to-day operations around them. One login, one
 dashboard, many modules.
 
-> Project status: 142 modules registered and wired through the hook/event
-> bus (see the list below), 108 Diesel migrations (gapless 000001–000108)
-> covering 675 tables (1,350 Diesel structs), 645,165 Rust lines under
-> `src/` + `crates/` (counted 2026-11-22; the total grows while
+> Project status: 149 modules registered and wired through the hook/event
+> bus (see the list below), 122 Diesel migrations (gapless 000001–000122)
+> covering 675 tables (1,350 Diesel structs), 732,821 Rust lines under
+> `src/` + `crates/` (counted 2026-11-23; the total grows while
 > external-module crates are being added), payment security re-checked,
 > public API access control with default-deny (see below). Integration
 > round 2 (2026-11-22) registered all 137 modules, renumbered migrations
@@ -40,7 +40,7 @@ Unified Pentagonal Project is a CRM-like unified management system for:
 
 ## Core modules
 
-Core modules ship inside the binary and cannot be removed. The 142 modules
+Core modules ship inside the binary and cannot be removed. The 149 modules
 below are grouped by business area, Odoo-style: each top-level category has
 subcategories, and every module appears exactly once. Counts are verified
 against `src/modules/mod.rs` (`pub mod` lines).
@@ -131,7 +131,7 @@ against `src/modules/mod.rs` (`pub mod` lines).
 - **BI (Business Intelligence)** — reports, KPI dashboards, and forecasts (revenue, churn, cashflow) computed from cross-module source records.
 - **Dashboards** — separate admin, user (client), and reseller dashboards, one shared design system, role/capability enforced server-side per route, with admin "view as user" for support (audited).
 
-### 4. Sales & Commerce (19)
+### 4. Sales & Commerce (22)
 
 #### Sales & Commerce > Store & Marketplace (8)
 
@@ -152,7 +152,7 @@ against `src/modules/mod.rs` (`pub mod` lines).
 - **Cards** — card validation: brand/IIN rules, custom validation rules, daily counts, and settings.
 - **Tax** — tax rules, tax computation with breakdowns, filings with due checks and submission, and external tax connectors.
 
-#### Sales & Commerce > Marketing & CRM (6)
+#### Sales & Commerce > Marketing & CRM (9)
 
 - **CRM Contacts / Leads** — contacts and leads shared by sales, support, and billing.
 - **Marketing** — campaigns with A/B variants and scheduling, segments, audience sync, automated sequences with enrollments, and lead scores.
@@ -160,10 +160,13 @@ against `src/modules/mod.rs` (`pub mod` lines).
 - **Affiliates** — affiliate program: affiliates, tracking links, clicks, conversions, commission rules with approval/void, and payouts.
 - **Loyalty** — loyalty programs with earn rules, tiers, ledger entries, redemptions, and expiry.
 - **Surveys** — surveys with questions, distributions, public response pages, and results.
+- **Referral** — employee referral: recruitment jobs marked referral-eligible with per-job reward-rule overrides, unique token-based shareable referral links per (employee, job), a fully data-driven pipeline of admin-defined stages, reward rules as data with rewards payable through events for billing/HR to pay out, anti-gaming rules as data, and an append-only audit trail.
+- **SMS Marketing** — SMS campaigns: admin-configurable SMS providers as data (a generic HTTP adapter plus a log-only test provider), plain-text templates with {{variable}} substitution and GSM-7/UCS-2 segment counting, contact lists with tags, campaigns with a draft/scheduled/sending/sent/paused/cancelled status machine, per-message delivery tracking, opt-out keywords with a per-tenant opt-out list, and an append-only audit trail.
+- **Social Marketing** — social publishing: admin-defined social networks as data, connected accounts with write-only encrypted credentials, scheduled posts with a draft/scheduled/publishing/published/failed/cancelled status machine publishing once per target account, campaigns grouping posts with live post-count and metrics rollups, analytics metrics arriving only through the provider webhook or manual entry, and an append-only audit trail.
 
-### 5. Communication & Support (15)
+### 5. Communication & Support (16)
 
-#### Communication & Support > Messaging (7)
+#### Communication & Support > Messaging (8)
 
 - **Chat** — realtime chat, interconnected with Support Tickets and the Knowledgebase through hooks.
 - **Mail Manager** — SMTP settings, mail connectors, and the default mailer used by notifications and billing.
@@ -172,6 +175,7 @@ against `src/modules/mod.rs` (`pub mod` lines).
 - **Notifications** — a core module: system and per-user notifications with audience targeting (single user, role, department, segment, or broadcast), a notification centre with unread counts, filters and per-user channel/category/digest preferences (including digest off), per-event templates with email delivery through the configured email provider (or the Mail Manager fallback) and GrapeJS email templates, delivery tracking with retries, and listeners for the other modules' important events (orders, payments, backups, clusters, tickets, licenses, incidents, webhooks, security). Announcements compose with audience, channels, scheduling and expiry, fan out into the notification centre and the user dashboard, and can also go out as email.
 - **Inbox** — message threads with assignment, replies, canned replies, snooze, merge, and stats.
 - **Announcements** — announcements and changelog; audience-targeted, scheduled, expiring, and pinned; fans out into the notification centre and the user dashboard, and can go out as email.
+- **Phone** — WebRTC voice and video calling over the web (internet-only): 1:1 and group calls with store-and-forward signalling (media stays peer-to-peer), call queues and routing rules as data, presence, IVR menus and auto-response scripts as data, consent-gated recording references, and AI call summaries.
 
 #### Communication & Support > Support (3)
 
@@ -190,7 +194,7 @@ against `src/modules/mod.rs` (`pub mod` lines).
 - **Meetings** — Zoom-like video meetings: rooms (scheduled and instant), WebRTC signalling over the WebSocket hub, screen share, in-meeting chat, recording metadata via storage, host/co-host/ participant roles, join tokens, waiting room, scheduling, history and attendance. Paid rooms check product entitlements at join. Signalling and room management are real; media transport is browser WebRTC — no media server/SFU is built in (see TODO.md).
 - **Webinars** — webinars with registrations, attendance, polls, Q&A, in-webinar chat, recordings, follow-ups, analytics, and links to meetings.
 
-### 6. Productivity & Content (20)
+### 6. Productivity & Content (21)
 
 #### Productivity & Content > Content & Website (7)
 
@@ -202,13 +206,14 @@ against `src/modules/mod.rs` (`pub mod` lines).
 - **Portals** — customer portals with menus and public pages, plus per-user views of downloads, invoices, and licenses.
 - **Studio** — custom fields: record types, field definitions with validation, values, and layouts for extending any record.
 
-#### Productivity & Content > Documents & Files (5)
+#### Productivity & Content > Documents & Files (6)
 
 - **Documents** — document storage: records with versions, chunked upload sessions, a download allowlist with signed token downloads, quotas, and scanner hooks.
 - **File Manager** — file browsing and management for uploads and assets.
 - **Forms** — form builder: forms with fields and conditions, public submission pages, submissions with spam marking and remapping, and embeds.
 - **Printing** — print jobs with printer profiles and paper sizes, including ESC/POS thermal output, reprint, and cancel/complete/fail flow.
 - **Records** — records store behind the audit trail, with retention from config.
+- **Spreadsheets** — spreadsheet workbooks with multiple sheets, each a grid of cells in A1 notation (text, number, boolean, date, empty, formula, and error values), a server-side formula evaluator with circular-reference detection, per-workbook sharing, version history, and CSV/JSON import and export.
 
 #### Productivity & Content > Planning & Tasks (8)
 
@@ -221,7 +226,7 @@ against `src/modules/mod.rs` (`pub mod` lines).
 - **Appointments** — bookable services with staff availability and slots; a public booking flow, appointments, reminder rules, settings, and ICS export.
 - **OKRs** — objectives and key results in cycles, with check-ins, overrides, and links to other records.
 
-### 7. Operations & Business (21)
+### 7. Operations & Business (23)
 
 #### Operations & Business > Projects & Field Service (5)
 
@@ -231,7 +236,7 @@ against `src/modules/mod.rs` (`pub mod` lines).
 - **Supervision** — site supervision: assignments, inspection templates and inspections, defects with follow-ups, daily logs with sign-off, progress reports, and approvals.
 - **Incidents** — incident management: incidents with timeline and responders, on-call rotations, escalation policies, auto-open rules, and postmortems.
 
-#### Operations & Business > Manufacturing & Supply (7)
+#### Operations & Business > Manufacturing & Supply (8)
 
 - **Manufacturing** — bills of materials with versions, work centers, work orders, production runs, stock consumption, scrap, and production reports.
 - **Quality** — quality points and criteria, inspections with measurements, alerts, CAPAs, and quality blocks.
@@ -240,6 +245,7 @@ against `src/modules/mod.rs` (`pub mod` lines).
 - **Properties** — property listings with plans and blocks, location search/reverse-geocoding, public pages with SVG plans and printable output, and sold-out marking.
 - **PLM** — Product lifecycle management: lifecycle stages with approval gates, product versions, engineering change orders, and versioned BOM snapshots.
 - **Assets** — asset register with assignments, stock levels and adjustments, stock takes, depreciation, and warranty checks.
+- **Delivery Notes** — delivery-note (DO) documents generated from logistics shipments, with the shipment's items, sender, receiver, and addresses snapshotted at creation time, data-driven DO numbering, and a pure status machine (draft → issued → in transit → delivered → returned, plus cancelled) with proof-of-delivery gating on delivery, partial and full returns with rental-order linkage, and print-ready documents queued through the printing module.
 
 #### Operations & Business > People & HR (4)
 
@@ -248,13 +254,14 @@ against `src/modules/mod.rs` (`pub mod` lines).
 - **Holidays** — holiday providers and countries, sync configs and runs, holidays with overrides, and is-holiday / non-working-day lookups.
 - **Expenses** — expense categories, policies, expenses with receipts, reports, reimbursements, currency rates, adjustments, and spend analytics.
 
-#### Operations & Business > Governance & Compliance (5)
+#### Operations & Business > Governance & Compliance (6)
 
 - **Compliance** — data-protection compliance: processing records, consent records, retention policies, data-subject deletion requests, exports, breach records with timelines, and checklists.
 - **KYC** — Know Your Customer: identity verification cases with AI-assisted document checks, a human admin review queue, risk levels as data, and a hash-chained audit trail.
 - **Privacy** — privacy controls: field declarations, consent types and records, erasure and anonymization requests, privacy notices, and an audit trail.
 - **Risk** — risk register with mitigation plans and tasks, checklist templates and instances, a risk matrix, and alerts.
 - **Auditors** — external auditor accounts with scoped sessions, public share links, activity and access logs, and session revocation.
+- **ESG** — sustainability reporting: admin-defined metric and reporting-framework definitions as data, reporting periods with open/closed status, metric values per period per scope with source notes and full value history, per-metric targets with direction and deadline plus exact progress math in basis points, period summaries with JSON and CSV export, and an append-only audit trail.
 
 ### 8. Education & Services (11)
 
@@ -275,9 +282,60 @@ against `src/modules/mod.rs` (`pub mod` lines).
 - **Sign** — Core e-signature: signing envelopes over documents with hashed signing tokens, signature capture (drawn, typed, or uploaded), completion certificates, and public token-gated signing flows.
 - **Vault** — secure document vault: folders, documents with versions, share links, access requests with approve/deny, retention, and an access log.
 
-142 registered modules in total, counted from `src/modules/mod.rs`
+149 registered modules in total, counted from `src/modules/mod.rs`
 (`pub mod` lines). The list is grouped by business area; the ordering
 inside each subcategory follows the original list order.
+
+## External modules
+
+Native Rust external modules live in `crates/external-*` as separate
+workspace crates. They implement the same
+`unified_core::modules::Module` contract as the built-ins (see
+`crates/example-hello-module` and
+`docs/WORKSPACE_AND_EXTERNAL_MODULES.md`), declare `is_core() =
+false`, and are disabled like any extension. They are workspace
+members but are **not wired into the server binary yet**: enabling one
+takes a root `Cargo.toml` dependency entry plus one `register` line in
+`src/modules/mod.rs::register_all` (see each crate's README).
+
+- **WhatsApp Business** (`crates/external-whatsapp`, id `whatsapp`) —
+  outbound text/template messaging via the Meta Graph API,
+  data-driven templates, webhook verification with HMAC-SHA256
+  inbound validation, message log, and conversations. Secrets
+  (access token, phone-number id, verify token, app secret) come from
+  environment variables only; without them messages stay queued as
+  `pending_config` and are never fake-sent.
+- **E-signature** (`crates/external-esignature`, id `esignature`) —
+  signature requests, HMAC-signed expiring signing links, a
+  hash-chained audit trail, and completion certificates. Workflow and
+  evidence layer only — it does not render or modify PDF bytes.
+- **Fleet** (`crates/external-fleet`, id `fleet`) — vehicles, drivers,
+  trips with overlap checks, GPS positions, fuel logs with km/litre
+  math, maintenance due by odometer/date, and per-vehicle cost
+  rollups. Per-tenant, in-memory.
+- **IoT** (`crates/external-iot`, id `iot`) — device registry with
+  per-device API keys (stored as SHA-256 hashes), HTTP telemetry
+  ingest with rate limits and aggregates, device twins, command queue
+  with ack/expiry, threshold alert rules, and fleet health. HTTP
+  ingestion only; MQTT is a documented topic mapping, no broker
+  embedded.
+- **BI / data warehouse** (`crates/external-bi`, id `bi`) — datasets
+  that declare shape only (never SQL), extracts from
+  `bi.dataset.provide` hook providers into immutable snapshots, a
+  small query engine (filters, grouping, count/sum/avg/min/max),
+  webhook/file destinations, CSV/JSONL exports, and cron schedules
+  evaluated on the `bi.schedule.tick` hook.
+
+Verification status: each crate was checked in an isolated scratch
+workspace against a stub `unified-core` — BI (11 tests passed), fleet
+(15 passed), IoT (12 passed); e-signature (10 tests) and WhatsApp
+(13 tests) have tests written but no passing run was reported. The
+in-tree `cargo check -p <crate>` is blocked by pre-existing
+`unified-db-*` compile errors from the Diesel split (E0425 name
+shadowing), not by these crates — re-run it after that fix lands.
+
+TypeScript modules are a separate layer — see "TypeScript /
+JavaScript engine" below.
 
 ## Integration round 2 (2026-11-22)
 
@@ -287,7 +345,7 @@ Diesel schema/models, hook wiring, compile-blocker fixes). Full detail,
 the renumbering map, and the honest open list live in
 [INTEGRATION_NOTES_INTEGRATION2.md](docs/integration/INTEGRATION_NOTES_INTEGRATION2.md).
 
-The complete categorized list of all 142 modules is in "Core modules"
+The complete categorized list of all 149 modules is in "Core modules"
 above; the groups below are the round-2 batch history, not a second
 list.
 
@@ -307,7 +365,7 @@ list.
   incidents, inbox, surveys, vault, logistics, properties,
   supervision, events, storage_manager, auditors, domain_verification.
 
-50 of the 137 modules declare themselves sellable as products
+63 of the 149 modules declare themselves sellable as products
 (`available_as_product`, see `src/core/modules.rs`); the rest are
 infrastructure or core.
 
