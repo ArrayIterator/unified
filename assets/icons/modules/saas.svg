@@ -1,8 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-<title>SaaS</title>
-<circle cx="9" cy="11" r="4" fill="var(--icon-primary, #2563EB)"/>
-<circle cx="14" cy="9.5" r="4.5" fill="var(--icon-primary, #2563EB)"/>
-<circle cx="16.5" cy="13" r="3" fill="var(--icon-primary, #2563EB)"/>
-<rect x="5" y="12" width="14.5" height="7" rx="3.5" fill="var(--icon-primary, #2563EB)"/>
-<circle cx="18.8" cy="5" r="1.7" fill="var(--icon-accent, #D97706)"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><title>SaaS</title><circle cx="8.5" cy="11" r="4" fill="var(--icon-primary, #2563EB)"/><circle cx="13.5" cy="8.5" r="4.5" fill="var(--icon-primary, #2563EB)"/><circle cx="17" cy="12" r="3.5" fill="var(--icon-primary, #2563EB)"/><rect x="4.5" y="11" width="16" height="6.5" rx="3.25" fill="var(--icon-primary, #2563EB)"/><rect x="15" y="15" width="6" height="6" rx="1.5" fill="var(--icon-accent, #D97706)"/><circle cx="16.8" cy="16.8" r="0.85" fill="#FFFFFF"/><circle cx="19.2" cy="16.8" r="0.85" fill="#FFFFFF"/><circle cx="16.8" cy="19.2" r="0.85" fill="#FFFFFF"/><circle cx="19.2" cy="19.2" r="0.85" fill="#FFFFFF"/></svg>
