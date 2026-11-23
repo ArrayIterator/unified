@@ -307,7 +307,7 @@ pub(crate) async fn update_software(
             // unresolved caller may not name one. `None` in the
             // body means "no change" (this shape cannot express an
             // explicit clear), so the stored vendor is untouched.
-            require_company_match_for(&scope, &Some(vendor))?;
+            require_company_match_for(&scope, &Some(vendor.clone()))?;
             validate_software_refs(&state, Some(&vendor), None, None)?;
             software.vendor_company_id = Some(vendor);
         }

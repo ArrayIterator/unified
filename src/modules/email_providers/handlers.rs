@@ -109,7 +109,7 @@ pub(crate) fn caller_company(
             ))
         }
         (Some(tenant_company), _) => Ok(Some(tenant_company.clone())),
-        (None, verified) => Ok(verified),
+        (None, verified) => Ok(verified.clone()),
     }
 }
 
@@ -205,8 +205,14 @@ pub(crate) async fn list_connections(
     req: HttpRequest,
     query: web::Query<PaginationParams>,
 ) -> HttpResponse {
-    let _tenant = require_tenant(&req)?;
-    let _scope = caller_company(&_tenant, &req)?;
+    let _tenant = match require_tenant(&req) {
+        Ok(value) => value,
+        Err(error) => return api_json::error_response(&error, false),
+    };
+    let _scope = match caller_company(&_tenant, &req) {
+        Ok(value) => value,
+        Err(error) => return api_json::error_response(&error, false),
+    };
     let params = query.into_inner();
     let mut items: Vec<EmailConnection> = connections_store()
         .iter()
@@ -243,8 +249,14 @@ pub(crate) async fn create_connection(
     body: web::Json<CreateConnectionRequest>,
 ) -> HttpResponse {
     let debug = state.is_debug();
-    let _tenant = require_tenant(&req)?;
-    let _scope = caller_company(&_tenant, &req)?;
+    let _tenant = match require_tenant(&req) {
+        Ok(value) => value,
+        Err(error) => return api_json::error_response(&error, debug),
+    };
+    let _scope = match caller_company(&_tenant, &req) {
+        Ok(value) => value,
+        Err(error) => return api_json::error_response(&error, debug),
+    };
     if let Err(error) = require_permission(&state, &req, PERM_EMAIL_PROVIDERS_MANAGE) {
         return api_json::error_response(&error, debug);
     }
@@ -299,9 +311,15 @@ pub(crate) async fn get_connection_handler(
     path: web::Path<String>,
     req: HttpRequest,
 ) -> HttpResponse {
-    let _tenant = require_tenant(&req)?;
-    let _scope = caller_company(&_tenant, &req)?;
     let debug = state.is_debug();
+    let _tenant = match require_tenant(&req) {
+        Ok(value) => value,
+        Err(error) => return api_json::error_response(&error, debug),
+    };
+    let _scope = match caller_company(&_tenant, &req) {
+        Ok(value) => value,
+        Err(error) => return api_json::error_response(&error, debug),
+    };
     let id = match parse_connection_id(&path.into_inner()) {
         Ok(id) => id,
         Err(error) => return api_json::error_response(&error, debug),
@@ -323,8 +341,14 @@ pub(crate) async fn update_connection(
     body: web::Json<UpdateConnectionRequest>,
 ) -> HttpResponse {
     let debug = state.is_debug();
-    let _tenant = require_tenant(&req)?;
-    let _scope = caller_company(&_tenant, &req)?;
+    let _tenant = match require_tenant(&req) {
+        Ok(value) => value,
+        Err(error) => return api_json::error_response(&error, debug),
+    };
+    let _scope = match caller_company(&_tenant, &req) {
+        Ok(value) => value,
+        Err(error) => return api_json::error_response(&error, debug),
+    };
     if let Err(error) = require_permission(&state, &req, PERM_EMAIL_PROVIDERS_MANAGE) {
         return api_json::error_response(&error, debug);
     }
@@ -422,8 +446,14 @@ pub(crate) async fn delete_connection(
     path: web::Path<String>,
 ) -> HttpResponse {
     let debug = state.is_debug();
-    let _tenant = require_tenant(&req)?;
-    let _scope = caller_company(&_tenant, &req)?;
+    let _tenant = match require_tenant(&req) {
+        Ok(value) => value,
+        Err(error) => return api_json::error_response(&error, debug),
+    };
+    let _scope = match caller_company(&_tenant, &req) {
+        Ok(value) => value,
+        Err(error) => return api_json::error_response(&error, debug),
+    };
     if let Err(error) = require_permission(&state, &req, PERM_EMAIL_PROVIDERS_MANAGE) {
         return api_json::error_response(&error, debug);
     }
@@ -465,8 +495,14 @@ pub(crate) async fn test_connection_handler(
     path: web::Path<String>,
 ) -> HttpResponse {
     let debug = state.is_debug();
-    let _tenant = require_tenant(&req)?;
-    let _scope = caller_company(&_tenant, &req)?;
+    let _tenant = match require_tenant(&req) {
+        Ok(value) => value,
+        Err(error) => return api_json::error_response(&error, debug),
+    };
+    let _scope = match caller_company(&_tenant, &req) {
+        Ok(value) => value,
+        Err(error) => return api_json::error_response(&error, debug),
+    };
     if let Err(error) = require_permission(&state, &req, PERM_EMAIL_PROVIDERS_MANAGE) {
         return api_json::error_response(&error, debug);
     }
@@ -568,8 +604,14 @@ pub(crate) async fn send_mail_handler(
     body: web::Json<SendInput>,
 ) -> HttpResponse {
     let debug = state.is_debug();
-    let _tenant = require_tenant(&req)?;
-    let _scope = caller_company(&_tenant, &req)?;
+    let _tenant = match require_tenant(&req) {
+        Ok(value) => value,
+        Err(error) => return api_json::error_response(&error, debug),
+    };
+    let _scope = match caller_company(&_tenant, &req) {
+        Ok(value) => value,
+        Err(error) => return api_json::error_response(&error, debug),
+    };
     if let Err(error) = require_permission(&state, &req, PERM_EMAIL_PROVIDERS_MANAGE) {
         return api_json::error_response(&error, debug);
     }
@@ -686,8 +728,14 @@ pub(crate) async fn send_batch_handler(
     body: web::Json<SendBatchInput>,
 ) -> HttpResponse {
     let debug = state.is_debug();
-    let _tenant = require_tenant(&req)?;
-    let _scope = caller_company(&_tenant, &req)?;
+    let _tenant = match require_tenant(&req) {
+        Ok(value) => value,
+        Err(error) => return api_json::error_response(&error, debug),
+    };
+    let _scope = match caller_company(&_tenant, &req) {
+        Ok(value) => value,
+        Err(error) => return api_json::error_response(&error, debug),
+    };
     if let Err(error) = require_permission(&state, &req, PERM_EMAIL_PROVIDERS_MANAGE) {
         return api_json::error_response(&error, debug);
     }
@@ -816,8 +864,14 @@ pub(crate) async fn list_send_log(
     req: HttpRequest,
     query: web::Query<PaginationParams>,
 ) -> HttpResponse {
-    let _tenant = require_tenant(&req)?;
-    let _scope = caller_company(&_tenant, &req)?;
+    let _tenant = match require_tenant(&req) {
+        Ok(value) => value,
+        Err(error) => return api_json::error_response(&error, false),
+    };
+    let _scope = match caller_company(&_tenant, &req) {
+        Ok(value) => value,
+        Err(error) => return api_json::error_response(&error, false),
+    };
     let params = query.into_inner();
     let pagination = params.normalized();
     let mut entries = send_log_store()
@@ -862,8 +916,14 @@ pub(crate) async fn list_send_log(
 
 
 pub(crate) async fn get_default_connection(req: HttpRequest) -> HttpResponse {
-    let _tenant = require_tenant(&req)?;
-    let _scope = caller_company(&_tenant, &req)?;
+    let _tenant = match require_tenant(&req) {
+        Ok(value) => value,
+        Err(error) => return api_json::error_response(&error, false),
+    };
+    let _scope = match caller_company(&_tenant, &req) {
+        Ok(value) => value,
+        Err(error) => return api_json::error_response(&error, false),
+    };
     match default_connection() {
         Some(connection) => api_json::success_response(
             json!({ "connection_id": connection.id.to_string(), "connection": connection.view() }),
@@ -886,8 +946,14 @@ pub(crate) async fn set_default_connection(
     body: web::Json<SetDefaultInput>,
 ) -> HttpResponse {
     let debug = state.is_debug();
-    let _tenant = require_tenant(&req)?;
-    let _scope = caller_company(&_tenant, &req)?;
+    let _tenant = match require_tenant(&req) {
+        Ok(value) => value,
+        Err(error) => return api_json::error_response(&error, debug),
+    };
+    let _scope = match caller_company(&_tenant, &req) {
+        Ok(value) => value,
+        Err(error) => return api_json::error_response(&error, debug),
+    };
     if let Err(error) = require_permission(&state, &req, PERM_EMAIL_PROVIDERS_MANAGE) {
         return api_json::error_response(&error, debug);
     }

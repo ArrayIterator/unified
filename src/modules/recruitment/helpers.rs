@@ -99,7 +99,7 @@ pub(crate) fn caller_company(
             ))
         }
         (Some(tenant_company), _) => Ok(Some(tenant_company.clone())),
-        (None, verified) => Ok(verified),
+        (None, verified) => Ok(verified.clone()),
     }
 }
 

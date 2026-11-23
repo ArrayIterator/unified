@@ -113,7 +113,7 @@ impl Module for SchedulerModule {
         // `seed_builtin_jobs`), then start the ticker so scheduled
         // jobs fire on their own. Starting twice is a no-op (see
         // `start_ticker`).
-        super::service::seed_builtin_jobs(self.state.clone());
+        super::service::seed_builtin_jobs(&self.state);
         super::service::start_ticker(self.state.clone());
         Ok(())
     }

@@ -118,7 +118,7 @@ pub(crate) async fn get_bank(
         let caller = caller(&req)?;
         let _scope = caller_company(&_tenant, &req)?;
         require_permission(&ctx, &caller.role, PERM_EXAMS_VIEW)?;
-        require_bank_by_id_in_scope(&state, path.as_str(), &_scope)?
+        require_bank_by_id_in_scope(&state, path.as_str(), &_scope)
     })();
     json::respond(result, debug)
 }

@@ -323,10 +323,14 @@ async fn serve_object(
             Ok(bytes) => bytes,
             Err(_) => return not_found,
         };
+        let chunks: Vec<Bytes> = bytes
+            .chunks(FILE_STREAM_CHUNK)
+            .map(Bytes::copy_from_slice)
+            .collect();
         let chunk_stream = stream::iter(
-            bytes
-                .chunks(FILE_STREAM_CHUNK)
-                .map(|chunk| Ok::<Bytes, actix_web::Error>(Bytes::copy_from_slice(chunk))),
+            chunks
+                .into_iter()
+                .map(|chunk| Ok::<Bytes, actix_web::Error>(chunk)),
         );
         response.streaming(chunk_stream)
     }

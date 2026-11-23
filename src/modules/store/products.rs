@@ -502,11 +502,15 @@ pub(crate) async fn list_tiers(
     };
     let params = query.into_inner();
     let product_id = path.into_inner();
-    let product = state
+    let product = match state
         .products
         .get(&product_id)
         .map(|entry| entry.value().clone())
-        .ok_or_else(|| UnifiedError::not_found("Product not found"))?;
+        .ok_or_else(|| UnifiedError::not_found("Product not found"))
+    {
+        Ok(product) => product,
+        Err(error) => return json::error_response(&error, false),
+    };
     if product.status != "published" && !in_company_scope(&product.company_id, &scope) {
         return json::error_response(&UnifiedError::not_found("Product not found"), false);
     }

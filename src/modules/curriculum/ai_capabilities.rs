@@ -134,8 +134,14 @@ pub(super) async fn ai_capability(
     let debug = ctx.is_debug();
     let capability = path.into_inner();
     let input = body.into_inner().input;
-    let _tenant = require_tenant(&req)?;
-    let _scope = caller_company(&_tenant, &req)?;
+    let _tenant = match require_tenant(&req) {
+        Ok(value) => value,
+        Err(error) => return json::error_response(&error, debug),
+    };
+    let _scope = match caller_company(&_tenant, &req) {
+        Ok(value) => value,
+        Err(error) => return json::error_response(&error, debug),
+    };
     let caller = match caller(&req) {
         Ok(caller) => caller,
         Err(error) => return json::error_response(&error, debug),

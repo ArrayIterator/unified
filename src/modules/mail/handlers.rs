@@ -45,8 +45,14 @@ pub(crate) async fn get_settings(
 ) -> HttpResponse {
     // C2: SMTP settings (including the stored password) are admin-only;
     // no verified caller, no read.
-    let _tenant = require_tenant(&req)?;
-    let _scope = caller_company(&_tenant, &req)?;
+    let _tenant = match require_tenant(&req) {
+        Ok(value) => value,
+        Err(error) => return api_json::error_response(&error, state.is_debug()),
+    };
+    let _scope = match caller_company(&_tenant, &req) {
+        Ok(value) => value,
+        Err(error) => return api_json::error_response(&error, state.is_debug()),
+    };
     if let Err(error) = unified_core::caller::require_caller(&req) {
         return api_json::error_response(&error, state.is_debug());
     }
@@ -66,8 +72,14 @@ pub(crate) async fn update_settings(
     let debug = state.is_debug();
     // C2: overwriting SMTP host/credentials is admin-only; no
     // verified caller, no write.
-    let _tenant = require_tenant(&req)?;
-    let _scope = caller_company(&_tenant, &req)?;
+    let _tenant = match require_tenant(&req) {
+        Ok(value) => value,
+        Err(error) => return api_json::error_response(&error, debug),
+    };
+    let _scope = match caller_company(&_tenant, &req) {
+        Ok(value) => value,
+        Err(error) => return api_json::error_response(&error, debug),
+    };
     if let Err(error) = unified_core::caller::require_caller(&req) {
         return api_json::error_response(&error, debug);
     }
@@ -155,10 +167,16 @@ pub(crate) async fn send_mail(
     body: web::Json<SendMailInput>,
     req: HttpRequest,
 ) -> HttpResponse {
-    let _tenant = require_tenant(&req)?;
-    let _scope = require_company_for_write(&_tenant, &req)?;
     let state: Arc<MailState> = state.get_ref().clone();
     let debug = state.is_debug();
+    let _tenant = match require_tenant(&req) {
+        Ok(value) => value,
+        Err(error) => return api_json::error_response(&error, debug),
+    };
+    let _scope = match require_company_for_write(&_tenant, &req) {
+        Ok(value) => value,
+        Err(error) => return api_json::error_response(&error, debug),
+    };
     let input = body.into_inner();
 
     if let Err(error) = parse_mailbox(&input.to) {
@@ -312,8 +330,14 @@ pub(crate) async fn test_mail(
     body: web::Json<TestMailInput>,
     req: HttpRequest,
 ) -> HttpResponse {
-    let _tenant = require_tenant(&req)?;
-    let _scope = caller_company(&_tenant, &req)?;
+    let _tenant = match require_tenant(&req) {
+        Ok(value) => value,
+        Err(error) => return api_json::error_response(&error, state.is_debug()),
+    };
+    let _scope = match caller_company(&_tenant, &req) {
+        Ok(value) => value,
+        Err(error) => return api_json::error_response(&error, state.is_debug()),
+    };
     let state: Arc<MailState> = state.get_ref().clone();
     let input = body.into_inner();
     if let Err(error) = parse_mailbox(&input.to) {
@@ -370,8 +394,14 @@ pub(crate) async fn list_log(
     query: web::Query<PaginationParams>,
     req: HttpRequest,
 ) -> HttpResponse {
-    let _tenant = require_tenant(&req)?;
-    let _scope = caller_company(&_tenant, &req)?;
+    let _tenant = match require_tenant(&req) {
+        Ok(value) => value,
+        Err(error) => return api_json::error_response(&error, state.is_debug()),
+    };
+    let _scope = match caller_company(&_tenant, &req) {
+        Ok(value) => value,
+        Err(error) => return api_json::error_response(&error, state.is_debug()),
+    };
     let pagination = query.normalized();
     let mut entries = state.log.read().expect("mail log lock poisoned").clone();
     if let Some(status) = pagination.filters.get("status") {
@@ -411,8 +441,14 @@ pub(crate) async fn list_connectors(
     state: web::Data<Arc<MailState>>,
     req: HttpRequest,
 ) -> HttpResponse {
-    let _tenant = require_tenant(&req)?;
-    let _scope = caller_company(&_tenant, &req)?;
+    let _tenant = match require_tenant(&req) {
+        Ok(value) => value,
+        Err(error) => return api_json::error_response(&error, state.is_debug()),
+    };
+    let _scope = match caller_company(&_tenant, &req) {
+        Ok(value) => value,
+        Err(error) => return api_json::error_response(&error, state.is_debug()),
+    };
     let configured = state.settings_snapshot().is_some();
     let local = sendmail_binary();
     api_json::success_response(

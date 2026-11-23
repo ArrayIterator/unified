@@ -565,11 +565,11 @@ pub(crate) async fn move_file(
         updated.folder_id = target.clone();
         if updated.kind == "folder" {
             updated.path = state
-                .disk_path(&target, &updated.id)
+                .disk_path(&target, &updated.id)?
                 .to_string_lossy()
                 .to_string();
         } else if state
-            .disk_path(&record.folder_id, &record.id)
+            .disk_path(&record.folder_id, &record.id)?
             .to_string_lossy()
             .into_owned()
             == record.path
@@ -578,7 +578,7 @@ pub(crate) async fn move_file(
             // `folder_id`. Shared files carry an external URL in
             // `path`; leave that untouched.
             updated.path = state
-                .disk_path(&target, &updated.id)
+                .disk_path(&target, &updated.id)?
                 .to_string_lossy()
                 .to_string();
         }

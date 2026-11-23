@@ -204,7 +204,7 @@ impl DataToolsState {
         run_id: &str,
     ) -> TargetOutcome {
         let context = self.bus().emit(
-            cleanup_event_for(target),
+            &cleanup_event_for(target),
             json!({
                 "target": target,
                 "dry_run": dry_run,

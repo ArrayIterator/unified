@@ -28,8 +28,14 @@ pub(crate) async fn list_departments(
     req: HttpRequest,
     query: web::Query<PaginationParams>,
 ) -> HttpResponse {
-    let _tenant = require_tenant(&req)?;
-    let _scope = caller_company(&_tenant, &req)?;
+    let _tenant = match require_tenant(&req) {
+        Ok(value) => value,
+        Err(error) => return json::error_response(&error, false),
+    };
+    let _scope = match caller_company(&_tenant, &req) {
+        Ok(value) => value,
+        Err(error) => return json::error_response(&error, false),
+    };
     if let Err(error) = authorize(&ctx, &req, PERM_DEPARTMENTS_VIEW) {
         return json::error_response(&error, false);
     }
@@ -66,8 +72,14 @@ pub(crate) async fn create_department(
     req: HttpRequest,
     body: web::Json<CreateDepartment>,
 ) -> HttpResponse {
-    let _tenant = require_tenant(&req)?;
-    let _scope = caller_company(&_tenant, &req)?;
+    let _tenant = match require_tenant(&req) {
+        Ok(value) => value,
+        Err(error) => return json::error_response(&error, false),
+    };
+    let _scope = match caller_company(&_tenant, &req) {
+        Ok(value) => value,
+        Err(error) => return json::error_response(&error, false),
+    };
     if let Err(error) = authorize(&ctx, &req, PERM_DEPARTMENTS_CREATE) {
         return json::error_response(&error, false);
     }
@@ -159,8 +171,14 @@ pub(crate) async fn get_department(
     req: HttpRequest,
     path: web::Path<String>,
 ) -> HttpResponse {
-    let _tenant = require_tenant(&req)?;
-    let _scope = caller_company(&_tenant, &req)?;
+    let _tenant = match require_tenant(&req) {
+        Ok(value) => value,
+        Err(error) => return json::error_response(&error, false),
+    };
+    let _scope = match caller_company(&_tenant, &req) {
+        Ok(value) => value,
+        Err(error) => return json::error_response(&error, false),
+    };
     if let Err(error) = authorize(&ctx, &req, PERM_DEPARTMENTS_VIEW) {
         return json::error_response(&error, false);
     }
@@ -179,8 +197,14 @@ pub(crate) async fn update_department(
     path: web::Path<String>,
     body: web::Json<UpdateDepartment>,
 ) -> HttpResponse {
-    let _tenant = require_tenant(&req)?;
-    let _scope = caller_company(&_tenant, &req)?;
+    let _tenant = match require_tenant(&req) {
+        Ok(value) => value,
+        Err(error) => return json::error_response(&error, false),
+    };
+    let _scope = match caller_company(&_tenant, &req) {
+        Ok(value) => value,
+        Err(error) => return json::error_response(&error, false),
+    };
     if let Err(error) = authorize(&ctx, &req, PERM_DEPARTMENTS_MANAGE) {
         return json::error_response(&error, false);
     }
@@ -311,8 +335,14 @@ pub(crate) async fn delete_department(
     req: HttpRequest,
     path: web::Path<String>,
 ) -> HttpResponse {
-    let _tenant = require_tenant(&req)?;
-    let _scope = caller_company(&_tenant, &req)?;
+    let _tenant = match require_tenant(&req) {
+        Ok(value) => value,
+        Err(error) => return json::error_response(&error, false),
+    };
+    let _scope = match caller_company(&_tenant, &req) {
+        Ok(value) => value,
+        Err(error) => return json::error_response(&error, false),
+    };
     if let Err(error) = authorize(&ctx, &req, PERM_DEPARTMENTS_MANAGE) {
         return json::error_response(&error, false);
     }
@@ -349,8 +379,14 @@ pub(crate) async fn get_department_sla(
     req: HttpRequest,
     path: web::Path<String>,
 ) -> HttpResponse {
-    let _tenant = require_tenant(&req)?;
-    let _scope = caller_company(&_tenant, &req)?;
+    let _tenant = match require_tenant(&req) {
+        Ok(value) => value,
+        Err(error) => return json::error_response(&error, false),
+    };
+    let _scope = match caller_company(&_tenant, &req) {
+        Ok(value) => value,
+        Err(error) => return json::error_response(&error, false),
+    };
     if let Err(error) = authorize(&ctx, &req, PERM_DEPARTMENTS_VIEW) {
         return json::error_response(&error, false);
     }
@@ -380,8 +416,14 @@ pub(crate) async fn list_agents(
     path: web::Path<String>,
     query: web::Query<PaginationParams>,
 ) -> HttpResponse {
-    let _tenant = require_tenant(&req)?;
-    let _scope = caller_company(&_tenant, &req)?;
+    let _tenant = match require_tenant(&req) {
+        Ok(value) => value,
+        Err(error) => return json::error_response(&error, ctx.is_debug()),
+    };
+    let _scope = match caller_company(&_tenant, &req) {
+        Ok(value) => value,
+        Err(error) => return json::error_response(&error, ctx.is_debug()),
+    };
     if let Err(error) = authorize(&ctx, &req, PERM_DEPARTMENTS_VIEW) {
         return json::error_response(&error, ctx.is_debug());
     }
@@ -408,8 +450,14 @@ pub(crate) async fn add_agent(
     path: web::Path<String>,
     body: web::Json<AddAgent>,
 ) -> HttpResponse {
-    let _tenant = require_tenant(&req)?;
-    let _scope = caller_company(&_tenant, &req)?;
+    let _tenant = match require_tenant(&req) {
+        Ok(value) => value,
+        Err(error) => return json::error_response(&error, false),
+    };
+    let _scope = match caller_company(&_tenant, &req) {
+        Ok(value) => value,
+        Err(error) => return json::error_response(&error, false),
+    };
     if let Err(error) = authorize(&ctx, &req, PERM_DEPARTMENTS_CREATE) {
         return json::error_response(&error, false);
     }
@@ -458,8 +506,14 @@ pub(crate) async fn remove_agent(
     req: HttpRequest,
     path: web::Path<(String, String)>,
 ) -> HttpResponse {
-    let _tenant = require_tenant(&req)?;
-    let _scope = caller_company(&_tenant, &req)?;
+    let _tenant = match require_tenant(&req) {
+        Ok(value) => value,
+        Err(error) => return json::error_response(&error, false),
+    };
+    let _scope = match caller_company(&_tenant, &req) {
+        Ok(value) => value,
+        Err(error) => return json::error_response(&error, false),
+    };
     if let Err(error) = authorize(&ctx, &req, PERM_DEPARTMENTS_MANAGE) {
         return json::error_response(&error, false);
     }

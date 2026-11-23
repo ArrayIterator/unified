@@ -114,7 +114,7 @@ pub(crate) fn require_company_match(
 ) -> UnifiedResult<Option<String>> {
     let caller = caller_company(tenant, req)?;
     match (body_company_id, caller) {
-        (Some(body), Some(caller_company)) if body != caller_company => Err(
+        (Some(body), Some(caller_company)) if body != &caller_company => Err(
             UnifiedError::forbidden("company_id does not match the caller's company scope"),
         ),
         (Some(body), Some(_)) => Ok(Some(body.clone())),

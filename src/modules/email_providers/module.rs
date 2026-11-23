@@ -181,8 +181,14 @@ pub(crate) async fn test_connection_send(
     body: web::Json<TestSendInput>,
 ) -> HttpResponse {
     let debug = state.is_debug();
-    let _tenant = require_tenant(&req)?;
-    let _scope = caller_company(&_tenant, &req)?;
+    let _tenant = match require_tenant(&req) {
+        Ok(value) => value,
+        Err(error) => return api_json::error_response(&error, debug),
+    };
+    let _scope = match caller_company(&_tenant, &req) {
+        Ok(value) => value,
+        Err(error) => return api_json::error_response(&error, debug),
+    };
     if let Err(error) = require_permission(&state, &req, PERM_EMAIL_PROVIDERS_MANAGE) {
         return api_json::error_response(&error, debug);
     }

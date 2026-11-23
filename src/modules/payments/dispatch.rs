@@ -87,7 +87,7 @@ impl ProviderAdapter {
                         "Provider \"{}\" needs an endpoint on the connection",
                         self.kind.as_str()
                     ))
-                })?;
+                });
             }
             _ => {}
         }
