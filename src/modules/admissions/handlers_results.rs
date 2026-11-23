@@ -24,7 +24,6 @@ use super::helpers::{
 };
 use super::state::AdmissionsState;
 use super::types::AdmissionResult;
-use super::state::AdmissionsState;
 
 // ---------------------------------------------------------------------------
 // Handlers: results

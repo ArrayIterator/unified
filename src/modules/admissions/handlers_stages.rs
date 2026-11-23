@@ -25,7 +25,6 @@ use super::helpers::{
 };
 use super::state::AdmissionsState;
 use super::types::{CreateStage, StageDefinition, UpdateStage};
-use super::state::AdmissionsState;
 
 // ---------------------------------------------------------------------------
 // Handlers: stage definitions

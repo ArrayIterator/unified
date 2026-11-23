@@ -18,7 +18,7 @@ use std::sync::Arc;
 use std::sync::atomic::Ordering;
 use uuid::Uuid;
 
-use super::ai::AI_CAPABILITIES;
+use super::ai_capabilities::AI_CAPABILITIES;
 use super::ai::ai_capability;
 use super::handlers::get_settings;
 use super::handlers::list_connectors;

@@ -21,12 +21,14 @@ pub use self::types::{AuditorStatus, AuditorAccount, AuditorAccountView, Auditor
     AuditorCreated, ActiveAuditorSessionView, AuditorScopeInput, CreateAuditorRequest,
     ExtendAuditorRequest, RevokeRequest, CreateLinkRequest, PublicLinkQuery};
 pub use self::state::{AuditorsState, expire_due_auditors};
-pub(crate) use self::helpers::{Caller, caller, check_capability, require_permission,
-    reject_auditor_caller, parse_uuid, require_text, valid_email, ok, created, err, paginate,
-    client_ip, user_agent, load_auditor, load_link, validate_scope_input, schedule_expiry,
-    require_tenant, caller_company, in_company_scope, require_record_in_company_scope,
-    account_in_scope, require_account_in_scope, require_scope_entry_company, link_in_scope,
-    require_link_in_scope};
+pub(crate) use self::helpers::{
+    Caller, account_in_scope, caller, caller_company, check_capability, client_ip, created, err,
+    in_company_scope, link_in_scope, load_auditor, load_link, ok, paginate, parse_uuid,
+    reject_auditor_caller, require_account_in_scope, require_company_for_write,
+    require_link_in_scope, require_permission, require_record_in_company_scope,
+    require_scope_entry_company, require_tenant, require_text, schedule_expiry, user_agent,
+    valid_email, validate_scope_input,
+};
 pub(crate) use self::hooks::{on_scope_check, on_expire_requested, on_auth_login};
 pub(crate) use self::handlers_auditors::{create_auditor, list_auditors, get_auditor, revoke_auditor,
     extend_auditor, list_auditor_sessions, revoke_auditor_session, list_auditor_activity,

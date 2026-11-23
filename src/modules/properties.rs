@@ -72,7 +72,14 @@ pub(crate) use self::svg::{PlanProjection, ring_path, format_money};
 pub use self::providers::{LocationProvider, NoneProvider, NominatimProvider};
 pub(crate) use self::providers::{NominatimSearchItem, NominatimReverseItem, build_provider, valid_hostname};
 pub use self::state::{PropertiesState};
-pub(crate) use self::helpers::{Caller, caller, check_capability, require_permission, parse_uuid, require_text, ok, created, err, paginate, valid_slug, slugify, valid_price, valid_currency, valid_latitude, valid_longitude, validate_click_target, load_property, load_property_by_slug, load_plan, load_block, slug_in_use, validate_storage_reference};
+pub(crate) use self::helpers::{
+    Caller, caller, caller_company, check_capability, created, err, in_company_scope, load_block,
+    load_plan, load_property, load_property_by_slug, ok, paginate, parse_uuid,
+    require_company_change_uuid_for, require_company_for_write, require_company_match_uuid,
+    require_permission, require_record_in_company_scope, require_record_writable_in_company_scope,
+    require_tenant, require_text, slug_in_use, slugify, valid_currency, valid_latitude,
+    valid_longitude, valid_price, valid_slug, validate_click_target, validate_storage_reference,
+};
 pub(crate) use self::block_status::{record_history, move_block_status, public_property_view, public_block_view, plan_view};
 pub(crate) use self::listeners::{on_properties_order_created, find_purchase_for_payment, is_zero_decimal_currency, minor_to_major, on_payment_captured, on_bank_transfer_verification_created, on_bank_transfer_rejected};
 pub(crate) use self::property_handlers::{list_properties, create_property, get_property, can_edit_property, update_property, delete_property, change_property_status, publish_property, archive_property, mark_property_sold_out};

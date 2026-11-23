@@ -26,7 +26,6 @@ use super::helpers::{
     caller, caller_company, created, err, load_equipment_type, ok, optional_text, paginate,
     require_permission, require_tenant, require_text, valid_slug,
 };
-use super::types::{Equipment, EquipmentType};
 
 // ---------------------------------------------------------------------------
 // Equipment type handlers

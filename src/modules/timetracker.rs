@@ -25,9 +25,9 @@ pub(crate) use self::auth::require_permission;
 pub(crate) use self::auth::{Caller, authenticate_agent, caller, can_view_screenshots};
 pub(crate) use self::auth::{can_view_user, claimed_company_id, require_company_member};
 pub(crate) use self::auth::{
-    caller_company, in_company_scope, in_company_scope_opt, require_company_match,
-    require_company_match_for, require_record_in_company_scope, require_tenant,
-    resolve_company_id,
+    caller_company, in_company_scope, in_company_scope_opt, require_company_for_write,
+    require_company_match, require_company_match_for, require_record_in_company_scope,
+    require_tenant,
 };
 pub(crate) use self::handlers::update_entry;
 pub(crate) use self::handlers::{approve_entry, create_entry, delete_entry, get_active_timer};

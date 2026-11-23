@@ -12,7 +12,8 @@ use std::sync::Arc;
 use super::helpers::{
     caller_company, in_company_scope, line_total_for, matches_search, minor_to_major, paginate,
     require_caller_company, require_company_match_for, require_product_in_scope,
-    require_record_in_company_scope, require_tenant, respond_created,
+    require_record_in_company_scope, require_record_writable_in_company_scope, require_tenant,
+    respond_created,
 };
 use super::pricing::{coupon_discount, resolve_tier, valid_billing_period, valid_currency, valid_kind, valid_pricing_model, valid_product_status, validate_subscription_settings};
 use super::state::{StoreState, new_id, now};

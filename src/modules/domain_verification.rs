@@ -98,7 +98,13 @@ pub use self::settings::{VerificationSettings, default_settings};
 pub(crate) use self::settings::{SETTINGS, settings_store, current_settings};
 pub use self::tokens::{VerificationToken, VerificationTokenView, VerificationAttempt};
 pub(crate) use self::tokens::{TOKENS, ATTEMPTS, tokens_store, attempts_store};
-pub(crate) use self::helpers::{Caller, caller, check_capability, require_permission, normalize_domain, render_host, render_value, generate_token, hash_token, value_prefix, paginate, current_token_for, domain_status, attempts_in_window};
+pub(crate) use self::helpers::{
+    Caller, attempts_in_window, caller, caller_company, check_capability, current_token_for,
+    domain_status, generate_token, hash_token, in_company_scope, normalize_domain, paginate,
+    render_host, render_value, require_body_tenant_match, require_company_for_write,
+    require_company_match_uuid, require_permission, require_record_in_company_scope,
+    require_record_writable_in_company_scope, require_tenant, value_prefix,
+};
 pub(crate) use self::requests::{UpdateSettingsRequest, IssueTokenRequest, VerifyRequest, StatusQuery, TokenIssuance, VerifyOutcome};
 pub(crate) use self::handlers::{get_settings, update_settings, issue_token, list_tokens, revoke_token, check_once, verify_domain_alias, list_attempts, get_status};
 pub(crate) use self::hooks::{on_status_requested, on_verify_retry_requested, retry_pending_verifications, stash_ctx, hook_ctx, DOMAIN_VERIFICATION_CTX};

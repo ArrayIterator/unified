@@ -2,7 +2,7 @@
 
 use crate::auth::{password as auth_password, totp as auth_totp};
 use unified_core::context::AppContext;
-use unified_core::error::UnifiedError;
+use unified_core::error::{UnifiedError, UnifiedResult};
 use unified_core::hardening::{shared_state, trusted_client_ip_for_http_request};
 use unified_core::hooks::events;
 use unified_core::json as api_json;

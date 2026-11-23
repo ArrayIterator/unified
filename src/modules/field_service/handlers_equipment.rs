@@ -26,7 +26,6 @@ use super::helpers::{
     caller, caller_company, created, err, load_equipment, ok, optional_text, paginate,
     require_permission, require_tenant, require_text,
 };
-use super::types::{Equipment, WorkOrder, WorkOrderStatus};
 
 // ---------------------------------------------------------------------------
 // Equipment handlers

@@ -21,7 +21,6 @@ use uuid::Uuid;
 use super::constants::{MAX_ID, MAX_MONEY, MAX_SHORT, PERM_ADMISSIONS_READ_ALL};
 use super::state::AdmissionsState;
 use super::types::Application;
-use super::state::AdmissionsState;
 
 // ---------------------------------------------------------------------------
 // Helpers: caller, capabilities, validation, views

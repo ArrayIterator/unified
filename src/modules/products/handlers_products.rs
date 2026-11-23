@@ -8,9 +8,9 @@ use actix_web::{web, HttpRequest, HttpResponse};
 use serde_json::{json, Value};
 use std::sync::{Arc};
 use super::helpers::{
-    caller, caller_company, require_company_for_write, check_capability, in_company_scope, require_company_match,
-    require_company_match_for, require_permission, require_product_in_scope,
-    require_record_in_company_scope, require_tenant,
+    caller, caller_company, check_capability, in_company_scope, require_company_for_write,
+    require_company_match, require_company_match_for, require_permission, require_product_in_scope,
+    require_record_in_company_scope, require_record_writable_in_company_scope, require_tenant,
 };
 use super::money::resolve_money;
 use super::types::{CreateProduct, CreateSupportTicket, EntitlementCheckRequest, PERM_PRODUCTS_CREATE, PERM_PRODUCTS_MANAGE, PERM_PRODUCTS_READ, PRODUCT_STATUSES, PriceQuote, PriceQuoteRequest, Product, ProductDetail, SubscriptionPlanView, TransitionProduct, UpdateProduct, default_bundle_rule};

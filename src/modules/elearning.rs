@@ -81,6 +81,7 @@ pub mod reviews;
 pub mod paths;
 pub mod settings_handlers;
 pub mod ai;
+pub mod ai_capabilities;
 pub mod module;
 
 pub(crate) use self::constants::{MAX_TITLE_LEN, MAX_DESCRIPTION_LEN, MAX_TEXT_LEN, MAX_SLUG_LEN, MAX_REF_LEN, MAX_COMMENT_LEN, MAX_QUESTIONS_PER_QUIZ, MAX_OPTIONS_PER_QUESTION, PERM_ELEARNING_VIEW, PERM_ELEARNING_MANAGE, PERM_ELEARNING_INSTRUCT, ORDER_PAID, STORE_ORDER_COMPLETED, STORE_ORDER_REFUNDED, STORE_ORDER_CANCELLED, ANCHOR_CONFIRMED, ANCHOR_FAILED, STATUS_DRAFT, STATUS_PUBLISHED, STATUS_ARCHIVED, ENROLL_ACTIVE, ENROLL_PENDING_PAYMENT, ENROLL_COMPLETED, ENROLL_CANCELLED, ENROLL_SUSPENDED};
@@ -88,7 +89,20 @@ pub use self::settings::{ElearningSettings};
 pub use self::types::{Course, CourseModule, Lesson, Enrollment, LessonProgress, Quiz, QuizQuestion, AttemptAnswer, QuizAttempt, QuizAttemptView, AttemptReviewItem, Certificate, Review, LearningPath, LearningPathCourse, CourseProgress, PathProgress, PathCourseProgress};
 pub use self::requests::{CreateCourseRequest, UpdateCourseRequest, CreateModuleRequest, UpdateModuleRequest, CreateLessonRequest, UpdateLessonRequest, EnrollRequest, CreateQuizRequest, UpdateQuizRequest, CreateQuestionRequest, UpdateQuestionRequest, SubmitAttemptRequest, CreateReviewRequest, UpdateReviewRequest, CreatePathRequest, UpdatePathRequest, AddPathCourseRequest, UpdateSettingsRequest};
 pub use self::state::{ElearningState};
-pub(crate) use self::helpers::{Caller, caller, check_capability, require_permission, can_teach, require_teach, require_course_write, course_visible_to, require_course_visible, parse_uuid, require_text, optional_text, require_in_list, require_currency, ok, created, err, paginate, opt_string, valid_course_transition, load_course, load_module, load_lesson, load_enrollment, load_quiz_for_lesson, load_question, load_attempt, load_certificate, load_review, load_path, find_enrollment, ordered_lessons, lesson_available, quiz_passed, course_progress, new_certificate_code, certificate_fingerprint, issue_certificate, paths_completed_by_course, maybe_complete_course};
+pub(crate) use self::helpers::{
+    Caller, caller, caller_company, can_teach, certificate_fingerprint, check_capability,
+    course_in_scope, course_progress, course_visible_to, created, err, find_enrollment,
+    in_company_scope, issue_certificate, lesson_available, load_attempt, load_certificate,
+    load_course, load_enrollment, load_lesson, load_module, load_path, load_question,
+    load_quiz_for_lesson, load_review, maybe_complete_course, new_certificate_code, ok, opt_string,
+    optional_media_reference, optional_text, ordered_lessons, paginate, parse_uuid, path_visible,
+    paths_completed_by_course, quiz_course_in_scope, quiz_passed, require_company_change_for,
+    require_company_for_write, require_company_match, require_course_by_id_in_scope,
+    require_course_visible, require_course_write, require_currency, require_in_list,
+    require_media_reference, require_permission, require_record_in_company_scope,
+    require_record_writable_in_company_scope, require_teach, require_tenant, require_text,
+    valid_course_transition,
+};
 pub(crate) use self::listeners::{order_course_id, on_course_requested, on_order_paid, on_order_refunded_or_cancelled, on_anchor_outcome};
 pub(crate) use self::courses::{list_courses, create_course, get_course, update_course, delete_course, delete_lesson_rows, transition_course, publish_course, archive_course};
 pub(crate) use self::modules_lessons::{list_course_modules, create_course_module, get_module, update_module, delete_module, list_module_lessons, create_lesson, get_lesson, update_lesson, delete_lesson};
@@ -98,6 +112,6 @@ pub(crate) use self::certificates::{list_certificates, get_certificate, verify_c
 pub(crate) use self::reviews::{course_rating_summary, list_course_reviews, create_course_review, get_review, update_review, delete_review};
 pub(crate) use self::paths::{list_paths, create_path, get_path, update_path, delete_path, add_path_course, remove_path_course, compute_path_progress, get_path_progress, list_my_paths};
 pub(crate) use self::settings_handlers::{get_settings, update_settings};
-pub use self::ai::{AI_CAPABILITIES};
+pub use self::ai_capabilities::{AI_CAPABILITIES};
 pub(crate) use self::ai::{lesson_grounding, quiz_grounding, ai_capability};
 pub use self::module::{ElearningModule, register};

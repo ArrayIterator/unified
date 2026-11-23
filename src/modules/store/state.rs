@@ -27,8 +27,8 @@ use super::reference::reference_settings;
 use super::types::{
     Cart, CatalogEntry, Coupon, DigitalDefaults, DigitalDownload, DigitalPayoutRequest,
     DigitalProduct, DigitalProductFile, DigitalProductPreview, DigitalProductType, DigitalRoyalty,
-    DownloadEntitlement, DownloadRecord, IssuedLicense, Order, PricingTier, Product, Subscription,
-    WatermarkFormat,
+    DownloadEntitlement, DownloadRecord, IssuedLicense, Order, OrderItem, PricingTier, Product,
+    Subscription, WatermarkFormat,
 };
 
 // ---------------------------------------------------------------------------

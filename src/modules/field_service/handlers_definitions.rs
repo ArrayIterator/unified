@@ -26,7 +26,6 @@ use super::helpers::{
     caller, caller_company, created, err, ok, require_permission, require_tenant, require_text,
     valid_slug,
 };
-use super::types::{DefinitionValue, FieldServiceSettings, IntervalUnitDef};
 
 // ---------------------------------------------------------------------------
 // Definition and settings handlers

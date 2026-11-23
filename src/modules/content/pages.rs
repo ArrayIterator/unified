@@ -163,6 +163,7 @@ pub(super) async fn get_page(
     req: HttpRequest,
     id: web::Path<Uuid>,
 ) -> HttpResponse {
+    let debug = ctx.is_debug();
     let tenant = match require_tenant(&req) {
         Ok(tenant) => tenant,
         Err(error) => return api_json::error_response(&error, debug),
@@ -187,6 +188,7 @@ pub(super) async fn update_page(
     id: web::Path<Uuid>,
     input: web::Json<UpdatePageInput>,
 ) -> HttpResponse {
+    let debug = ctx.is_debug();
     let tenant = match require_tenant(&req) {
         Ok(tenant) => tenant,
         Err(error) => return api_json::error_response(&error, debug),
@@ -294,6 +296,7 @@ pub(super) async fn delete_page(
     req: HttpRequest,
     id: web::Path<Uuid>,
 ) -> HttpResponse {
+    let debug = ctx.is_debug();
     let tenant = match require_tenant(&req) {
         Ok(tenant) => tenant,
         Err(error) => return api_json::error_response(&error, debug),
@@ -321,6 +324,7 @@ pub(super) async fn publish_page(
     req: HttpRequest,
     id: web::Path<Uuid>,
 ) -> HttpResponse {
+    let debug = ctx.is_debug();
     let tenant = match require_tenant(&req) {
         Ok(tenant) => tenant,
         Err(error) => return api_json::error_response(&error, debug),
@@ -372,6 +376,7 @@ pub(super) async fn unpublish_page(
     req: HttpRequest,
     id: web::Path<Uuid>,
 ) -> HttpResponse {
+    let debug = ctx.is_debug();
     let tenant = match require_tenant(&req) {
         Ok(tenant) => tenant,
         Err(error) => return api_json::error_response(&error, debug),

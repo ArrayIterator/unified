@@ -49,9 +49,9 @@ pub use self::state::{StorageManagerState};
 pub(crate) use self::helpers::{
     Caller, authorize, bucket_company_visible, caller, caller_company, check_bucket_access,
     check_capability, check_object_access, created, err_response, in_company_scope,
-    is_storage_admin, ok, paginate, quota_in_scope, require_company_match_for, require_permission,
-    require_quota_in_scope, require_record_in_company_scope, require_tenant,
-    resolve_upload_company,
+    is_platform_admin, ok, paginate, quota_in_scope, require_company_match_for, require_permission,
+    require_quota_in_scope, require_record_in_company_scope,
+    require_record_writable_in_company_scope, require_tenant, resolve_upload_company,
 };
 pub(crate) use self::validation::{require_text, optional_text, parse_uuid, valid_scope_id,
     valid_module_id, valid_prefix, valid_quota_limit, object_key, quota_key, load_bucket,

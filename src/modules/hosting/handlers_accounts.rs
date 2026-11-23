@@ -25,7 +25,13 @@ use uuid::Uuid;
 use super::types::{HostingAccount, HostingState};
 use super::requests::{CreateAccountRequest, UpdateAccountRequest};
 use super::views::AccountRequirementReport;
-use super::helpers::{PERM_HOSTING_MANAGE, PERM_HOSTING_VIEW, allowed_transition, caller, caller_company, require_company_for_write, check_account_requirements, in_company_scope, paginate, require_company_match_uuid, require_company_match_uuid_update, require_permission, require_record_in_company_scope, require_tenant, validate_usage_against_plan};
+use super::helpers::{
+    PERM_HOSTING_MANAGE, PERM_HOSTING_VIEW, allowed_transition, caller, caller_company,
+    check_account_requirements, in_company_scope, paginate, require_company_for_write,
+    require_company_match_uuid, require_company_match_uuid_update, require_permission,
+    require_record_in_company_scope, require_record_writable_in_company_scope, require_tenant,
+    validate_usage_against_plan,
+};
 
 // ---------------------------------------------------------------------------
 // Account handlers.

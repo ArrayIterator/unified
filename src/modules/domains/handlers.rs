@@ -18,7 +18,11 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use super::service::{domain_exists_by_name, is_unique_violation, load_domain, persist_domain, valid_ssl_status, verify_domain_record};
-use super::state::{PERM_DOMAINS_MANAGE, PERM_DOMAINS_VIEW, caller, caller_company, require_company_for_write, db_pool, domains_store, in_company_scope, paginate, require_company_match_uuid, require_permission, require_record_in_company_scope, require_tenant};
+use super::state::{
+    PERM_DOMAINS_MANAGE, PERM_DOMAINS_VIEW, caller, caller_company, db_pool, domains_store,
+    in_company_scope, paginate, require_company_match_uuid, require_permission,
+    require_record_in_company_scope, require_record_writable_in_company_scope, require_tenant,
+};
 use super::types::{CreateDomainRequest, CreateSubdomainRequest, UpdateDomainRequest, VerifyRequest};
 
 // ---------------------------------------------------------------------------

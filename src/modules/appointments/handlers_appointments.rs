@@ -835,7 +835,7 @@ pub(crate) async fn guest_book(
         let input = body.into_inner();
         let service = load_service_by_id(&state, input.service_id)
             .map_err(|_| UnifiedError::new(GENERIC_FAILURE, 400))?;
-        require_record_in_company_scope(&service.company_id, &_scope)?;
+        require_record_in_company_scope(&service.company_id, &None)?;
         if !service.is_active {
             return Err(UnifiedError::new(GENERIC_FAILURE, 400));
         }

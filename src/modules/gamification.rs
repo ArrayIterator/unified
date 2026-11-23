@@ -155,7 +155,15 @@ pub use self::types::{GamificationRule, PointsLedgerEntry, GamificationBadge, Ga
 pub use self::requests::{CreateRuleRequest, UpdateRuleRequest, AwardPointsRequest, AdjustPointsRequest, CreateBadgeRequest, UpdateBadgeRequest, CreateSeasonRequest, UpdateSeasonRequest, CreateRewardRequest, UpdateRewardRequest, RequestRewardScope};
 pub use self::state::{GamificationState};
 pub use self::helpers::{AwardOutcome};
-pub(crate) use self::helpers::{Caller, caller, caller_company, check_capability, require_permission, can_manage, parse_uuid, require_text, ok, created, err, paginate, opt_string, valid_action, load_rule, load_badge, load_season, load_reward, load_reward_request, user_balance, active_season_for, points_from_rule_today, action_count, check_badges, append_ledger_entry, award_points_for_action, require_tenant, resolve_company_id, require_company_match, require_company_match_for, in_company_scope, require_record_in_company_scope};
+pub(crate) use self::helpers::{
+    Caller, action_count, active_season_for, append_ledger_entry, award_points_for_action, caller,
+    caller_company, can_manage, check_badges, check_capability, created, err, in_company_scope,
+    load_badge, load_reward, load_reward_request, load_rule, load_season, ok, opt_string, paginate,
+    parse_uuid, points_from_rule_today, require_company_for_write, require_company_match,
+    require_company_match_for, require_permission, require_record_in_company_scope,
+    require_record_writable_in_company_scope, require_tenant, require_text, user_balance,
+    valid_action,
+};
 pub(crate) use self::listeners::{on_ticket_updated, on_order_completed, on_survey_response_received, on_community_post_replied, on_community_topic_created};
 pub(crate) use self::rules::{list_rules, create_rule, get_rule, update_rule, delete_rule};
 pub(crate) use self::ledger::{list_ledger, get_ledger_entry, balance_view, get_own_balance, get_user_balance, award_points, adjust_points};

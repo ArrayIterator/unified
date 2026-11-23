@@ -28,6 +28,7 @@ pub(super) async fn list_categories(
     req: HttpRequest,
     query: web::Query<PaginationParams>,
 ) -> HttpResponse {
+    let debug = ctx.is_debug();
     let tenant = match require_tenant(&req) {
         Ok(tenant) => tenant,
         Err(error) => return api_json::error_response(&error, debug),
@@ -67,6 +68,7 @@ pub(super) async fn create_category(
     req: HttpRequest,
     input: web::Json<CreateCategoryInput>,
 ) -> HttpResponse {
+    let debug = ctx.is_debug();
     let tenant = match require_tenant(&req) {
         Ok(tenant) => tenant,
         Err(error) => return api_json::error_response(&error, debug),
@@ -119,6 +121,7 @@ pub(super) async fn get_category(
     req: HttpRequest,
     id: web::Path<Uuid>,
 ) -> HttpResponse {
+    let debug = ctx.is_debug();
     let tenant = match require_tenant(&req) {
         Ok(tenant) => tenant,
         Err(error) => return api_json::error_response(&error, debug),
@@ -143,6 +146,7 @@ pub(super) async fn update_category(
     id: web::Path<Uuid>,
     input: web::Json<UpdateCategoryInput>,
 ) -> HttpResponse {
+    let debug = ctx.is_debug();
     let tenant = match require_tenant(&req) {
         Ok(tenant) => tenant,
         Err(error) => return api_json::error_response(&error, debug),
@@ -201,6 +205,7 @@ pub(super) async fn delete_category(
     req: HttpRequest,
     id: web::Path<Uuid>,
 ) -> HttpResponse {
+    let debug = ctx.is_debug();
     let tenant = match require_tenant(&req) {
         Ok(tenant) => tenant,
         Err(error) => return api_json::error_response(&error, debug),

@@ -13,11 +13,11 @@ use unified_core::pagination::PaginationParams;
 use uuid::Uuid;
 
 use super::helpers::{
-    caller, created, err, load_note, note_event, note_view, ok, optional_text, paginate,
-    parse_date_filter, parse_uuid, require_address, require_label, require_notes, require_reason,
-    require_reference, require_text, caller_company, require_company_for_write, in_company_scope_uuid,
-    require_company_change_uuid, require_company_match_uuid, require_note_in_company_scope,
-    require_tenant,
+    caller, caller_company, created, err, in_company_scope_uuid, load_note, note_event, note_view,
+    ok, optional_text, paginate, parse_date_filter, parse_uuid, require_address,
+    require_company_change_uuid, require_company_for_write, require_company_match_uuid,
+    require_label, require_note_in_company_scope, require_note_writable_in_company_scope,
+    require_notes, require_reason, require_reference, require_tenant, require_text,
 };
 use super::state::DeliveryNoteState;
 use super::types::{

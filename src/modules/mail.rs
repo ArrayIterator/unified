@@ -32,13 +32,14 @@ use actix_web::HttpRequest;
 use unified_core::error::{UnifiedError, UnifiedResult};
 
 pub mod ai;
+pub mod ai_capabilities;
 mod handlers;
 pub mod module;
 mod service;
 pub mod state;
 pub mod types;
 
-pub use self::ai::AI_CAPABILITIES;
+pub use self::ai_capabilities::AI_CAPABILITIES;
 pub use self::module::*;
 pub use self::state::*;
 pub use self::types::{
@@ -93,5 +94,23 @@ pub(crate) fn caller_company(
         }
         (Some(tenant_company), _) => Ok(Some(tenant_company.clone())),
         (None, verified) => Ok(verified),
+    }
+}
+
+/// Resolve the caller's company for a WRITE (C3 task 315, strict by
+/// default): a write requires a resolved company scope, so an
+/// unresolved caller is refused with 403 instead of silently
+/// writing a global (unscoped) record. Mutation handlers call
+/// this instead of `caller_company`; read handlers keep
+/// `caller_company`.
+pub(crate) fn require_company_for_write(
+    tenant: &unified_core::tenancy::TenantContext,
+    req: &actix_web::HttpRequest,
+) -> UnifiedResult<Option<String>> {
+    match caller_company(tenant, req)? {
+        Some(company) => Ok(Some(company)),
+        None => Err(UnifiedError::forbidden(
+            "A write requires a resolved company scope",
+        )),
     }
 }

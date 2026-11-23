@@ -11,9 +11,10 @@ use std::collections::{HashMap};
 use std::sync::{Arc};
 use uuid::Uuid;
 use super::helpers::{
-    caller, caller_company, require_company_for_write, file_company, in_company_scope, release_company,
-    require_company_match, require_company_match_for, require_record_in_company_scope,
-    require_software_in_scope, require_tenant, require_permission, version_company,
+    caller, caller_company, file_company, in_company_scope, release_company,
+    require_company_for_write, require_company_match, require_company_match_for,
+    require_permission, require_record_in_company_scope, require_record_writable_in_company_scope,
+    require_software_in_scope, require_tenant, version_company,
 };
 use super::types::Release;
 use super::types::{AttachTag, CreateSoftware, LatestRelease, PERM_SOFTWARE_CREATE, PERM_SOFTWARE_MANAGE, PERM_SOFTWARE_READ, SOFTWARE_STATUSES, Software, SoftwareDetail, SoftwareReleaseHistory, SoftwareVersion, Tag, UpdateSoftware};

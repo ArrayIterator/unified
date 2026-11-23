@@ -26,6 +26,7 @@
 // `academic/module.rs`.
 
 pub mod ai;
+pub mod ai_capabilities;
 pub mod constants;
 mod handlers_assessment;
 mod handlers_catalog;
@@ -38,7 +39,7 @@ pub mod module;
 pub mod state;
 pub mod types;
 
-pub use self::ai::AI_CAPABILITIES;
+pub use self::ai_capabilities::AI_CAPABILITIES;
 pub use self::constants::{
     PERM_ACADEMIC_ADVISE, PERM_ACADEMIC_GRADE, PERM_ACADEMIC_MANAGE, PERM_ACADEMIC_READ,
     PERM_ACADEMIC_READ_ALL, PERM_ACADEMIC_TRANSCRIPT,

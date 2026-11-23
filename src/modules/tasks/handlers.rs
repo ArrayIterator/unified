@@ -2,9 +2,10 @@
 
 use super::types::{PERM_TASKS_MANAGE, PERM_TASKS_READ, TASK_DELETED};
 use super::validation::{
-    assign_event_for, caller, caller_company, require_company_for_write, in_company_scope, require_company_match,
-    require_company_match_for, require_company_match_uuid, require_company_match_uuid_for,
-    require_permission, require_record_in_company_scope, require_tenant,
+    assign_event_for, caller, caller_company, in_company_scope, require_company_for_write,
+    require_company_match, require_company_match_for, require_company_match_uuid,
+    require_company_match_uuid_for, require_permission, require_record_in_company_scope,
+    require_record_writable_in_company_scope, require_tenant,
 };
 use super::*;
 use unified_core::context::AppContext;

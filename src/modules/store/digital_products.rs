@@ -14,7 +14,7 @@ use super::digital::{digital_can_manage, digital_search_text, require_digital_ma
 use super::helpers::{
     caller_company, matches_search, paginate, require_caller_company, require_company_match_for,
     require_digital_product_in_scope, require_product_in_scope, require_record_in_company_scope,
-    require_tenant, respond_created,
+    require_record_writable_in_company_scope, require_tenant, respond_created,
 };
 use super::pricing::{valid_product_status};
 use super::state::{StoreState, new_id, now};

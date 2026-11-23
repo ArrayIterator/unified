@@ -25,7 +25,6 @@ use super::helpers::{
 };
 use super::state::FieldServiceState;
 use super::types::{DispatchAssignment, WorkOrder, WorkOrderStatus};
-use super::state::FieldServiceState;
 
 // ---------------------------------------------------------------------------
 // Dispatch handlers

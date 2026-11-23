@@ -22,17 +22,18 @@
 // never buffer a whole file.
 
 use super::*;
-use unified_core::context::AppContext;
-use unified_core::error::UnifiedError;
-use unified_core::json;
-use unified_core::storage::{StorageKind, validate_key};
-use unified_core::tenancy::ControlPlaneGuard;
 use actix_web::{HttpRequest, HttpResponse, web};
 use bytes::Bytes;
 use futures_util::stream;
 use serde::Deserialize;
 use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncSeekExt};
+use unified_core::context::AppContext;
+use unified_core::error::UnifiedError;
+use unified_core::json;
+use unified_core::storage::{StorageKind, validate_key};
+use unified_core::tenancy::ControlPlaneGuard;
+use uuid::Uuid;
 
 /// Chunk size for streamed file bodies (64 KiB).
 const FILE_STREAM_CHUNK: usize = 65536;
@@ -529,6 +530,11 @@ mod tests {
         DocumentRecord {
             id: "doc-1".to_string(),
             name: "report.pdf".to_string(),
+            title: "report.pdf".to_string(),
+            alt_text: None,
+            caption: None,
+            description: None,
+            custom_metadata: serde_json::Map::new(),
             module_id: "documents".to_string(),
             company_id: "company-1".to_string(),
             owner_id: "user-1".to_string(),

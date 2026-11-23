@@ -26,7 +26,6 @@ use super::helpers::{
     caller, caller_company, compute_next_due, created, err, load_equipment, load_template, ok,
     optional_text, paginate, require_permission, require_tenant, require_text,
 };
-use super::types::{Equipment, MaintenancePlan, MaintenanceTemplate};
 
 // ---------------------------------------------------------------------------
 // Maintenance template handlers

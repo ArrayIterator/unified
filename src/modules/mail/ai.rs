@@ -1,6 +1,8 @@
-//! Mail - AI capabilities.
+//! Mail - AI handlers and grounding.
 //!
 //! Part of the `mail` module split; see `src/modules/mail.rs`.
+//!
+//! Capability declarations live in `ai_capabilities.rs`.
 
 use unified_core::context::AppContext;
 use unified_core::json as api_json;
@@ -18,20 +20,6 @@ use std::sync::Arc;
 // `mail.ai.draft_requested` hook, and run through the AI module's
 // gated runner. Drafts are returned inline and are never sent by
 // this module: sending stays on the existing human endpoints.
-// ---------------------------------------------------------------------------
-
-/// AI capabilities this module exposes through the AI module's
-/// contract. The capability is non-PII: inputs are redacted before
-/// they reach the model.
-pub const AI_CAPABILITIES: &[ai::AiCapability] = &[ai::AiCapability {
-    id: "draft",
-    module_id: "mail",
-    name: "Draft email",
-    description: "Draft an email from a subject and bullet points (a string, or a JSON array of points). The output is returned inline; it is never sent by this module.",
-    input_fields: &["subject", "bullets"],
-    allows_pii: false,
-    use_case: "email",
-}];
 
 /// Run one registered mail AI capability:
 /// `POST /api/v1/mail/ai/{capability}` with body

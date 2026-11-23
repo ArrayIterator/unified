@@ -26,7 +26,6 @@ use super::helpers::{
     caller, caller_company, can_act_on_order, created, err, items_of, load_item, load_work_order,
     ok, optional_text, paginate, require_permission, require_tenant, require_text,
 };
-use super::types::WorkOrderItem;
 
 // ---------------------------------------------------------------------------
 // Work order checklist item handlers

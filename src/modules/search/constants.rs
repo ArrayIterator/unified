@@ -28,8 +28,23 @@ use super::module::*;
 /// Document kinds the global index accepts. Keep this list in sync with
 /// the kinds named in the module documentation above.
 pub const SEARCH_KINDS: &[&str] = &[
-    "software", "product", "order", "invoice", "license", "user", "company", "domain",
-    "task", "article", "ticket", "server", "cluster", "backup",
+    "software",
+    "product",
+    "order",
+    "invoice",
+    "license",
+    "user",
+    "company",
+    "domain",
+    "task",
+    "article",
+    "ticket",
+    "server",
+    "cluster",
+    "backup",
+    "documents.document",
+    "forums.thread",
+    "forums.post",
 ];
 
 /// Maximum number of documents kept in the in-memory index. Oldest

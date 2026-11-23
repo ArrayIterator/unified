@@ -22,7 +22,6 @@ use super::constants::PERM_ADMISSIONS_READ;
 use super::helpers::{caller, caller_company, require_permission, require_tenant};
 use super::state::AdmissionsState;
 use super::types::{Application, ChecklistItem};
-use super::state::AdmissionsState;
 
 // ---------------------------------------------------------------------------
 // Handlers: period summary report

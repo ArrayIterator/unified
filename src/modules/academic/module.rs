@@ -211,7 +211,7 @@ use actix_web::web;
 use serde_json::json;
 use std::sync::Arc;
 
-use super::ai::AI_CAPABILITIES;
+use super::ai_capabilities::AI_CAPABILITIES;
 use super::ai::academic_progress_grounding;
 use super::ai::ai_capability;
 use super::handlers_assessment::create_grade;

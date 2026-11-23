@@ -26,7 +26,6 @@ use super::helpers::{
     caller, caller_company, can_act_on_order, created, err, load_part, load_work_order, ok,
     paginate, parts_of, require_permission, require_tenant, require_text,
 };
-use super::types::WorkOrderPart;
 
 // ---------------------------------------------------------------------------
 // Work order part handlers

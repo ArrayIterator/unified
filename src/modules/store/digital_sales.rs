@@ -15,7 +15,8 @@ use super::digital::{check_sample_rate_limit, digital_can_manage, ensure_digital
 use super::digital_products::{digital_product_for_read, load_digital_product};
 use super::helpers::{
     caller_company, in_company_scope, matches_search, minor_to_major, owner_of, paginate,
-    require_caller_company, require_record_in_company_scope, require_tenant, respond_created,
+    require_caller_company, require_record_in_company_scope,
+    require_record_writable_in_company_scope, require_tenant, respond_created,
 };
 use super::signing::{build_signed_url};
 use super::state::{StoreState, new_id, now};

@@ -120,7 +120,7 @@ impl AiProviderRegistry {
     ) -> UnifiedResult<()> {
         if !valid_provider_id(id) {
             return Err(UnifiedError::bad_request(format!(
-                "Invalid AI provider id "{id}" (expected lowercase letters, digits, '-' or '_')"
+                "Invalid AI provider id \"{id}\" (expected lowercase letters, digits, '-' or '_')"
             )));
         }
         self.factories_by_id
@@ -164,7 +164,7 @@ impl AiProviderRegistry {
             .expect("ai provider registry lock poisoned");
         let factory = factories.get(id).ok_or_else(|| {
             UnifiedError::internal(format!(
-                "No AI provider adapter registered for id "{id}""
+                "No AI provider adapter registered for id \"{id}\""
             ))
         })?;
         factory(connection, api_key)

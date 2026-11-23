@@ -25,7 +25,6 @@ use super::helpers::{
 };
 use super::state::AdmissionsState;
 use super::types::{ApplicationScore, CreateScore, ScoreTotal, UpdateScore};
-use super::state::AdmissionsState;
 
 // ---------------------------------------------------------------------------
 // Handlers: scores

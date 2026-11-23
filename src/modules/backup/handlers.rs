@@ -104,14 +104,14 @@ pub(crate) async fn list_jobs(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let params = query.into_inner();
-    let caller = match (|| {
+    let (caller, _scope) = match (|| {
         let _tenant = require_tenant(&req)?;
         let _scope = caller_company(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_BACKUP_VIEW)?;
-        Ok::<Caller, UnifiedError>(caller)
+        Ok::<(Caller, Option<String>), UnifiedError>((caller, _scope))
     })() {
-        Ok(caller) => caller,
+        Ok((caller, scope)) => (caller, scope),
         Err(error) => return json::error_response(&error, debug),
     };
     let company = _scope.clone();

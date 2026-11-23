@@ -35,8 +35,7 @@ pub(crate) use self::types::{AI_CAPABILITIES, AUDIT_COMPLETED, AUDIT_OPEN, COPY_
     PERM_LIBRARY_CIRCULATE, PERM_LIBRARY_MANAGE, PERM_LIBRARY_VIEW};
 pub(crate) use self::state::{LibraryState};
 pub(crate) use self::auth::{Caller, caller, can_catalog, can_circulate, check_capability,
-    constant_time_eq, require_catalog, require_circulate, require_permission, require_tenant,
-    resolve_company_id};
+    constant_time_eq, require_catalog, require_circulate, require_permission, require_tenant};
 pub(crate) use self::validation::{normalize_isbn, optional_text, parse_datetime,
     parse_optional_uuid, parse_uuid, require_currency, require_in_list, require_non_negative,
     require_positive, require_text, slugify};

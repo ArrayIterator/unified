@@ -38,6 +38,7 @@ use super::helpers::require_company_match_str;
 use super::helpers::require_hex_color;
 use super::helpers::require_permission;
 use super::helpers::require_record_in_company_scope_str;
+use super::helpers::require_record_writable_in_company_scope_str;
 use super::helpers::require_text;
 use super::helpers::require_tenant;
 use super::helpers::slug_in_use;

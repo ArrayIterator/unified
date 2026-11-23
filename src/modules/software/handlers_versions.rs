@@ -10,9 +10,10 @@ use semver::Version;
 use serde_json::{json, Value};
 use std::sync::{Arc};
 use super::helpers::{
-    caller, caller_company, require_company_for_write, in_company_scope, release_company, require_record_in_company_scope,
-    require_release_in_scope, require_software_in_scope, require_tenant, require_permission,
-    require_version_in_scope, version_company,
+    caller, caller_company, in_company_scope, release_company, require_company_for_write,
+    require_permission, require_record_in_company_scope, require_record_writable_in_company_scope,
+    require_release_in_scope, require_software_in_scope, require_tenant, require_version_in_scope,
+    version_company,
 };
 use super::types::{CreateRelease, CreateVersion, PERM_SOFTWARE_CREATE, PERM_SOFTWARE_MANAGE, PERM_SOFTWARE_READ, Release, ReleaseFile, SoftwareVersion, UpdateVersion};
 use super::state::SoftwareState;

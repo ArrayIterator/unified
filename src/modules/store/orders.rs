@@ -17,7 +17,7 @@ use super::helpers::{
     caller_company, caller_owns, entitlement_company, in_company_scope, license_company,
     matches_search, minor_to_major, paginate, record_visible_to_caller, require_caller_company,
     require_entitlement_owner, require_order_owner, require_record_in_company_scope,
-    require_tenant,
+    require_record_writable_in_company_scope, require_tenant,
 };
 use super::signing::{build_signed_url, catalog_release_file, record_download, require_paid_order_for_entitlement, sign_download, signature_matches};
 use super::state::{StoreState, new_id, now};

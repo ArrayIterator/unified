@@ -1,6 +1,8 @@
-//! Academic - AI capabilities.
+//! Academic - AI handlers and grounding.
 //!
 //! Part of the `academic` module split; see `src/modules/academic.rs`.
+//!
+//! Capability declarations live in `ai_capabilities.rs`.
 
 use unified_core::context::AppContext;
 use unified_core::error::UnifiedError;
@@ -31,21 +33,6 @@ use super::types::Enrollment;
 // `academic.ai.summarize_progress_requested` hook, and run through
 // the AI module's gated runner. The summary is returned inline and
 // is never published, sent, or stored by this module.
-// ---------------------------------------------------------------------------
-
-/// AI capabilities this module exposes through the AI module's
-/// contract. The capability is non-PII: the grounding summary is
-/// anonymised (aggregates only — no user id, no student number, no
-/// names), and the input is redacted before it reaches the model.
-pub const AI_CAPABILITIES: &[ai::AiCapability] = &[ai::AiCapability {
-    id: "summarize_progress",
-    module_id: "academic",
-    name: "Summarize student progress",
-    description: "Summarize one student's academic progress from anonymised grade and attendance aggregates (GPA, credits, standing, per-subject average scores, attendance rate). Never receives raw personal data or student identities.",
-    input_fields: &["student_id"],
-    allows_pii: false,
-    use_case: "academic.summarize_progress",
-}];
 
 /// Anonymised progress grounding for one student: GPA, credits,
 /// standing, enrollment and attendance aggregates, and per-subject
