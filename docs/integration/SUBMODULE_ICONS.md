@@ -420,7 +420,7 @@ There is no sub-module registry, submenu, or parent/child concept in the module 
 | `hooks_subscriptions` | `webhook` |
 | `http` | `globe` |
 | `hub` | `share` |
-| `hyperpay` | `credit-card` |
+| `hyperswitch` | `credit-card` |
 | `ical` | `calendar` |
 | `ics` | `calendar` |
 | `identity` | `id` |

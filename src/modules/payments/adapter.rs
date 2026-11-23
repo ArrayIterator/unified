@@ -13,7 +13,7 @@ use serde_json::{json, Value};
 use sha2::{Digest, Sha256, Sha512};
 use std::time::Duration;
 use url::Url;
-use super::{events::*, card_validation::*, card_settings::*, limits::*, providers::*, types::*, reference_ids::*, credentials::*, records::*, dispatch::*, stripe::*, paypal::*, xendit::*, midtrans::*, hyperpay::*, twocheckout::*, mpgs::*, generic_card::*, custom_provider::*, wallets::*, state::*, requests::*, handlers_catalog::*, handlers_intents::*, handlers_charges::*, handlers_methods::*, handlers_subscriptions::*, handlers_checkout::*, handlers_webhooks::*, handlers_split_bills::*, hooks::*, module::*};
+use super::{events::*, card_validation::*, card_settings::*, limits::*, providers::*, types::*, reference_ids::*, credentials::*, records::*, dispatch::*, stripe::*, paypal::*, xendit::*, midtrans::*, hyperswitch::*, twocheckout::*, mpgs::*, generic_card::*, custom_provider::*, wallets::*, state::*, requests::*, handlers_catalog::*, handlers_intents::*, handlers_charges::*, handlers_methods::*, handlers_subscriptions::*, handlers_checkout::*, handlers_webhooks::*, handlers_split_bills::*, hooks::*, module::*};
 
 
 
@@ -103,7 +103,7 @@ pub trait PaymentProvider: Send + Sync {
 
     /// Server-side outcome of the event a webhook claims, for
     /// providers that do not sign their webhooks and are verified by
-    /// re-fetching the resource (HyperPay, 2Checkout). `Ok(None)`
+    /// re-fetching the resource (2Checkout). `Ok(None)`
     /// means the provider signs its webhooks, so the verified body is
     /// authoritative. `Ok(Some(status))` means the receiver must apply
     /// the fetched status, not the body's claim: for these providers
@@ -156,6 +156,16 @@ pub(crate) type HmacSha256 = Hmac<Sha256>;
 
 pub(crate) fn hmac_sha256_hex(key: &[u8], message: &[u8]) -> String {
     let mut mac = HmacSha256::new_from_slice(key).expect("HMAC key length is always valid");
+    mac.update(message);
+    hex_encode(&mac.finalize().into_bytes())
+}
+
+
+pub(crate) type HmacSha512 = Hmac<Sha512>;
+
+
+pub(crate) fn hmac_sha512_hex(key: &[u8], message: &[u8]) -> String {
+    let mut mac = HmacSha512::new_from_slice(key).expect("HMAC key length is always valid");
     mac.update(message);
     hex_encode(&mac.finalize().into_bytes())
 }
@@ -823,6 +833,18 @@ pub(crate) fn map_status(kind: PaymentProviderKind, raw: &str) -> PaymentStatus 
             "pending" => PaymentStatus::Pending,
             "deny" | "cancel" | "expire" => PaymentStatus::Failed,
             "refund" => PaymentStatus::Refunded,
+            _ => PaymentStatus::Failed,
+        },
+        PaymentProviderKind::Hyperswitch => match raw.as_str() {
+            "succeeded" | "partially_captured" => PaymentStatus::Captured,
+            "requires_capture" | "partially_authorized_and_requires_capture"
+            | "partially_captured_and_capturable" => PaymentStatus::Authorized,
+            "requires_confirmation" => PaymentStatus::RequiresConfirmation,
+            "requires_customer_action" | "requires_merchant_action"
+            | "requires_payment_method" | "processing"
+            | "partially_captured_and_processing" | "review" => PaymentStatus::Pending,
+            "cancelled" => PaymentStatus::Cancelled,
+            "cancelled_post_capture" => PaymentStatus::Voided,
             _ => PaymentStatus::Failed,
         },
         _ => match raw.as_str() {

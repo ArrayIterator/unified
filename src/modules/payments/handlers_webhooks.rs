@@ -10,7 +10,7 @@ use serde::{Serialize};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::sync::{Arc};
-use super::{events::*, card_validation::*, card_settings::*, limits::*, providers::*, types::*, reference_ids::*, credentials::*, records::*, adapter::*, dispatch::*, stripe::*, paypal::*, xendit::*, midtrans::*, hyperpay::*, twocheckout::*, mpgs::*, generic_card::*, custom_provider::*, wallets::*, state::*, requests::*, handlers_catalog::*, handlers_intents::*, handlers_charges::*, handlers_methods::*, handlers_subscriptions::*, handlers_checkout::*, handlers_split_bills::*, hooks::*, module::*};
+use super::{events::*, card_validation::*, card_settings::*, limits::*, providers::*, types::*, reference_ids::*, credentials::*, records::*, adapter::*, dispatch::*, stripe::*, paypal::*, xendit::*, midtrans::*, hyperswitch::*, twocheckout::*, mpgs::*, generic_card::*, custom_provider::*, wallets::*, state::*, requests::*, handlers_catalog::*, handlers_intents::*, handlers_charges::*, handlers_methods::*, handlers_subscriptions::*, handlers_checkout::*, handlers_split_bills::*, hooks::*, module::*};
 
 
 
@@ -180,6 +180,11 @@ pub(crate) fn event_amount_minor(event: &Value, kind: PaymentProviderKind) -> Op
                 .and_then(|data| json_major_to_minor(data, &["gross_amount"], &currency))
                 .or_else(|| json_major_to_minor(event, &["gross_amount"], &currency))
         }
+        PaymentProviderKind::Hyperswitch => event
+            .get("content")
+            .and_then(|content| content.get("object"))
+            .and_then(|object| json_i64(object, &["amount"]))
+            .or_else(|| json_i64(event, &["amount"])),
         _ => None,
     }
 }
@@ -360,7 +365,7 @@ pub(crate) async fn webhook_receiver(
                 "event_id": event_id,
             }));
         }
-        // Providers without signed webhooks (HyperPay, 2Checkout) are
+        // Providers without signed webhooks (2Checkout) are
         // verified by re-fetching the resource; the body's event type
         // is unauthenticated there, so the outcome is read from the
         // provider instead. A failed confirmation fails closed: the
@@ -391,6 +396,12 @@ pub(crate) async fn webhook_receiver(
                 event
                     .get("resource")
                     .and_then(|resource| json_str(resource, &["id", "parent_payment"]))
+            })
+            .or_else(|| {
+                event
+                    .get("content")
+                    .and_then(|content| content.get("object"))
+                    .and_then(|object| json_str(object, &["payment_id", "id"]))
             })
             .or_else(|| json_str(&event, &["transaction_id", "order_id", "charge_id", "payment_id"]))
             .map(str::to_string);
@@ -980,7 +991,7 @@ mod tests {
         // amount: the caller must treat it as unquantified.
         let unknown = serde_json::json!({ "amount": 999 });
         assert_eq!(
-            event_amount_minor(&unknown, PaymentProviderKind::HyperPay),
+            event_amount_minor(&unknown, PaymentProviderKind::BankTransfer),
             None
         );
     }

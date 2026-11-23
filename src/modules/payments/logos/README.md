@@ -1,7 +1,7 @@
 # Payment logos
 
 One SVG logo per payment provider (12 `PaymentProviderKind`), card
-scheme (5), and Indonesian payment method (8) — 25 files in total.
+scheme (6), and Indonesian payment method (8) — 25 files in total.
 The catalog endpoints (`GET /api/v1/payments/providers` and
 `GET /api/v1/payments/providers/{kind}`) return one per provider kind
 as `"logo": "payment-paypal"` — a stem, never a URL. The demo copies
@@ -46,7 +46,7 @@ a logo. `logos.rs` embeds the sprite at compile time
 **Providers (12).** One logo per `PaymentProviderKind`; the catalog
 `logo` stem is `PaymentProviderKind::logo_stem()`.
 
-**Card schemes (5).** Visa, Mastercard, American Express, Discover,
+**Card schemes (6).** Visa, Mastercard, American Express, Discover,
 Diners Club, JCB — real brand marks from simple-icons. Mastercard is
 both a provider kind and a scheme; its one file serves both roles.
 
@@ -57,7 +57,7 @@ simple-icons entry (verified 404 on the current simple-icons release
 — same for BCA/Mandiri/BRI/BNI), so they are lettermark monograms
 in the same style as the provider fallbacks, not official artwork.
 
-## Real brand marks (11)
+## Real brand marks (12)
 
 From [simple-icons](https://github.com/simple-icons/simple-icons),
 fetched from the simple-icons CDN (`https://cdn.simpleicons.org/{slug}`)
@@ -91,11 +91,69 @@ Real brand marks (file → simple-icons slug):
 | `payment-dinersclub.svg` | `dinersclub` |
 | `payment-jcb.svg` | `jcb` |
 
-## Lettermark fallbacks (14)
+Plus one official vendor mark (not simple-icons): `payment-hyperswitch.svg`
+— the Hyperswitch switch mark, icon only (wordmark removed), extracted
+from the official logo `docs/imgs/hyperswitch-logo-light.svg` in
+[juspay/hyperswitch](https://github.com/juspay/hyperswitch) (Apache 2.0).
+The mark itself is Juspay's trademark and is used here only to identify
+the service; no endorsement is implied. The two blue fills (`#0099FF`
++ `#0561E2`) are the brand's own colours.
 
-Providers without a simple-icons entry (6): `hyperpay` (HP),
-`twocheckout` (2C), `card` (C), `midtrans` (M), `custom` (CU),
-`banktransfer` (BT). Indonesian methods (8): `dana` (DA), `ovo`
+## Lettermark fallbacks (12)
+
+Providers without a simple-icons entry (4): `twocheckout` (2C),
+`card` (C), `midtrans` (M), `custom` (CU). `banktransfer` is a
+custom-drawn generic bank building, not a lettermark and not a brand
+mark. Indonesian methods (8): `dana` (DA), `ovo`
 (OVO), `gopay` (GP), `qris` (QR), `shopeepay` (SP), `linkaja` (LA),
 `indomaret` (IM), `alfamart` (AM). Colours are brand-ish
 approximations, not trademarked artwork.
+
+## Wikimedia Commons availability (checked 2026-11-24, task 380)
+
+The user asked to source real marks for the Indonesian methods from
+Wikipedia/Wikimedia Commons (icon mark ONLY, no wordmark text —
+"reconstruct" where the file is a full lockup). Existence + licence
+were verified per file page; the SVG sources themselves could NOT be
+fetched in this run (every `upload.wikimedia.org` original-SVG fetch
+failed — timeout / no extractable content — and must not be retried),
+so no Commons mark was vendored. The parent can fetch via the live
+browser or another route.
+
+Exists on Commons, fetch blocked (icon-only extraction still owed):
+`dana` — File:Logo dana blue.svg (512x146, 2020-01-24); licence block
+did not survive the page fetch, re-check before use. `gopay` —
+File:Logo Gopay.svg (512x495, 2024-08-15, author Moconaid) — CC0 1.0
+Universal; near-square, likely already icon-only. `qris` —
+File:Logo QRIS.svg (163x62, Bank Indonesia source) — Public Domain in
+Indonesia (Art 43 Law 28/2014) + Trademarked. `shopeepay` —
+File:Shopee.svg (1000x320, 2022-07-25) — PD-textlogo + Trademarked;
+wide lockup, extract the orange bag only. `alfamart` —
+File:Alfamart logo.svg (3543x1134, 2018-07-03, "Current logo") —
+Public Domain + Trademarked; wide lockup, extract the mark only.
+(The older File:Alfamart.svg is the 2003-2015 logo — do not use.)
+
+Not found on Commons: `ovo` (only OVO Energy UK + OVO Sound; the
+user-provided id.wikipedia URL Berkas:Logo_ovo_purple.svg could not
+be opened), `linkaja` (only the LINK interbank network logo,
+File:Link logo (2019).svg, PT Jalin Pembayaran Nusantara — NOT the
+LinkAja e-wallet mark), `indomaret` (no SVG file, store photos only),
+`midtrans` (only an unrelated shipping company), `twocheckout`
+(nothing found; now Verifone).
+
+Available on Commons, no repo usage — noted only, NOT added:
+`Bank Central Asia.svg` (File:Bank Central Asia.svg, 1000x313,
+2020-03-18, source bca.co.id) — Public Domain + Trademarked; wide
+lockup. BCA appears in the repo only as an example bank code in an
+error message (`xendit.rs`), never as a logo. Same for BRI/BNI/BTN/
+HSBC: the category "SVG logos of banks in Indonesia" holds 79 files,
+but no bank is a repo payment method/provider, so no bank logo files
+were added.
+
+Card schemes: all 6 files are the genuine simple-icons real marks,
+verified from file content (Visa #1A1F71, Mastercard #EB001B two
+circles, Amex #2E77BC, Discover #FF6000, Diners #004C97 split circle,
+JCB #0B4EA2). Mastercard was additionally cross-checked against its
+Commons file and matches. No replacement was needed; individual
+Commons file-page cross-checks for the other five were not done in
+this run.

@@ -4,7 +4,7 @@ use unified_core::error::{UnifiedError, UnifiedResult};
 use unified_core::reference_id;
 use chrono::{DateTime, Datelike, NaiveDate, Utc};
 use std::time::Duration;
-use super::{events::*, card_validation::*, card_settings::*, limits::*, providers::*, types::*, reference_ids::*, credentials::*, records::*, adapter::*, dispatch::*, stripe::*, paypal::*, xendit::*, midtrans::*, hyperpay::*, twocheckout::*, mpgs::*, generic_card::*, custom_provider::*, state::*, requests::*, handlers_catalog::*, handlers_intents::*, handlers_charges::*, handlers_methods::*, handlers_subscriptions::*, handlers_checkout::*, handlers_webhooks::*, handlers_split_bills::*, hooks::*, module::*};
+use super::{events::*, card_validation::*, card_settings::*, limits::*, providers::*, types::*, reference_ids::*, credentials::*, records::*, adapter::*, dispatch::*, stripe::*, paypal::*, xendit::*, midtrans::*, hyperswitch::*, twocheckout::*, mpgs::*, generic_card::*, custom_provider::*, state::*, requests::*, handlers_catalog::*, handlers_intents::*, handlers_charges::*, handlers_methods::*, handlers_subscriptions::*, handlers_checkout::*, handlers_webhooks::*, handlers_split_bills::*, hooks::*, module::*};
 
 
 
@@ -127,7 +127,7 @@ impl ProviderAdapter {
     }
 
     /// Local-schedule subscription: for providers without a native
-    /// subscription object (Xendit, HyperPay, 2Checkout, Mastercard,
+    /// subscription object (Xendit, Hyperswitch, 2Checkout, Mastercard,
     /// generic card), the subscription is a record in this module and
     /// the first period is charged immediately against the stored
     /// token. The provider subscription id is the initial charge id,

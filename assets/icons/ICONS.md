@@ -46,7 +46,7 @@ Built from `src/modules/payments/logos/*.svg` into `src/modules/payments/logos/s
 
 ### Providers — lettermark fallbacks (6)
 
-| <img src="../../src/modules/payments/logos/payment-hyperpay.svg" width="32" height="32"><br>hyperpay | <img src="../../src/modules/payments/logos/payment-twocheckout.svg" width="32" height="32"><br>twocheckout | <img src="../../src/modules/payments/logos/payment-card.svg" width="32" height="32"><br>card | <img src="../../src/modules/payments/logos/payment-midtrans.svg" width="32" height="32"><br>midtrans | <img src="../../src/modules/payments/logos/payment-custom.svg" width="32" height="32"><br>custom | <img src="../../src/modules/payments/logos/payment-banktransfer.svg" width="32" height="32"><br>banktransfer |
+| <img src="../../src/modules/payments/logos/payment-hyperswitch.svg" width="32" height="32"><br>hyperswitch | <img src="../../src/modules/payments/logos/payment-twocheckout.svg" width="32" height="32"><br>twocheckout | <img src="../../src/modules/payments/logos/payment-card.svg" width="32" height="32"><br>card | <img src="../../src/modules/payments/logos/payment-midtrans.svg" width="32" height="32"><br>midtrans | <img src="../../src/modules/payments/logos/payment-custom.svg" width="32" height="32"><br>custom | <img src="../../src/modules/payments/logos/payment-banktransfer.svg" width="32" height="32"><br>banktransfer |
 | --- | --- | --- | --- | --- | --- |
 
 ### Card schemes — real brand marks (5)

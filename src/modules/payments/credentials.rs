@@ -5,7 +5,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use url::Url;
 use uuid::Uuid;
-use super::{events::*, card_validation::*, card_settings::*, limits::*, providers::*, types::*, reference_ids::*, records::*, adapter::*, dispatch::*, stripe::*, paypal::*, xendit::*, midtrans::*, hyperpay::*, twocheckout::*, mpgs::*, generic_card::*, custom_provider::*, wallets::*, state::*, requests::*, handlers_catalog::*, handlers_intents::*, handlers_charges::*, handlers_methods::*, handlers_subscriptions::*, handlers_checkout::*, handlers_webhooks::*, handlers_split_bills::*, hooks::*, module::*};
+use super::{events::*, card_validation::*, card_settings::*, limits::*, providers::*, types::*, reference_ids::*, records::*, adapter::*, dispatch::*, stripe::*, paypal::*, xendit::*, midtrans::*, hyperswitch::*, twocheckout::*, mpgs::*, generic_card::*, custom_provider::*, wallets::*, state::*, requests::*, handlers_catalog::*, handlers_intents::*, handlers_charges::*, handlers_methods::*, handlers_subscriptions::*, handlers_checkout::*, handlers_webhooks::*, handlers_split_bills::*, hooks::*, module::*};
 
 
 
@@ -51,6 +51,8 @@ pub struct PaymentCredentials {
     pub client_key: Option<String>,
     #[serde(default)]
     pub secret_word: Option<String>,
+    #[serde(default)]
+    pub profile_id: Option<String>,
 }
 
 
@@ -110,6 +112,9 @@ impl PaymentCredentials {
         if present(&self.secret_word) {
             fields.push("secret_word");
         }
+        if present(&self.profile_id) {
+            fields.push("profile_id");
+        }
         fields
     }
 
@@ -164,6 +169,9 @@ impl PaymentCredentials {
         }
         if update.secret_word.is_some() {
             self.secret_word = update.secret_word;
+        }
+        if update.profile_id.is_some() {
+            self.profile_id = update.profile_id;
         }
     }
 }
@@ -537,12 +545,9 @@ pub(crate) fn validate_connection(input: &CreateConnectionRequest) -> UnifiedRes
                 return Err(missing("callback_token"));
             }
         }
-        PaymentProviderKind::HyperPay => {
-            if !has(&creds.access_token) {
-                return Err(missing("access_token"));
-            }
-            if !has(&creds.merchant_id) {
-                return Err(missing("merchant_id"));
+        PaymentProviderKind::Hyperswitch => {
+            if !has(&creds.api_key) {
+                return Err(missing("api_key"));
             }
         }
         PaymentProviderKind::TwoCheckout => {

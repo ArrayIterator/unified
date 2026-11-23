@@ -202,7 +202,7 @@ assets/icons/
   README.md           layout map + style + provenance
   LICENSE.colorticons MIT licence text (Copyright (c) 2020-2023 Pawel Kuna)
 src/modules/payments/logos/   12 payment logos (module-owned, mirrors email_providers/logos/)
-src/modules/email_providers/logos/  56 email logos (unchanged)
+src/modules/email_providers/logos/  55 email logos (56 at task 371; one removed by task 381)
 demo/assets/logos/    demo copies: email-*.svg + payment-*.svg + brand-*.svg
 ```
 
@@ -229,7 +229,7 @@ Lettermark fallbacks (same style as the email lettermarks: rounded rect + initia
 
 | Provider | File | Letters |
 |---|---|---|
-| HyperPay | payment-hyperpay.svg | HP |
+| Hyperswitch | payment-hyperswitch.svg | real mark |
 | TwoCheckout | payment-twocheckout.svg | 2C |
 | Card | payment-card.svg | C |
 | Midtrans | payment-midtrans.svg | M |

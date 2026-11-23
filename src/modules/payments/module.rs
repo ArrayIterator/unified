@@ -20,11 +20,10 @@
 //     tokenized charges: Xendit exposes no single subscription object
 //     to this adapter, so the subscription record lives here and each
 //     period is a charge against the stored card token.
-//   - HyperPay (OPPWA): checkout creation plus a status fetch (the
-//     shopper completes payment in the HyperPay hosted widget using the
-//     returned checkout id), authorize (PA) / capture (CP) / refund /
-//     void through the payments endpoint. Subscriptions are a local
-//     schedule over tokenized charges.
+//   - Hyperswitch (payment switch): one unified API (POST /payments,
+//     capture, cancel, refunds), authorize through manual capture.
+//     Subscriptions are a local schedule over tokenized charges.
+//     Webhooks are HMAC-SHA512 signed (X-Webhook-Signature-512).
 //   - 2Checkout (2CO): orders placed with a client-side token
 //     (EesToken), refunds, subscription as a local schedule over
 //     tokenized charges. Webhook verification is a server-side sale
@@ -164,7 +163,7 @@ use unified_core::modules::{Module, ModuleRegistry, RouteInfo};
 use crate::modules::ai;
 use actix_web::{web};
 use std::sync::{Arc};
-use super::{events::*, card_validation::*, card_settings::*, limits::*, providers::*, types::*, reference_ids::*, credentials::*, records::*, adapter::*, dispatch::*, stripe::*, paypal::*, xendit::*, midtrans::*, hyperpay::*, twocheckout::*, mpgs::*, generic_card::*, custom_provider::*, wallets::*, state::*, requests::*, handlers_catalog::*, handlers_intents::*, handlers_charges::*, handlers_methods::*, handlers_subscriptions::*, handlers_checkout::*, handlers_webhooks::*, handlers_split_bills::*, hooks::*};
+use super::{events::*, card_validation::*, card_settings::*, limits::*, providers::*, types::*, reference_ids::*, credentials::*, records::*, adapter::*, dispatch::*, stripe::*, paypal::*, xendit::*, midtrans::*, hyperswitch::*, twocheckout::*, mpgs::*, generic_card::*, custom_provider::*, wallets::*, state::*, requests::*, handlers_catalog::*, handlers_intents::*, handlers_charges::*, handlers_methods::*, handlers_subscriptions::*, handlers_checkout::*, handlers_webhooks::*, handlers_split_bills::*, hooks::*};
 use super::ai_capabilities::AI_CAPABILITIES;
 
 
@@ -203,7 +202,7 @@ impl Module for PaymentsModule {
     }
 
     fn description(&self) -> &'static str {
-        "Payment gateway wrapper: Xendit, HyperPay, 2Checkout, card processing, Mastercard, Google Pay, Apple Pay, PayPal, Stripe, Midtrans, custom providers, and bank transfer (manual verification) behind one hookable interface, plus split bills across methods, payers, and instalments."
+        "Payment gateway wrapper: Xendit, Hyperswitch, 2Checkout, card processing, Mastercard, Google Pay, Apple Pay, PayPal, Stripe, Midtrans, custom providers, and bank transfer (manual verification) behind one hookable interface, plus split bills across methods, payers, and instalments."
     }
 
     fn requires(&self) -> &[&'static str] {

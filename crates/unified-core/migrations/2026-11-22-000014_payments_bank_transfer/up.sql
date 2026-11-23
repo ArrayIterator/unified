@@ -14,7 +14,7 @@
 --     DOUBLE PRECISION, so the NUMERIC(19,4) rule for decimal
 --     money (see migration 000003) does not apply here; no amount
 --     in this migration is a decimal.
---   - `payment_connections.kind` is `xendit`, `hyperpay`,
+--   - `payment_connections.kind` is `xendit`, `hyperswitch`,
 --     `2checkout`, `card`, `mastercard`, `google_pay`,
 --     `apple_pay`, `paypal`, `stripe`, `midtrans`, `custom`, or
 --     `bank_transfer`. `mode` is `sandbox` or `live`.
@@ -60,7 +60,7 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE TABLE IF NOT EXISTS payment_connections (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR NOT NULL,
-    kind VARCHAR NOT NULL CHECK (kind IN ('xendit', 'hyperpay', '2checkout', 'card', 'mastercard', 'google_pay', 'apple_pay', 'paypal', 'stripe', 'midtrans', 'custom', 'bank_transfer')),
+    kind VARCHAR NOT NULL CHECK (kind IN ('xendit', 'hyperswitch', '2checkout', 'card', 'mastercard', 'google_pay', 'apple_pay', 'paypal', 'stripe', 'midtrans', 'custom', 'bank_transfer')),
     mode VARCHAR NOT NULL DEFAULT 'sandbox' CHECK (mode IN ('sandbox', 'live')),
     endpoint VARCHAR,
     credentials JSONB NOT NULL DEFAULT '{}'::jsonb,

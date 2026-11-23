@@ -16,17 +16,18 @@
       "adapter_kind": "xendit"
     },
     {
-      "family": "payments", "id": "hyperpay", "display_name": "HyperPay",
-      "base_url": "https://eu-prod.oppwa.com", "sandbox_base_url": "https://eu-test.oppwa.com",
-      "allowed_hosts": ["eu-test.oppwa.com", "eu-prod.oppwa.com"],
+      "family": "payments", "id": "hyperswitch", "display_name": "Hyperswitch",
+      "base_url": "https://api.hyperswitch.io", "sandbox_base_url": "https://sandbox.hyperswitch.io",
+      "webhook_signature_header": "X-Webhook-Signature-512",
+      "allowed_hosts": ["api.hyperswitch.io", "sandbox.hyperswitch.io"],
       "capabilities": {"authorize": true, "capture": true, "charge": true, "refund": true, "void": true, "subscriptions": true, "payouts": false, "3ds": true, "webhooks": true, "subscriptions_are_local_schedule": true},
-      "currencies": ["AED", "SAR", "USD", "EUR", "GBP", "EGP", "JOD", "KWD", "QAR", "BHD", "OMR"],
+      "currencies": ["USD", "EUR", "GBP", "AUD", "CAD", "JPY", "SGD", "HKD", "NZD", "CHF", "SEK", "NOK", "DKK", "PLN", "CZK", "HUF", "ILS", "MXN", "BRL", "INR", "IDR", "MYR", "PHP", "THB", "VND", "ZAR", "KRW", "TWD", "AED"],
       "credentials_shape": [
-        {"name": "access_token", "label": "Access token", "type": "password", "required": true, "secret": true, "applies_to": "both", "description": "HyperPay access token (Bearer). Sandbox and live tokens differ; switch mode to use the matching one."},
-        {"name": "merchant_id", "label": "Entity ID", "type": "text", "required": true, "secret": false, "applies_to": "both", "description": "HyperPay entityId (the channel / entity identifier for checkouts)."},
-        {"name": "webhook_secret", "label": "Webhook secret", "type": "password", "required": false, "secret": true, "applies_to": "both", "description": "Shared secret for webhook verification when the operator configures HyperPay notifications with one. When empty, webhooks are verified by re-fetching the payment status from HyperPay."}
+        {"name": "api_key", "label": "API key", "type": "password", "required": true, "secret": true, "applies_to": "both", "description": "Hyperswitch API key (secret key). Sandbox and live keys differ; switch mode to use the matching one."},
+        {"name": "profile_id", "label": "Profile ID", "type": "text", "required": false, "secret": false, "applies_to": "both", "description": "Hyperswitch profile id (business profile). Sent as profile_id on every payment when set; empty means the account default profile."},
+        {"name": "webhook_secret", "label": "Webhook secret", "type": "password", "required": false, "secret": true, "applies_to": "both", "description": "Hyperswitch payment_response_hash_key for the business profile. Verifies the X-Webhook-Signature-512 header (hex HMAC-SHA512 of the raw body)."}
       ],
-      "adapter_kind": "hyperpay"
+      "adapter_kind": "hyperswitch"
     },
     {
       "family": "payments", "id": "2checkout", "display_name": "2Checkout",
@@ -994,23 +995,6 @@
       "adapter_kind": "smtp",
       "smtp_host": "smtp.socketlabs.com", "smtp_port": 587, "smtp_tls": "starttls",
       "notes": "No free plan — first month free (40,000 emails), then from $39.95/month. Best for: high-volume senders who want a dedicated sending platform. Sends through smtp.socketlabs.com:587 (STARTTLS); an HTTP API is also available. Free tier verified Nov 2026."
-    },
-    {
-      "family": "email", "id": "pepipost", "display_name": "Pepipost / Netcore", "logo": "email-pepipost",
-      "base_url": "https://smtp.netcorecloud.net", "sandbox_base_url": null,
-      "allowed_hosts": ["smtp.netcorecloud.net"],
-      "capabilities": {"transactional":true,"bulk":true,"templates":false,"webhooks":false,"tracking":false,"sandbox":false},
-      "currencies": [],
-      "credentials_shape": [
-        {"name":"username","label":"SMTP username","type":"text","required":true,"secret":false,"placeholder":"you@example.com","description":"SMTP username from the Pepipost dashboard."},
-        {"name":"password","label":"SMTP password","type":"password","required":true,"secret":true,"description":"SMTP password from the Pepipost dashboard. Stored encrypted; never shown again."},
-        {"name":"sender_email","label":"Default sender email","type":"email","required":true,"secret":false,"placeholder":"news@example.com","description":"From address used when a send does not supply its own. Must be verified with the provider."},
-        {"name":"sender_name","label":"Default sender name","type":"text","required":false,"secret":false,"placeholder":"Example News","description":"Display name shown next to the sender email."},
-        {"name":"test_mode","label":"Test mode (sandbox)","type":"boolean","required":false,"secret":false,"description":"When on, mail is accepted by the provider sandbox where one exists, otherwise recorded as a simulated delivery and never sent."}
-      ],
-      "adapter_kind": "smtp",
-      "smtp_host": "smtp.netcorecloud.net", "smtp_port": 587, "smtp_tls": "starttls",
-      "notes": "Trial only; no published free plan. Best for: high-volume transactional mail from Netcore. Sends through smtp.netcorecloud.net:587 (STARTTLS); an HTTP API is also available. Free tier unverified — check the provider site."
     },
     {
       "family": "email", "id": "smtp-com", "display_name": "SMTP.com", "logo": "email-smtp-com",

@@ -6,7 +6,7 @@ use std::sync::{Arc, OnceLock};
 use unified_core::provider_registry::{
     ProviderDefinition, leak_str, leak_str_slice, provider_registry,
 };
-use super::{events::*, card_validation::*, card_settings::*, limits::*, types::*, reference_ids::*, credentials::*, records::*, adapter::*, dispatch::*, stripe::*, paypal::*, xendit::*, midtrans::*, hyperpay::*, twocheckout::*, mpgs::*, generic_card::*, custom_provider::*, wallets::*, state::*, requests::*, handlers_catalog::*, handlers_intents::*, handlers_charges::*, handlers_methods::*, handlers_subscriptions::*, handlers_checkout::*, handlers_webhooks::*, handlers_split_bills::*, hooks::*, module::*};
+use super::{events::*, card_validation::*, card_settings::*, limits::*, types::*, reference_ids::*, credentials::*, records::*, adapter::*, dispatch::*, stripe::*, paypal::*, xendit::*, midtrans::*, hyperswitch::*, twocheckout::*, mpgs::*, generic_card::*, custom_provider::*, wallets::*, state::*, requests::*, handlers_catalog::*, handlers_intents::*, handlers_charges::*, handlers_methods::*, handlers_subscriptions::*, handlers_checkout::*, handlers_webhooks::*, handlers_split_bills::*, hooks::*, module::*};
 
 
 
@@ -18,7 +18,7 @@ use super::{events::*, card_validation::*, card_settings::*, limits::*, types::*
 /// Every payment provider this module can talk to.
 pub enum PaymentProviderKind {
     Xendit,
-    HyperPay,
+    Hyperswitch,
     TwoCheckout,
     Card,
     Mastercard,
@@ -36,7 +36,7 @@ impl PaymentProviderKind {
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Xendit => "xendit",
-            Self::HyperPay => "hyperpay",
+            Self::Hyperswitch => "hyperswitch",
             Self::TwoCheckout => "2checkout",
             Self::Card => "card",
             Self::Mastercard => "mastercard",
@@ -53,7 +53,7 @@ impl PaymentProviderKind {
     pub fn from_str(value: &str) -> Option<Self> {
         match value {
             "xendit" => Some(Self::Xendit),
-            "hyperpay" => Some(Self::HyperPay),
+            "hyperswitch" => Some(Self::Hyperswitch),
             "2checkout" | "2co" | "twocheckout" => Some(Self::TwoCheckout),
             "card" => Some(Self::Card),
             "mastercard" => Some(Self::Mastercard),
@@ -77,7 +77,7 @@ impl PaymentProviderKind {
     pub fn logo_stem(&self) -> &'static str {
         match self {
             Self::Xendit => "payment-xendit",
-            Self::HyperPay => "payment-hyperpay",
+            Self::Hyperswitch => "payment-hyperswitch",
             Self::TwoCheckout => "payment-twocheckout",
             Self::Card => "payment-card",
             Self::Mastercard => "payment-mastercard",
@@ -95,7 +95,7 @@ impl PaymentProviderKind {
     pub fn all() -> &'static [PaymentProviderKind] {
         &[
             Self::Xendit,
-            Self::HyperPay,
+            Self::Hyperswitch,
             Self::TwoCheckout,
             Self::Card,
             Self::Mastercard,

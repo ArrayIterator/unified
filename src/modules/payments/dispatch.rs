@@ -10,7 +10,7 @@ use std::sync::{Arc};
 use std::time::Duration;
 use url::Url;
 use uuid::Uuid;
-use super::{events::*, card_validation::*, card_settings::*, limits::*, providers::*, types::*, reference_ids::*, credentials::*, records::*, adapter::*, stripe::*, paypal::*, xendit::*, midtrans::*, hyperpay::*, twocheckout::*, mpgs::*, generic_card::*, custom_provider::*, wallets::*, state::*, requests::*, handlers_catalog::*, handlers_intents::*, handlers_charges::*, handlers_methods::*, handlers_subscriptions::*, handlers_checkout::*, handlers_webhooks::*, handlers_split_bills::*, hooks::*, module::*};
+use super::{events::*, card_validation::*, card_settings::*, limits::*, providers::*, types::*, reference_ids::*, credentials::*, records::*, adapter::*, stripe::*, paypal::*, xendit::*, midtrans::*, hyperswitch::*, twocheckout::*, mpgs::*, generic_card::*, custom_provider::*, wallets::*, state::*, requests::*, handlers_catalog::*, handlers_intents::*, handlers_charges::*, handlers_methods::*, handlers_subscriptions::*, handlers_checkout::*, handlers_webhooks::*, handlers_split_bills::*, hooks::*, module::*};
 
 
 
@@ -172,19 +172,19 @@ impl ProviderAdapter {
                     })?,
                 );
             }
-            PaymentProviderKind::HyperPay => {
-                let token = self
+            PaymentProviderKind::Hyperswitch => {
+                let key = self
                     .credentials
-                    .access_token
+                    .api_key
                     .as_ref()
                     .filter(|v| !v.is_empty())
                     .ok_or_else(|| {
-                        UnifiedError::bad_request("HyperPay connection needs access_token")
+                        UnifiedError::bad_request("Hyperswitch connection needs api_key")
                     })?;
                 headers.insert(
-                    AUTHORIZATION,
-                    HeaderValue::from_str(&format!("Bearer {token}")).map_err(|_| {
-                        UnifiedError::internal("Stored HyperPay credential is not a valid header value")
+                    "api-key",
+                    HeaderValue::from_str(key).map_err(|_| {
+                        UnifiedError::internal("Stored Hyperswitch credential is not a valid header value")
                     })?,
                 );
             }
@@ -473,7 +473,7 @@ impl PaymentProvider for ProviderAdapter {
             PaymentProviderKind::PayPal => self.paypal_test().await?,
             PaymentProviderKind::Xendit => self.xendit_test().await?,
             PaymentProviderKind::Midtrans => self.midtrans_test().await?,
-            PaymentProviderKind::HyperPay => self.hyperpay_test().await?,
+            PaymentProviderKind::Hyperswitch => self.hyperswitch_test().await?,
             PaymentProviderKind::TwoCheckout => self.two_checkout_test().await?,
             PaymentProviderKind::Mastercard => self.mastercard_test().await?,
             PaymentProviderKind::Card => self.card_test().await?,
@@ -502,7 +502,7 @@ impl PaymentProvider for ProviderAdapter {
             PaymentProviderKind::PayPal => self.paypal_charge(input, false).await,
             PaymentProviderKind::Xendit => self.xendit_charge(input).await,
             PaymentProviderKind::Midtrans => self.midtrans_charge(input).await,
-            PaymentProviderKind::HyperPay => self.hyperpay_charge(input, "DB").await,
+            PaymentProviderKind::Hyperswitch => self.hyperswitch_charge(input, false).await,
             PaymentProviderKind::TwoCheckout => self.two_checkout_charge(input).await,
             PaymentProviderKind::Mastercard => self.mastercard_charge(input, "PAY").await,
             PaymentProviderKind::Card => self.card_charge(input, "charge").await,
@@ -524,7 +524,7 @@ impl PaymentProvider for ProviderAdapter {
             PaymentProviderKind::PayPal => self.paypal_charge(input, true).await,
             PaymentProviderKind::Xendit => self.xendit_authorize(input).await,
             PaymentProviderKind::Midtrans => self.midtrans_authorize(input).await,
-            PaymentProviderKind::HyperPay => self.hyperpay_charge(input, "PA").await,
+            PaymentProviderKind::Hyperswitch => self.hyperswitch_charge(input, true).await,
             PaymentProviderKind::Mastercard => self.mastercard_charge(input, "AUTHORIZE").await,
             PaymentProviderKind::Card => self.card_charge(input, "authorize").await,
             PaymentProviderKind::Custom => self.custom_charge(input, "authorize").await,
@@ -567,8 +567,8 @@ impl PaymentProvider for ProviderAdapter {
             PaymentProviderKind::Midtrans => {
                 self.midtrans_capture(provider_transaction_id).await
             }
-            PaymentProviderKind::HyperPay => {
-                self.hyperpay_capture(provider_transaction_id, amount_minor).await
+            PaymentProviderKind::Hyperswitch => {
+                self.hyperswitch_capture(provider_transaction_id, amount_minor).await
             }
             PaymentProviderKind::Mastercard => {
                 self.mastercard_capture(provider_transaction_id, amount_minor).await
@@ -600,7 +600,7 @@ impl PaymentProvider for ProviderAdapter {
             PaymentProviderKind::PayPal => self.paypal_refund(input).await,
             PaymentProviderKind::Xendit => self.xendit_refund(input).await,
             PaymentProviderKind::Midtrans => self.midtrans_refund(input).await,
-            PaymentProviderKind::HyperPay => self.hyperpay_refund(input).await,
+            PaymentProviderKind::Hyperswitch => self.hyperswitch_refund(input).await,
             PaymentProviderKind::TwoCheckout => self.two_checkout_refund(input).await,
             PaymentProviderKind::Mastercard => self.mastercard_refund(input).await,
             PaymentProviderKind::Card => self.card_refund(input).await,
@@ -628,8 +628,8 @@ impl PaymentProvider for ProviderAdapter {
             PaymentProviderKind::PayPal => {
                 self.paypal_void(provider_transaction_id).await
             }
-            PaymentProviderKind::HyperPay => {
-                self.hyperpay_void(provider_transaction_id).await
+            PaymentProviderKind::Hyperswitch => {
+                self.hyperswitch_void(provider_transaction_id).await
             }
             PaymentProviderKind::Mastercard => {
                 self.mastercard_void(provider_transaction_id).await
@@ -718,8 +718,8 @@ impl PaymentProvider for ProviderAdapter {
             }
             PaymentProviderKind::Xendit => self.xendit_webhook_verify(headers, raw_body),
             PaymentProviderKind::Midtrans => self.midtrans_webhook_verify(raw_body),
-            PaymentProviderKind::HyperPay => {
-                self.hyperpay_webhook_verify(raw_body).await
+            PaymentProviderKind::Hyperswitch => {
+                self.hyperswitch_webhook_verify(headers, raw_body)
             }
             PaymentProviderKind::TwoCheckout => {
                 self.two_checkout_webhook_verify(raw_body).await
@@ -742,9 +742,8 @@ impl PaymentProvider for ProviderAdapter {
 
     async fn webhook_outcome(&self, raw_body: &[u8]) -> UnifiedResult<Option<PaymentStatus>> {
         match self.kind {
-            PaymentProviderKind::HyperPay => self
-                .hyperpay_webhook_outcome(raw_body)
-                .await
+            PaymentProviderKind::Hyperswitch => self
+                .hyperswitch_webhook_outcome(raw_body)
                 .map(Some),
             PaymentProviderKind::TwoCheckout => self
                 .two_checkout_webhook_outcome(raw_body)

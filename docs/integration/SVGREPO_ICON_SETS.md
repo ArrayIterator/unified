@@ -380,3 +380,119 @@ window + layout blocks), `placeholder` (circle + "?").
 - `demo/assets/sprite.js` regenerated from the new sprite
   (round-trip verified: JSON-unescape is byte-identical).
 - `assets/icons/ICONS.md` regenerated (64px preview).
+
+## 11. Task 380 metaphor audit + swaps (2026-11-24)
+
+The user looked at the ICONS.md preview and judged several icons
+wrong metaphors / childish / ugly. Every one of the 157 module icons
+was re-read from its file (never trust the filename — that is how
+the SIM card and the `C:\` prompt slipped in) and judged on three
+tests: (1) metaphor matches the module name, (2) looks decent/modern
+(not childish, not ugly), (3) stylistically consistent with the rest
+of the set (same flat style, same visual weight, same 48 grid).
+
+WARNING: the §5 mapping table's "good"/"weak" ratings are
+UNRELIABLE — several "good" ratings were wrong on first-hand
+reading (advisor → `assistant` "good" was in fact the same headset
+person; cards → `sim_card` "ok" was a SIM card; api-manager →
+`command_line` "good" was a DOS prompt). Judge from the files.
+
+### 11.1 Swaps executed (13)
+
+All customs are 48x48 viewBox, flat multi-tone fills, no strokes,
+no `currentColor`, no `<text>` (except the placeholder "?").
+
+| Module | Old | New | Failed test | Note |
+|---|---|---|---|---|
+| `cards` | Flat Color `sim_card_chip` (teal rect + orange chip — a SIM card) | CUSTOM credit card (blue #1565C0 body, dark stripe, gold chip, number lines) | 1 metaphor | The set has NO credit-card icon at all (329 files checked). |
+| `advisor` | Flat Color `support` (person, orange hair, headset + mic) | CUSTOM person + tie + speech bubble (blue suit, red tie, bubble with 3 dots) | 1 + 2 | The set's `assistant.svg` is IDENTICAL to the old icon. Suited people already used by `businessman`/`manager`/`businesswoman`, so a custom was needed. |
+| `api-manager` | Flat Color `command_line` (window with green `C:\` text) | CUSTOM `</>` code window (dark window, traffic-light dots, cyan `<`, amber `/`, orange `>`) | 1 metaphor | The set has no code-brackets icon. |
+| `elearning` | Flat Color `reading` (person reading a book) | CUSTOM laptop + play button (dark frame, blue screen, white play triangle) | 1 + 2 | Childish/school-like per the user. `reading_ebook.svg` is ALSO a person reading, not a device. `graduation_cap` is taken by `academic`. |
+| `logistics` | Flat Color `in_transit` (box truck) | CUSTOM warehouse (gable-roof building, door, windows, orange parcel) | 1 + 2 | Reads as a generic car at preview size. `package`/`shipped` taken. |
+| `okrs` | Flat Color `decision` (face with blue `?`) | CUSTOM target (red/white concentric circles + blue arrow) | 1 metaphor | |
+| `products` | Flat Color `gallery` (two landscape pictures) | CUSTOM shopping bag (teal bag, dark handle, fold band) | 1 metaphor | `package`/`shop`/`grid`/`briefcase` all taken. |
+| `whitelabel` | Purple circle with `TM` letters | CUSTOM tag + sparkle (purple tag, white hole, white 4-point sparkle) | 3 consistency | Near-duplicate of licensing's purple `®` circle. Licensing keeps `®`. |
+| `web3` | Flat Color `web` (orange lattice + green square) | CUSTOM blockchain blocks (blue/purple/teal blocks + link bars + dots) | 1 metaphor | Abstract lattice, not recognisably web3. |
+| `ai` | Flat Color `automatic` (dark square + light-blue gear) | CUSTOM sparkle (dark rounded square, big white 4-point star + 2 small blue stars) | 1 metaphor | Gear reads as settings/automation, not AI. |
+| `calendar` | CUSTOM sparse grid (white body, blue header, 5 grey squares + 1 blue date — user: ugly) | Flat Color `calendar.svg` vendored (red header, full date grid, rings) | 2 modernity | Custom is not automatically better. |
+| `appointments` | Flat Color `calendar.svg` (identical to the new `calendar.svg`) | CUSTOM variant: set calendar + blue clock badge (blue circle, white face, dark hands) | 3 consistency | Appointment = scheduled time; keeps the two calendars distinct. |
+| `bank-transfer` | Flat Color `envelope` (mail icon) | CUSTOM bank building (grey-blue pediment roof + white dot, 4 columns, 2-step base) | 1 metaphor | User rule: bank transfer uses a BANK icon. The set has no bank/landmark icon. The payment logo `payment-banktransfer.svg` was a "BT" lettermark — replaced with a custom bank building in the logos convention too (24x24, single colour). |
+
+Verified kept (first-hand reads correcting the table): `notifications`
+is ALREADY a custom bell (not `missed_call`); `social-marketing` is a
+red megaphone + broadcast waves (distinct from `marketing`); `webhooks`
+is a blue hook/pipe with down-arrows; `webinars` is a green video
+camera; `delivery-notes` is a green truck WITH a white checkmark
+(distinct from plain-truck logistics); `licensing` is the purple `®`.
+
+Sprite rebuilt after the swaps: 157 symbols, all `viewBox 0 0 48 48`.
+`demo/assets/modules-sprite.svg` re-copied and `demo/assets/sprite.js`
+regenerated from it (round-trip verified).
+
+### 11.2 Placeholder audit — modules with no icon (2026-11-24)
+
+Measured, not assumed. 145 module ids were extracted from
+`fn id(&self)` in `src/modules/*/module.rs` (tenants = `tenants`,
+maps = `maps`, both via a `MODULE_ID` const). 0 module-owned
+`icon.svg` files exist; all icons come from central
+`assets/icons/modules/*.svg` (157 files).
+
+The lookup (`src/themes/module_icons.rs::module_icon_use`, same rule
+in `assets/react/src/sprite.ts::hasModuleIcon`) accepts ONLY
+`[a-z0-9-]` names and does NOT normalise snake_case to kebab-case:
+
+- 19 module ids are snake_case, so `module_icon_use` returns an
+  EMPTY string (no icon at all) on the Handlebars track, and the React
+  track shows an initials tile. They do NOT render the "?" placeholder
+  (that only renders for a valid kebab name with no symbol — and every
+  kebab id has a file, so no module currently hits the placeholder):
+  `bank_transfer`, `data_tools`, `delivery_notes`,
+  `domain_verification`, `email_providers`, `field_service`,
+  `import_export`, `load_balancer`, `network_tools`, `pricing_tables`,
+  `reference_data`, `saas_domains`, `saas_packages`, `saved_views`,
+  `sms_marketing`, `social_marketing`, `storage_manager`,
+  `tenant_destroy`, `widgets`.
+- 17 of those 19 DO have a kebab central file (`bank-transfer.svg`
+  etc.) sitting in the sprite — unreachable, because nothing looks
+  them up by the kebab name. The kebab files are effectively dead
+  until the ids are unified (separate pending user decision — modules
+  were NOT renamed in this task).
+- 2 of the 19 have no icon file in either spelling: `data_tools`,
+  `widgets`. These need a new icon whenever the kebab unification
+  lands (warehouse/package for `data_tools` is ambiguous — the icon
+  should wait for the module's scope to be named; `widgets` wants a
+  grid/puzzle icon).
+- 32 central files have no module id (orphans): the 17 dead kebab
+  files above + `audit`, `backup`, `domains`, `external-bi`,
+  `external-esignature`, `external-fleet`, `external-iot`,
+  `external-whatsapp`, `hosting`, `newsletter`, `providers`, `store`,
+  `tenants`, `whitelabel`, `workflows`. These are either icons for
+  modules whose ids live elsewhere (external crates, sub-areas) or
+  genuinely unused — do not delete on this audit alone.
+
+### 11.3 Alternative-set proposal — NOT executed (2026-11-24)
+
+The user asked: if the Flat Color Icons set itself is the childish
+problem, research ONE modern flat multi-colour alternative and
+PROPOSE it, do not swap. Verdict: **stay with Flat Color Icons**
+(+ custom draws in the same style, as in §11.1).
+
+- Icons8 **Fluency** (the obvious modern candidate, Microsoft Fluent
+  style) was verified first-hand via search (icons8.com + Icons8 help
+  centre, 2026-11-24): free use requires a link back to Icons8 on
+  every page (two hyperlinks per the Universal License Agreement);
+  the free tier is PNG only, up to 100px — SVG vectors need a paid
+  plan (except the "Popular" category). That fails the repo licence
+  rule (MIT/Apache/CC0/CC-BY only) AND the format rule (the sprite
+  needs SVG). A Fluency swap would need either a paid Icons8 plan or
+  a user-approved licence exception. Not executed.
+- Emoji sets (Noto Emoji Apache 2.0, Twemoji CC BY 4.0, OpenMoji
+  CC BY-SA) are colourful but read playful/childish — the opposite of
+  what the user wants.
+- The large monochrome sets (Lucide/Feather/Tabler/Iconoir, MIT)
+  fail the multi-colour requirement.
+- No open-licensed modern multi-colour flat business set with 150+
+  metaphors was found that clearly beats Flat Color Icons. The
+  "childish" feel is a property of individual picks (fixed in §11.1),
+  not of the whole set.
+

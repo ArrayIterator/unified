@@ -88,7 +88,7 @@ mod tests {
         for logo_id in [
             // 12 provider kinds.
             "payment-xendit",
-            "payment-hyperpay",
+            "payment-hyperswitch",
             "payment-twocheckout",
             "payment-card",
             "payment-mastercard",

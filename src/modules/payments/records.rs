@@ -4,7 +4,7 @@ use super::{
     adapter::*, card_settings::*, card_validation::*, credentials::*, custom_provider::*,
     dispatch::*, events::*, generic_card::*, handlers_catalog::*, handlers_charges::*,
     handlers_checkout::*, handlers_intents::*, handlers_methods::*, handlers_split_bills::*,
-    handlers_subscriptions::*, handlers_webhooks::*, hooks::*, hyperpay::*, limits::*, midtrans::*,
+    handlers_subscriptions::*, handlers_webhooks::*, hooks::*, hyperswitch::*, limits::*, midtrans::*,
     module::*, mpgs::*, paypal::*, providers::*, reference_ids::*, requests::*, state::*,
     stripe::*, twocheckout::*, types::*, wallets::*, xendit::*,
 };

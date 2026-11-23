@@ -23,4 +23,8 @@
         <rect x="25" y="32" width="4" height="4"/>
         <rect x="31" y="32" width="4" height="4"/>
     </g>
+    <circle cx="37" cy="37" r="9.5" fill="#1565C0"/>
+    <circle cx="37" cy="37" r="6.5" fill="#FFFFFF"/>
+    <rect x="36.3" y="31.5" width="1.4" height="6" rx="0.7" fill="#1565C0"/>
+    <rect x="37" y="36.3" width="4.5" height="1.4" rx="0.7" fill="#1565C0"/>
 </svg>
