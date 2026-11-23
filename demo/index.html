@@ -3,19 +3,19 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Dashboard — Unified Demo</title>
-  <meta name="description" content="Unified demo dashboard: module overview, market strip and activity.">
+  <title>Unified — Demo</title>
+  <meta name="description" content="Unified demo home page: the public system site (control plane) with pages and latest posts.">
   <script>try{var t=localStorage.getItem('unified-demo-theme');if(t==='editorial'){document.documentElement.classList.add('theme-dark');}}catch(e){}</script>
   <link rel="stylesheet" href="assets/demo.css">
 </head>
-<body data-page="dashboard" data-layout="app">
+<body data-page="home" data-layout="app">
   <main class="main" id="demo-main">
     <div class="page-head">
-      <h1>Dashboard</h1>
-      <p class="page-intro">Welcome back, Demo Admin. Here is what is happening across your Unified installation.</p>
+      <h1>Unified</h1>
+      <p class="page-intro">One platform to run your whole business — licensing, store, billing, content and 150 modules, all connected.</p>
     </div>
 
-    <div class="demo-note"><strong>Static demo.</strong> This page previews the Unified dashboard. All numbers, prices and names are demo data — nothing is live and nothing is saved.</div>
+    <div class="demo-note"><strong>Static demo.</strong> This is the public home page of the <strong>system site</strong> (the control plane). All numbers, prices and names are demo data — nothing is live and nothing is saved. Looking for a tenant site instead? <a href="tenant.html">See the tenant demo →</a></div>
 
     <div class="market-strip" aria-label="Market snapshot (demo data)">
       <span>Gold <strong>Antam Rp 1.942.000/g</strong> ▲ 0.8%</span>
@@ -37,118 +37,68 @@
       </ul>
     </div>
 
-    <div class="grid grid-stats">
-      <div class="card">
-        <div class="stat-value">1,284</div>
-        <div class="stat-label">Active users</div>
-        <div class="stat-delta">▲ 12.4% vs last month</div>
-      </div>
-      <div class="card">
-        <div class="stat-value">$48,290</div>
-        <div class="stat-label">Revenue this month</div>
-        <div class="stat-delta">▲ 8.1% vs last month</div>
-      </div>
-      <div class="card">
-        <div class="stat-value">312</div>
-        <div class="stat-label">Orders this month</div>
-        <div class="stat-delta">▲ 3.2% vs last month</div>
-      </div>
-      <div class="card">
-        <div class="stat-value">6.8 TB</div>
-        <div class="stat-label">Storage used of 10 TB</div>
-        <div class="stat-delta down">68% full — quota warning at 80%</div>
-      </div>
+    <h2>Pages</h2>
+    <div class="grid grid-two">
+      <a class="card" href="store.html" style="text-decoration: none;">
+        <h3>Pricing &amp; packages</h3>
+        <p>SaaS packages, per-module pricing and what each plan unlocks — from a single shop to a full ERP.</p>
+        <span><span class="badge">Page</span> <span class="badge badge-success">Published</span></span>
+      </a>
+      <a class="card" href="modules.html" style="text-decoration: none;">
+        <h3>All modules</h3>
+        <p>Browse the 150 modules: commerce, content, education, finance, HR and more — every one hookable.</p>
+        <span><span class="badge">Page</span> <span class="badge badge-success">Published</span></span>
+      </a>
+      <a class="card" href="settings.html" style="text-decoration: none;">
+        <h3>Documentation</h3>
+        <p>How to run Unified: install, configure tenants, connect providers and ship your first store.</p>
+        <span><span class="badge">Page</span> <span class="badge badge-success">Published</span></span>
+      </a>
+      <a class="card" href="admin.html" style="text-decoration: none;">
+        <h3>About Unified</h3>
+        <p>What Unified is, who builds it and why it is one system instead of ten disconnected apps.</p>
+        <span><span class="badge">Page</span> <span class="badge badge-success">Published</span></span>
+      </a>
     </div>
 
-    <h2>Modules</h2>
-    <div class="grid grid-modules">
-      <a class="module-card" href="module.html">
-        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-billing"/></svg>Billing</h3>
-        <p>Invoices, subscriptions, dunning and school fees.</p>
-        <span><span class="badge badge-success">Enabled</span> <span class="badge">v0.1.0</span></span>
-      </a>
-      <a class="module-card" href="modules.html">
-        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-crm"/></svg>CRM</h3>
-        <p>Contacts, deals, pipelines and customer history.</p>
-        <span><span class="badge badge-success">Enabled</span> <span class="badge">v0.1.0</span></span>
-      </a>
-      <a class="module-card" href="modules.html">
-        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-content"/></svg>Content</h3>
-        <p>Pages, posts, categories and the media library.</p>
-        <span><span class="badge badge-success">Enabled</span> <span class="badge">v0.1.0</span></span>
-      </a>
-      <a class="module-card" href="modules.html">
-        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-documents"/></svg>Documents</h3>
-        <p>Uploads, versions, sharing and the virus-scan gate.</p>
-        <span><span class="badge badge-success">Enabled</span> <span class="badge">v0.1.0</span></span>
-      </a>
-      <a class="module-card" href="store.html">
-        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-store"/></svg>Store</h3>
-        <p>Product catalogue, cart, orders and digital delivery.</p>
-        <span><span class="badge badge-success">Enabled</span> <span class="badge">v0.1.0</span></span>
-      </a>
-      <a class="module-card" href="modules.html">
-        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-licensing"/></svg>Licensing</h3>
-        <p>License keys, activations and SaaS packages.</p>
-        <span><span class="badge badge-success">Enabled</span> <span class="badge">v0.1.0</span></span>
-      </a>
-      <a class="module-card" href="admin.html">
-        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-users"/></svg>Users</h3>
-        <p>Accounts, roles, permissions and sessions.</p>
-        <span><span class="badge badge-success">Enabled</span> <span class="badge">v0.1.0</span></span>
-      </a>
-      <a class="module-card" href="modules.html">
-        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-security"/></svg>Security</h3>
-        <p>Audit log, two-factor auth and brute-force guard.</p>
-        <span><span class="badge badge-success">Enabled</span> <span class="badge">v0.1.0</span></span>
-      </a>
-      <a class="module-card" href="modules.html">
-        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-backup"/></svg>Backup</h3>
-        <p>Scheduled backups, storage providers and restore drills.</p>
-        <span><span class="badge badge-success">Enabled</span> <span class="badge">v0.1.0</span></span>
-      </a>
-      <a class="module-card" href="modules.html">
-        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-analytics"/></svg>Analytics</h3>
-        <p>Dashboards, reports and custom metrics.</p>
-        <span><span class="badge badge-success">Enabled</span> <span class="badge">v0.1.0</span></span>
-      </a>
-      <a class="module-card" href="modules.html">
-        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-ai"/></svg>AI</h3>
-        <p>Providers, capabilities and per-module AI wiring.</p>
-        <span><span class="badge badge-gold">Beta</span> <span class="badge">v0.1.0</span></span>
-      </a>
-      <a class="module-card" href="modules.html">
-        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-ai-support"/></svg>AI Support</h3>
-        <p>Chat support, knowledgebase and ticket triage.</p>
-        <span><span class="badge badge-gold">Beta</span> <span class="badge">v0.1.0</span></span>
-      </a>
+    <h2 style="margin-top: 1.5rem;">Latest posts</h2>
+    <div class="grid grid-two">
+      <article class="card">
+        <h3>Unified 0.1.0 demo is live</h3>
+        <p class="small muted">23 Nov 2026 · Release notes</p>
+        <p>150 modules, 127 migrations, a React dashboard track next to Handlebars, and a public/private file system with lazy finalize.</p>
+        <p><a href="modules.html">Read more →</a></p>
+      </article>
+      <article class="card">
+        <h3>Billing: dunning now retries failed charges</h3>
+        <p class="small muted">22 Nov 2026 · Billing</p>
+        <p>Failed subscription charges retry automatically on a schedule, with a full audit trail and no free days from renewal anchoring.</p>
+        <p><a href="module.html">Read more →</a></p>
+      </article>
+      <article class="card">
+        <h3>Tenant isolation, enforced everywhere</h3>
+        <p class="small muted">21 Nov 2026 · Security</p>
+        <p>Every tenant-facing handler is now guarded: company scope is resolved at auth time and a missing scope fails closed.</p>
+        <p><a href="admin.html">Read more →</a></p>
+      </article>
+      <article class="card">
+        <h3>New in the Store: Editorial Dark theme</h3>
+        <p class="small muted">20 Nov 2026 · Store</p>
+        <p>A dark editorial variant of the default theme — serif headlines, gold accents, dark canvas. Try it with the theme switcher above.</p>
+        <p><a href="store.html">Read more →</a></p>
+      </article>
     </div>
 
     <div class="grid grid-two" style="margin-top: 1.5rem;">
       <section class="card">
-        <h2>Recent activity</h2>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr><th>Reference</th><th>Customer</th><th>Amount</th><th>Status</th></tr>
-            </thead>
-            <tbody>
-              <tr><td class="mono">INV-2041</td><td>Acme Corp</td><td>$1,240.00</td><td><span class="badge badge-success">Paid</span></td></tr>
-              <tr><td class="mono">INV-2040</td><td>Beta Ltd</td><td>$860.00</td><td><span class="badge badge-success">Paid</span></td></tr>
-              <tr><td class="mono">ORD-8812</td><td>Gamma Studio</td><td>$49.00</td><td><span class="badge badge-success">Completed</span></td></tr>
-              <tr><td class="mono">LIC-5521</td><td>Koperasi Kita</td><td>—</td><td><span class="badge">Activated</span></td></tr>
-              <tr><td class="mono">TKT-118</td><td>Delta Shop</td><td>—</td><td><span class="badge badge-warning">Open</span></td></tr>
-            </tbody>
-          </table>
-        </div>
+        <h2>Run your business on Unified</h2>
+        <p>Pick a package, get your own subdomain, and open your dashboard. Tenants are provisioned with their own isolated schema.</p>
+        <p><a class="button" href="register.html">Create an account</a> <a class="button button-secondary" href="store.html">Browse the store</a></p>
       </section>
       <section class="card">
-        <h2>System status</h2>
-        <div class="check-row"><div><strong>API</strong><p>Public and core API responding.</p></div><span class="badge badge-success">Online</span></div>
-        <div class="check-row"><div><strong>Database</strong><p>PostgreSQL, 127 migrations applied.</p></div><span class="badge badge-success">Connected</span></div>
-        <div class="check-row"><div><strong>Job queue</strong><p>12 jobs waiting, 0 failed today.</p></div><span class="badge badge-success">Healthy</span></div>
-        <div class="check-row"><div><strong>Uptime</strong><p>Last 30 days, all services.</p></div><span class="badge badge-success">99.98%</span></div>
-        <p class="small muted" style="margin: 1rem 0 0;">Unified 0.1.0-demo · <a href="admin.html">Open admin →</a></p>
+        <h2>Already running Unified?</h2>
+        <p>Sign in to your dashboard to manage modules, billing, content and users — or open the admin area.</p>
+        <p><a class="button button-secondary" href="login.html">Sign in</a> <a class="button button-ghost" href="dashboard.html">Open dashboard →</a></p>
       </section>
     </div>
   </main>

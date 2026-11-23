@@ -7,9 +7,14 @@ with any static server. No build step, no network dependencies.
 
 ## Pages (phase 1)
 
+This demo shows the **system site** (control plane) plus one **tenant site**
+example, so the two contexts are never confused:
+
 | File | Page |
 | --- | --- |
-| `index.html` | Dashboard — stats, market strip, news ticker, module grid, activity |
+| `index.html` | **Home (system site)** — public front page: pages, latest posts, market strip, ticker |
+| `dashboard.html` | **Dashboard (system site)** — stats, market strip, news ticker, module grid, activity |
+| `tenant.html` | **Tenant demo** — a tenant site (Koperasi Kita) with its own pages and services |
 | `login.html` | Sign in — email/password, TOTP toggle, links to register/dashboard |
 | `register.html` | Create an account — name, email, company, plan, password |
 | `admin.html` | Admin dashboard — users table, roles, system status |
@@ -18,6 +23,10 @@ with any static server. No build step, no network dependencies.
 | `settings.html` | Settings — General / Theme / Mail / Security tabs |
 | `store.html` | Store — product cards, demo cart counter |
 
+System vs tenant: the system site is the control plane (tenants,
+subscriptions, domains, billing, licensing). A tenant site serves only that
+tenant's services; tenant administration lives on the system dashboard.
+
 All data is inline demo data. Forms never submit; buttons show a toast.
 The login/register forms redirect to the dashboard after a short toast.
 
@@ -25,8 +34,8 @@ The login/register forms redirect to the dashboard after a short toast.
 
 ```
 demo/
-  index.html  login.html  register.html  admin.html
-  modules.html  module.html  settings.html  store.html
+  index.html  dashboard.html  tenant.html  login.html  register.html
+  admin.html  modules.html  module.html  settings.html  store.html
   README.md            <- this file
   assets/
     demo.css           <- the only stylesheet (tokens mirror the real theme)

@@ -70,7 +70,9 @@
 
   /* Topbar entries. `page` matches <body data-page="..."> for the active state. */
   var NAV = [
-    { page: "dashboard", label: "Dashboard", href: "index.html" },
+    { page: "home", label: "Home", href: "index.html" },
+    { page: "dashboard", label: "Dashboard", href: "dashboard.html" },
+    { page: "tenant", label: "Tenant demo", href: "tenant.html" },
     { page: "modules", label: "Modules", href: "modules.html" },
     { page: "store", label: "Store", href: "store.html" },
     { page: "admin", label: "Admin", href: "admin.html" },
@@ -155,7 +157,7 @@
       '<footer class="footer">' +
       "<p><strong>Unified demo</strong> — static preview, no backend. " +
       "All data on this page is demo data; nothing is saved or sent anywhere.</p>" +
-      '<p><a href="index.html">Dashboard</a> &middot; <a href="modules.html">Modules</a> &middot; ' +
+      '<p><a href="index.html">Home</a> &middot; <a href="dashboard.html">Dashboard</a> &middot; <a href="tenant.html">Tenant demo</a> &middot; <a href="modules.html">Modules</a> &middot; ' +
       '<a href="store.html">Store</a> &middot; <a href="settings.html">Settings</a></p>' +
       "</footer>"
     );

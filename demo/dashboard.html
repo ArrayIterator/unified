@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard — Unified Demo</title>
+  <meta name="description" content="Unified demo dashboard: module overview, market strip and activity.">
+  <script>try{var t=localStorage.getItem('unified-demo-theme');if(t==='editorial'){document.documentElement.classList.add('theme-dark');}}catch(e){}</script>
+  <link rel="stylesheet" href="assets/demo.css">
+</head>
+<body data-page="dashboard" data-layout="app">
+  <main class="main" id="demo-main">
+    <div class="page-head">
+      <h1>Dashboard</h1>
+      <p class="page-intro">Welcome back, Demo Admin. Here is what is happening across your Unified installation.</p>
+    </div>
+
+    <div class="demo-note"><strong>Static demo.</strong> This page previews the Unified dashboard. All numbers, prices and names are demo data — nothing is live and nothing is saved.</div>
+
+    <div class="market-strip" aria-label="Market snapshot (demo data)">
+      <span>Gold <strong>Antam Rp 1.942.000/g</strong> ▲ 0.8%</span>
+      <span>UBS <strong>Rp 1.938.500/g</strong> ▲ 0.6%</span>
+      <span>Galeri 24 <strong>Rp 1.940.000/g</strong> ▲ 0.7%</span>
+      <span>Pegadaian <strong>Rp 1.935.000/g</strong> ▼ 0.2%</span>
+      <span>USD/IDR <strong>16.240</strong></span>
+      <span>BTC <strong>$97.400</strong> ▲ 1.9%</span>
+    </div>
+
+    <div class="ticker" aria-label="Announcements">
+      <span class="ticker-label">Breaking</span>
+      <span class="ticker-item" data-ticker-item>Unified 0.1.0 demo: 150 modules, 127 migrations.</span>
+      <ul hidden>
+        <li data-ticker-source>Unified 0.1.0 demo: 150 modules, 127 migrations.</li>
+        <li data-ticker-source>Billing: dunning now retries failed charges automatically.</li>
+        <li data-ticker-source>New in the Store: Editorial Dark theme.</li>
+        <li data-ticker-source>Maintenance window Sunday 02:00–03:00 WIB.</li>
+      </ul>
+    </div>
+
+    <div class="grid grid-stats">
+      <div class="card">
+        <div class="stat-value">1,284</div>
+        <div class="stat-label">Active users</div>
+        <div class="stat-delta">▲ 12.4% vs last month</div>
+      </div>
+      <div class="card">
+        <div class="stat-value">$48,290</div>
+        <div class="stat-label">Revenue this month</div>
+        <div class="stat-delta">▲ 8.1% vs last month</div>
+      </div>
+      <div class="card">
+        <div class="stat-value">312</div>
+        <div class="stat-label">Orders this month</div>
+        <div class="stat-delta">▲ 3.2% vs last month</div>
+      </div>
+      <div class="card">
+        <div class="stat-value">6.8 TB</div>
+        <div class="stat-label">Storage used of 10 TB</div>
+        <div class="stat-delta down">68% full — quota warning at 80%</div>
+      </div>
+    </div>
+
+    <h2>Modules</h2>
+    <div class="grid grid-modules">
+      <a class="module-card" href="module.html">
+        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-billing"/></svg>Billing</h3>
+        <p>Invoices, subscriptions, dunning and school fees.</p>
+        <span><span class="badge badge-success">Enabled</span> <span class="badge">v0.1.0</span></span>
+      </a>
+      <a class="module-card" href="modules.html">
+        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-crm"/></svg>CRM</h3>
+        <p>Contacts, deals, pipelines and customer history.</p>
+        <span><span class="badge badge-success">Enabled</span> <span class="badge">v0.1.0</span></span>
+      </a>
+      <a class="module-card" href="modules.html">
+        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-content"/></svg>Content</h3>
+        <p>Pages, posts, categories and the media library.</p>
+        <span><span class="badge badge-success">Enabled</span> <span class="badge">v0.1.0</span></span>
+      </a>
+      <a class="module-card" href="modules.html">
+        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-documents"/></svg>Documents</h3>
+        <p>Uploads, versions, sharing and the virus-scan gate.</p>
+        <span><span class="badge badge-success">Enabled</span> <span class="badge">v0.1.0</span></span>
+      </a>
+      <a class="module-card" href="store.html">
+        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-store"/></svg>Store</h3>
+        <p>Product catalogue, cart, orders and digital delivery.</p>
+        <span><span class="badge badge-success">Enabled</span> <span class="badge">v0.1.0</span></span>
+      </a>
+      <a class="module-card" href="modules.html">
+        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-licensing"/></svg>Licensing</h3>
+        <p>License keys, activations and SaaS packages.</p>
+        <span><span class="badge badge-success">Enabled</span> <span class="badge">v0.1.0</span></span>
+      </a>
+      <a class="module-card" href="admin.html">
+        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-users"/></svg>Users</h3>
+        <p>Accounts, roles, permissions and sessions.</p>
+        <span><span class="badge badge-success">Enabled</span> <span class="badge">v0.1.0</span></span>
+      </a>
+      <a class="module-card" href="modules.html">
+        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-security"/></svg>Security</h3>
+        <p>Audit log, two-factor auth and brute-force guard.</p>
+        <span><span class="badge badge-success">Enabled</span> <span class="badge">v0.1.0</span></span>
+      </a>
+      <a class="module-card" href="modules.html">
+        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-backup"/></svg>Backup</h3>
+        <p>Scheduled backups, storage providers and restore drills.</p>
+        <span><span class="badge badge-success">Enabled</span> <span class="badge">v0.1.0</span></span>
+      </a>
+      <a class="module-card" href="modules.html">
+        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-analytics"/></svg>Analytics</h3>
+        <p>Dashboards, reports and custom metrics.</p>
+        <span><span class="badge badge-success">Enabled</span> <span class="badge">v0.1.0</span></span>
+      </a>
+      <a class="module-card" href="modules.html">
+        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-ai"/></svg>AI</h3>
+        <p>Providers, capabilities and per-module AI wiring.</p>
+        <span><span class="badge badge-gold">Beta</span> <span class="badge">v0.1.0</span></span>
+      </a>
+      <a class="module-card" href="modules.html">
+        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-ai-support"/></svg>AI Support</h3>
+        <p>Chat support, knowledgebase and ticket triage.</p>
+        <span><span class="badge badge-gold">Beta</span> <span class="badge">v0.1.0</span></span>
+      </a>
+    </div>
+
+    <div class="grid grid-two" style="margin-top: 1.5rem;">
+      <section class="card">
+        <h2>Recent activity</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Reference</th><th>Customer</th><th>Amount</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+              <tr><td class="mono">INV-2041</td><td>Acme Corp</td><td>$1,240.00</td><td><span class="badge badge-success">Paid</span></td></tr>
+              <tr><td class="mono">INV-2040</td><td>Beta Ltd</td><td>$860.00</td><td><span class="badge badge-success">Paid</span></td></tr>
+              <tr><td class="mono">ORD-8812</td><td>Gamma Studio</td><td>$49.00</td><td><span class="badge badge-success">Completed</span></td></tr>
+              <tr><td class="mono">LIC-5521</td><td>Koperasi Kita</td><td>—</td><td><span class="badge">Activated</span></td></tr>
+              <tr><td class="mono">TKT-118</td><td>Delta Shop</td><td>—</td><td><span class="badge badge-warning">Open</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section class="card">
+        <h2>System status</h2>
+        <div class="check-row"><div><strong>API</strong><p>Public and core API responding.</p></div><span class="badge badge-success">Online</span></div>
+        <div class="check-row"><div><strong>Database</strong><p>PostgreSQL, 127 migrations applied.</p></div><span class="badge badge-success">Connected</span></div>
+        <div class="check-row"><div><strong>Job queue</strong><p>12 jobs waiting, 0 failed today.</p></div><span class="badge badge-success">Healthy</span></div>
+        <div class="check-row"><div><strong>Uptime</strong><p>Last 30 days, all services.</p></div><span class="badge badge-success">99.98%</span></div>
+        <p class="small muted" style="margin: 1rem 0 0;">Unified 0.1.0-demo · <a href="admin.html">Open admin →</a></p>
+      </section>
+    </div>
+  </main>
+  <script src="assets/sprite.js"></script>
+  <script src="assets/demo.js"></script>
+</body>
+</html>
