@@ -1,10 +1,10 @@
 # Icons preview
 
-Every icon in the Unified set, in one file, for visual review. Module icons are flat fill-only vectors (see `README.md`); mail logos are real brand marks from [simple-icons](https://github.com/simple-icons/simple-icons) (CC0) where available, otherwise lettermark fallbacks in a consistent style.
+Every icon in the Unified set, in one file, for visual review. Module icons are multi-colour IconPark (ByteDance, Apache 2.0 — see `LICENSE.icon-park`) multi-color theme icons on a 48 grid, plus 5 custom-drawn gap icons in the same style (`load-balancer`, `vault`, `tenant-destroy`, `site-builder`, `placeholder`); mail logos are real brand marks from [simple-icons](https://github.com/simple-icons/simple-icons) (CC0) where available, otherwise lettermark fallbacks in a consistent style.
 
 ## Module icons (156)
 
-Built from `modules/*.svg` into `modules-sprite.svg` (`python3 scripts/build-module-icons-sprite.py`, 156 symbols).
+Built from `modules/*.svg` into `modules-sprite.svg` (`python3 scripts/build-module-icons-sprite.py`, 156 symbols). One palette for light and dark (outline `#64748B`, blue `#2F88FF`, white `#FFFFFF`, light blue `#43CCF8`); see `README.md`.
 
 | <img src="modules/academic.svg" width="32" height="32"><br>academic | <img src="modules/admissions.svg" width="32" height="32"><br>admissions | <img src="modules/advisor.svg" width="32" height="32"><br>advisor | <img src="modules/affiliates.svg" width="32" height="32"><br>affiliates | <img src="modules/ai.svg" width="32" height="32"><br>ai | <img src="modules/ai-support.svg" width="32" height="32"><br>ai-support |
 | --- | --- | --- | --- | --- | --- |

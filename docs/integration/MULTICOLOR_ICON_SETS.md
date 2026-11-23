@@ -1,7 +1,10 @@
 # Multi-Colour Icon Sets — Research & Replacement Proposal
 
 Date: 2026-11-23
-Status: PROPOSAL ONLY — no icon has been changed, nothing committed or pushed.
+Status: IMPLEMENTED 2026-11-23 — all 156 module icons replaced with
+multi-colour IconPark icons (151 vendored) + 5 custom-drawn gap icons.
+See §8 for the implementation record. Nothing committed or pushed yet
+(parent does the push).
 Context: the 156 module icons in `assets/icons/modules/*.svg` (built into
 `assets/icons/modules-sprite.svg`) are flat fill-only vectors, mostly a single
 colour via `var(--icon-*, #hex)`. The user finds them ugly and wants
@@ -420,3 +423,176 @@ which can carry 156 admin modules.
   TwoTone 1,944); IconPark package docs (@icon-park/svg, @icon-park/react,
   @icon-park/vue); fyne-iconpark Safe-category list; Dart icon-park
   `iconsList` sample.
+
+## 8. Implementation record (2026-11-23)
+
+Decision: IconPark multi-color (Apache 2.0) adopted as planned in §5.
+151 icons vendored from `@icon-park/svg` 1.4.2 (pinned), theme
+`multi-color`; 5 custom-drawn in the same visual language. No icon
+was changed in the mail logos or the flags.
+
+### 8.1 Palette decision — ONE palette for light and dark
+
+Option (a) from §4.1: a single palette chosen to read on both the
+light theme (`--bg: #f4f6f8`) and Editorial Dark (`--bg: #141210`).
+IconPark's default `#333` outline was replaced with slate `#64748B`
+(~4.8:1 on light, ~3.9:1 on dark); the other three fills are the
+IconPark defaults. No second dark sprite is generated.
+
+| Fill | Value | Role |
+|---|---|---|
+| 1 — outline | `#64748B` | Strokes, outlines, neutral structure |
+| 2 — main | `#2F88FF` | Main colour, primary meaning |
+| 3 — light | `#FFFFFF` | Inner detail on coloured shapes |
+| 4 — accent | `#43CCF8` | Secondary colour |
+
+Exception: `tenant-destroy` uses danger red `#B3261E` for its X badge
+(the only red in the set — a destructive action must read as destructive).
+Rendered grids on both backgrounds were inspected at 48 px and 16 px:
+all 156 icons render, outlines stay visible on dark, no blanks.
+
+### 8.2 Custom-drawn gap icons (5)
+
+| Module | Design (48 grid, stroke 4, same palette) |
+|---|---|
+| `load-balancer` | Down arrow splitting from one node into three server bars |
+| `vault` | Safe box with blue door and dial |
+| `tenant-destroy` | Building + red X badge (only red in the set) |
+| `site-builder` | Browser window with layout blocks |
+| `placeholder` | Circle with a "?" |
+
+### 8.3 Mapping — module id → IconPark name (or CUSTOM)
+
+| Module | IconPark icon | Module | IconPark icon |
+|---|---|---|---|
+| `academic` | school | `admissions` | add-user |
+| `advisor` | help | `affiliates` | link-one |
+| `ai` | brain | `ai-support` | robot |
+| `analytics` | chart-line | `announcements` | announcement |
+| `api-manager` | api | `apikeys` | keyhole |
+| `app-sync` | sync | `appointments` | appointment |
+| `approvals` | stamp | `assets` | box |
+| `audit` | audit | `auditors` | people-search |
+| `auth-manager` | fingerprint | `backup` | copy |
+| `bank-transfer` | bank-transfer | `bi` | chart-pie |
+| `billing` | bill | `cache` | refresh |
+| `calendar` | calendar | `cards` | bank-card |
+| `certificates` | certificate | `chat` | messages |
+| `cloudflare` | shield-add | `clusters` | network-drive |
+| `community` | group | `company` | building-one |
+| `compliance` | protect | `content` | file-text |
+| `contracts` | agreement | `crm` | customer |
+| `curriculum` | book | `dashboards` | dashboard |
+| `delivery-notes` | express-delivery | `departments` | headset |
+| `documents` | document-folder | `domain-verification` | check-correct |
+| `domains` | globe | `downloader` | download |
+| `elearning` | monitor-two | `email-providers` | send-email |
+| `email-templates` | mail-edit | `entitlements` | key |
+| `esg` | leaf | `events` | ticket |
+| `exams` | notebook-and-pen | `expenses` | expenses |
+| `extensions` | puzzle | `external-bi` | data |
+| `external-esignature` | doc-detail | `external-fleet` | car |
+| `external-iot` | wifi | `external-whatsapp` | message-one |
+| `field-service` | toolkit | `files` | folder |
+| `forms` | form | `forums` | comments |
+| `frontend` | browser | `gamification` | game |
+| `geo` | map-two | `holidays` | sun |
+| `hosting` | server | `hr` | people |
+| `i18n` | translate | `import-export` | import-and-export |
+| `inbox` | inbox | `incidents` | alarm |
+| `knowledgebase` | book-open | `kyc` | id-card |
+| `library` | bookshelf | `licensing` | seal |
+| `load-balancer` | CUSTOM | `logistics` | truck |
+| `logs` | record | `loyalty` | gift |
+| `mail` | mail | `maintenance` | repair |
+| `manufacturing` | factory-building | `marketing` | broadcast |
+| `mcp` | data-server | `meetings` | video |
+| `network` | network-tree | `network-tools` | tool |
+| `newsletter` | mail-package | `notifications` | remind |
+| `okrs` | target | `panels` | monitor |
+| `payments` | wallet | `phone` | phone |
+| `placeholder` | CUSTOM | `planner` | notebook |
+| `plm` | cube | `portals` | gate |
+| `pos` | shopping-cart | `presets` | setting-one |
+| `pricing` | tag | `pricing-tables` | table-file |
+| `printing` | printer | `privacy` | personal-privacy |
+| `procurement` | shopping-bag | `products` | commodity |
+| `projects` | folder-block | `properties` | home |
+| `providers` | link | `quality` | badge |
+| `records` | collection-records | `recruitment` | briefcase |
+| `reference-data` | data-sheet | `referral` | people-plus |
+| `rental` | coupon | `risk` | attention |
+| `roles` | user-business | `routes` | road |
+| `saas` | link-cloud | `saas-domains` | earth |
+| `saas-packages` | gift-box | `saved-views` | bookmark |
+| `scheduler` | time | `search` | search |
+| `security` | shield | `seo` | seo |
+| `service-monitor` | radar | `settings` | setting |
+| `sign` | edit | `site-builder` | CUSTOM |
+| `sms-marketing` | message | `social-marketing` | share |
+| `software` | code | `spreadsheets` | table |
+| `statuspage` | monitor-one | `storage` | cloud-storage |
+| `storage-manager` | database-setting | `store` | shop |
+| `studio` | paint | `supervision` | eyes |
+| `surveys` | clipboard | `tasks` | check |
+| `tax` | calculator | `tenant-destroy` | CUSTOM |
+| `tenants` | building-two | `theme` | theme |
+| `tickets` | tickets-one | `timeline` | timeline |
+| `timetracker` | timer | `todos` | list |
+| `users` | user | `vault` | CUSTOM |
+| `vcs` | branch | `web3` | blockchain |
+| `webhooks` | plug | `webinars` | video-conference |
+| `whitelabel` | magic | `workflows` | mindmap-list |
+
+Notes on the loose metaphors: `whitelabel` → `magic` (rebrand like magic);
+`departments` → `headset` (support agents); `holidays` → `sun`;
+`saas` → `link-cloud`; `risk` → `attention`; `rental` → `coupon`;
+`projects` → `folder-block`; `workflows` → `mindmap-list`;
+`mcp` → `data-server`; `vcs` → `branch`; `plm` → `cube`.
+Every IconPark name is used once — no two modules share an icon.
+
+### 8.4 Files changed
+
+- `assets/icons/modules/*.svg` — all 156 replaced (151 vendored, 5 custom).
+- `assets/icons/modules-sprite.svg` — rebuilt, 156 symbols, viewBox 48.
+- `assets/icons/ICONS.md` — regenerated from disk.
+- `assets/icons/README.md` — multi-colour style, palette, provenance,
+  grayscale mode retired.
+- `assets/icons/LICENSE.icon-park` — Apache 2.0 licence from the
+  IconPark repo (raw.githubusercontent.com/bytedance/IconPark/master/LICENSE).
+- `scripts/build-module-icons-sprite.py` — viewBox 24 → 48, multi-colour
+  rules; `fill="none"` on symbols kept (some IconPark paths carry no fill).
+- `demo/assets/sprite.js` — regenerated from the new sprite.
+- This doc — status + this section.
+
+### 8.5 Verification
+
+- Sprite rebuilds clean: `python3 scripts/build-module-icons-sprite.py` →
+  156 symbols, 0 module-owned; every module id has a matching symbol,
+  no extras; all symbols viewBox `0 0 48 48`.
+- Lint on all 156 module files: well-formed XML, viewBox `0 0 48 48`,
+  `<title>` present, no `<text>`, no old `var(--icon-*)` fills, no `24`
+  viewBox remnant — zero problems.
+- Render grids (resvg) at 48 px and 16 px on light `#f4f6f8` and dark
+  `#141210`: all 156 render on both backgrounds, outlines visible on dark,
+  no blanks. The 5 custom icons were rendered at 240 px and inspected
+  individually.
+- The 6 `data-animation` declarations from the old icons were carried over
+  (`app-sync`/`backup` spin, `downloader` bounce, `geo`/`service-monitor`
+  pulse, `notifications` wiggle) and are present on the built symbols.
+- Greps on touched files: no Indonesian strings, no tnode, no WordPress,
+  no TrayDigita (one pre-existing "WordPress-plugin model" comment in the
+  builder docstring was reworded to "the icon belongs to the module").
+- `npm run check` exit 0 (no React code touched; `node --check` on the
+  regenerated `demo/assets/sprite.js` also passes).
+- Sprite size: 114,130 bytes (was 94,553 — multi-colour paths are heavier,
+  still one file, no runtime dependency).
+
+### 8.6 What was NOT done
+
+- Mail logos (`src/modules/email_providers/logos/`) untouched — already real
+  brand marks. Flags (`assets/icons/flags/`) untouched.
+- The 17 snake_case `fn id()` modules still cannot render icons in-app
+  (needs the kebab unification decision); their new icons exist in the
+  preview but the app cannot address them yet.
+- No commit, no push (parent does that).

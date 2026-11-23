@@ -1,92 +1,78 @@
 # Unified module icons
 
-150 module icons (145 core modules + 5 native external crates) plus one
-`placeholder` icon, one SVG per icon in `modules/<name>.svg`, combined
-into `modules-sprite.svg` (151 symbols) by
+156 module icons (150 core modules + 5 native external crates, plus
+one `placeholder` icon), one SVG per icon in `modules/<name>.svg`,
+combined into `modules-sprite.svg` (156 symbols) by
 `scripts/build-module-icons-sprite.py` (deterministic, re-runnable).
 Use them with `<svg class="icon"><use href="#module-icon-billing"/></svg>`.
 New modules registered in `src/modules/mod.rs` need an icon file here;
 until one exists the accessor falls back to `module-icon-placeholder`.
 
-## Style — flat solid fills, tracker language
+## Style — multi-colour IconPark
 
-The project tracker artifact has no SVG icon set at all — its whole
-visual language is flat solid colour (one semantic colour per meaning),
-fully rounded geometry, generous whitespace, no linework, no decoration.
-These icons translate that language into SVG:
+The icons are [IconPark](https://github.com/bytedance/IconPark)
+(ByteDance, Apache 2.0 — see `LICENSE.icon-park`) multi-color theme
+icons, plus 5 custom-drawn gap icons in the same visual language:
 
-- **Fill-only silhouettes. No `stroke` attribute anywhere** — not on
-  the `<svg>` root, not on any shape. Every shape carries an explicit
-  `fill="var(--icon-*, #hex)"`.
-- 24x24 `viewBox`; drawings stay inside the 3–21 range so nothing clips
-  at small sizes; corners fully rounded (`rx` on rects, round joins in
-  path data).
+- 48x48 `viewBox`; stroke width 4, round caps and joins.
+- Four fixed fills per icon (see Palette below). Fills are fixed at
+  generation time — they do not follow CSS variables.
 - Every file: `<title>` in English as first child, then the drawing.
-- **Max 2 flat colours per icon**: one dominant semantic colour + one
-  supporting colour (or a white knockout). Restraint is the style —
-  no decorative linework, no gradients, no third colour.
-- **No Gemini-style sparkles/stars anywhere.** AI concepts use
-  brain / neural-network nodes / circuit motifs (see below).
+- No gradients. **No Gemini-style sparkles/stars anywhere.** AI
+  concepts use brain / neural-network nodes / circuit motifs (see below).
 
-## Palette (CSS custom properties)
+## Palette — one palette for light and dark
 
-Colors are written as `var(--name, fallback)` so the host page can
-retheme them. The fallback is the color-mode default, so icons also
-render correctly standalone (no CSS loaded). Values are the tracker
-artifact's own semantic colours:
+IconPark's default multi-color palette uses `#333` outlines, which
+vanish on dark backgrounds. This set uses a single palette chosen to
+read on both the light theme (`--bg: #f4f6f8`) and Editorial Dark
+(`--bg: #141210`): the outline is slate `#64748B` instead of `#333`
+(~4.8:1 on light, ~3.9:1 on dark). There is no second dark sprite;
+the same icons ship in both themes.
 
-| Variable | Color mode (default) | Role |
+| Fill | Value | Role |
 |---|---|---|
-| `--icon-ink` | `#64748B` (slate) | Neutral structure, default colour |
-| `--icon-primary` | `#2563EB` (blue) | Main shape, primary meaning |
-| `--icon-accent` | `#D97706` (amber) | Highlight / in-progress warmth |
-| `--icon-success` | `#16A34A` (green) | Positive, done, live |
-| `--icon-danger` | `#B3261E` (red) | Alert, failed, destructive |
-| `--icon-teal` | `#0F766E` (teal) | Tracker accent, maintenance/mail |
-| `--icon-violet` | `#7C3AED` (violet) | Pending, special states |
-| `--icon-soft` | `#E2E8F0` (slate-200) | Light fills, secondary shapes |
+| 1 — outline | `#64748B` (slate-500) | Strokes, outlines, neutral structure |
+| 2 — main | `#2F88FF` (blue) | Main colour, primary meaning |
+| 3 — light | `#FFFFFF` (white) | Inner detail on coloured shapes |
+| 4 — accent | `#43CCF8` (light blue) | Secondary colour |
 
-White (`#FFFFFF`) is the knockout colour for details cut out of a
-solid shape (e.g. a white check on a green badge).
+Exception: `tenant-destroy` uses danger red `#B3261E` for its X badge —
+the only red in the set, kept from the old icon because a destructive
+action must read as destructive.
 
-## Grayscale mode
+## Provenance
 
-A parent sets `data-icon-theme="grayscale"` (`.icon-grayscale` class is
-an alias). The variables are redefined to a stepped gray ramp so icons
-keep their structure and stay distinguishable — do not fake grayscale
-with a CSS `filter: grayscale()` on color icons; the variables are the
-mechanism:
+- 151 icons are generated from IconPark 1.4.2 (`@icon-park/svg`,
+  pinned) with theme `multi-color` and the palette above; see
+  `docs/integration/MULTICOLOR_ICON_SETS.md` §8 for the full
+  module → IconPark name mapping.
+- 5 icons are custom-drawn in the same style (48 grid, stroke 4, same
+  palette): `load-balancer` (arrow splitting into server bars),
+  `vault` (safe with dial), `tenant-destroy` (building + red X badge),
+  `site-builder` (browser window + layout blocks), `placeholder`
+  (circle + "?").
+- Licence: Apache 2.0 (`LICENSE.icon-park`). Keep the notice with the
+  redistributed files; no attribution in the UI is required.
+- The static SVGs in `modules/` are the source of truth; the
+  generation step (Node + `@icon-park/svg`, see the proposal doc §4.1)
+  is not shipped in the repo.
 
-| Variable | Grayscale value |
-|---|---|
-| `--icon-ink` | `#475569` |
-| `--icon-primary` | `#334155` |
-| `--icon-accent` | `#64748B` |
-| `--icon-success` | `#525252` |
-| `--icon-danger` | `#0F172A` |
-| `--icon-teal` | `#57534E` |
-| `--icon-violet` | `#737373` |
-| `--icon-soft` | `#A8A29E` |
+## Grayscale mode — retired
 
-Both modes are rendered and inspected before any report of done
-(see `~/workspace/iconfix/` render scripts).
+The old flat icons followed CSS variables (`--icon-*`) and a parent
+could set `data-icon-theme="grayscale"` to recolour them. Multi-colour
+icons carry fixed fills, so that mechanism no longer applies to module
+icons; the variables remain defined in `assets/css/icons.css` but
+nothing reads them. Do not fake grayscale with a CSS `filter` on
+colour icons.
 
 ## AI family (no sparkles)
 
-- `ai`: brain outline + neural-network nodes (dots connected by lines).
-  Never a 4-point star/sparkle.
-- `ai-support`: headset + a small brain/node mark, not a star.
-- `advisor`: person + lightbulb (or compass); never a plain circle.
-- `mcp`: plug / connected nodes; never a star.
-
-## Weak metaphors that must read at 24px
-
-These rendered as blobs or bare shapes in the first round and must be
-redrawn, not just recolored: `advisor` (person + lightbulb),
-`apikeys` (key with teeth + keyring), `approvals` (checkmark badge),
-`bi` (bar chart + trend line), `calendar` (grid + marked date),
-`cards` (stacked cards + chip). Any other icon that reads as a plain
-circle, rectangle, or dot is a failure — add the distinguishing detail.
+- `ai`: brain (IconPark `brain`).
+- `ai-support`: robot (IconPark `robot`), not a star.
+- `advisor`: help (IconPark `help`); never a plain circle.
+- `mcp`: data server (IconPark `data-server`); never a star.
 
 ## Animation (opt-in, off by default)
 
@@ -103,5 +89,5 @@ or `:hover`. `prefers-reduced-motion` disables all of it.
 python3 scripts/build-module-icons-sprite.py
 ```
 
-Then render both modes and inspect the PNGs before reporting done:
-`~/workspace/iconfix/render_grid.py --mode color|grayscale`.
+Then render the sprite on light and dark backgrounds and inspect the
+PNGs before reporting done.

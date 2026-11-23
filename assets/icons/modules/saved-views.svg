@@ -1,5 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-<title>Saved Views</title>
-<path d="M7 3.5 h10 a1 1 0 0 1 1 1 V20 a1 1 0 0 1 -1.6 .8 L12 16.6 7.6 20.8 A1 1 0 0 1 6 20 V4.5 a1 1 0 0 1 1-1 Z" fill="var(--icon-primary, #2563EB)"/>
-<polygon points="12,7.2 13.1,10.1 16.2,10.3 13.9,12.2 14.7,15.2 12,13.6 9.3,15.2 10.1,12.2 7.8,10.3 10.9,10.1" fill="#FFFFFF"/>
-</svg>
+<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><title>Saved Views</title><path d="M10 44C8.89543 44 8 43.1046 8 42V6C8 4.89543 8.89543 4 10 4H38C39.1046 4 40 4.89543 40 6V42C40 43.1046 39.1046 44 38 44H10Z" fill="#2F88FF" stroke="#64748B" stroke-width="4" stroke-linejoin="round"/><path fill-rule="evenodd" clip-rule="evenodd" d="M21 22V4H33V22L27 15.7273L21 22Z" fill="#43CCF8" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 4H38" stroke="#64748B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>

@@ -1,7 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" data-animation="pulse">
-<title>Service Monitor</title>
-<rect x="4" y="5" width="16" height="11.5" rx="2" fill="var(--icon-primary, #2563EB)"/>
-<polygon points="5.5,10.35 8,10.35 9.5,6.85 12,13.85 13.5,10.35 18.5,10.35 18.5,11.65 13.5,11.65 12,15.15 9.5,8.15 8,11.65 5.5,11.65" fill="var(--icon-accent, #D97706)"/>
-<rect x="11" y="16.5" width="2" height="2.5" fill="var(--icon-primary, #2563EB)"/>
-<rect x="7.5" y="19" width="9" height="1.8" rx="0.9" fill="var(--icon-primary, #2563EB)"/>
-</svg>
+<svg data-animation="pulse" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><title>Service Monitor</title><path fill-rule="evenodd" clip-rule="evenodd" d="M24 44C35.0457 44 44 35.0457 44 24C44 12.9543 35.0457 4 24 4C12.9543 4 4 12.9543 4 24C4 35.0457 12.9543 44 24 44Z" stroke="#64748B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path fill-rule="evenodd" clip-rule="evenodd" d="M24 34C29.5228 34 34 29.5228 34 24C34 18.4772 29.5228 14 24 14C18.4772 14 14 18.4772 14 24C14 29.5228 18.4772 34 24 34Z" stroke="#64748B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M24 4V44" stroke="#64748B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 24.0002L18 24.0086" stroke="#64748B" stroke-width="4" stroke-linecap="round"/><path d="M4 24.0083L44 24.0083" stroke="#64748B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>

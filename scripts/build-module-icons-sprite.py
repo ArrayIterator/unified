@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """Build assets/icons/modules-sprite.svg from per-module icon.svg files.
 
-Icon lookup order (WordPress-plugin model: the icon belongs to the
-module):
+Icon lookup order (the icon belongs to the module):
   1. module-owned: <module>/icon.svg alongside the module code
      (src/modules/<name>/icon.svg, crates/external-*/icon.svg),
   2. central: assets/icons/modules/<name>.svg (override / fallback store),
@@ -14,12 +13,15 @@ icon set is the union of central filenames and discovered module-owned
 icon.svg owners. A module-owned icon overrides the central file of
 the same name; the build prints every override so it is visible.
 
-One <symbol id="module-icon-<module>" viewBox="0 0 24 24"> per icon.
-Icons are fill-only (tracker style: flat solid fills, no stroke), so
-each <symbol> carries only fill="none" — a shape without an explicit
-fill renders invisible instead of a black blob. A per-module
-data-animation="spin|wiggle|pulse|bounce" attribute on the icon file's
-<svg> root is copied onto the <symbol> (see assets/icons/ANIMATION.md).
+One <symbol id="module-icon-<module>" viewBox="0 0 48 48"> per icon.
+Icons are multi-colour IconPark (Apache 2.0) multi-color theme, 48x48
+grid, stroke width 4, one fixed palette for light and dark
+(see assets/icons/README.md). Each shape carries its own explicit
+fill/stroke, so each <symbol> carries only fill="none" — a shape
+without an explicit fill renders invisible instead of a black blob.
+A per-module data-animation="spin|wiggle|pulse|bounce" attribute on
+the icon file's <svg> root is copied onto the <symbol>
+(see assets/icons/ANIMATION.md).
 
 Deterministic: symbols sorted by id. No network, no extra deps.
 Set UNIFIED_ICON_ROOT to build from a different tree (used by tests).
@@ -45,9 +47,9 @@ OWNED_PATTERNS = [
 
 ANIMATIONS = {"spin", "wiggle", "pulse", "bounce"}
 
-# Fill-only icons: no stroke anywhere. fill="none" on the symbol means a
-# shape that forgot its explicit fill renders invisible (caught by the
-# visual render check) instead of a black blob.
+# Multi-colour icons: stroke + fill per shape, 48x48 grid. fill="none"
+# on the symbol means a shape that forgot its explicit fill renders
+# invisible (caught by the visual render check) instead of a black blob.
 SYMBOL_ATTRS = {"fill": "none"}
 
 
@@ -73,8 +75,8 @@ def build() -> None:
         path, _origin = icons[name]
         tree = ET.parse(path)
         root = tree.getroot()
-        assert root.get("viewBox") == "0 0 24 24", f"{path}: bad viewBox"
-        attrs = {"id": f"module-icon-{name}", "viewBox": "0 0 24 24"}
+        assert root.get("viewBox") == "0 0 48 48", f"{path}: bad viewBox"
+        attrs = {"id": f"module-icon-{name}", "viewBox": "0 0 48 48"}
         attrs.update(SYMBOL_ATTRS)
         anim = root.get("data-animation")
         if anim is not None:

@@ -1,9 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-<title>Roles</title>
-<circle cx="9" cy="8.5" r="3.5" fill="var(--icon-primary, #2563EB)"/>
-<path d="M3.8 20 v-3 a5.2 5.2 0 0 1 10.4 0 V20 Z" fill="var(--icon-primary, #2563EB)"/>
-<path d="M14.8 9 a2.2 2.2 0 1 0 4.4 0 a2.2 2.2 0 1 0 -4.4 0 Z M15.9 9 a1.1 1.1 0 1 0 2.2 0 a1.1 1.1 0 1 0 -2.2 0 Z" fill="var(--icon-accent, #D97706)" fill-rule="evenodd"/>
-<rect x="17.8" y="8.2" width="2.7" height="1.6" rx="0.8" fill="var(--icon-accent, #D97706)"/>
-<rect x="18.4" y="9.8" width="1.2" height="1.8" rx="0.6" fill="var(--icon-accent, #D97706)"/>
-<rect x="19.7" y="9.8" width="1.2" height="1.8" rx="0.6" fill="var(--icon-accent, #D97706)"/>
-</svg>
+<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><title>Roles</title><circle cx="24" cy="12" r="8" fill="#2F88FF" stroke="#64748B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M42 44C42 34.0589 33.9411 26 24 26C14.0589 26 6 34.0589 6 44" stroke="#64748B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M24 44L28 39L24 26L20 39L24 44Z" fill="#2F88FF" stroke="#64748B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
