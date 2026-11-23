@@ -56,6 +56,11 @@ impl Module for ProvidersModule {
                 .route("/connections/{id}/servers/{server_id}/scale", web::post().to(scale_server))
                 .route("/connections/{id}/servers/{server_id}/start", web::post().to(start_server))
                 .route("/connections/{id}/servers/{server_id}/stop", web::post().to(stop_server))
+                .route("/connections/{id}/servers/{server_id}/suspend", web::post().to(suspend_server))
+                .route("/connections/{id}/servers/{server_id}/unsuspend", web::post().to(unsuspend_server))
+                .route("/connections/{id}/servers/{server_id}/renew", web::post().to(renew_server))
+                .route("/connections/{id}/servers/{server_id}/change-password", web::post().to(change_server_password))
+                .route("/connections/{id}/servers/{server_id}/usage", web::get().to(get_server_usage))
                 .route("/connections/{id}/inventory", web::get().to(get_inventory_view))
                 .route("/connections/{id}/sync", web::post().to(sync_now)),
         );
@@ -152,6 +157,41 @@ impl Module for ProvidersModule {
                 path: "/api/v1/providers/connections/{id}/servers/{server_id}/stop",
                 owner: "providers",
                 description: "Stop a container / VPS where the provider supports it.",
+                auth: unified_core::auth::RouteAuth::Authenticated,
+            },
+            RouteInfo {
+                method: "POST",
+                path: "/api/v1/providers/connections/{id}/servers/{server_id}/suspend",
+                owner: "providers",
+                description: "Suspend a server / container where the provider supports it.",
+                auth: unified_core::auth::RouteAuth::Authenticated,
+            },
+            RouteInfo {
+                method: "POST",
+                path: "/api/v1/providers/connections/{id}/servers/{server_id}/unsuspend",
+                owner: "providers",
+                description: "Unsuspend a server / container where the provider supports it.",
+                auth: unified_core::auth::RouteAuth::Authenticated,
+            },
+            RouteInfo {
+                method: "POST",
+                path: "/api/v1/providers/connections/{id}/servers/{server_id}/renew",
+                owner: "providers",
+                description: "Renew a server where the provider supports it.",
+                auth: unified_core::auth::RouteAuth::Authenticated,
+            },
+            RouteInfo {
+                method: "POST",
+                path: "/api/v1/providers/connections/{id}/servers/{server_id}/change-password",
+                owner: "providers",
+                description: "Change a server password where the provider supports it.",
+                auth: unified_core::auth::RouteAuth::Authenticated,
+            },
+            RouteInfo {
+                method: "GET",
+                path: "/api/v1/providers/connections/{id}/servers/{server_id}/usage",
+                owner: "providers",
+                description: "Usage metrics for a server / container where the provider supports it.",
                 auth: unified_core::auth::RouteAuth::Authenticated,
             },
             RouteInfo {

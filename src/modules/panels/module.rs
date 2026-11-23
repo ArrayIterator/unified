@@ -1,6 +1,6 @@
 //! panels module - Module registration: struct, Module impl, register.
 
-use unified_core::hooks::HookBus;
+use unified_core::hooks::{HookBus, HookContext};
 use unified_core::modules::{Module, ModuleRegistry, RouteInfo};
 use unified_core::context::AppContext;
 use unified_core::error::UnifiedResult;
@@ -37,7 +37,7 @@ impl Module for PanelsModule {
         "Hosting and billing panel connectors: WHMCS, cPanel/WHM, DirectAdmin, Plesk, CyberPanel, and a configuration-driven generic panel, with a hookable adapter registry, masked credentials, in-memory import with two-way sync and conflict reporting."
     }
 
-    fn register_hooks(&self, _bus: &HookBus) {
+    fn register_hooks(&self, bus: &HookBus) {
         // Imported records are stored data, not a cache, so they are
         // deliberately NOT cleared on `app.reload`: a reload must not
         // discard synced records. Hook wiring for this module is
@@ -45,6 +45,28 @@ impl Module for PanelsModule {
         // `panel.service.synced`, `panel.sync.completed`,
         // `panel.sync.failed`, and `panel.sync.conflict`); the audit
         // module subscribes to those events for its trail.
+        //
+        // The one exception is the cloud module's panel catalogue
+        // hook: this module answers `cloud.panel.definitions` with
+        // the registered panel kinds (read-only; extraction of this
+        // module to external "cloud panel" modules is later work).
+        bus.register(
+            crate::modules::cloud::hooks::EVENT_CLOUD_PANEL_DEFINITIONS,
+            "panels",
+            Arc::new(|ctx: &mut HookContext| {
+                let definitions: Vec<serde_json::Value> = panel_registry()
+                    .registered_kinds()
+                    .iter()
+                    .map(|kind| {
+                        serde_json::json!({
+                            "id": kind.as_str(),
+                            "display_name": kind.display_name(),
+                        })
+                    })
+                    .collect();
+                ctx.add_result(serde_json::Value::Array(definitions));
+            }),
+        );
     }
 
     fn configure_routes(&self, cfg: &mut web::ServiceConfig) {

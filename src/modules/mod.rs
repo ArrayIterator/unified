@@ -35,6 +35,7 @@ pub mod calendar;
 pub mod cards;
 pub mod certificates;
 pub mod chat;
+pub mod cloud;
 pub mod cloudflare;
 pub mod clusters;
 pub mod community;
@@ -202,6 +203,7 @@ pub fn register_all(registry: &ModuleRegistry) {
     data_tools::register(registry);
     clusters::register(registry);
     load_balancer::register(registry);
+    cloud::register(registry);
     hosting::register(registry);
     panels::register(registry);
     providers::register(registry);

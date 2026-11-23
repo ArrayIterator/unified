@@ -574,6 +574,35 @@ impl CloudProvider for VirtualizorAdapter {
         self.call("stopvs", &[("vpsid", id.to_string())]).await?;
         self.server_status(id).await
     }
+
+    async fn suspend_server(&self, id: &str) -> UnifiedResult<ServerInfo> {
+        self.call("suspendvs", &[("vpsid", id.to_string())]).await?;
+        self.server_status(id).await
+    }
+
+    async fn unsuspend_server(&self, id: &str) -> UnifiedResult<ServerInfo> {
+        self.call("unsuspendvs", &[("vpsid", id.to_string())]).await?;
+        self.server_status(id).await
+    }
+
+    async fn change_password(
+        &self,
+        id: &str,
+        request: &ChangePasswordRequest,
+    ) -> UnifiedResult<ServerInfo> {
+        if request.new_password.trim().is_empty() {
+            return Err(UnifiedError::bad_request("New password is required"));
+        }
+        self.call(
+            "changepassword",
+            &[
+                ("vpsid", id.to_string()),
+                ("newpass", request.new_password.clone()),
+            ],
+        )
+        .await?;
+        self.server_status(id).await
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -581,10 +610,11 @@ impl CloudProvider for VirtualizorAdapter {
 // ---------------------------------------------------------------------------
 
 /// Remote Docker Engine API (`/v1.44`), over TCP/TLS against the
-/// endpoint on the connection. Containers list / inspect / start /
-/// stop / delete. No image management and no container create in this
-/// round. TLS verification stays on; a self-signed daemon needs a
-/// properly configured CA.
+/// endpoint on the connection. Containers list / inspect / create /
+/// start / stop / pause / unpause / delete, with one-shot stats.
+/// No image management: the image must exist on the host or be
+/// pullable by name. TLS verification stays on; a self-signed daemon
+/// needs a properly configured CA.
 pub struct DockerAdapter {
     pub(crate) client: reqwest::Client,
     pub(crate) base_url: String,
@@ -718,6 +748,10 @@ impl CloudProvider for DockerAdapter {
         ProviderKind::Docker
     }
 
+    fn metadata(&self) -> ProviderMetadata {
+        metadata_with_version(self.kind(), "v1.44")
+    }
+
     async fn test_connection(&self) -> UnifiedResult<ProviderInfo> {
         let started = Instant::now();
         let request = self.request(Method::GET, "/v1.44/version");
@@ -776,14 +810,209 @@ impl CloudProvider for DockerAdapter {
         }
         self.server_status(id).await
     }
+
+    async fn create_server(&self, request: &CreateServerRequest) -> UnifiedResult<ServerInfo> {
+        let name = request.name.trim();
+        if name.is_empty()
+            || !name
+                .chars()
+                .all(|ch| ch.is_ascii_alphanumeric() || ch == '_' || ch == '.' || ch == '-')
+            || !name
+                .chars()
+                .next()
+                .is_some_and(|ch| ch.is_ascii_alphanumeric())
+        {
+            return Err(UnifiedError::bad_request(
+                "Docker container name must start with a letter or digit and contain only letters, digits, '_' , '.' , or '-'",
+            ));
+        }
+        let image = request
+            .image
+            .clone()
+            .or_else(|| request.image_id.clone())
+            .filter(|image| !image.trim().is_empty())
+            .ok_or_else(|| UnifiedError::bad_request("Docker create requires an image"))?;
+        let mut body = serde_json::json!({ "Image": image });
+        if let Some(command) = &request.command {
+            if !command.is_empty() {
+                body["Cmd"] = serde_json::json!(command);
+            }
+        }
+        if let Some(env) = &request.env {
+            if !env.is_empty() {
+                let vars: Vec<String> = env
+                    .iter()
+                    .map(|(key, value)| format!("{key}={value}"))
+                    .collect();
+                body["Env"] = serde_json::json!(vars);
+            }
+        }
+        let mut host_config = serde_json::json!({});
+        if let Some(ports) = &request.ports {
+            if !ports.is_empty() {
+                let mut exposed = serde_json::Map::new();
+                let mut bindings = serde_json::Map::new();
+                for port in ports {
+                    let protocol = port
+                        .protocol
+                        .clone()
+                        .unwrap_or_else(|| "tcp".to_string())
+                        .to_ascii_lowercase();
+                    if protocol != "tcp" && protocol != "udp" {
+                        return Err(UnifiedError::bad_request(
+                            "Docker port protocol must be \"tcp\" or \"udp\"",
+                        ));
+                    }
+                    let key = format!("{}/{protocol}", port.container_port);
+                    exposed.insert(key.clone(), serde_json::json!({}));
+                    if let Some(host_port) = port.host_port {
+                        bindings.insert(
+                            key,
+                            serde_json::json!([{ "HostPort": host_port.to_string() }]),
+                        );
+                    }
+                }
+                body["ExposedPorts"] = serde_json::Value::Object(exposed);
+                host_config["PortBindings"] = serde_json::Value::Object(bindings);
+            }
+        }
+        if let Some(memory_mb) = request.memory_mb {
+            host_config["Memory"] = serde_json::json!(memory_mb.saturating_mul(1024 * 1024));
+        }
+        if let Some(cpu_cores) = request.cpu_cores {
+            host_config["NanoCpus"] = serde_json::json!(i64::from(cpu_cores).saturating_mul(1_000_000_000));
+        }
+        body["HostConfig"] = host_config;
+        let req = self
+            .request(Method::POST, "/v1.44/containers/create")
+            .query(&[("name", name)])
+            .json(&body);
+        let created = send_json(&self.client, req, "docker").await?;
+        let id = json_string(&created, "Id")
+            .filter(|id| !id.is_empty())
+            .ok_or_else(|| {
+                UnifiedError::internal("Docker create succeeded but returned no container id")
+            })?
+            .to_string();
+        self.server_status(&id).await
+    }
+
+    async fn suspend_server(&self, id: &str) -> UnifiedResult<ServerInfo> {
+        // Pause freezes the container's processes; the inspect status
+        // reads "paused" (normalized to "stopped", raw "paused").
+        let request = self.request(Method::POST, &format!("/v1.44/containers/{id}/pause"));
+        let response = request.send().await.map_err(|error| {
+            UnifiedError::internal(format!("Docker pause request failed: {error}"))
+        })?;
+        let status = response.status();
+        if !status.is_success() {
+            return Err(http_status_error(status, "docker", parse_retry_after(&response)));
+        }
+        self.server_status(id).await
+    }
+
+    async fn unsuspend_server(&self, id: &str) -> UnifiedResult<ServerInfo> {
+        let request = self.request(Method::POST, &format!("/v1.44/containers/{id}/unpause"));
+        let response = request.send().await.map_err(|error| {
+            UnifiedError::internal(format!("Docker unpause request failed: {error}"))
+        })?;
+        let status = response.status();
+        if !status.is_success() {
+            return Err(http_status_error(status, "docker", parse_retry_after(&response)));
+        }
+        self.server_status(id).await
+    }
+
+    async fn usage_metrics(&self, id: &str) -> UnifiedResult<UsageMetrics> {
+        let request = self.request(
+            Method::GET,
+            &format!("/v1.44/containers/{id}/stats?stream=false"),
+        );
+        let body = send_json(&self.client, request, "docker").await?;
+        let cpu = body.get("cpu_stats");
+        let precpu = body.get("precpu_stats");
+        let cpu_delta = cpu
+            .and_then(|stats| stats.get("cpu_usage"))
+            .and_then(|usage| usage.get("total_usage"))
+            .and_then(Value::as_u64)
+            .unwrap_or(0)
+            .saturating_sub(
+                precpu
+                    .and_then(|stats| stats.get("cpu_usage"))
+                    .and_then(|usage| usage.get("total_usage"))
+                    .and_then(Value::as_u64)
+                    .unwrap_or(0),
+            ) as f64;
+        let system_delta = cpu
+            .and_then(|stats| stats.get("system_cpu_usage"))
+            .and_then(Value::as_u64)
+            .unwrap_or(0)
+            .saturating_sub(
+                precpu
+                    .and_then(|stats| stats.get("system_cpu_usage"))
+                    .and_then(Value::as_u64)
+                    .unwrap_or(0),
+            ) as f64;
+        let online_cpus = cpu
+            .and_then(|stats| stats.get("online_cpus"))
+            .and_then(Value::as_u64)
+            .unwrap_or_else(|| {
+                cpu.and_then(|stats| stats.get("cpu_usage"))
+                    .and_then(|usage| usage.get("percpu_usage"))
+                    .and_then(Value::as_array)
+                    .map(|cores| cores.len() as u64)
+                    .unwrap_or(1)
+            })
+            .max(1) as f64;
+        let cpu_percent = if system_delta > 0.0 {
+            Some(cpu_delta / system_delta * online_cpus * 100.0)
+        } else {
+            None
+        };
+        let memory_mb = body
+            .get("memory_stats")
+            .and_then(|stats| stats.get("usage"))
+            .and_then(Value::as_u64)
+            .map(|bytes| bytes / (1024 * 1024));
+        let (rx_bytes, tx_bytes) = body
+            .get("networks")
+            .and_then(Value::as_object)
+            .map(|networks| {
+                networks.values().fold((0u64, 0u64), |(rx, tx), network| {
+                    (
+                        rx.saturating_add(
+                            network.get("rx_bytes").and_then(Value::as_u64).unwrap_or(0),
+                        ),
+                        tx.saturating_add(
+                            network.get("tx_bytes").and_then(Value::as_u64).unwrap_or(0),
+                        ),
+                    )
+                })
+            })
+            .unwrap_or((0, 0));
+        Ok(UsageMetrics {
+            server_id: id.to_string(),
+            cpu_percent,
+            memory_mb,
+            disk_gb: None,
+            bandwidth_in_mb: Some(rx_bytes as f64 / (1024.0 * 1024.0)),
+            bandwidth_out_mb: Some(tx_bytes as f64 / (1024.0 * 1024.0)),
+            sampled_at: body
+                .get("read")
+                .and_then(Value::as_str)
+                .map(str::to_string)
+                .unwrap_or_else(|| Utc::now().to_rfc3339()),
+        })
+    }
 }
 
 // ---------------------------------------------------------------------------
 // Kubernetes adapter.
 // ---------------------------------------------------------------------------
 
-/// Kubernetes API server, service-account bearer token. Read-only in
-/// this round: namespaces, pods, and deployments list / status.
+/// Kubernetes API server, service-account bearer token. Namespaces,
+/// pods, and deployments list / status, plus deployment create /
+/// scale / delete (suspend scales replicas to 0, unsuspend back to 1).
 pub struct KubernetesAdapter {
     pub(crate) client: reqwest::Client,
     pub(crate) base_url: String,
@@ -818,6 +1047,82 @@ impl KubernetesAdapter {
         let headers = bearer_header(&self.bearer_token)?;
         let request = self.client.get(url).headers(headers);
         send_json(&self.client, request, "kubernetes").await
+    }
+
+    /// Send a JSON write request (POST / PATCH / DELETE). The scale
+    /// subresource needs a merge-patch content type, so callers pass
+    /// it explicitly through `request_json_typed`.
+    pub(crate) async fn request_json(
+        &self,
+        method: Method,
+        path: &str,
+        body: &Value,
+    ) -> UnifiedResult<Value> {
+        self.request_json_typed(method, path, body, "application/json")
+            .await
+    }
+
+    pub(crate) async fn request_json_typed(
+        &self,
+        method: Method,
+        path: &str,
+        body: &Value,
+        content_type: &str,
+    ) -> UnifiedResult<Value> {
+        let url = Url::parse(&format!("{}{path}", self.base_url))
+            .map_err(|_| UnifiedError::internal("Invalid Kubernetes API URL"))?;
+        let mut headers = bearer_header(&self.bearer_token)?;
+        let content_type = HeaderValue::from_str(content_type)
+            .map_err(|_| UnifiedError::internal("Invalid Kubernetes content type"))?;
+        headers.insert(CONTENT_TYPE, content_type);
+        let request = self.client.request(method, url).headers(headers).json(body);
+        send_json_or_empty(&self.client, request, "kubernetes").await
+    }
+
+    /// Split `pod/<namespace>/<name>` or `deployment/<namespace>/<name>`.
+    fn split_resource_id(id: &str) -> UnifiedResult<(&str, &str, &str)> {
+        let parts: Vec<&str> = id.split('/').collect();
+        if parts.len() != 3 || (parts[0] != "pod" && parts[0] != "deployment") {
+            return Err(UnifiedError::bad_request(
+                "Kubernetes resource id must look like \"pod/<namespace>/<name>\" or \"deployment/<namespace>/<name>\"",
+            ));
+        }
+        Ok((parts[0], parts[1], parts[2]))
+    }
+
+    /// Validate a Kubernetes resource name (DNS-1123 subdomain).
+    fn validate_resource_name(name: &str) -> UnifiedResult<()> {
+        if name.is_empty()
+            || name.len() > 253
+            || !name.chars().all(|ch| {
+                ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == '-' || ch == '.'
+            })
+            || !name
+                .chars()
+                .next()
+                .is_some_and(|ch| ch.is_ascii_alphanumeric())
+            || !name
+                .chars()
+                .last()
+                .is_some_and(|ch| ch.is_ascii_alphanumeric())
+        {
+            return Err(UnifiedError::bad_request(
+                "Kubernetes resource name must be a DNS-1123 subdomain (lowercase letters, digits, '-' and '.')",
+            ));
+        }
+        Ok(())
+    }
+
+    /// Scale one deployment through the `/scale` subresource.
+    async fn scale_deployment(&self, namespace: &str, name: &str, replicas: u32) -> UnifiedResult<()> {
+        self.request_json_typed(
+            Method::PATCH,
+            &format!("/apis/apps/v1/namespaces/{namespace}/deployments/{name}/scale"),
+            &serde_json::json!({ "spec": { "replicas": replicas } }),
+            "application/merge-patch+json",
+        )
+        .await?;
+        Ok(())
     }
 
     pub(crate) fn meta<'a>(value: &'a Value) -> (&'a str, &'a str, Option<&'a str>) {
@@ -913,6 +1218,10 @@ impl CloudProvider for KubernetesAdapter {
         ProviderKind::Kubernetes
     }
 
+    fn metadata(&self) -> ProviderMetadata {
+        metadata_with_version(self.kind(), "apps/v1")
+    }
+
     async fn test_connection(&self) -> UnifiedResult<ProviderInfo> {
         let started = Instant::now();
         self.get("/api/v1/namespaces?limit=1").await?;
@@ -942,13 +1251,7 @@ impl CloudProvider for KubernetesAdapter {
     async fn server_status(&self, id: &str) -> UnifiedResult<ServerInfo> {
         // Ids are `pod/<namespace>/<name>` or
         // `deployment/<namespace>/<name>` (see `list_servers`).
-        let parts: Vec<&str> = id.split('/').collect();
-        if parts.len() != 3 {
-            return Err(UnifiedError::bad_request(
-                "Kubernetes resource id must look like \"pod/<namespace>/<name>\" or \"deployment/<namespace>/<name>\"",
-            ));
-        }
-        let (item_kind, namespace, name) = (parts[0], parts[1], parts[2]);
+        let (item_kind, namespace, name) = Self::split_resource_id(id)?;
         match item_kind {
             "pod" => {
                 let body = self
@@ -964,9 +1267,158 @@ impl CloudProvider for KubernetesAdapter {
                     .await?;
                 Ok(Self::map_deployment(&body))
             }
-            _ => Err(UnifiedError::bad_request(format!(
-                "Unknown Kubernetes resource kind \"{item_kind}\""
-            ))),
+            _ => unreachable!("split_resource_id only accepts pod and deployment"),
         }
+    }
+
+    async fn create_server(&self, request: &CreateServerRequest) -> UnifiedResult<ServerInfo> {
+        let name = request.name.trim();
+        Self::validate_resource_name(name)?;
+        let image = request
+            .image
+            .clone()
+            .or_else(|| request.image_id.clone())
+            .filter(|image| !image.trim().is_empty())
+            .ok_or_else(|| UnifiedError::bad_request("Kubernetes create requires an image"))?;
+        let namespace = request
+            .namespace
+            .clone()
+            .unwrap_or_else(|| "default".to_string());
+        Self::validate_resource_name(&namespace)?;
+        let replicas = request.replicas.unwrap_or(1);
+        let mut container = serde_json::json!({
+            "name": name,
+            "image": image,
+        });
+        if let Some(env) = &request.env {
+            if !env.is_empty() {
+                let vars: Vec<Value> = env
+                    .iter()
+                    .map(|(key, value)| serde_json::json!({ "name": key, "value": value }))
+                    .collect();
+                container["env"] = serde_json::Value::Array(vars);
+            }
+        }
+        if let Some(ports) = &request.ports {
+            if !ports.is_empty() {
+                let mut mapped: Vec<Value> = Vec::new();
+                for port in ports {
+                    let protocol = port
+                        .protocol
+                        .clone()
+                        .unwrap_or_else(|| "TCP".to_string())
+                        .to_ascii_uppercase();
+                    if protocol != "TCP" && protocol != "UDP" {
+                        return Err(UnifiedError::bad_request(
+                            "Kubernetes port protocol must be \"TCP\" or \"UDP\"",
+                        ));
+                    }
+                    mapped.push(serde_json::json!({
+                        "containerPort": port.container_port,
+                        "protocol": protocol,
+                    }));
+                }
+                container["ports"] = serde_json::Value::Array(mapped);
+            }
+        }
+        if let Some(command) = &request.command {
+            if !command.is_empty() {
+                container["command"] = serde_json::json!(command);
+            }
+        }
+        // Resource limits from the request (the app flow fills them
+        // from the plan quotas).
+        if request.memory_mb.is_some() || request.cpu_cores.is_some() {
+            let mut limits = serde_json::Map::new();
+            if let Some(memory_mb) = request.memory_mb {
+                limits.insert(
+                    "memory".to_string(),
+                    serde_json::json!(format!("{memory_mb}Mi")),
+                );
+            }
+            if let Some(cpu_cores) = request.cpu_cores {
+                limits.insert("cpu".to_string(), serde_json::json!(cpu_cores.to_string()));
+            }
+            container["resources"] = serde_json::json!({ "limits": limits });
+        }
+        let manifest = serde_json::json!({
+            "apiVersion": "apps/v1",
+            "kind": "Deployment",
+            "metadata": {
+                "name": name,
+                "namespace": namespace,
+                "labels": { "app": name },
+            },
+            "spec": {
+                "replicas": replicas,
+                "selector": { "matchLabels": { "app": name } },
+                "template": {
+                    "metadata": { "labels": { "app": name } },
+                    "spec": { "containers": [container] },
+                },
+            },
+        });
+        self.request_json(
+            Method::POST,
+            &format!("/apis/apps/v1/namespaces/{namespace}/deployments"),
+            &manifest,
+        )
+        .await?;
+        self.server_status(&format!("deployment/{namespace}/{name}"))
+            .await
+    }
+
+    async fn scale_server(
+        &self,
+        id: &str,
+        request: &ScaleServerRequest,
+    ) -> UnifiedResult<ServerInfo> {
+        let (item_kind, namespace, name) = Self::split_resource_id(id)?;
+        if item_kind != "deployment" {
+            return Err(UnifiedError::bad_request(
+                "Kubernetes scale applies to deployments, not pods",
+            ));
+        }
+        let replicas = request.replicas.ok_or_else(|| {
+            UnifiedError::bad_request("Kubernetes scale requires replicas")
+        })?;
+        self.scale_deployment(&namespace, &name, replicas).await?;
+        self.server_status(id).await
+    }
+
+    async fn delete_server(&self, id: &str) -> UnifiedResult<()> {
+        let (item_kind, namespace, name) = Self::split_resource_id(id)?;
+        let path = match item_kind {
+            "pod" => format!("/api/v1/namespaces/{namespace}/pods/{name}"),
+            _ => format!("/apis/apps/v1/namespaces/{namespace}/deployments/{name}"),
+        };
+        self.request_json(Method::DELETE, &path, &serde_json::json!({}))
+            .await?;
+        Ok(())
+    }
+
+    async fn suspend_server(&self, id: &str) -> UnifiedResult<ServerInfo> {
+        // Suspend is scale-to-zero; the deployment keeps its pod spec,
+        // so unsuspend restores it by scaling back to 1. The
+        // pre-suspend replica count is not preserved in this round.
+        let (item_kind, namespace, name) = Self::split_resource_id(id)?;
+        if item_kind != "deployment" {
+            return Err(UnifiedError::bad_request(
+                "Kubernetes suspend applies to deployments, not pods; deleting a pod restarts it",
+            ));
+        }
+        self.scale_deployment(&namespace, &name, 0).await?;
+        self.server_status(id).await
+    }
+
+    async fn unsuspend_server(&self, id: &str) -> UnifiedResult<ServerInfo> {
+        let (item_kind, namespace, name) = Self::split_resource_id(id)?;
+        if item_kind != "deployment" {
+            return Err(UnifiedError::bad_request(
+                "Kubernetes unsuspend applies to deployments, not pods",
+            ));
+        }
+        self.scale_deployment(&namespace, &name, 1).await?;
+        self.server_status(id).await
     }
 }

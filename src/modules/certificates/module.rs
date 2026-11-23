@@ -137,6 +137,44 @@ impl Module for CertificatesModule {
                 Arc::new(move |ctx: &mut HookContext| on_ssl_completion(state.clone(), ctx)),
             );
         }
+        // Answer the cloud module's SSL-provider catalogue hook with
+        // the ACME providers (plus the Cloudflare origin mode, which
+        // is not an ACME provider and carries no directory URL).
+        // Read-only; extraction of this module to external "cloud
+        // panel" modules is later work.
+        bus.register(
+            crate::modules::cloud::hooks::EVENT_CLOUD_SSL_PROVIDER_DEFINITIONS,
+            "certificates",
+            Arc::new(|ctx: &mut HookContext| {
+                ctx.add_result(serde_json::json!([
+                    {
+                        "id": "letsencrypt",
+                        "display_name": "Let's Encrypt",
+                        "acme_directory_url": crate::http::acme::LETS_ENCRYPT_URL
+                    },
+                    {
+                        "id": "google",
+                        "display_name": "Google Trust Services",
+                        "acme_directory_url": crate::http::acme::GOOGLE_URL
+                    },
+                    {
+                        "id": "zerossl",
+                        "display_name": "ZeroSSL",
+                        "acme_directory_url": crate::http::acme::ZEROSSL_URL
+                    },
+                    {
+                        "id": "buypass",
+                        "display_name": "BuyPass",
+                        "acme_directory_url": crate::http::acme::BUYPASS_URL
+                    },
+                    { "id": "custom", "display_name": "Custom ACME" },
+                    {
+                        "id": "cloudflare",
+                        "display_name": "Cloudflare (origin certificate)"
+                    },
+                ]));
+            }),
+        );
     }
 
     fn register_cli(&self, registry: &mut CliRegistry) {

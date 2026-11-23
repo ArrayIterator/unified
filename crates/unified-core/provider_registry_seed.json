@@ -744,7 +744,7 @@
       "family": "email", "id": "ovh", "display_name": "OVH Mail", "logo": "email-ovh",
       "base_url": "https://ssl0.ovh.net", "sandbox_base_url": null,
       "allowed_hosts": ["ssl0.ovh.net"],
-      "capabilities": {"transactional":true,"bulk":false,"templates":false,"webhooks":false,"tracking":false,"sandbox":false},
+      "capabilities": {"transactional": true, "bulk": false, "templates": false, "webhooks": false, "tracking": false, "sandbox": false},
       "currencies": [],
       "credentials_shape": [
         {"name":"username","label":"SMTP username","type":"text","required":true,"secret":false,"placeholder":"you@yourdomain.com","description":"SMTP username (usually the full email address)."},
@@ -1308,7 +1308,7 @@
       "family": "cloud", "id": "hetzner", "display_name": "Hetzner Cloud",
       "base_url": "https://api.hetzner.cloud", "sandbox_base_url": null,
       "allowed_hosts": ["api.hetzner.cloud"],
-      "capabilities": {"create": true, "scale": true, "delete": true, "containers": false, "start_stop": false},
+      "capabilities": {"create": true, "scale": true, "delete": true, "containers": false, "start_stop": false, "suspend": false, "renew": false, "change_password": false, "usage": true},
       "currencies": [],
       "credentials_shape": [
         {"name": "api_token", "label": "API token", "type": "password", "required": true, "secret": true, "description": "Hetzner Cloud API token."},
@@ -1320,7 +1320,7 @@
       "family": "cloud", "id": "ovh", "display_name": "OVHcloud",
       "base_url": "https://api.ovh.com", "sandbox_base_url": null,
       "allowed_hosts": ["api.ovh.com", "eu.api.ovh.com"],
-      "capabilities": {"create": true, "scale": true, "delete": true, "containers": false, "start_stop": false},
+      "capabilities": {"create": true, "scale": true, "delete": true, "containers": false, "start_stop": false, "suspend": false, "renew": false, "change_password": false, "usage": false},
       "currencies": [],
       "credentials_shape": [
         {"name": "application_key", "label": "Application key", "type": "text", "required": true, "secret": false, "description": "OVH application key."},
@@ -1335,7 +1335,7 @@
       "family": "cloud", "id": "tencent", "display_name": "Tencent Cloud CVM",
       "base_url": "https://cvm.tencentcloudapi.com", "sandbox_base_url": null,
       "allowed_hosts": ["cvm.tencentcloudapi.com"],
-      "capabilities": {"create": false, "scale": false, "delete": false, "containers": false, "start_stop": false},
+      "capabilities": {"create": false, "scale": false, "delete": false, "containers": false, "start_stop": false, "suspend": false, "renew": false, "change_password": false, "usage": false},
       "currencies": [],
       "credentials_shape": [
         {"name": "access_key_id", "label": "Secret id", "type": "text", "required": true, "secret": false, "description": "Tencent Cloud secret id."},
@@ -1349,7 +1349,7 @@
       "family": "cloud", "id": "huawei", "display_name": "Huawei Cloud ECS",
       "base_url": null, "sandbox_base_url": null,
       "allowed_hosts": [],
-      "capabilities": {"create": false, "scale": false, "delete": false, "containers": false, "start_stop": false},
+      "capabilities": {"create": false, "scale": false, "delete": false, "containers": false, "start_stop": false, "suspend": false, "renew": false, "change_password": false, "usage": false},
       "currencies": [],
       "credentials_shape": [
         {"name": "access_key_id", "label": "Access key", "type": "text", "required": false, "secret": false, "description": "Huawei Cloud access key (either access key + secret key, or username + password)."},
@@ -1366,7 +1366,7 @@
       "family": "cloud", "id": "aws", "display_name": "AWS EC2",
       "base_url": null, "sandbox_base_url": null,
       "allowed_hosts": [],
-      "capabilities": {"create": false, "scale": false, "delete": false, "containers": false, "start_stop": false},
+      "capabilities": {"create": false, "scale": false, "delete": false, "containers": false, "start_stop": false, "suspend": false, "renew": false, "change_password": false, "usage": false},
       "currencies": [],
       "credentials_shape": [
         {"name": "access_key_id", "label": "Access key id", "type": "text", "required": true, "secret": false, "description": "AWS access key id."},
@@ -1380,7 +1380,7 @@
       "family": "cloud", "id": "google", "display_name": "Google Cloud Compute Engine",
       "base_url": "https://compute.googleapis.com", "sandbox_base_url": null,
       "allowed_hosts": ["compute.googleapis.com", "oauth2.googleapis.com"],
-      "capabilities": {"create": false, "scale": false, "delete": false, "containers": false, "start_stop": false},
+      "capabilities": {"create": false, "scale": false, "delete": false, "containers": false, "start_stop": false, "suspend": false, "renew": false, "change_password": false, "usage": false},
       "currencies": [],
       "credentials_shape": [
         {"name": "access_token", "label": "OAuth2 access token", "type": "password", "required": true, "secret": true, "description": "Google Cloud OAuth2 access token."},
@@ -1394,7 +1394,7 @@
       "family": "cloud", "id": "virtualizor", "display_name": "Virtualizor",
       "base_url": null, "sandbox_base_url": null,
       "allowed_hosts": [],
-      "capabilities": {"create": true, "scale": true, "delete": true, "containers": false, "start_stop": true},
+      "capabilities": {"create": true, "scale": true, "delete": true, "containers": false, "start_stop": true, "suspend": true, "renew": false, "change_password": true, "usage": false},
       "currencies": [],
       "credentials_shape": [
         {"name": "api_token", "label": "API key", "type": "password", "required": true, "secret": true, "description": "Virtualizor API key."},
@@ -1408,7 +1408,7 @@
       "family": "cloud", "id": "docker", "display_name": "Docker Engine",
       "base_url": null, "sandbox_base_url": null,
       "allowed_hosts": [],
-      "capabilities": {"create": false, "scale": false, "delete": true, "containers": true, "start_stop": true},
+      "capabilities": {"create": true, "scale": false, "delete": true, "containers": true, "start_stop": true, "suspend": true, "renew": false, "change_password": false, "usage": true},
       "currencies": [],
       "credentials_shape": [
         {"name": "endpoint", "label": "Docker API endpoint", "type": "url", "required": true, "secret": false, "description": "Docker Engine API endpoint URL."}
@@ -1420,7 +1420,7 @@
       "family": "cloud", "id": "kubernetes", "display_name": "Kubernetes",
       "base_url": null, "sandbox_base_url": null,
       "allowed_hosts": [],
-      "capabilities": {"create": false, "scale": false, "delete": false, "containers": true, "start_stop": false},
+      "capabilities": {"create": true, "scale": true, "delete": true, "containers": true, "start_stop": false, "suspend": true, "renew": false, "change_password": false, "usage": false},
       "currencies": [],
       "credentials_shape": [
         {"name": "bearer_token", "label": "Bearer token", "type": "password", "required": true, "secret": true, "description": "Kubernetes service-account bearer token."},
@@ -1434,7 +1434,7 @@
       "family": "cloud", "id": "redshift", "display_name": "Amazon Redshift",
       "base_url": null, "sandbox_base_url": null,
       "allowed_hosts": [],
-      "capabilities": {"create": false, "scale": false, "delete": false, "containers": false, "start_stop": false},
+      "capabilities": {"create": false, "scale": false, "delete": false, "containers": false, "start_stop": false, "suspend": false, "renew": false, "change_password": false, "usage": false},
       "currencies": [],
       "credentials_shape": [
         {"name": "access_key_id", "label": "Access key id", "type": "text", "required": true, "secret": false, "description": "AWS access key id."},
@@ -1448,7 +1448,7 @@
       "family": "cloud", "id": "digitalocean", "display_name": "DigitalOcean",
       "base_url": "https://api.digitalocean.com", "sandbox_base_url": null,
       "allowed_hosts": ["api.digitalocean.com"],
-      "capabilities": {"create": true, "scale": true, "delete": true, "containers": false, "start_stop": true},
+      "capabilities": {"create": true, "scale": true, "delete": true, "containers": false, "start_stop": true, "suspend": false, "renew": false, "change_password": false, "usage": false},
       "currencies": [],
       "credentials_shape": [
         {"name": "api_token", "label": "API token", "type": "password", "required": true, "secret": true, "description": "DigitalOcean API token."}
@@ -1459,7 +1459,7 @@
       "family": "cloud", "id": "linode", "display_name": "Linode",
       "base_url": "https://api.linode.com", "sandbox_base_url": null,
       "allowed_hosts": ["api.linode.com"],
-      "capabilities": {"create": true, "scale": true, "delete": true, "containers": false, "start_stop": true},
+      "capabilities": {"create": true, "scale": true, "delete": true, "containers": false, "start_stop": true, "suspend": false, "renew": false, "change_password": true, "usage": false},
       "currencies": [],
       "credentials_shape": [
         {"name": "api_token", "label": "API token", "type": "password", "required": true, "secret": true, "description": "Linode API token."}
@@ -1470,7 +1470,7 @@
       "family": "cloud", "id": "openstack", "display_name": "OpenStack",
       "base_url": null, "sandbox_base_url": null,
       "allowed_hosts": [],
-      "capabilities": {"create": true, "scale": false, "delete": true, "containers": false, "start_stop": true},
+      "capabilities": {"create": true, "scale": false, "delete": true, "containers": false, "start_stop": true, "suspend": true, "renew": false, "change_password": true, "usage": false},
       "currencies": [],
       "credentials_shape": [
         {"name": "username", "label": "Username", "type": "text", "required": true, "secret": false, "description": "OpenStack username."},
@@ -1485,7 +1485,7 @@
       "family": "cloud", "id": "proxmox", "display_name": "Proxmox VE",
       "base_url": null, "sandbox_base_url": null,
       "allowed_hosts": [],
-      "capabilities": {"create": false, "scale": false, "delete": true, "containers": false, "start_stop": true},
+      "capabilities": {"create": false, "scale": false, "delete": true, "containers": false, "start_stop": true, "suspend": true, "renew": false, "change_password": false, "usage": false},
       "currencies": [],
       "credentials_shape": [
         {"name": "username", "label": "Username", "type": "text", "required": true, "secret": false, "description": "Proxmox VE username."},
@@ -1499,7 +1499,7 @@
       "family": "cloud", "id": "kvm", "display_name": "KVM (via Proxmox VE)",
       "base_url": null, "sandbox_base_url": null,
       "allowed_hosts": [],
-      "capabilities": {"create": false, "scale": false, "delete": true, "containers": false, "start_stop": true},
+      "capabilities": {"create": false, "scale": false, "delete": true, "containers": false, "start_stop": true, "suspend": true, "renew": false, "change_password": false, "usage": false},
       "currencies": [],
       "credentials_shape": [
         {"name": "username", "label": "Username", "type": "text", "required": true, "secret": false, "description": "Proxmox VE username."},
@@ -1513,7 +1513,7 @@
       "family": "cloud", "id": "xen", "display_name": "XenServer / XCP-ng",
       "base_url": null, "sandbox_base_url": null,
       "allowed_hosts": [],
-      "capabilities": {"create": false, "scale": false, "delete": true, "containers": false, "start_stop": true},
+      "capabilities": {"create": false, "scale": false, "delete": true, "containers": false, "start_stop": true, "suspend": true, "renew": false, "change_password": false, "usage": false},
       "currencies": [],
       "credentials_shape": [
         {"name": "username", "label": "Username", "type": "text", "required": true, "secret": false, "description": "XenServer / XCP-ng username."},
@@ -1527,7 +1527,7 @@
       "family": "cloud", "id": "custom", "display_name": "Custom Provider",
       "base_url": null, "sandbox_base_url": null,
       "allowed_hosts": [],
-      "capabilities": {"create": true, "scale": false, "delete": true, "containers": false, "start_stop": true},
+      "capabilities": {"create": true, "scale": false, "delete": true, "containers": false, "start_stop": true, "suspend": false, "renew": false, "change_password": false, "usage": false},
       "currencies": [],
       "credentials_shape": [
         {"name": "endpoint", "label": "API base URL", "type": "url", "required": true, "secret": false, "description": "Custom provider API base URL."}

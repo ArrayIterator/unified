@@ -940,7 +940,7 @@ mod tests {
 
     use super::*;
     use super::super::types::{DomainObservation, OrderClaim};
-    use crate::modules::hosting::HostingPlan;
+    use crate::modules::cloud::hosting::HostingPlan;
     use chrono::Utc;
 
     fn plan() -> HostingPlan {

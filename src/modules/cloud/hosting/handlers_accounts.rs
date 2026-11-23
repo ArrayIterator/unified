@@ -54,6 +54,7 @@ pub(crate) async fn list_accounts(
     };
     if let Err(error) = caller(&req)
         .and_then(|caller| require_permission(&ctx, &caller.role, PERM_HOSTING_VIEW))
+        .and_then(|_| crate::modules::cloud::helpers::require_cloud_entitlement(&ctx, &req))
     {
         return json::error_response(&error, debug);
     }
@@ -108,6 +109,7 @@ pub(crate) async fn create_account(
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_HOSTING_MANAGE)?;
+        crate::modules::cloud::helpers::require_cloud_entitlement(&ctx, &req)?;
         let company_id = require_company_match_uuid(&_tenant, &req, &body.company_id)?;
         let plan = state
             .plans
@@ -188,6 +190,7 @@ pub(crate) async fn get_account(
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_HOSTING_VIEW)?;
+        crate::modules::cloud::helpers::require_cloud_entitlement(&ctx, &req)?;
         let scope = caller_company(&_tenant, &req)?;
         let account = state
             .accounts
@@ -212,6 +215,7 @@ pub(crate) async fn update_account(
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_HOSTING_MANAGE)?;
+        crate::modules::cloud::helpers::require_cloud_entitlement(&ctx, &req)?;
         let scope = require_company_for_write(&_tenant, &req)?;
         let id = id.into_inner();
         let mut account = state
@@ -289,6 +293,7 @@ pub(crate) async fn delete_account(
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_HOSTING_MANAGE)?;
+        crate::modules::cloud::helpers::require_cloud_entitlement(&ctx, &req)?;
         let scope = require_company_for_write(&_tenant, &req)?;
         let id = id.into_inner();
         let account = state
@@ -390,6 +395,7 @@ pub(crate) async fn activate_account(
     };
     if let Err(error) = caller(&req)
         .and_then(|caller| require_permission(&ctx, &caller.role, PERM_HOSTING_MANAGE))
+        .and_then(|_| crate::modules::cloud::helpers::require_cloud_entitlement(&ctx, &req))
     {
         return json::error_response(&error, debug);
     }
@@ -413,6 +419,7 @@ pub(crate) async fn suspend_account(
     };
     if let Err(error) = caller(&req)
         .and_then(|caller| require_permission(&ctx, &caller.role, PERM_HOSTING_MANAGE))
+        .and_then(|_| crate::modules::cloud::helpers::require_cloud_entitlement(&ctx, &req))
     {
         return json::error_response(&error, debug);
     }
@@ -439,6 +446,7 @@ pub(crate) async fn unsuspend_account(
     };
     if let Err(error) = caller(&req)
         .and_then(|caller| require_permission(&ctx, &caller.role, PERM_HOSTING_MANAGE))
+        .and_then(|_| crate::modules::cloud::helpers::require_cloud_entitlement(&ctx, &req))
     {
         return json::error_response(&error, debug);
     }
@@ -462,6 +470,7 @@ pub(crate) async fn cancel_account(
     };
     if let Err(error) = caller(&req)
         .and_then(|caller| require_permission(&ctx, &caller.role, PERM_HOSTING_MANAGE))
+        .and_then(|_| crate::modules::cloud::helpers::require_cloud_entitlement(&ctx, &req))
     {
         return json::error_response(&error, debug);
     }
@@ -482,6 +491,7 @@ pub(crate) async fn get_account_requirements(
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_HOSTING_VIEW)?;
+        crate::modules::cloud::helpers::require_cloud_entitlement(&ctx, &req)?;
         let scope = caller_company(&_tenant, &req)?;
         let account = state
             .accounts

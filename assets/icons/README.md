@@ -36,7 +36,7 @@ all three logo sets live in `demo/assets/logos/`.
 The module icons are
 [Icons8 Flat Color Icons](https://github.com/icons8/flat-color-icons)
 (312 free icons, MIT-or-Good-Boy — see `LICENSE.flat-color-icons`),
-plus 13 custom-drawn gap icons in the same visual language:
+plus 14 custom-drawn gap icons in the same visual language:
 
 - 48x48 `viewBox`; flat fills, no strokes. Every shape carries its
   own explicit fill, so an icon renders identically on light and dark
@@ -91,7 +91,7 @@ full mapping).
 ## Provenance
 
 - Module icons: 143 vendored from Icons8 Flat Color Icons +
-  13 custom-drawn. Full module → Flat Color name mapping:
+  14 custom-drawn. Full module → Flat Color name mapping:
   `docs/integration/SVGREPO_ICON_SETS.md` (§5 + §10 execution record).
   The previous sets (IconPark, then ColorTicons/Tabler) were removed
   entirely; see `docs/integration/MULTICOLOR_ICON_SETS.md` and

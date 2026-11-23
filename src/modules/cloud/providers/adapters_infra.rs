@@ -267,6 +267,10 @@ impl CloudProvider for OpenStackAdapter {
         ProviderKind::OpenStack
     }
 
+    fn metadata(&self) -> ProviderMetadata {
+        metadata_with_version(self.kind(), "v2.1")
+    }
+
     async fn test_connection(&self) -> UnifiedResult<ProviderInfo> {
         let started = Instant::now();
         let auth = self.authenticate().await?;
@@ -384,6 +388,43 @@ impl CloudProvider for OpenStackAdapter {
             Method::POST,
             &format!("/servers/{}/action", encode_path_segment(id)),
             Some(serde_json::json!({ "os-stop": null })),
+        )
+        .await?;
+        self.server_status(id).await
+    }
+
+    async fn suspend_server(&self, id: &str) -> UnifiedResult<ServerInfo> {
+        self.compute_no_content(
+            Method::POST,
+            &format!("/servers/{}/action", encode_path_segment(id)),
+            Some(serde_json::json!({ "suspend": null })),
+        )
+        .await?;
+        self.server_status(id).await
+    }
+
+    async fn unsuspend_server(&self, id: &str) -> UnifiedResult<ServerInfo> {
+        self.compute_no_content(
+            Method::POST,
+            &format!("/servers/{}/action", encode_path_segment(id)),
+            Some(serde_json::json!({ "resume": null })),
+        )
+        .await?;
+        self.server_status(id).await
+    }
+
+    async fn change_password(
+        &self,
+        id: &str,
+        request: &ChangePasswordRequest,
+    ) -> UnifiedResult<ServerInfo> {
+        if request.new_password.trim().is_empty() {
+            return Err(UnifiedError::bad_request("New password is required"));
+        }
+        self.compute_no_content(
+            Method::POST,
+            &format!("/servers/{}/action", encode_path_segment(id)),
+            Some(serde_json::json!({ "changePassword": { "adminPass": request.new_password } })),
         )
         .await?;
         self.server_status(id).await
@@ -588,6 +629,10 @@ impl CloudProvider for ProxmoxAdapter {
         ProviderKind::Proxmox
     }
 
+    fn metadata(&self) -> ProviderMetadata {
+        metadata_with_version(self.kind(), "api2")
+    }
+
     async fn test_connection(&self) -> UnifiedResult<ProviderInfo> {
         let started = Instant::now();
         let data = self.request(Method::GET, "/nodes", None).await?;
@@ -662,6 +707,26 @@ impl CloudProvider for ProxmoxAdapter {
         self.request(Method::POST, &path, None).await?;
         self.server_status(id).await
     }
+
+    async fn suspend_server(&self, id: &str) -> UnifiedResult<ServerInfo> {
+        let (node, kind, vmid) = Self::parse_guest_id(id)?;
+        let path = format!(
+            "/nodes/{}/{kind}/{vmid}/status/suspend",
+            encode_path_segment(&node),
+        );
+        self.request(Method::POST, &path, None).await?;
+        self.server_status(id).await
+    }
+
+    async fn unsuspend_server(&self, id: &str) -> UnifiedResult<ServerInfo> {
+        let (node, kind, vmid) = Self::parse_guest_id(id)?;
+        let path = format!(
+            "/nodes/{}/{kind}/{vmid}/status/resume",
+            encode_path_segment(&node),
+        );
+        self.request(Method::POST, &path, None).await?;
+        self.server_status(id).await
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -704,6 +769,10 @@ impl CloudProvider for KvmAdapter {
         ProviderKind::Kvm
     }
 
+    fn metadata(&self) -> ProviderMetadata {
+        metadata_with_version(self.kind(), "api2")
+    }
+
     async fn test_connection(&self) -> UnifiedResult<ProviderInfo> {
         let started = Instant::now();
         let info = self.proxmox.test_connection().await?;
@@ -743,6 +812,16 @@ impl CloudProvider for KvmAdapter {
     async fn stop_server(&self, id: &str) -> UnifiedResult<ServerInfo> {
         Self::require_qemu(id)?;
         self.proxmox.stop_server(id).await
+    }
+
+    async fn suspend_server(&self, id: &str) -> UnifiedResult<ServerInfo> {
+        Self::require_qemu(id)?;
+        self.proxmox.suspend_server(id).await
+    }
+
+    async fn unsuspend_server(&self, id: &str) -> UnifiedResult<ServerInfo> {
+        Self::require_qemu(id)?;
+        self.proxmox.unsuspend_server(id).await
     }
 }
 
@@ -1069,6 +1148,10 @@ impl CloudProvider for XenAdapter {
         ProviderKind::Xen
     }
 
+    fn metadata(&self) -> ProviderMetadata {
+        metadata_with_version(self.kind(), "1.0")
+    }
+
     async fn test_connection(&self) -> UnifiedResult<ProviderInfo> {
         let started = Instant::now();
         let count = self
@@ -1142,6 +1225,37 @@ impl CloudProvider for XenAdapter {
                 xmlrpc_string_param(&vm_ref),
             );
             self.rpc("VM.clean_shutdown", &params).await?;
+            self.record_for_uuid(&session, id).await
+        })
+        .await
+    }
+
+    async fn suspend_server(&self, id: &str) -> UnifiedResult<ServerInfo> {
+        self.with_session(|session| async move {
+            let vm_ref = self.vm_ref_for_uuid(&session, id).await?;
+            let params = format!(
+                "{}{}",
+                Self::session_param(&session),
+                xmlrpc_string_param(&vm_ref),
+            );
+            self.rpc("VM.suspend", &params).await?;
+            self.record_for_uuid(&session, id).await
+        })
+        .await
+    }
+
+    async fn unsuspend_server(&self, id: &str) -> UnifiedResult<ServerInfo> {
+        self.with_session(|session| async move {
+            let vm_ref = self.vm_ref_for_uuid(&session, id).await?;
+            // VM.resume takes (session, vm, start_paused, force).
+            let params = format!(
+                "{}{}{}{}",
+                Self::session_param(&session),
+                xmlrpc_string_param(&vm_ref),
+                xmlrpc_bool_param(false),
+                xmlrpc_bool_param(false),
+            );
+            self.rpc("VM.resume", &params).await?;
             self.record_for_uuid(&session, id).await
         })
         .await

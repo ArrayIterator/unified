@@ -119,6 +119,10 @@ impl CloudProvider for DigitalOceanAdapter {
         ProviderKind::DigitalOcean
     }
 
+    fn metadata(&self) -> ProviderMetadata {
+        metadata_with_version(self.kind(), "v2")
+    }
+
     async fn test_connection(&self) -> UnifiedResult<ProviderInfo> {
         let started = Instant::now();
         let body = self.request(Method::GET, "/account", None).await?;
@@ -351,6 +355,10 @@ impl CloudProvider for LinodeAdapter {
         ProviderKind::Linode
     }
 
+    fn metadata(&self) -> ProviderMetadata {
+        metadata_with_version(self.kind(), "v4")
+    }
+
     async fn test_connection(&self) -> UnifiedResult<ProviderInfo> {
         let started = Instant::now();
         let body = self.request(Method::GET, "/account", None).await?;
@@ -462,6 +470,23 @@ impl CloudProvider for LinodeAdapter {
         self.request(Method::DELETE, &format!("/linode/instances/{id}"), None)
             .await?;
         Ok(())
+    }
+
+    async fn change_password(
+        &self,
+        id: &str,
+        request: &ChangePasswordRequest,
+    ) -> UnifiedResult<ServerInfo> {
+        if request.new_password.trim().is_empty() {
+            return Err(UnifiedError::bad_request("New password is required"));
+        }
+        self.request(
+            Method::POST,
+            &format!("/linode/instances/{id}/password"),
+            Some(serde_json::json!({ "root_pass": request.new_password })),
+        )
+        .await?;
+        self.server_status(id).await
     }
 
     async fn start_server(&self, id: &str) -> UnifiedResult<ServerInfo> {

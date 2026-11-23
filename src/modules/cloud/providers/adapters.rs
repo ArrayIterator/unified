@@ -103,6 +103,10 @@ impl CloudProvider for HetznerAdapter {
         ProviderKind::Hetzner
     }
 
+    fn metadata(&self) -> ProviderMetadata {
+        metadata_with_version(self.kind(), "v1")
+    }
+
     async fn test_connection(&self) -> UnifiedResult<ProviderInfo> {
         let started = Instant::now();
         self.request(Method::GET, "/servers?per_page=1", None).await?;
@@ -199,6 +203,72 @@ impl CloudProvider for HetznerAdapter {
         self.request(Method::DELETE, &format!("/servers/{id}"), None)
             .await?;
         Ok(())
+    }
+
+    async fn usage_metrics(&self, id: &str) -> UnifiedResult<UsageMetrics> {
+        // Last hour of metrics. The `cpu` series is a percentage; the
+        // `network.0.in` / `network.0.out` series are bytes per second,
+        // integrated over the step to total bytes. Memory and disk
+        // usage are not exposed by this API.
+        let end = Utc::now();
+        let start = DateTime::from_timestamp(end.timestamp() - 3600, 0).unwrap_or(end);
+        let fmt = |time: DateTime<Utc>| time.format("%Y-%m-%dT%H:%M:%SZ").to_string();
+        let body = self
+            .request(
+                Method::GET,
+                &format!(
+                    "/servers/{}/metrics?type=cpu,network&start={}&end={}",
+                    encode_path_segment(id),
+                    fmt(start),
+                    fmt(end),
+                ),
+                None,
+            )
+            .await?;
+        let metrics = body.get("metrics");
+        let series = metrics.and_then(|metrics| metrics.get("time_series"));
+        let last_value = |key: &str| -> Option<f64> {
+            series
+                .and_then(|series| series.get(key))
+                .and_then(|series| series.get("values"))
+                .and_then(Value::as_array)
+                .and_then(|values| values.last())
+                .and_then(|point| point.as_array())
+                .and_then(|point| point.get(1))
+                .and_then(|value| value.as_str())
+                .and_then(|value| value.parse::<f64>().ok())
+        };
+        let integrate = |key: &str| -> f64 {
+            let step = metrics
+                .and_then(|metrics| metrics.get("step"))
+                .and_then(Value::as_f64)
+                .unwrap_or(60.0);
+            series
+                .and_then(|series| series.get(key))
+                .and_then(|series| series.get("values"))
+                .and_then(Value::as_array)
+                .map(|values| {
+                    values.iter().fold(0.0, |total, point| {
+                        let value = point
+                            .as_array()
+                            .and_then(|point| point.get(1))
+                            .and_then(|value| value.as_str())
+                            .and_then(|value| value.parse::<f64>().ok())
+                            .unwrap_or(0.0);
+                        total + value * step
+                    })
+                })
+                .unwrap_or(0.0)
+        };
+        Ok(UsageMetrics {
+            server_id: id.to_string(),
+            cpu_percent: last_value("cpu"),
+            memory_mb: None,
+            disk_gb: None,
+            bandwidth_in_mb: Some(integrate("network.0.in") / (1024.0 * 1024.0)),
+            bandwidth_out_mb: Some(integrate("network.0.out") / (1024.0 * 1024.0)),
+            sampled_at: end.to_rfc3339(),
+        })
     }
 }
 

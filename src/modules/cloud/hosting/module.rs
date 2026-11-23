@@ -22,7 +22,7 @@ use serde_json::{json, Value};
 use std::sync::Arc;
 use uuid::Uuid;
 
-use super::types::HostingState;
+use super::types::{shared_state, HostingState};
 use crate::modules::certificates::cert_events::{SSL_RENEWED, SSL_SWAPPED};
 use crate::modules::ai;
 use super::handlers_plans::{create_plan, delete_plan, get_plan, list_plans, update_plan};
@@ -40,8 +40,10 @@ pub struct HostingModule {
 
 impl HostingModule {
     pub fn new() -> Self {
+        // Shared with the cloud module (see `types::shared_state`):
+        // both scopes read and write the same plans and accounts.
         Self {
-            state: Arc::new(HostingState::new()),
+            state: shared_state(),
         }
     }
 }

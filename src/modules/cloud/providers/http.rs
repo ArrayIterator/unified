@@ -19,15 +19,40 @@ use super::*;
 // ---------------------------------------------------------------------------
 
 /// The interface every provider adapter implements. Create / scale /
-/// delete / start / stop have default implementations that fail with a
+/// delete / start / stop / suspend / unsuspend / renew / change
+/// password / usage have default implementations that fail with a
 /// clear "not supported" error, so a read-only adapter only implements
 /// the three required methods plus `capabilities`.
+///
+/// The surface follows the WHMCS provisioning-module standard
+/// (CreateAccount, SuspendAccount, UnsuspendAccount, TerminateAccount,
+/// Renew, ChangePassword, ChangePackage, MetaData, UsageUpdate /
+/// MetricProvider): `create_server` is CreateAccount, `delete_server`
+/// is TerminateAccount, `scale_server` is ChangePackage. Each adapter
+/// translates its platform's API into this uniform interface; the
+/// trait never reimplements a platform.
 #[async_trait]
 pub trait CloudProvider: Send + Sync {
     fn kind(&self) -> ProviderKind;
 
     fn capabilities(&self) -> ProviderCapabilities {
         capabilities_for(self.kind())
+    }
+
+    /// Provider metadata (WHMCS MetaData: DisplayName, APIVersion,
+    /// RequiresServer). The display name comes from the registry
+    /// definition; adapters override the API version.
+    fn metadata(&self) -> ProviderMetadata {
+        let display_name = self
+            .kind()
+            .definition()
+            .map(|definition| definition.display_name.clone())
+            .unwrap_or_else(|| self.kind().as_str().to_string());
+        ProviderMetadata {
+            display_name,
+            api_version: "unknown".to_string(),
+            requires_server: true,
+        }
     }
 
     /// Verify the credentials against the real provider API.
@@ -72,6 +97,45 @@ pub trait CloudProvider: Send + Sync {
     async fn stop_server(&self, _id: &str) -> UnifiedResult<ServerInfo> {
         Err(unsupported(self.kind(), "stop", "supports_start_stop"))
     }
+
+    /// Suspend a server / VPS / container (WHMCS SuspendAccount).
+    /// Guarded by `supports_suspend`.
+    async fn suspend_server(&self, _id: &str) -> UnifiedResult<ServerInfo> {
+        Err(unsupported(self.kind(), "suspend", "supports_suspend"))
+    }
+
+    /// Unsuspend a server / VPS / container (WHMCS UnsuspendAccount).
+    /// Guarded by `supports_suspend`.
+    async fn unsuspend_server(&self, _id: &str) -> UnifiedResult<ServerInfo> {
+        Err(unsupported(self.kind(), "unsuspend", "supports_suspend"))
+    }
+
+    /// Renew a server (WHMCS Renew). Renewal is a billing-layer
+    /// concept — platforms bill automatically — so no built-in adapter
+    /// implements it yet. Guarded by `supports_renew`.
+    async fn renew_server(&self, _id: &str) -> UnifiedResult<ServerInfo> {
+        Err(unsupported(self.kind(), "renew", "supports_renew"))
+    }
+
+    /// Change a server password (WHMCS ChangePassword). Guarded by
+    /// `supports_change_password`.
+    async fn change_password(
+        &self,
+        _id: &str,
+        _request: &ChangePasswordRequest,
+    ) -> UnifiedResult<ServerInfo> {
+        Err(unsupported(
+            self.kind(),
+            "change password",
+            "supports_change_password",
+        ))
+    }
+
+    /// Usage metrics for one server / container (WHMCS UsageUpdate /
+    /// MetricProvider). Guarded by `supports_usage`.
+    async fn usage_metrics(&self, _id: &str) -> UnifiedResult<UsageMetrics> {
+        Err(unsupported(self.kind(), "usage metrics", "supports_usage"))
+    }
 }
 
 pub(crate) fn unsupported(kind: ProviderKind, action: &str, capability: &str) -> UnifiedError {
@@ -79,6 +143,21 @@ pub(crate) fn unsupported(kind: ProviderKind, action: &str, capability: &str) ->
         "Provider \"{}\" does not support {action} (capability {capability} is false)",
         kind.as_str()
     ))
+}
+
+/// Build provider metadata with an adapter-declared API version; the
+/// display name comes from the registry definition (same as the trait
+/// default in `CloudProvider::metadata`).
+pub(crate) fn metadata_with_version(kind: ProviderKind, api_version: &str) -> ProviderMetadata {
+    let display_name = kind
+        .definition()
+        .map(|definition| definition.display_name.clone())
+        .unwrap_or_else(|| kind.as_str().to_string());
+    ProviderMetadata {
+        display_name,
+        api_version: api_version.to_string(),
+        requires_server: true,
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -213,6 +292,36 @@ pub(crate) async fn send_json(
         return Err(http_status_error(status, provider, parse_retry_after(&response)));
     }
     response.json::<Value>().await.map_err(|error| {
+        UnifiedError::internal(format!(
+            "Provider \"{provider}\" returned an unreadable response: {error}"
+        ))
+    })
+}
+
+/// Send a request and parse the JSON body, tolerating an empty body
+/// (some write calls answer 200/204 with no content). Returns
+/// `Value::Null` for an empty body.
+pub(crate) async fn send_json_or_empty(
+    client: &reqwest::Client,
+    request: reqwest::RequestBuilder,
+    provider: &str,
+) -> UnifiedResult<Value> {
+    let response = request.send().await.map_err(|error| {
+        UnifiedError::internal(format!("Provider \"{provider}\" request failed: {error}"))
+    })?;
+    let status = response.status();
+    if !status.is_success() {
+        return Err(http_status_error(status, provider, parse_retry_after(&response)));
+    }
+    let text = response.text().await.map_err(|error| {
+        UnifiedError::internal(format!(
+            "Provider \"{provider}\" returned an unreadable response: {error}"
+        ))
+    })?;
+    if text.trim().is_empty() {
+        return Ok(Value::Null);
+    }
+    serde_json::from_str(&text).map_err(|error| {
         UnifiedError::internal(format!(
             "Provider \"{provider}\" returned an unreadable response: {error}"
         ))

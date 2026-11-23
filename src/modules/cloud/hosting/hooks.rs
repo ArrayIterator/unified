@@ -147,7 +147,7 @@ pub(crate) fn observe_ssl_completion(state: &Arc<HostingState>, data: &Value) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::modules::hosting::HostingPlan;
+    use crate::modules::cloud::hosting::HostingPlan;
 
     fn plan(id: Uuid, name: &str, product_id: &str) -> HostingPlan {
         HostingPlan {

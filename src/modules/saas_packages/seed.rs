@@ -53,6 +53,50 @@ pub const SEED_ONLINE_EXAM_PACKAGE_ID: &str = "20000000-0000-4000-8000-000000000
 /// package above.
 pub const SEED_SITE_BUILDER_PACKAGE_ID: &str = "20000000-0000-4000-8000-000000000002";
 
+/// Fixed id for the seeded example Cloud package, shared with
+/// migration `000135_cloud_package_apps` exactly like the packages
+/// above.
+pub const SEED_CLOUD_PACKAGE_ID: &str = "20000000-0000-4000-8000-000000000003";
+
+/// The example "Cloud SaaS" package (task 377): the cloud module as
+/// a PACKAGE. A tenant ordering this package gets the cloud module
+/// (hosting plans and accounts, provider connectors, containers, app
+/// deployment) plus the domains module for its own domain. No pricing
+/// is invented here (`product_id` stays `None`; pricing lives on the
+/// store product, if one is ever attached).
+pub(crate) fn seed_cloud_package() -> SaasPackage {
+    let now = Utc::now();
+    SaasPackage {
+        id: Uuid::parse_str(SEED_CLOUD_PACKAGE_ID)
+            .expect("seed package id is a valid UUID"),
+        slug: "cloud-saas".to_string(),
+        name: "Cloud SaaS".to_string(),
+        description: "Cloud hosting, provider connectors, containers, and app deployment: hosting plans and accounts, cloud provider adapters (OpenStack, Docker, Kubernetes, Proxmox, and more), and apps deployed through those connectors.".to_string(),
+        status: STATUS_PUBLISHED.to_string(),
+        current_version: 1,
+        product_id: None,
+        preset_settings: json!({
+            "welcome_email_enabled": true,
+            "default_language": "en"
+        }),
+        wizard_steps: vec![
+            "business_type".to_string(),
+            "review_modules".to_string(),
+            "apply".to_string(),
+            "settings".to_string(),
+            "done".to_string(),
+        ],
+        modules: vec![
+            PackageModuleEntry { module_id: "cloud".to_string(), required: true, sort_order: 0 },
+            PackageModuleEntry { module_id: "domains".to_string(), required: true, sort_order: 1 },
+        ],
+        created_by: "system".to_string(),
+        vendor_id: None,
+        created_at: now,
+        updated_at: now,
+    }
+}
+
 /// The example "Site Builder SaaS" package (task 353): the site
 /// builder as a PACKAGE. A tenant ordering this package gets the
 /// builder plus the content module, the theme, and its own domain

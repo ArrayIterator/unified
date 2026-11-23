@@ -207,13 +207,16 @@ pub(crate) async fn list_kinds(ctx: web::Data<Arc<AppContext>>, req: HttpRequest
     if let Err(error) = require_permission(&ctx, &caller.role, PERM_PROVIDERS_VIEW) {
         return json::error_response(&error, debug);
     }
+    if let Err(error) = crate::modules::cloud::helpers::require_cloud_entitlement(&ctx, &req) {
+        return json::error_response(&error, debug);
+    }
     let registered = provider_registry().registered_kinds();
     let kinds: Vec<ProviderKind> = ProviderKind::all()
         .iter()
         .copied()
         .filter(|kind| registered.contains(kind))
         .collect();
-    let result: UnifiedResult<Vec<ProviderKindView>> = Ok(kinds
+    let mut views: Vec<ProviderKindView> = kinds
         .iter()
         .map(|kind| ProviderKindView {
             kind: kind.as_str().to_string(),
@@ -225,7 +228,33 @@ pub(crate) async fn list_kinds(ctx: web::Data<Arc<AppContext>>, req: HttpRequest
                 .map(|host| host.to_string())
                 .collect(),
         })
-        .collect());
+        .collect();
+    // Hook-contributed provider definitions (see
+    // `cloud::hooks::collect_cloud_provider_definitions`) appear after
+    // the built-ins; a contributed id that collides with a built-in
+    // is skipped by the collector.
+    for definition in crate::modules::cloud::hooks::collect_cloud_provider_definitions(&ctx) {
+        if views.iter().any(|view| view.kind == definition.id) {
+            continue;
+        }
+        views.push(ProviderKindView {
+            kind: definition.id.clone(),
+            display_name: definition.display_name.clone(),
+            capabilities: ProviderCapabilities {
+                supports_create: definition.capability("create"),
+                supports_scale: definition.capability("scale"),
+                supports_delete: definition.capability("delete"),
+                supports_containers: definition.capability("containers"),
+                supports_start_stop: definition.capability("start_stop"),
+                supports_suspend: definition.capability("suspend"),
+                supports_renew: definition.capability("renew"),
+                supports_change_password: definition.capability("change_password"),
+                supports_usage: definition.capability("usage"),
+            },
+            allowed_hosts: definition.allowed_hosts.clone(),
+        });
+    }
+    let result: UnifiedResult<Vec<ProviderKindView>> = Ok(views);
     json::respond(result, debug)
 }
 
@@ -240,6 +269,7 @@ pub(crate) async fn create_connection(
         let _company = require_company(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PROVIDERS_MANAGE)?;
+        crate::modules::cloud::helpers::require_cloud_entitlement(&ctx, &req)?;
         validate_connection(&body)?;
         let kind = ProviderKind::from_str(&body.kind).ok_or_else(|| {
             UnifiedError::bad_request(format!("Unknown provider kind \"{}\"", body.kind))
@@ -307,6 +337,7 @@ pub(crate) async fn list_connections(
         let _scope = caller_company(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PROVIDERS_VIEW)?;
+        crate::modules::cloud::helpers::require_cloud_entitlement(&ctx, &req)?;
         let mut items: Vec<ProviderConnectionView> = connections_store()
             .iter()
             .map(|entry| entry.value().view())
@@ -356,6 +387,9 @@ pub(crate) async fn get_connection(ctx: web::Data<Arc<AppContext>>,
     if let Err(error) = require_permission(&ctx, &caller.role, PERM_PROVIDERS_VIEW) {
         return json::error_response(&error, debug);
     }
+    if let Err(error) = crate::modules::cloud::helpers::require_cloud_entitlement(&ctx, &req) {
+        return json::error_response(&error, debug);
+    }
     let result: UnifiedResult<ProviderConnectionView> =
         find_connection(id.into_inner()).map(|connection| connection.view());
     json::respond(result, debug)
@@ -369,6 +403,7 @@ pub(crate) async fn delete_connection(ctx: web::Data<Arc<AppContext>>,
         let _company = require_company(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PROVIDERS_MANAGE)?;
+        crate::modules::cloud::helpers::require_cloud_entitlement(&ctx, &req)?;
         let id = id.into_inner();
         let connection = find_connection(id)?;
         connections_store().remove(&id);
@@ -396,6 +431,7 @@ pub(crate) async fn test_connection(ctx: web::Data<Arc<AppContext>>,
         let _company = require_company(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PROVIDERS_MANAGE)?;
+        crate::modules::cloud::helpers::require_cloud_entitlement(&ctx, &req)?;
         let connection = find_connection(id.into_inner())?;
         require_enabled(&connection)?;
         let adapter = provider_registry().build(&connection)?;
@@ -433,6 +469,7 @@ pub(crate) async fn list_servers(
         let _scope = caller_company(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PROVIDERS_VIEW)?;
+        crate::modules::cloud::helpers::require_cloud_entitlement(&ctx, &req)?;
         let connection = find_connection(path.into_inner())?;
         require_enabled(&connection)?;
         let force_refresh = params
@@ -474,6 +511,7 @@ pub(crate) async fn get_inventory_view(
         let _scope = caller_company(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PROVIDERS_VIEW)?;
+        crate::modules::cloud::helpers::require_cloud_entitlement(&ctx, &req)?;
         let connection = find_connection(path.into_inner())?;
         require_enabled(&connection)?;
         let (servers, cached, fetched_at) = get_inventory(&connection, false).await?;
@@ -502,6 +540,7 @@ pub(crate) async fn get_server_status(
         let _scope = caller_company(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PROVIDERS_VIEW)?;
+        crate::modules::cloud::helpers::require_cloud_entitlement(&ctx, &req)?;
         let (connection_id, server_id) = path.into_inner();
         let connection = find_connection(connection_id)?;
         require_enabled(&connection)?;
@@ -525,6 +564,7 @@ pub(crate) async fn create_server(
         let _company = require_company(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PROVIDERS_MANAGE)?;
+        crate::modules::cloud::helpers::require_cloud_entitlement(&ctx, &req)?;
         let connection = find_connection(path.into_inner())?;
         require_enabled(&connection)?;
         let adapter = provider_registry().build(&connection)?;
@@ -566,6 +606,7 @@ pub(crate) async fn scale_server(
         let _company = require_company(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PROVIDERS_MANAGE)?;
+        crate::modules::cloud::helpers::require_cloud_entitlement(&ctx, &req)?;
         let (connection_id, server_id) = path.into_inner();
         let connection = find_connection(connection_id)?;
         require_enabled(&connection)?;
@@ -603,6 +644,7 @@ pub(crate) async fn delete_server(
         let _company = require_company(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PROVIDERS_MANAGE)?;
+        crate::modules::cloud::helpers::require_cloud_entitlement(&ctx, &req)?;
         let (connection_id, server_id) = path.into_inner();
         let connection = find_connection(connection_id)?;
         require_enabled(&connection)?;
@@ -640,6 +682,7 @@ pub(crate) async fn start_server(
         let _company = require_company(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PROVIDERS_MANAGE)?;
+        crate::modules::cloud::helpers::require_cloud_entitlement(&ctx, &req)?;
         let (connection_id, server_id) = path.into_inner();
         let connection = find_connection(connection_id)?;
         require_enabled(&connection)?;
@@ -671,6 +714,7 @@ pub(crate) async fn stop_server(
         let _company = require_company(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PROVIDERS_MANAGE)?;
+        crate::modules::cloud::helpers::require_cloud_entitlement(&ctx, &req)?;
         let (connection_id, server_id) = path.into_inner();
         let connection = find_connection(connection_id)?;
         require_enabled(&connection)?;
@@ -691,6 +735,203 @@ pub(crate) async fn stop_server(
 }
 
 
+pub(crate) async fn suspend_server(
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+    path: web::Path<(Uuid, String)>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let result: UnifiedResult<ServerInfo> = (|| async {
+        let _tenant = require_tenant(&req)?;
+        let _company = require_company(&_tenant, &req)?;
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_PROVIDERS_MANAGE)?;
+        crate::modules::cloud::helpers::require_cloud_entitlement(&ctx, &req)?;
+        let (connection_id, server_id) = path.into_inner();
+        let connection = find_connection(connection_id)?;
+        require_enabled(&connection)?;
+        let adapter = provider_registry().build(&connection)?;
+        if !adapter.capabilities().supports_suspend {
+            return Err(unsupported(
+                connection.kind,
+                "suspend",
+                "supports_suspend",
+            ));
+        }
+        let server = adapter.suspend_server(&server_id).await?;
+        inventory_store().remove(&connection.id);
+        ctx.hooks.emit(
+            PROVIDER_SERVER_SUSPENDED,
+            serde_json::json!({
+                "actor": caller.actor.clone(),
+                "connection_id": connection.id,
+                "kind": connection.kind.as_str(),
+                "resource": format!("provider-server:{server_id}"),
+                "server_id": server_id,
+            }),
+        );
+        Ok(server)
+    })()
+    .await;
+    json::respond(result, debug)
+}
+
+pub(crate) async fn unsuspend_server(
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+    path: web::Path<(Uuid, String)>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let result: UnifiedResult<ServerInfo> = (|| async {
+        let _tenant = require_tenant(&req)?;
+        let _company = require_company(&_tenant, &req)?;
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_PROVIDERS_MANAGE)?;
+        crate::modules::cloud::helpers::require_cloud_entitlement(&ctx, &req)?;
+        let (connection_id, server_id) = path.into_inner();
+        let connection = find_connection(connection_id)?;
+        require_enabled(&connection)?;
+        let adapter = provider_registry().build(&connection)?;
+        if !adapter.capabilities().supports_suspend {
+            return Err(unsupported(
+                connection.kind,
+                "unsuspend",
+                "supports_suspend",
+            ));
+        }
+        let server = adapter.unsuspend_server(&server_id).await?;
+        inventory_store().remove(&connection.id);
+        ctx.hooks.emit(
+            PROVIDER_SERVER_UNSUSPENDED,
+            serde_json::json!({
+                "actor": caller.actor.clone(),
+                "connection_id": connection.id,
+                "kind": connection.kind.as_str(),
+                "resource": format!("provider-server:{server_id}"),
+                "server_id": server_id,
+            }),
+        );
+        Ok(server)
+    })()
+    .await;
+    json::respond(result, debug)
+}
+
+pub(crate) async fn renew_server(
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+    path: web::Path<(Uuid, String)>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let result: UnifiedResult<ServerInfo> = (|| async {
+        let _tenant = require_tenant(&req)?;
+        let _company = require_company(&_tenant, &req)?;
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_PROVIDERS_MANAGE)?;
+        crate::modules::cloud::helpers::require_cloud_entitlement(&ctx, &req)?;
+        let (connection_id, server_id) = path.into_inner();
+        let connection = find_connection(connection_id)?;
+        require_enabled(&connection)?;
+        let adapter = provider_registry().build(&connection)?;
+        if !adapter.capabilities().supports_renew {
+            return Err(unsupported(
+                connection.kind,
+                "renew",
+                "supports_renew",
+            ));
+        }
+        let server = adapter.renew_server(&server_id).await?;
+        inventory_store().remove(&connection.id);
+        ctx.hooks.emit(
+            PROVIDER_SERVER_RENEWED,
+            serde_json::json!({
+                "actor": caller.actor.clone(),
+                "connection_id": connection.id,
+                "kind": connection.kind.as_str(),
+                "resource": format!("provider-server:{server_id}"),
+                "server_id": server_id,
+            }),
+        );
+        Ok(server)
+    })()
+    .await;
+    json::respond(result, debug)
+}
+
+pub(crate) async fn change_server_password(
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+    path: web::Path<(Uuid, String)>,
+    body: web::Json<ChangePasswordRequest>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let result: UnifiedResult<ServerInfo> = (|| async {
+        let _tenant = require_tenant(&req)?;
+        let _company = require_company(&_tenant, &req)?;
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_PROVIDERS_MANAGE)?;
+        crate::modules::cloud::helpers::require_cloud_entitlement(&ctx, &req)?;
+        let (connection_id, server_id) = path.into_inner();
+        let connection = find_connection(connection_id)?;
+        require_enabled(&connection)?;
+        let adapter = provider_registry().build(&connection)?;
+        if !adapter.capabilities().supports_change_password {
+            return Err(unsupported(
+                connection.kind,
+                "change password",
+                "supports_change_password",
+            ));
+        }
+        // The password is write-only: it is passed to the adapter and
+        // never logged, serialized, or included in any event payload.
+        let server = adapter.change_password(&server_id, &body).await?;
+        inventory_store().remove(&connection.id);
+        ctx.hooks.emit(
+            PROVIDER_SERVER_PASSWORD_CHANGED,
+            serde_json::json!({
+                "actor": caller.actor.clone(),
+                "connection_id": connection.id,
+                "kind": connection.kind.as_str(),
+                "resource": format!("provider-server:{server_id}"),
+                "server_id": server_id,
+            }),
+        );
+        Ok(server)
+    })()
+    .await;
+    json::respond(result, debug)
+}
+
+pub(crate) async fn get_server_usage(
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+    path: web::Path<(Uuid, String)>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    let result: UnifiedResult<UsageMetrics> = (|| async {
+        let _tenant = require_tenant(&req)?;
+        let _company = require_company(&_tenant, &req)?;
+        let caller = caller(&req)?;
+        require_permission(&ctx, &caller.role, PERM_PROVIDERS_VIEW)?;
+        crate::modules::cloud::helpers::require_cloud_entitlement(&ctx, &req)?;
+        let (connection_id, server_id) = path.into_inner();
+        let connection = find_connection(connection_id)?;
+        require_enabled(&connection)?;
+        let adapter = provider_registry().build(&connection)?;
+        if !adapter.capabilities().supports_usage {
+            return Err(unsupported(
+                connection.kind,
+                "usage metrics",
+                "supports_usage",
+            ));
+        }
+        adapter.usage_metrics(&server_id).await
+    })()
+    .await;
+    json::respond(result, debug)
+}
+
+
 pub(crate) async fn sync_now(ctx: web::Data<Arc<AppContext>>,
     req: HttpRequest, path: web::Path<Uuid>) -> HttpResponse {
     let debug = ctx.is_debug();
@@ -699,6 +940,7 @@ pub(crate) async fn sync_now(ctx: web::Data<Arc<AppContext>>,
         let _company = require_company(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PROVIDERS_MANAGE)?;
+        crate::modules::cloud::helpers::require_cloud_entitlement(&ctx, &req)?;
         let connection = find_connection(path.into_inner())?;
         require_enabled(&connection)?;
         let count = sync_connection(&ctx, &connection).await?;

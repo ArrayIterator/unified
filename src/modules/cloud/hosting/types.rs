@@ -19,7 +19,7 @@ use dashmap::DashMap;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use uuid::Uuid;
 
 // ---------------------------------------------------------------------------
@@ -126,6 +126,19 @@ impl HostingState {
             order_claims: DashMap::new(),
         }
     }
+}
+
+/// Process-wide shared hosting state.
+///
+/// The hosting state is shared between the compat `hosting` module
+/// (legacy `/api/v1/hosting/*` routes) and the `cloud` module
+/// (`/api/v1/cloud/hosting/*`), so a plan or account created under
+/// either scope is visible under the other. Both modules register the
+/// same `Arc` as actix app data in their own scopes, and the hook
+/// subscriptions capture it too.
+pub(crate) fn shared_state() -> Arc<HostingState> {
+    static STATE: OnceLock<Arc<HostingState>> = OnceLock::new();
+    STATE.get_or_init(|| Arc::new(HostingState::new())).clone()
 }
 
 impl Default for HostingState {

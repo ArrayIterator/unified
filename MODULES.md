@@ -60,7 +60,7 @@ against `src/modules/mod.rs` (`pub mod` lines).
 - **GEO Location** — GeoLite / MaxMind-compatible database, downloadable from MaxMind or a custom URL, a global Geo information variable in the core engine, ASN checks, and IP-range-to-country settings overrides (IPv4 and IPv6) that win over the database reading by default.
 - **Clusters** — multi-cluster connection and mutual sync, with load balancing across nodes.
 - **Load Balancer** — load balancing across backends, sharing the one TLS storage with the server.
-- **Hosting** — hosting plans and accounts; a module that needs another module auto-activates it (the hosting module requires the cart/sales module) and the module list shows the requirement.
+- **Hosting** — hosting plans and accounts; a module that needs another module auto-activates it (the hosting module requires the cart/sales module) and the module list shows the requirement. Now a submodule of `cloud`; `/api/v1/hosting/*` is kept as a compat alias.
 - **Cloudflare** — Cloudflare connector: zones, DNS, and cache.
 
 #### Infrastructure & Network > Storage & Data (6)
@@ -72,10 +72,11 @@ against `src/modules/mod.rs` (`pub mod` lines).
 - **Downloader** — secure, resumable downloads for licensed files and assets.
 - **Third-Party VCS Integrations** — GitHub, GitLab, and Bitbucket integrations: repository connections linked to software records, release import as review drafts (never auto-published), HMAC / token-verified webhooks, allowlisted release-asset downloads with streamed SHA-256 verification, manual sync with rate-limit handling, and sync history. Provider tokens are write-only and never logged or returned; configuration flags are merged into the settings store under `vcs.<provider>`.
 
-#### Infrastructure & Network > Platform Services (9)
+#### Infrastructure & Network > Platform Services (10)
 
 - **Panels** — hosting/billing panel connectors (WHMCS, cPanel/WHM, DirectAdmin, Plesk, CyberPanel, generic).
-- **Providers** — cloud/VPS/container provider connectors (AWS, DigitalOcean, Linode, Hetzner, Huawei, OVH, Tencent, and others), plus server management for Redshift, OpenStack, KVM, Proxmox, and Xen.
+- **Providers** — cloud/VPS/container provider connectors (AWS, DigitalOcean, Linode, Hetzner, Huawei, OVH, Tencent, and others), plus server management for Redshift, OpenStack, KVM, Proxmox, and Xen. Now a submodule of `cloud`; `/api/v1/providers/*` is kept as a compat alias.
+- **Cloud** — cloud parent module: hosting plans and accounts, cloud provider connectors (OpenStack, Redshift, Docker, Kubernetes, EC2, Proxmox, KVM, Xen), containers and app deployment (Docker create, Kubernetes write ops), virtualization grouping, and the Cloud SaaS package (package → plans → apps). Sellable package; tenants without it get 403/404. External "cloud panel" modules (SolusVM, Virtualizor, cPanel, DirectAdmin, Plesk, CyberPanel, WHMCS, SSL providers) hook in via `cloud.provider.definitions`, `cloud.panel.definitions`, and `cloud.ssl_provider.definitions`.
 - **Webhooks** — outgoing webhook endpoints and deliveries.
 - **Routes** — customizable page routes: login, register, admin and user dashboard paths are changeable via admin or config.
 - **Global Search** — global search across modules, with a timeline.

@@ -45,6 +45,7 @@ pub(crate) async fn list_plans(
     };
     if let Err(error) = caller(&req)
         .and_then(|caller| require_permission(&ctx, &caller.role, PERM_HOSTING_VIEW))
+        .and_then(|_| crate::modules::cloud::helpers::require_cloud_entitlement(&ctx, &req))
     {
         return json::error_response(&error, debug);
     }
@@ -97,6 +98,7 @@ pub(crate) async fn create_plan(
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_HOSTING_MANAGE)?;
+        crate::modules::cloud::helpers::require_cloud_entitlement(&ctx, &req)?;
         let name = body.name.trim().to_string();
         if name.is_empty() {
             return Err(UnifiedError::bad_request("name must not be empty"));
@@ -164,6 +166,7 @@ pub(crate) async fn get_plan(
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_HOSTING_VIEW)?;
+        crate::modules::cloud::helpers::require_cloud_entitlement(&ctx, &req)?;
         state
             .plans
             .get(&id.into_inner())
@@ -185,6 +188,7 @@ pub(crate) async fn update_plan(
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_HOSTING_MANAGE)?;
+        crate::modules::cloud::helpers::require_cloud_entitlement(&ctx, &req)?;
         let id = id.into_inner();
         let mut plan = state
             .plans
@@ -259,6 +263,7 @@ pub(crate) async fn delete_plan(
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_HOSTING_MANAGE)?;
+        crate::modules::cloud::helpers::require_cloud_entitlement(&ctx, &req)?;
         let id = id.into_inner();
         if !state.plans.contains_key(&id) {
             return Err(UnifiedError::not_found("Hosting plan not found"));

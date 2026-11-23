@@ -448,7 +448,11 @@ impl Module for SaasPackagesModule {
         // consulted again. Each seed is inserted by id, so an
         // existing install picks up a new seed without disturbing
         // the packages already stored.
-        for seed in [seed_online_exam_package(), seed_site_builder_package()] {
+        for seed in [
+            seed_online_exam_package(),
+            seed_site_builder_package(),
+            seed_cloud_package(),
+        ] {
             if !self.state.packages.contains_key(&seed.id) {
                 self.state.store_version(&seed);
                 self.state.packages.insert(seed.id, seed.clone());

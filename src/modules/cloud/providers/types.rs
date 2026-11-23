@@ -37,6 +37,18 @@ pub const PROVIDER_SERVER_SCALED: &str = "provider.server.scaled";
 
 pub const PROVIDER_SERVER_DELETED: &str = "provider.server.deleted";
 
+/// Emitted when a server is suspended or unsuspended (audit trail).
+pub const PROVIDER_SERVER_SUSPENDED: &str = "provider.server.suspended";
+
+pub const PROVIDER_SERVER_UNSUSPENDED: &str = "provider.server.unsuspended";
+
+/// Emitted when a server is renewed (audit trail).
+pub const PROVIDER_SERVER_RENEWED: &str = "provider.server.renewed";
+
+/// Emitted when a server's password is changed (audit trail; the
+/// password itself is never in the payload).
+pub const PROVIDER_SERVER_PASSWORD_CHANGED: &str = "provider.server.password_changed";
+
 /// Capability required to read provider kinds, connections, servers, and inventory.
 pub(crate) const PERM_PROVIDERS_VIEW: &str = "providers.view";
 
@@ -201,7 +213,8 @@ impl ProviderKind {
 }
 
 /// What an adapter can do. Callers must check these flags before
-/// calling create / scale / delete / start / stop: an unsupported call
+/// calling create / scale / delete / start / stop / suspend /
+/// unsuspend / renew / change password / usage: an unsupported call
 /// fails with a 400 naming the missing capability.
 #[derive(Debug, Clone, Copy, Serialize)]
 pub struct ProviderCapabilities {
@@ -212,6 +225,17 @@ pub struct ProviderCapabilities {
     /// virtual servers.
     pub supports_containers: bool,
     pub supports_start_stop: bool,
+    /// True when the adapter can suspend / unsuspend a server
+    /// (WHMCS SuspendAccount / UnsuspendAccount).
+    pub supports_suspend: bool,
+    /// True when the adapter can renew a server (WHMCS Renew).
+    pub supports_renew: bool,
+    /// True when the adapter can change a server password
+    /// (WHMCS ChangePassword).
+    pub supports_change_password: bool,
+    /// True when the adapter can report usage metrics
+    /// (WHMCS UsageUpdate / MetricProvider).
+    pub supports_usage: bool,
 }
 
 impl ProviderCapabilities {
@@ -222,6 +246,10 @@ impl ProviderCapabilities {
             supports_delete: false,
             supports_containers: false,
             supports_start_stop: false,
+            supports_suspend: false,
+            supports_renew: false,
+            supports_change_password: false,
+            supports_usage: false,
         }
     }
 }
@@ -299,6 +327,40 @@ pub struct CreateServerRequest {
     pub root_password: Option<String>,
     #[serde(default)]
     pub ssh_key_ids: Option<Vec<String>>,
+    /// Kubernetes namespace (default `default`). Ignored by adapters
+    /// that do not use namespaces.
+    #[serde(default)]
+    pub namespace: Option<String>,
+    /// Desired replica count for container orchestrators (Kubernetes
+    /// deployments). Ignored by other adapters.
+    #[serde(default)]
+    pub replicas: Option<u32>,
+    /// Environment variables for containers (`KEY` -> value).
+    #[serde(default)]
+    pub env: Option<std::collections::HashMap<String, String>>,
+    /// Port mappings for containers.
+    #[serde(default)]
+    pub ports: Option<Vec<ContainerPort>>,
+    /// Command override for containers.
+    #[serde(default)]
+    pub command: Option<Vec<String>>,
+    /// Memory limit in MiB for containers.
+    #[serde(default)]
+    pub memory_mb: Option<u64>,
+    /// CPU cores for containers.
+    #[serde(default)]
+    pub cpu_cores: Option<u32>,
+}
+
+/// One container port mapping (Docker create / Kubernetes deployment).
+#[derive(Debug, Clone, Deserialize)]
+pub struct ContainerPort {
+    pub container_port: u16,
+    #[serde(default)]
+    pub host_port: Option<u16>,
+    /// `tcp` (default) or `udp`.
+    #[serde(default)]
+    pub protocol: Option<String>,
 }
 
 /// Generic scale request. Adapters use the fields that apply to them.
@@ -313,6 +375,46 @@ pub struct ScaleServerRequest {
     pub memory_mb: Option<u64>,
     #[serde(default)]
     pub disk_gb: Option<u64>,
+    /// Desired replica count for container orchestrators (Kubernetes
+    /// deployments). Ignored by other adapters.
+    #[serde(default)]
+    pub replicas: Option<u32>,
+}
+
+/// Request to change a server's password (WHMCS ChangePassword).
+/// Write-only: never serialized into a view, never logged.
+#[derive(Debug, Clone, Deserialize)]
+pub struct ChangePasswordRequest {
+    pub new_password: String,
+}
+
+/// Usage metrics for one server / container (WHMCS UsageUpdate /
+/// MetricProvider). Every field is optional: adapters report what
+/// their platform exposes and leave the rest empty.
+#[derive(Debug, Clone, Serialize)]
+pub struct UsageMetrics {
+    pub server_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cpu_percent: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub memory_mb: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub disk_gb: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bandwidth_in_mb: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bandwidth_out_mb: Option<f64>,
+    pub sampled_at: String,
+}
+
+/// Provider metadata (WHMCS MetaData: DisplayName, APIVersion,
+/// RequiresServer). The display name comes from the registry
+/// definition; the API version is adapter-declared.
+#[derive(Debug, Clone, Serialize)]
+pub struct ProviderMetadata {
+    pub display_name: String,
+    pub api_version: String,
+    pub requires_server: bool,
 }
 
 // ---------------------------------------------------------------------------
@@ -555,6 +657,10 @@ pub fn capabilities_for(kind: ProviderKind) -> ProviderCapabilities {
         supports_delete: def.capability("delete"),
         supports_containers: def.capability("containers"),
         supports_start_stop: def.capability("start_stop"),
+        supports_suspend: def.capability("suspend"),
+        supports_renew: def.capability("renew"),
+        supports_change_password: def.capability("change_password"),
+        supports_usage: def.capability("usage"),
     }
 }
 
