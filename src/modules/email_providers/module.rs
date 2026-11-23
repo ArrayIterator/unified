@@ -9,11 +9,11 @@
 // connection test, sandbox / test mode, and 429 handling that surfaces
 // the provider's `Retry-After` delay in `error.metadata`.
 //
-// Providers (56 built-ins, task 354): Mailchimp Transactional
+// Providers (55 built-ins, tasks 354 + 381): Mailchimp Transactional
 // (Mandrill), Brevo, SendGrid, Mailgun, Postmark, Amazon SES
 // (SigV4), Resend, SparkPost, Sender.net, SendPulse, Mailjet,
 // Mailtrap, Elastic Email, SMTP2GO, MailerSend, ZeptoMail,
-// SendLayer, SocketLabs, Pepipost, SMTP.com, Campaign Monitor
+// SendLayer, SocketLabs, SMTP.com, Campaign Monitor
 // (Transactional SMTP), Plunk, Courier, Loops, OneSignal Email
 // (generic HTTP adapters — see `adapters.rs`), generic SMTP
 // (direct lettre transport from the connection's own host, port,
@@ -150,7 +150,7 @@ impl Module for EmailProvidersModule {
     }
 
     fn description(&self) -> &'static str {
-        "Email provider registry: 56 built-in providers (Mailchimp Transactional, Brevo, SendGrid, Mailgun, Postmark, Amazon SES, Resend, SparkPost, Sender.net, SendPulse, Mailjet, Mailtrap, Elastic Email, SMTP2GO, MailerSend, ZeptoMail, SendLayer, SocketLabs, Pepipost, SMTP.com, Campaign Monitor, Plunk, Courier, Loops, OneSignal, 26 mailbox SMTP presets, direct SMTP, Gmail / Yahoo / Outlook OAuth2 + XOAUTH2, and local sendmail), with per-send provider selection, connection tests, webhook signature verification, deliverability headers, and per-provider logos."
+        "Email provider registry: 55 built-in providers (Mailchimp Transactional, Brevo, SendGrid, Mailgun, Postmark, Amazon SES, Resend, SparkPost, Sender.net, SendPulse, Mailjet, Mailtrap, Elastic Email, SMTP2GO, MailerSend, ZeptoMail, SendLayer, SocketLabs, SMTP.com, Campaign Monitor, Plunk, Courier, Loops, OneSignal, 26 mailbox SMTP presets, direct SMTP, Gmail / Yahoo / Outlook OAuth2 + XOAUTH2, and local sendmail), with per-send provider selection, connection tests, webhook signature verification, deliverability headers, and per-provider logos."
     }
 
     fn dependencies(&self) -> Vec<&'static str> {

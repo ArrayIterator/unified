@@ -8,7 +8,7 @@
 -- until the seed is reverted too.
 DELETE FROM provider_registry_definitions
     WHERE family = 'email'
-      AND provider_id IN ('zoho', 'zoho-eu', 'proton', 'yandex', 'fastmail', 'icloud', 'gmx', 'mail-com', 'aol', 'qq-mail', 'mail-163', 'mail-126', 'sina', 'mail-ru', 'posteo', 'migadu', 'mailfence', 'startmail', 'runbox', 'kolabnow', 'infomaniak', 'ovh', 'gandi', 'namecheap', 'dreamhost', 'mxroute', 'sender-net', 'sendpulse', 'mailjet', 'mailtrap', 'elastic-email', 'smtp2go', 'mailersend', 'zeptomail', 'sendlayer', 'socketlabs', 'pepipost', 'smtp-com', 'campaign-monitor', 'plunk', 'courier', 'loops', 'onesignal');
+      AND provider_id IN ('zoho', 'zoho-eu', 'proton', 'yandex', 'fastmail', 'icloud', 'gmx', 'mail-com', 'aol', 'qq-mail', 'mail-163', 'mail-126', 'sina', 'mail-ru', 'posteo', 'migadu', 'mailfence', 'startmail', 'runbox', 'kolabnow', 'infomaniak', 'ovh', 'gandi', 'namecheap', 'dreamhost', 'mxroute', 'sender-net', 'sendpulse', 'mailjet', 'mailtrap', 'elastic-email', 'smtp2go', 'mailersend', 'zeptomail', 'sendlayer', 'socketlabs', 'smtp-com', 'campaign-monitor', 'plunk', 'courier', 'loops', 'onesignal');
 ALTER TABLE provider_registry_definitions
     DROP COLUMN IF EXISTS smtp_host,
     DROP COLUMN IF EXISTS smtp_port,

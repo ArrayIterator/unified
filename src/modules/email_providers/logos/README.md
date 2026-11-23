@@ -1,7 +1,7 @@
 # Email provider logos
 
 One SVG logo per provider (9 existing + 4 added by task 350 = 13,
-+ 43 added by task 354 = 56).
++ 43 added by task 354 = 56, − 1 removed by task 381 = 55).
 The catalog endpoint (`GET /api/v1/email-providers/catalog`) returns
 one per provider kind as `"logo": "email-gmail"` — a stem, never a
 URL. The demo settings page copies these files to
@@ -105,22 +105,58 @@ Real brand marks (provider id → simple-icons slug):
 | `zoho` | `zoho` |
 | `zoho-eu` | `zoho` (same brand, EU region) |
 
+## Real brand marks (task 381)
+
+13 more files now use the real brand mark, copied from TrayDigita
+Core (`~/workspace/traydigita-core-git/assets/images/providers/`,
+repo ArrayIterator/traydigita-core-plugin, head 3281f60) and
+normalized to this directory's convention: `viewBox="0 0 24 24"`,
+an English `<title>` as first child, every shape with its own
+explicit fill, and the source artwork kept verbatim inside one
+`<g transform="...">` that maps the source viewBox into the 24 box
+(uniform scale, centered). Gradient and clipPath ids are prefixed
+with the provider stem (e.g. `courier-g`) so they cannot collide
+inside `sprite.svg`. The normalization script is kept outside the
+repo at `~/workspace/unified-check/normalize-email-logos-381.py`.
+
+Provenance per file (from Core's `assets/images/providers/README.md`):
+
+| Provider id | Source | Licence / status |
+| :--- | :--- | :--- |
+| `aol` | Wikimedia Commons, `AOL logo (2024).svg` (current mark since 6 Dec 2024) | Public domain (per file page). Wordmark path had no fill; explicit `fill="#000000"` added (black is the brand's own colour). |
+| `courier` | https://www.courier.com/favicon.svg (paper-plane mark) | Brand's own published mark, trademarked; used unaltered for provider identification, no open licence claimed. Gradient id prefixed (`courier-g`). |
+| `dreamhost` | https://www.dreamhost.com/icon.svg (32x32, "D" swirl) | Trademarked, as above. The file's own white rounded-square background is kept as published (the dark-navy crescent would be near-invisible on a dark tile without it). |
+| `fastmail` | https://www.fastmail.com/favicon.svg (blue ring, yellow/black envelope) | Trademarked, as above. |
+| `kolabnow` | https://kolabnow.com/themes/kolabnow/images/logo.svg (orange ring) | Trademarked, as above. Fill came from a `<style>` class (`.st0 #F3A628`); replaced with an explicit fill, `<style>` dropped. |
+| `mailersend` | https://www.mailersend.com/images/logo-symbol.svg (teal/blue symbol) | Trademarked, as above. |
+| `mailfence` | https://mailfence.com/c/mailfence/images/favicon/safari-pinned-tab.svg (mono black envelope) | Trademarked, as above. Path inherited `fill="#000000"` from its `<g>`; made explicit. Black mark: low-contrast on a dark tile, like `resend`. |
+| `mxroute` | https://mxroute.com/brand-mark.svg (pink envelope) | Trademarked, as above. Gradient ids prefixed (`mxroute-Background_1_`, `mxroute-Foreground_1_`); the source gradients are direct `<svg>` children (no `<defs>` wrap). |
+| `onesignal` | https://onesignal.com/favicon.svg (navy `#051B2C` only) | Trademarked, as above. Navy mark: low-contrast on a dark tile. |
+| `plunk` | https://www.useplunk.com/_next/static/media/logo.02awr5i-j9sof.svg (black "P") | Trademarked, as above. Black mark: low-contrast on a dark tile, like `resend`. |
+| `sendpulse` | https://sendpulse.com/templates/sendpulsev1/img/favicons/favicon.svg (blue `#009FC1` pulse) | Trademarked, as above. Near-white background rect removed (the pulse path itself untouched). |
+| `socketlabs` | https://www.socketlabs.com/images/favicon.svg (orange `#fc6423` puzzle) | Trademarked, as above. clipPath id prefixed (`socketlabs-clipPath26`). |
+| `zeptomail` | https://www.zohowebstatic.com/sites/zweb/images/productlogos/zeptomail.svg | Trademarked, as above. **Icon only**: the source is a wide lockup (1142x296, 3.86:1); only the icon group (blue envelope/Z + yellow inner envelope) is kept and the "Zoho ZeptoMail" text paths are dropped. Class fills resolved from the source `<style>` (`.cls-1 #f9b21d`, `.cls-2 #226db4`). |
+
+The brand marks themselves are the trademarks of their respective
+owners and are used here only to identify their services; no
+endorsement is implied. The 13 files are pure vector: no `<text>`,
+no `<image>`, no base64.
+
 ## Lettermark fallbacks (task 360)
 
-The remaining 34 providers have no entry in simple-icons, so their
+The remaining 20 providers have no entry in simple-icons, so their
 existing lettermark / hand-drawn files were left untouched — the set
-stays visually consistent and has no gaps. 27 of these are the
+stays visually consistent and has no gaps. 13 of these are the
 task-354 lettermarks (initials + `<text>`); 7 are the original
 hand-drawn marks (`outlook`, `postmark`, `sendgrid`, `sendmail`,
-`ses`, `smtp`, `yahoo`).
+`ses`, `smtp`, `yahoo`). (Task 381 removed one lettermark provider
+and replaced 13 lettermarks with the real marks above, so this list
+fell from 34 to 20.)
 
-Lettermark fallbacks (34 ids): `aol`, `courier`, `dreamhost`,
-`elastic-email`, `fastmail`, `kolabnow`, `mail-126`, `mail-163`,
-`mailersend`, `mailfence`, `mailjet`, `mxroute`, `onesignal`,
-`outlook`, `pepipost`, `plunk`, `posteo`, `postmark`, `runbox`,
-`sender-net`, `sendgrid`, `sendlayer`, `sendmail`, `sendpulse`,
-`ses`, `sina`, `smtp`, `smtp-com`, `smtp2go`, `socketlabs`,
-`startmail`, `yahoo`, `yandex`, `zeptomail`.
+Lettermark fallbacks (20 ids): `elastic-email`, `mail-126`,
+`mail-163`, `mailjet`, `outlook`, `posteo`, `postmark`, `runbox`,
+`sender-net`, `sendgrid`, `sendlayer`, `sendmail`, `ses`, `sina`,
+`smtp`, `smtp-com`, `smtp2go`, `startmail`, `yahoo`, `yandex`.
 
 Checked against the simple-icons slugs table and deliberately NOT
 substituted with a near-miss brand: `yandex` (only `yandexcloud`

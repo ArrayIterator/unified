@@ -437,12 +437,6 @@ pub fn email_provider_registry() -> &'static EmailProviderRegistry {
             }),
         );
         registry.register_factory(
-            EmailProviderKind::Pepipost,
-            Arc::new(|connection| {
-                Ok(Arc::new(SmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
-            }),
-        );
-        registry.register_factory(
             EmailProviderKind::SmtpCom,
             Arc::new(|connection| {
                 Ok(Arc::new(SmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)

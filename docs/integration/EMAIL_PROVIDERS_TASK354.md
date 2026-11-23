@@ -1,14 +1,21 @@
-# Email Providers — Task 354: Catalog Expansion (13 → 56)
+# Email Providers — Task 354: Catalog Expansion (13 → 56, now 55 after task 381)
 
-Task 354 expanded the built-in Mailer catalog from 13 to 56 providers,
+> Task 381 (2026-11-24): one relay removed — discontinued
+> (acquired by Netcore in 2018; its site now redirects to
+> netcore.ai). Current catalog: 55 providers. The 56-count claims
+> below describe what task 354 shipped; the tables in §1 are
+> updated to the current 55.
+
+Task 354 expanded the built-in Mailer catalog from 13 to 56 providers
+(55 after task 381 removed one discontinued relay),
 added the `email_provider.definitions` hook, and shipped deliverability
 headers on the shared send path. Tracker: web-app-software-development-
 tracker, project 1, task 354.
 
-## 1. Catalog: 56 built-in providers
+## 1. Catalog: 55 built-in providers
 
 Source of truth: `crates/unified-core/provider_registry_seed.json`
-(email family, 56 entries) + migration `000131` (durable table sync).
+(email family, 55 entries) + migration `000131` (durable table sync).
 Every entry states its free tier and what it is good for in `notes`;
 the catalog endpoint returns it as `description`.
 
@@ -16,9 +23,9 @@ the catalog endpoint returns it as `description`.
 | --- | --- | --- |
 | Existing (task 350) | 13 | 8 native API adapters, Gmail/Yahoo/Outlook OAuth2 + SMTP XOAUTH2, generic SMTP, local sendmail |
 | Mailbox SMTP presets (new) | 26 | Generic `SmtpAdapter` + preset from the definition (`smtp_host`/`smtp_port`/`smtp_tls`) |
-| Dual API/SMTP relays (new) | 13 | Generic `SmtpAdapter` via the relay's SMTP interface (Sender.net, SendPulse, Mailjet, Mailtrap, Elastic Email, SMTP2GO, MailerSend, ZeptoMail, SendLayer, SocketLabs, Pepipost, SMTP.com, Campaign Monitor) |
+| Dual API/SMTP relays (new) | 12 | Generic `SmtpAdapter` via the relay's SMTP interface (Sender.net, SendPulse, Mailjet, Mailtrap, Elastic Email, SMTP2GO, MailerSend, ZeptoMail, SendLayer, SocketLabs, SMTP.com, Campaign Monitor) |
 | Generic HTTP (new) | 4 | Generic `GenericHttpAdapter` driven by the definition's `http_api` (Plunk, Courier, Loops, OneSignal) |
-| **Total** | **56** | |
+| **Total** | **55** | |
 
 Mailbox presets: Zoho, Zoho EU, Proton (Bridge 127.0.0.1:1025),
 Yandex, Fastmail, iCloud, GMX, Mail.com, AOL, QQ, 163, 126, Sina,
@@ -57,8 +64,7 @@ Postmark 100/mo; SendGrid 60-day trial; Gmail OAuth2.
 
 Verified in-session via web search: Elastic Email 3,000/mo
 (100/day, no card); ZeptoMail first 10,000-email credit free,
-6-month credit; Mailtrap 4,000/mo; Pepipost/Netcore trial only
-(no published free plan); Loops free 4,000 sends/mo to the first
+6-month credit; Mailtrap 4,000/mo; Loops free 4,000 sends/mo to the first
 1,000 contacts (vendor site); Courier free 10,000 sends/mo (third-
 party comparison, Nov 2026 — stated with that caveat); Plunk free
 tier conflicting in sources (3,000 vs 1,000/mo) → "check provider
@@ -88,8 +94,7 @@ ZeptoMail `smtp.zeptomail.com:587`, Mailtrap `live.smtp.mailtrap.io:587`
 (production; `smtp.mailtrap.io:2525` sandbox), MailerSend
 `smtp.mailersend.net:587`, SendLayer `smtp.sendlayer.net:587`,
 SMTP2GO `mail.smtp2go.com:587`, Campaign Monitor
-`smtp.api.createsend.com:587`, Pepipost/Netcore
-`smtp.netcorecloud.net:587`.
+`smtp.api.createsend.com:587`.
 
 **Not re-verified in-session** (vendor-documented only, flag if a
 preset fails in the field): SocketLabs `smtp.socketlabs.com`,

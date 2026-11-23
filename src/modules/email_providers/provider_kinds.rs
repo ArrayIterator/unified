@@ -67,7 +67,6 @@ pub enum EmailProviderKind {
     Zeptomail,
     Sendlayer,
     Socketlabs,
-    Pepipost,
     SmtpCom,
     CampaignMonitor,
     Plunk,
@@ -128,7 +127,6 @@ impl EmailProviderKind {
             Self::Zeptomail => "zeptomail",
             Self::Sendlayer => "sendlayer",
             Self::Socketlabs => "socketlabs",
-            Self::Pepipost => "pepipost",
             Self::SmtpCom => "smtp-com",
             Self::CampaignMonitor => "campaign-monitor",
             Self::Plunk => "plunk",
@@ -189,7 +187,6 @@ impl EmailProviderKind {
             "zeptomail" => Some(Self::Zeptomail),
             "sendlayer" => Some(Self::Sendlayer),
             "socketlabs" => Some(Self::Socketlabs),
-            "pepipost" => Some(Self::Pepipost),
             "smtp-com" => Some(Self::SmtpCom),
             "campaign-monitor" => Some(Self::CampaignMonitor),
             "plunk" => Some(Self::Plunk),
@@ -251,7 +248,6 @@ impl EmailProviderKind {
             Self::Zeptomail,
             Self::Sendlayer,
             Self::Socketlabs,
-            Self::Pepipost,
             Self::SmtpCom,
             Self::CampaignMonitor,
             Self::Plunk,
@@ -343,7 +339,7 @@ impl EmailProviderKind {
             Self::Outlook => {
                 "The sender address must be the linked Microsoft account; Outlook rejects mail sent from any other address over XOAUTH2."
             }
-            Self::Zoho | Self::ZohoEu | Self::Proton | Self::Yandex | Self::Fastmail | Self::Icloud | Self::Gmx | Self::MailCom | Self::Aol | Self::QqMail | Self::Mail163 | Self::Mail126 | Self::Sina | Self::MailRu | Self::Posteo | Self::Migadu | Self::Mailfence | Self::Startmail | Self::Runbox | Self::Kolabnow | Self::Infomaniak | Self::Ovh | Self::Gandi | Self::Namecheap | Self::Dreamhost | Self::Mxroute | Self::SenderNet | Self::Sendpulse | Self::Mailjet | Self::Mailtrap | Self::ElasticEmail | Self::Smtp2go | Self::Mailersend | Self::Zeptomail | Self::Sendlayer | Self::Socketlabs | Self::Pepipost | Self::SmtpCom | Self::CampaignMonitor => {
+            Self::Zoho | Self::ZohoEu | Self::Proton | Self::Yandex | Self::Fastmail | Self::Icloud | Self::Gmx | Self::MailCom | Self::Aol | Self::QqMail | Self::Mail163 | Self::Mail126 | Self::Sina | Self::MailRu | Self::Posteo | Self::Migadu | Self::Mailfence | Self::Startmail | Self::Runbox | Self::Kolabnow | Self::Infomaniak | Self::Ovh | Self::Gandi | Self::Namecheap | Self::Dreamhost | Self::Mxroute | Self::SenderNet | Self::Sendpulse | Self::Mailjet | Self::Mailtrap | Self::ElasticEmail | Self::Smtp2go | Self::Mailersend | Self::Zeptomail | Self::Sendlayer | Self::Socketlabs | Self::SmtpCom | Self::CampaignMonitor => {
                 "Delivery goes through this provider's SMTP relay (preset host and port from the catalog); the From domain should have SPF and DKIM records for that relay."
             }
             Self::Plunk => {
@@ -412,7 +408,7 @@ impl EmailProviderKind {
             Self::Outlook => {
                 "Outlook has no webhooks; bounce and complaint handling is not available for this provider."
             }
-            Self::Zoho | Self::ZohoEu | Self::Proton | Self::Yandex | Self::Fastmail | Self::Icloud | Self::Gmx | Self::MailCom | Self::Aol | Self::QqMail | Self::Mail163 | Self::Mail126 | Self::Sina | Self::MailRu | Self::Posteo | Self::Migadu | Self::Mailfence | Self::Startmail | Self::Runbox | Self::Kolabnow | Self::Infomaniak | Self::Ovh | Self::Gandi | Self::Namecheap | Self::Dreamhost | Self::Mxroute | Self::SenderNet | Self::Sendpulse | Self::Mailjet | Self::Mailtrap | Self::ElasticEmail | Self::Smtp2go | Self::Mailersend | Self::Zeptomail | Self::Sendlayer | Self::Socketlabs | Self::Pepipost | Self::SmtpCom | Self::CampaignMonitor => {
+            Self::Zoho | Self::ZohoEu | Self::Proton | Self::Yandex | Self::Fastmail | Self::Icloud | Self::Gmx | Self::MailCom | Self::Aol | Self::QqMail | Self::Mail163 | Self::Mail126 | Self::Sina | Self::MailRu | Self::Posteo | Self::Migadu | Self::Mailfence | Self::Startmail | Self::Runbox | Self::Kolabnow | Self::Infomaniak | Self::Ovh | Self::Gandi | Self::Namecheap | Self::Dreamhost | Self::Mxroute | Self::SenderNet | Self::Sendpulse | Self::Mailjet | Self::Mailtrap | Self::ElasticEmail | Self::Smtp2go | Self::Mailersend | Self::Zeptomail | Self::Sendlayer | Self::Socketlabs | Self::SmtpCom | Self::CampaignMonitor => {
                 "SMTP has no webhooks; bounce and complaint handling is not available for this provider."
             }
             Self::Plunk | Self::Courier | Self::Loops | Self::Onesignal => {
@@ -634,7 +630,7 @@ mod tests {
 
     #[test]
     fn new_kinds_have_capabilities_logos_and_fields() {
-        assert_eq!(EmailProviderKind::all().len(), 56);
+        assert_eq!(EmailProviderKind::all().len(), 55);
         // OAuth kinds: transactional only, no webhooks, no sandbox.
         for kind in [
             EmailProviderKind::Gmail,

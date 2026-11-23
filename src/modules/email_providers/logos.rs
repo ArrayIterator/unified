@@ -129,7 +129,6 @@ mod tests {
             "email-zeptomail",
             "email-sendlayer",
             "email-socketlabs",
-            "email-pepipost",
             "email-smtp-com",
             "email-campaign-monitor",
             // Task 354: 4 generic HTTP providers.

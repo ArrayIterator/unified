@@ -495,7 +495,6 @@ pub(crate) fn validate_connection(
         | EmailProviderKind::Zeptomail
         | EmailProviderKind::Sendlayer
         | EmailProviderKind::Socketlabs
-        | EmailProviderKind::Pepipost
         | EmailProviderKind::SmtpCom
         | EmailProviderKind::CampaignMonitor => {
             if !has(&input.smtp_username) {

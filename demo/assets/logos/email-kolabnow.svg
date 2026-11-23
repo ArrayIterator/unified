@@ -1,1 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" rx="5" fill="var(--icon-primary, #2F7D32)"/><text x="12" y="12.5" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-size="8" font-weight="700" fill="var(--icon-secondary, #fff)">Ko</text></svg>
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" fill="#F3A628" role="img" viewBox="0 0 24 24">
+  <title>Kolab Now</title>
+  <g transform="translate(0,0) scale(0.042336)">
+    <path d="M334.4,511c-9.9,0-18.8-6.7-21.3-16.7c-2.9-11.8,4.2-23.7,16-26.7C412.6,446.7,471,372,471,285.8  c0-103.3-84.1-187.4-187.4-187.4s-187.5,84-187.5,187.4c0,86.2,58.3,161,141.9,181.8c11.8,2.9,19,14.9,16,26.7  c-2.9,11.8-14.9,19-26.7,16C124.2,484.5,52.1,392.2,52.1,285.8c0-127.6,103.8-231.4,231.4-231.4S515,158.1,515,285.8  c0,106.4-72.1,198.8-175.2,224.5C338,510.7,336.2,511,334.4,511z" fill="#F3A628" />
+  </g>
+</svg>
