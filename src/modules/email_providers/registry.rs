@@ -1,24 +1,23 @@
 //! email_providers - registry.
 
-use unified_core::error::{UnifiedError, UnifiedResult};
-use unified_core::hooks::{HookBus};
-use unified_core::provider_registry::valid_provider_id;
+use super::{
+    adapters::*, credentials::*, events::*, handlers::*, hooks::*, http::*, module::*,
+    provider_kinds::*, store::*, worker::*,
+};
 use async_trait::async_trait;
-use reqwest::header::{HeaderMap};
-use serde_json::{Value};
+use reqwest::header::HeaderMap;
+use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::{Arc, OnceLock, RwLock};
-use super::{events::*, provider_kinds::*, credentials::*, store::*, http::*, adapters::*, worker::*, hooks::*, handlers::*, module::*};
-
-
+use unified_core::error::{UnifiedError, UnifiedResult};
+use unified_core::hooks::HookBus;
+use unified_core::provider_registry::valid_provider_id;
 
 // ---------------------------------------------------------------------------
 // Provider registry: the plug-in point for adapters.
 // ---------------------------------------------------------------------------
-pub type EmailProviderFactory = Arc<
-    dyn Fn(&EmailConnection) -> UnifiedResult<Arc<dyn EmailProvider>> + Send + Sync,
->;
-
+pub type EmailProviderFactory =
+    Arc<dyn Fn(&EmailConnection) -> UnifiedResult<Arc<dyn EmailProvider>> + Send + Sync>;
 
 pub struct EmailProviderRegistry {
     pub(crate) factories: RwLock<HashMap<EmailProviderKind, EmailProviderFactory>>,
@@ -30,7 +29,6 @@ pub struct EmailProviderRegistry {
     /// admin stored it under.
     pub(crate) factories_by_id: RwLock<HashMap<String, EmailProviderFactory>>,
 }
-
 
 impl EmailProviderRegistry {
     pub(crate) fn new() -> Self {
@@ -137,9 +135,7 @@ impl EmailProviderRegistry {
     }
 }
 
-
 pub(crate) static REGISTRY: OnceLock<EmailProviderRegistry> = OnceLock::new();
-
 
 /// The shared registry, with the built-in adapters registered on
 /// first use.
@@ -200,21 +196,42 @@ pub fn email_provider_registry() -> &'static EmailProviderRegistry {
                 Ok(Arc::new(SmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
             }),
         );
+        registry.register_factory(
+            EmailProviderKind::Gmail,
+            Arc::new(|connection| {
+                Ok(Arc::new(OAuthSmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::Yahoo,
+            Arc::new(|connection| {
+                Ok(Arc::new(OAuthSmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::Outlook,
+            Arc::new(|connection| {
+                Ok(Arc::new(OAuthSmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::Sendmail,
+            Arc::new(|connection| {
+                Ok(Arc::new(SendmailAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
         registry
     })
 }
-
 
 /// The hook bus, shared with the adapters that delegate through hooks
 /// (SMTP). Set once by the module `init`; adapters that need it read it
 /// from here so factories stay synchronous.
 pub(crate) static EMAIL_HOOKS: OnceLock<RwLock<Option<Arc<HookBus>>>> = OnceLock::new();
 
-
 pub(crate) fn email_hooks_store() -> &'static RwLock<Option<Arc<HookBus>>> {
     EMAIL_HOOKS.get_or_init(|| RwLock::new(None))
 }
-
 
 pub(crate) fn email_hooks() -> Option<Arc<HookBus>> {
     email_hooks_store()
@@ -223,14 +240,11 @@ pub(crate) fn email_hooks() -> Option<Arc<HookBus>> {
         .clone()
 }
 
-
 pub(crate) fn emit_event(event: &str, data: Value) {
     if let Some(hooks) = email_hooks() {
         hooks.emit(event, data);
     }
 }
-
-
 
 #[async_trait]
 // ---------------------------------------------------------------------------
@@ -277,11 +291,7 @@ pub trait EmailProvider: Send + Sync {
     /// error when verification cannot be performed at all (missing
     /// secret, unsupported provider, or a missing webhook URL). A
     /// `false` or an error both mean the webhook must be rejected.
-    async fn webhook_verify(
-        &self,
-        headers: &HeaderMap,
-        raw_body: &[u8],
-    ) -> UnifiedResult<bool> {
+    async fn webhook_verify(&self, headers: &HeaderMap, raw_body: &[u8]) -> UnifiedResult<bool> {
         self.webhook_verify_secret_token(headers, raw_body)
     }
 
@@ -310,14 +320,12 @@ pub trait EmailProvider: Send + Sync {
     fn connection(&self) -> &EmailConnection;
 }
 
-
 pub(crate) fn unsupported(kind: EmailProviderKind, action: &str, capability: &str) -> UnifiedError {
     UnifiedError::bad_request(format!(
         "Provider \"{}\" does not support {action} (capability {capability} is false)",
         kind.as_str()
     ))
 }
-
 
 pub(crate) fn require_api_key(connection: &EmailConnection) -> UnifiedResult<String> {
     connection
@@ -349,6 +357,10 @@ mod tests {
             sender_email: None,
             sender_name: None,
             webhook_url: None,
+            smtp_host: None,
+            smtp_port: None,
+            smtp_tls: None,
+            smtp_username: None,
             credentials: EmailCredentials::default(),
             test_mode: false,
             enabled: true,
@@ -370,14 +382,10 @@ mod tests {
         registry
             .register_factory_by_id(
                 "acme_mail",
-                Arc::new(|_| {
-                    Err(UnifiedError::internal("factory invoked for acme_mail"))
-                }),
+                Arc::new(|_| Err(UnifiedError::internal("factory invoked for acme_mail"))),
             )
             .unwrap();
-        assert!(registry
-            .registered_ids()
-            .contains(&"acme_mail".to_string()));
+        assert!(registry.registered_ids().contains(&"acme_mail".to_string()));
         let err = registry.build_by_id("acme_mail", &connection).unwrap_err();
         assert!(err.to_string().contains("factory invoked for acme_mail"));
         let missing = registry.build_by_id("no_such", &connection).unwrap_err();

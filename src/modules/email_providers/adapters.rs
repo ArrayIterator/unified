@@ -1,18 +1,26 @@
 //! email_providers - adapters.
 
-use unified_core::error::{UnifiedError, UnifiedResult};
+use super::{
+    credentials::*, crypto::*, events::*, handlers::*, hooks::*, http::*, module::*, oauth::*,
+    provider_kinds::*, registry::*, store::*, worker::*,
+};
 use async_trait::async_trait;
 use base64::Engine;
-use chrono::{Utc};
+use chrono::{DateTime, Utc};
 use hmac::{Hmac, Mac};
-use reqwest::header::{HeaderMap, AUTHORIZATION, CONTENT_TYPE};
-use serde_json::{json, Value};
+use lettre::message::header::ContentType;
+use lettre::message::{Mailbox, Message as LettreMessage, MultiPart};
+use lettre::transport::smtp::authentication::{Credentials as SmtpCredentials, Mechanism};
+use lettre::transport::smtp::client::{Tls, TlsParameters};
+use lettre::{AsyncSmtpTransport, AsyncTransport, Tokio1Executor};
+use reqwest::header::{AUTHORIZATION, CONTENT_TYPE, HeaderMap};
+use serde_json::{Value, json};
 use sha1::Sha1;
 use std::collections::HashMap;
+use std::sync::Mutex;
+use std::time::Duration;
+use unified_core::error::{UnifiedError, UnifiedResult};
 use url::Url;
-use super::{events::*, provider_kinds::*, credentials::*, store::*, http::*, registry::*, worker::*, hooks::*, handlers::*, module::*};
-
-
 
 // ---------------------------------------------------------------------------
 // Adapters.
@@ -36,11 +44,9 @@ macro_rules! http_adapter {
     };
 }
 
-
 // --- Mailchimp Transactional (Mandrill) ------------------------------------
 
 http_adapter!(MailchimpAdapter);
-
 
 #[async_trait]
 impl EmailProvider for MailchimpAdapter {
@@ -149,11 +155,7 @@ impl EmailProvider for MailchimpAdapter {
         })
     }
 
-    async fn webhook_verify(
-        &self,
-        headers: &HeaderMap,
-        raw_body: &[u8],
-    ) -> UnifiedResult<bool> {
+    async fn webhook_verify(&self, headers: &HeaderMap, raw_body: &[u8]) -> UnifiedResult<bool> {
         let secret = self
             .connection
             .credentials
@@ -188,16 +190,15 @@ impl EmailProvider for MailchimpAdapter {
         let mut mac = Hmac::<Sha1>::new_from_slice(secret.as_bytes())
             .map_err(|_| UnifiedError::internal("Invalid Mandrill webhook key"))?;
         mac.update(signed.as_bytes());
-        let expected = base64::engine::general_purpose::STANDARD.encode(mac.finalize().into_bytes());
+        let expected =
+            base64::engine::general_purpose::STANDARD.encode(mac.finalize().into_bytes());
         Ok(signatures_equal(signature, &expected))
     }
 }
 
-
 // --- Brevo -----------------------------------------------------------------
 
 http_adapter!(BrevoAdapter);
-
 
 #[async_trait]
 impl EmailProvider for BrevoAdapter {
@@ -225,7 +226,10 @@ impl EmailProvider for BrevoAdapter {
             kind: self.kind().as_str().to_string(),
             reachable: true,
             latency_ms: started.elapsed().as_millis() as u64,
-            account: body.get("email").and_then(|v| v.as_str()).map(str::to_string),
+            account: body
+                .get("email")
+                .and_then(|v| v.as_str())
+                .map(str::to_string),
             detail: "Brevo account endpoint answered".to_string(),
         })
     }
@@ -281,11 +285,9 @@ impl EmailProvider for BrevoAdapter {
     }
 }
 
-
 // --- SendGrid ---------------------------------------------------------------
 
 http_adapter!(SendGridAdapter);
-
 
 #[async_trait]
 impl EmailProvider for SendGridAdapter {
@@ -342,9 +344,7 @@ impl EmailProvider for SendGridAdapter {
             content.push(json!({ "type": "text/html", "value": html }));
         }
         if content.is_empty() {
-            return Err(UnifiedError::bad_request(
-                "Provide body_text or body_html",
-            ));
+            return Err(UnifiedError::bad_request("Provide body_text or body_html"));
         }
         let mut payload = json!({
             "personalizations": [{ "to": [{ "email": message.to }], "subject": message.subject }],
@@ -399,14 +399,12 @@ impl EmailProvider for SendGridAdapter {
     }
 }
 
-
 // --- Mailgun ----------------------------------------------------------------
 
 pub struct MailgunAdapter {
     pub(crate) connection: EmailConnection,
     pub(crate) client: reqwest::Client,
 }
-
 
 impl MailgunAdapter {
     pub(crate) fn new(connection: &EmailConnection) -> UnifiedResult<Self> {
@@ -438,7 +436,6 @@ impl MailgunAdapter {
             })
     }
 }
-
 
 #[async_trait]
 impl EmailProvider for MailgunAdapter {
@@ -545,11 +542,7 @@ impl EmailProvider for MailgunAdapter {
         })
     }
 
-    async fn webhook_verify(
-        &self,
-        _headers: &HeaderMap,
-        raw_body: &[u8],
-    ) -> UnifiedResult<bool> {
+    async fn webhook_verify(&self, _headers: &HeaderMap, raw_body: &[u8]) -> UnifiedResult<bool> {
         let secret = self
             .connection
             .credentials
@@ -590,11 +583,9 @@ impl EmailProvider for MailgunAdapter {
     }
 }
 
-
 // --- Postmark ---------------------------------------------------------------
 
 http_adapter!(PostmarkAdapter);
-
 
 #[async_trait]
 impl EmailProvider for PostmarkAdapter {
@@ -625,7 +616,10 @@ impl EmailProvider for PostmarkAdapter {
             kind: self.kind().as_str().to_string(),
             reachable: true,
             latency_ms: started.elapsed().as_millis() as u64,
-            account: body.get("Name").and_then(|v| v.as_str()).map(str::to_string),
+            account: body
+                .get("Name")
+                .and_then(|v| v.as_str())
+                .map(str::to_string),
             detail: "Postmark server endpoint answered".to_string(),
         })
     }
@@ -677,7 +671,10 @@ impl EmailProvider for PostmarkAdapter {
                 .get("Message")
                 .and_then(|v| v.as_str())
                 .unwrap_or("Postmark rejected the message");
-            return Err(UnifiedError::new(format!("Postmark rejected the message: {reason}"), 502));
+            return Err(UnifiedError::new(
+                format!("Postmark rejected the message: {reason}"),
+                502,
+            ));
         }
         Ok(SendResult {
             provider_message_id: body
@@ -691,14 +688,12 @@ impl EmailProvider for PostmarkAdapter {
     }
 }
 
-
 // --- Amazon SES (SigV4) -----------------------------------------------------
 
 pub struct SesAdapter {
     pub(crate) connection: EmailConnection,
     pub(crate) client: reqwest::Client,
 }
-
 
 impl SesAdapter {
     pub(crate) fn new(connection: &EmailConnection) -> UnifiedResult<Self> {
@@ -725,11 +720,7 @@ impl SesAdapter {
         let region = self.region()?;
         let url = Url::parse(&format!("https://email.{region}.amazonaws.com/"))
             .map_err(|_| UnifiedError::internal("Invalid SES endpoint URL"))?;
-        if !url
-            .host_str()
-            .unwrap_or("")
-            .ends_with(".amazonaws.com")
-        {
+        if !url.host_str().unwrap_or("").ends_with(".amazonaws.com") {
             return Err(UnifiedError::bad_request(
                 "Refusing SES request to a non-Amazon host",
             ));
@@ -809,7 +800,6 @@ impl SesAdapter {
     }
 }
 
-
 pub(crate) fn xml_tag(body: &str, tag: &str) -> Option<String> {
     let open = format!("<{tag}>");
     let close = format!("</{tag}>");
@@ -817,7 +807,6 @@ pub(crate) fn xml_tag(body: &str, tag: &str) -> Option<String> {
     let end = body[start..].find(&close)? + start;
     Some(body[start..end].to_string())
 }
-
 
 #[async_trait]
 impl EmailProvider for SesAdapter {
@@ -870,7 +859,10 @@ impl EmailProvider for SesAdapter {
             ("Action".to_string(), "SendEmail".to_string()),
             ("Version".to_string(), "2010-12-01".to_string()),
             ("Source".to_string(), source),
-            ("Destination.ToAddresses.member.1".to_string(), message.to.clone()),
+            (
+                "Destination.ToAddresses.member.1".to_string(),
+                message.to.clone(),
+            ),
             ("Message.Subject.Data".to_string(), message.subject.clone()),
             ("Message.Subject.Charset".to_string(), "UTF-8".to_string()),
         ];
@@ -886,14 +878,8 @@ impl EmailProvider for SesAdapter {
             params.push(("ReplyToAddresses.member.1".to_string(), reply_to.clone()));
         }
         for (index, (key, value)) in message.metadata.iter().enumerate() {
-            params.push((
-                format!("Tags.member.{}.Name", index + 1),
-                key.clone(),
-            ));
-            params.push((
-                format!("Tags.member.{}.Value", index + 1),
-                value.clone(),
-            ));
+            params.push((format!("Tags.member.{}.Name", index + 1), key.clone()));
+            params.push((format!("Tags.member.{}.Value", index + 1), value.clone()));
         }
         let body = self.ses_call(&params).await?;
         Ok(SendResult {
@@ -905,11 +891,9 @@ impl EmailProvider for SesAdapter {
     }
 }
 
-
 // --- Resend ------------------------------------------------------------------
 
 http_adapter!(ResendAdapter);
-
 
 #[async_trait]
 impl EmailProvider for ResendAdapter {
@@ -1000,11 +984,7 @@ impl EmailProvider for ResendAdapter {
         })
     }
 
-    async fn webhook_verify(
-        &self,
-        headers: &HeaderMap,
-        raw_body: &[u8],
-    ) -> UnifiedResult<bool> {
+    async fn webhook_verify(&self, headers: &HeaderMap, raw_body: &[u8]) -> UnifiedResult<bool> {
         // Svix-signed webhook: headers svix-id, svix-timestamp,
         // svix-signature ("v1,<base64 hmac>"). The signing secret is
         // base64-encoded and may carry a "whsec_" prefix.
@@ -1051,12 +1031,9 @@ impl EmailProvider for ResendAdapter {
         } else {
             return Ok(false);
         }
-        let signed = format!(
-            "{id}.{timestamp}.{}",
-            String::from_utf8_lossy(raw_body)
-        );
-        let expected = base64::engine::general_purpose::STANDARD
-            .encode(hmac_sha256(&key, signed.as_bytes()));
+        let signed = format!("{id}.{timestamp}.{}", String::from_utf8_lossy(raw_body));
+        let expected =
+            base64::engine::general_purpose::STANDARD.encode(hmac_sha256(&key, signed.as_bytes()));
         for candidate in signatures.split_whitespace() {
             if let Some(value) = candidate.strip_prefix("v1,") {
                 if signatures_equal(value, &expected) {
@@ -1068,14 +1045,12 @@ impl EmailProvider for ResendAdapter {
     }
 }
 
-
 // --- SparkPost ---------------------------------------------------------------
 
 pub struct SparkPostAdapter {
     pub(crate) connection: EmailConnection,
     pub(crate) client: reqwest::Client,
 }
-
 
 impl SparkPostAdapter {
     pub(crate) fn new(connection: &EmailConnection) -> UnifiedResult<Self> {
@@ -1094,7 +1069,6 @@ impl SparkPostAdapter {
         Url::parse(host).map_err(|_| UnifiedError::internal("Invalid SparkPost API URL"))
     }
 }
-
 
 #[async_trait]
 impl EmailProvider for SparkPostAdapter {
@@ -1193,7 +1167,6 @@ impl EmailProvider for SparkPostAdapter {
     }
 }
 
-
 // --- SMTP (delegates to the Mail Manager) ------------------------------------
 //
 // Delivery goes through the `mail.send_requested` hook owned by the
@@ -1201,19 +1174,159 @@ impl EmailProvider for SparkPostAdapter {
 // settings, and the send log. This adapter never opens an SMTP
 // connection itself.
 
+// ---------------------------------------------------------------------------
+// Shared SMTP-family helpers (SMTP, OAuth, sendmail).
+// ---------------------------------------------------------------------------
+
+/// Build the lettre message for an SMTP-family send, mirroring
+/// `mail/service.rs::build_message`: multipart alternative when
+/// both bodies exist, plain text or HTML alone otherwise.
+/// `default_from` is the last-resort sender (`unified@localhost`
+/// for local sendmail); without one, a missing sender is an honest
+/// 400 instead of a silently wrong From. Addresses are parsed with
+/// lettre's own parser, which also rejects header-injecting
+/// newlines.
+pub(crate) fn build_lettre_message(
+    connection: &EmailConnection,
+    message: &EmailMessage,
+    default_from: Option<&str>,
+) -> UnifiedResult<LettreMessage> {
+    let (from, from_name) = message.sender(connection);
+    let from = if from.trim().is_empty() {
+        default_from.unwrap_or("").to_string()
+    } else {
+        from
+    };
+    if from.trim().is_empty() {
+        return Err(UnifiedError::bad_request(
+            "A sender email is required (set sender_email on the connection or from on the message)",
+        ));
+    }
+    let from_address: lettre::Address = from
+        .trim()
+        .parse()
+        .map_err(|_| UnifiedError::bad_request(format!("Invalid sender email address: {from}")))?;
+    let from_mailbox = Mailbox::new(
+        from_name.filter(|name| !name.trim().is_empty()),
+        from_address,
+    );
+    let to = message.to.trim().parse::<Mailbox>().map_err(|_| {
+        UnifiedError::bad_request(format!("Invalid recipient email address: {}", message.to))
+    })?;
+    let mut builder = LettreMessage::builder()
+        .from(from_mailbox)
+        .to(to)
+        .subject(message.subject.as_str());
+    if let Some(reply_to) = message
+        .reply_to
+        .as_deref()
+        .filter(|value| !value.trim().is_empty())
+    {
+        let reply_mailbox = reply_to.parse::<Mailbox>().map_err(|_| {
+            UnifiedError::bad_request(format!("Invalid reply-to email address: {reply_to}"))
+        })?;
+        builder = builder.reply_to(reply_mailbox);
+    }
+    match (&message.body_text, &message.body_html) {
+        (Some(text), Some(html)) => builder
+            .multipart(MultiPart::alternative_plain_html(
+                text.clone(),
+                html.clone(),
+            ))
+            .map_err(|error| UnifiedError::bad_request(format!("Cannot build message: {error}"))),
+        (Some(text), None) => builder
+            .body(text.clone())
+            .map_err(|error| UnifiedError::bad_request(format!("Cannot build message: {error}"))),
+        (None, Some(html)) => builder
+            .header(ContentType::TEXT_HTML)
+            .body(html.clone())
+            .map_err(|error| UnifiedError::bad_request(format!("Cannot build message: {error}"))),
+        (None, None) => Err(UnifiedError::bad_request(
+            "Provide body_text or body_html (or a template_id that renders one)",
+        )),
+    }
+}
+
+/// Build an async SMTP transport for explicit server settings.
+/// `tls_mode`: `"starttls"` (default, port 587), `"implicit"`
+/// (port 465), `"none"` (plaintext, local relays only). STARTTLS is
+/// REQUIRED, never opportunistic: a server that cannot upgrade
+/// fails the connection instead of silently sending plaintext.
+/// Credentials are only attached when a username is configured.
+pub(crate) fn smtp_transport(
+    host: &str,
+    port: u16,
+    tls_mode: &str,
+    username: Option<&str>,
+    password: Option<String>,
+) -> UnifiedResult<AsyncSmtpTransport<Tokio1Executor>> {
+    let tls_parameters = |host: &str| {
+        TlsParameters::new(host.to_string())
+            .map_err(|error| UnifiedError::bad_request(format!("Invalid TLS parameters: {error}")))
+    };
+    let tls = match tls_mode {
+        "implicit" => Tls::Wrapper(tls_parameters(host)?),
+        "none" => Tls::None,
+        _ => Tls::Required(tls_parameters(host)?),
+    };
+    let mut builder = AsyncSmtpTransport::<Tokio1Executor>::builder_dangerous(host)
+        .port(port)
+        .tls(tls)
+        .timeout(Some(Duration::from_secs(DEFAULT_TIMEOUT_SECS)));
+    if let Some(username) = username.filter(|value| !value.trim().is_empty()) {
+        builder = builder.credentials(SmtpCredentials::new(
+            username.to_string(),
+            password.unwrap_or_default(),
+        ));
+    }
+    Ok(builder.build())
+}
+
+// --- Generic SMTP (direct, per-connection server settings) -----------
+
 pub struct SmtpAdapter {
     pub(crate) connection: EmailConnection,
 }
 
-
 impl SmtpAdapter {
     pub(crate) fn new(connection: &EmailConnection) -> UnifiedResult<Self> {
+        // Validate the server settings up front (host, TLS
+        // parameters, decryptable password) so a broken connection
+        // is rejected at build time, not at the first send.
+        let _ = Self::transport(connection)?;
         Ok(Self {
             connection: connection.clone(),
         })
     }
-}
 
+    fn transport(
+        connection: &EmailConnection,
+    ) -> UnifiedResult<AsyncSmtpTransport<Tokio1Executor>> {
+        let host = connection
+            .smtp_host
+            .clone()
+            .filter(|value| !value.trim().is_empty())
+            .ok_or_else(|| {
+                UnifiedError::bad_request(format!(
+                    "Connection \"{}\" has no smtp_host configured",
+                    connection.name
+                ))
+            })?;
+        let port = connection.smtp_port.unwrap_or(587);
+        let tls_mode = connection
+            .smtp_tls
+            .clone()
+            .unwrap_or_else(|| "starttls".to_string());
+        let password = decrypt_optional(&connection.credentials.password)?;
+        smtp_transport(
+            &host,
+            port,
+            &tls_mode,
+            connection.smtp_username.as_deref(),
+            password,
+        )
+    }
+}
 
 #[async_trait]
 impl EmailProvider for SmtpAdapter {
@@ -1225,29 +1338,49 @@ impl EmailProvider for SmtpAdapter {
         &self.connection
     }
 
+    /// A real check now: the transport connects and issues NOOP.
+    /// A refused or unreachable server is `reachable: false` with
+    /// the transport error as the detail — never a 500, because a
+    /// failed connection test is a result, not a handler error.
     async fn test_connection(&self) -> UnifiedResult<ConnectionTestResult> {
         let started = std::time::Instant::now();
-        let Some(hooks) = email_hooks() else {
-            return Ok(ConnectionTestResult {
+        let host = self.connection.smtp_host.clone().unwrap_or_default();
+        let port = self.connection.smtp_port.unwrap_or(587);
+        let transport = match Self::transport(&self.connection) {
+            Ok(transport) => transport,
+            Err(error) => {
+                return Ok(ConnectionTestResult {
+                    kind: self.kind().as_str().to_string(),
+                    reachable: false,
+                    latency_ms: started.elapsed().as_millis() as u64,
+                    account: None,
+                    detail: error.message,
+                });
+            }
+        };
+        match transport.test_connection().await {
+            Ok(true) => Ok(ConnectionTestResult {
+                kind: self.kind().as_str().to_string(),
+                reachable: true,
+                latency_ms: started.elapsed().as_millis() as u64,
+                account: None,
+                detail: format!("SMTP {host}:{port} answered NOOP"),
+            }),
+            Ok(false) => Ok(ConnectionTestResult {
                 kind: self.kind().as_str().to_string(),
                 reachable: false,
                 latency_ms: started.elapsed().as_millis() as u64,
                 account: None,
-                detail: "Mail Manager hook bus is not available".to_string(),
-            });
-        };
-        let registered = hooks.has(EVENT_MAIL_SEND_REQUESTED);
-        Ok(ConnectionTestResult {
-            kind: self.kind().as_str().to_string(),
-            reachable: registered,
-            latency_ms: started.elapsed().as_millis() as u64,
-            account: None,
-            detail: if registered {
-                "Mail Manager answers mail.send_requested; use test-send for a real delivery check".to_string()
-            } else {
-                "Mail Manager does not answer mail.send_requested (mail module is not registered)".to_string()
-            },
-        })
+                detail: format!("SMTP {host}:{port} connected but did not answer NOOP"),
+            }),
+            Err(error) => Ok(ConnectionTestResult {
+                kind: self.kind().as_str().to_string(),
+                reachable: false,
+                latency_ms: started.elapsed().as_millis() as u64,
+                account: None,
+                detail: format!("SMTP connection to {host}:{port} failed: {error}"),
+            }),
+        }
     }
 
     async fn send(&self, message: &EmailMessage) -> UnifiedResult<SendResult> {
@@ -1255,57 +1388,420 @@ impl EmailProvider for SmtpAdapter {
         if message.test_mode {
             return Ok(simulated_result("smtp"));
         }
-        let Some(hooks) = email_hooks() else {
-            return Err(UnifiedError::new(
-                "Mail Manager is unavailable (no hook bus)",
-                503,
-            ));
+        let transport = Self::transport(&self.connection)?;
+        let lettre_message = build_lettre_message(&self.connection, message, None)?;
+        transport
+            .send(lettre_message)
+            .await
+            .map_err(|error| UnifiedError::new(format!("SMTP delivery failed: {error}"), 502))?;
+        Ok(SendResult {
+            provider_message_id: None,
+            accepted: true,
+            test_mode: false,
+            detail: format!(
+                "Accepted by SMTP {}:{}",
+                self.connection.smtp_host.clone().unwrap_or_default(),
+                self.connection.smtp_port.unwrap_or(587)
+            ),
+        })
+    }
+
+    async fn webhook_verify(&self, _headers: &HeaderMap, _raw_body: &[u8]) -> UnifiedResult<bool> {
+        Err(unsupported(self.kind(), "webhook verification", "webhooks"))
+    }
+}
+
+// --- OAuth account providers (Gmail / Yahoo / Outlook) ---------------
+
+/// The tokens one OAuth connection currently holds. The adapter
+/// refreshes the access token on first use when it is expired and
+/// persists the rotated tokens back to the stored connection.
+#[derive(Debug, Clone, Default)]
+struct OAuthTokens {
+    access_token: Option<String>,
+    refresh_token: Option<String>,
+    expires_at: Option<DateTime<Utc>>,
+}
+
+/// One adapter for all three OAuth account providers: the only
+/// difference is the static config (endpoints, scopes, SMTP host).
+/// Delivery is SMTP + XOAUTH2 on port 587 with required STARTTLS;
+/// the access token is the password and the sender address is the
+/// XOAUTH2 identity.
+pub struct OAuthSmtpAdapter {
+    connection: EmailConnection,
+    config: &'static OAuthProviderConfig,
+    tokens: Mutex<OAuthTokens>,
+}
+
+impl OAuthSmtpAdapter {
+    pub(crate) fn new(connection: &EmailConnection) -> UnifiedResult<Self> {
+        let config = connection.kind.oauth_config().ok_or_else(|| {
+            UnifiedError::internal(format!(
+                "No OAuth configuration for provider kind \"{}\"",
+                connection.kind.as_str()
+            ))
+        })?;
+        let access_token = decrypt_optional(&connection.credentials.access_token)?;
+        let refresh_token = decrypt_optional(&connection.credentials.refresh_token)?;
+        Ok(Self {
+            connection: connection.clone(),
+            config,
+            tokens: Mutex::new(OAuthTokens {
+                access_token,
+                refresh_token,
+                expires_at: connection.credentials.access_token_expires_at,
+            }),
+        })
+    }
+
+    /// A fresh access token: the stored one when it is still valid,
+    /// otherwise a refresh from the stored refresh token (persisted
+    /// back, rotated refresh token included). Errors honestly when
+    /// the account was never linked — that is a setup error, not a
+    /// send failure.
+    async fn ensure_fresh_token(&self) -> UnifiedResult<String> {
+        {
+            let tokens = self.tokens.lock().expect("oauth tokens lock poisoned");
+            if let Some(access_token) = &tokens.access_token {
+                if !access_token_expired(tokens.expires_at) {
+                    return Ok(access_token.clone());
+                }
+            }
+        }
+        let (client_id, client_secret, refresh_token) = {
+            let tokens = self.tokens.lock().expect("oauth tokens lock poisoned");
+            let refresh_token = tokens.refresh_token.clone().ok_or_else(|| {
+                UnifiedError::unprocessable(format!(
+                    "Connection \"{}\" is not linked to a {} account yet; link it from the OAuth authorize endpoint",
+                    self.connection.name,
+                    self.connection.kind.as_str()
+                ))
+            })?;
+            let client_id = self
+                .connection
+                .credentials
+                .client_id
+                .clone()
+                .unwrap_or_default();
+            let client_secret =
+                decrypt_optional(&self.connection.credentials.client_secret)?.unwrap_or_default();
+            (client_id, client_secret, refresh_token)
         };
-        let (from, _) = message.sender(&self.connection);
-        let answer = hooks.emit(
-            EVENT_MAIL_SEND_REQUESTED,
+        let refreshed = refresh_access_token(
+            self.connection.kind,
+            &client_id,
+            &client_secret,
+            &refresh_token,
+        )
+        .await?;
+        let new_access = refreshed.access_token.clone();
+        let new_refresh = refreshed.refresh_token.clone();
+        let new_expires = refreshed.expires_at();
+        {
+            let mut tokens = self.tokens.lock().expect("oauth tokens lock poisoned");
+            tokens.access_token = Some(new_access.clone());
+            if let Some(rotated) = &new_refresh {
+                tokens.refresh_token = Some(rotated.clone());
+            }
+            tokens.expires_at = Some(new_expires);
+        }
+        self.persist_tokens(&new_access, new_refresh.as_deref(), Some(new_expires))?;
+        emit_event(
+            EVENT_EMAIL_PROVIDER_OAUTH_REFRESHED,
             json!({
-                "to": message.to,
-                "subject": message.subject,
-                "body_text": message.body_text,
-                "body_html": message.body_html,
-                "template_id": message.template_id,
-                "variables": message.variables,
-                "from": from,
+                "connection_id": self.connection.id.to_string(),
+                "kind": self.connection.kind.as_str(),
+                "expires_at": new_expires.to_rfc3339(),
             }),
         );
-        match answer.results.first() {
-            Some(result) if result.get("error").is_none() => Ok(SendResult {
-                provider_message_id: result
-                    .get("job_id")
-                    .and_then(|value| value.as_str())
-                    .map(str::to_string),
-                accepted: true,
-                test_mode: false,
-                detail: "Mail Manager accepted the message for SMTP delivery".to_string(),
-            }),
-            Some(result) => {
-                let reason = result
-                    .get("error")
-                    .and_then(|value| value.as_str())
-                    .unwrap_or("mail service rejected the request");
-                Err(UnifiedError::new(
-                    format!("Mail Manager rejected the message: {reason}"),
-                    502,
-                ))
+        Ok(new_access)
+    }
+
+    /// Write refreshed tokens back to the stored connection,
+    /// encrypted. A missing stored connection (deleted mid-flight)
+    /// is not an error: the in-memory tokens are already updated.
+    fn persist_tokens(
+        &self,
+        access_token: &str,
+        refresh_token: Option<&str>,
+        expires_at: Option<DateTime<Utc>>,
+    ) -> UnifiedResult<()> {
+        let encrypted_access = encrypt_secret(access_token)?;
+        let encrypted_refresh = match refresh_token {
+            Some(token) => Some(encrypt_secret(token)?),
+            None => None,
+        };
+        if let Some(mut stored) = connections_store().get_mut(&self.connection.id) {
+            stored.credentials.access_token = Some(encrypted_access);
+            if let Some(encrypted) = encrypted_refresh {
+                stored.credentials.refresh_token = Some(encrypted);
             }
-            None => Err(UnifiedError::new(
-                "Mail Manager did not answer the mail.send_requested event: no mail handler is registered",
-                503,
-            )),
+            stored.credentials.access_token_expires_at = expires_at;
+            stored.updated_at = Utc::now();
+        }
+        Ok(())
+    }
+
+    fn transport(
+        &self,
+        access_token: &str,
+        sender_email: &str,
+    ) -> UnifiedResult<AsyncSmtpTransport<Tokio1Executor>> {
+        let parameters =
+            TlsParameters::new(self.config.smtp_host.to_string()).map_err(|error| {
+                UnifiedError::bad_request(format!("Invalid TLS parameters: {error}"))
+            })?;
+        Ok(
+            AsyncSmtpTransport::<Tokio1Executor>::builder_dangerous(self.config.smtp_host)
+                .port(self.config.smtp_port)
+                .tls(Tls::Required(parameters))
+                .credentials(SmtpCredentials::new(
+                    sender_email.to_string(),
+                    access_token.to_string(),
+                ))
+                .authentication(vec![Mechanism::Xoauth2])
+                .timeout(Some(Duration::from_secs(DEFAULT_TIMEOUT_SECS)))
+                .build(),
+        )
+    }
+}
+
+#[async_trait]
+impl EmailProvider for OAuthSmtpAdapter {
+    fn kind(&self) -> EmailProviderKind {
+        self.connection.kind
+    }
+
+    fn connection(&self) -> &EmailConnection {
+        &self.connection
+    }
+
+    async fn test_connection(&self) -> UnifiedResult<ConnectionTestResult> {
+        let started = std::time::Instant::now();
+        let from = self.connection.sender_email.clone().unwrap_or_default();
+        let account = if from.is_empty() {
+            None
+        } else {
+            Some(from.clone())
+        };
+        let token = match self.ensure_fresh_token().await {
+            Ok(token) => token,
+            Err(error) => {
+                return Ok(ConnectionTestResult {
+                    kind: self.kind().as_str().to_string(),
+                    reachable: false,
+                    latency_ms: started.elapsed().as_millis() as u64,
+                    account,
+                    detail: error.message,
+                });
+            }
+        };
+        let transport = match self.transport(&token, &from) {
+            Ok(transport) => transport,
+            Err(error) => {
+                return Ok(ConnectionTestResult {
+                    kind: self.kind().as_str().to_string(),
+                    reachable: false,
+                    latency_ms: started.elapsed().as_millis() as u64,
+                    account,
+                    detail: error.message,
+                });
+            }
+        };
+        match transport.test_connection().await {
+            Ok(true) => Ok(ConnectionTestResult {
+                kind: self.kind().as_str().to_string(),
+                reachable: true,
+                latency_ms: started.elapsed().as_millis() as u64,
+                account,
+                detail: format!(
+                    "{} SMTP {}:{} answered NOOP",
+                    self.connection.kind.as_str(),
+                    self.config.smtp_host,
+                    self.config.smtp_port
+                ),
+            }),
+            Ok(false) => Ok(ConnectionTestResult {
+                kind: self.kind().as_str().to_string(),
+                reachable: false,
+                latency_ms: started.elapsed().as_millis() as u64,
+                account,
+                detail: format!(
+                    "{} SMTP connected but did not answer NOOP",
+                    self.connection.kind.as_str()
+                ),
+            }),
+            Err(error) => Ok(ConnectionTestResult {
+                kind: self.kind().as_str().to_string(),
+                reachable: false,
+                latency_ms: started.elapsed().as_millis() as u64,
+                account,
+                detail: format!(
+                    "{} SMTP connection failed: {error}",
+                    self.connection.kind.as_str()
+                ),
+            }),
         }
     }
 
-    async fn webhook_verify(
-        &self,
-        _headers: &HeaderMap,
-        _raw_body: &[u8],
-    ) -> UnifiedResult<bool> {
+    async fn send(&self, message: &EmailMessage) -> UnifiedResult<SendResult> {
+        validate_email_address(&message.to)?;
+        if message.test_mode {
+            return Ok(simulated_result(self.connection.kind.as_str()));
+        }
+        let (from, _) = message.sender(&self.connection);
+        if from.trim().is_empty() {
+            return Err(UnifiedError::bad_request(
+                "A sender email is required (set sender_email on the connection or from on the message)",
+            ));
+        }
+        let token = self.ensure_fresh_token().await?;
+        let transport = self.transport(&token, &from)?;
+        let lettre_message = build_lettre_message(&self.connection, message, None)?;
+        transport.send(lettre_message).await.map_err(|error| {
+            UnifiedError::new(
+                format!("{} delivery failed: {error}", self.connection.kind.as_str()),
+                502,
+            )
+        })?;
+        Ok(SendResult {
+            provider_message_id: None,
+            accepted: true,
+            test_mode: false,
+            detail: format!("Accepted by {} SMTP", self.connection.kind.as_str()),
+        })
+    }
+
+    async fn webhook_verify(&self, _headers: &HeaderMap, _raw_body: &[u8]) -> UnifiedResult<bool> {
+        Err(unsupported(self.kind(), "webhook verification", "webhooks"))
+    }
+}
+
+// --- Local sendmail ------------------------------------------------------
+
+pub struct SendmailAdapter {
+    pub(crate) connection: EmailConnection,
+}
+
+impl SendmailAdapter {
+    pub(crate) fn new(connection: &EmailConnection) -> UnifiedResult<Self> {
+        Ok(Self {
+            connection: connection.clone(),
+        })
+    }
+
+    /// Locate the local sendmail binary (same probe as the mail
+    /// module: `/usr/sbin/sendmail`, then `/usr/bin/sendmail`).
+    pub(crate) fn sendmail_binary() -> Option<&'static str> {
+        for candidate in ["/usr/sbin/sendmail", "/usr/bin/sendmail"] {
+            if std::path::Path::new(candidate).exists() {
+                return Some(candidate);
+            }
+        }
+        None
+    }
+}
+
+#[async_trait]
+impl EmailProvider for SendmailAdapter {
+    fn kind(&self) -> EmailProviderKind {
+        EmailProviderKind::Sendmail
+    }
+
+    fn connection(&self) -> &EmailConnection {
+        &self.connection
+    }
+
+    /// The connection test for sendmail is the binary probe: no
+    /// credentials exist to verify, so presence of the binary is
+    /// the honest signal. A missing binary is `reachable: false`,
+    /// never a 500.
+    async fn test_connection(&self) -> UnifiedResult<ConnectionTestResult> {
+        let started = std::time::Instant::now();
+        match Self::sendmail_binary() {
+            Some(binary) => Ok(ConnectionTestResult {
+                kind: self.kind().as_str().to_string(),
+                reachable: true,
+                latency_ms: started.elapsed().as_millis() as u64,
+                account: None,
+                detail: format!("Sendmail binary found at {binary}"),
+            }),
+            None => Ok(ConnectionTestResult {
+                kind: self.kind().as_str().to_string(),
+                reachable: false,
+                latency_ms: started.elapsed().as_millis() as u64,
+                account: None,
+                detail: "No sendmail binary found at /usr/sbin/sendmail or /usr/bin/sendmail; install a local MTA (for example postfix) to use this provider".to_string(),
+            }),
+        }
+    }
+
+    async fn send(&self, message: &EmailMessage) -> UnifiedResult<SendResult> {
+        validate_email_address(&message.to)?;
+        if message.test_mode {
+            return Ok(simulated_result("sendmail"));
+        }
+        let binary = Self::sendmail_binary().ok_or_else(|| {
+            UnifiedError::new(
+                "No sendmail binary found at /usr/sbin/sendmail or /usr/bin/sendmail",
+                502,
+            )
+        })?;
+        let lettre_message =
+            build_lettre_message(&self.connection, message, Some("unified@localhost"))?;
+        // Spawning the binary directly (std::process::Command) instead
+        // of lettre's SendmailTransport: that transport needs the
+        // `sendmail-transport` feature, which pulls the async-std
+        // tree into the lock for one trivial spawn. The direct spawn
+        // is the same behaviour — `-t` reads recipients from the
+        // message headers, `-i` keeps dots in the body literal —
+        // with no new dependency. Blocking process I/O runs off the
+        // async worker in spawn_blocking, mirroring the mail module.
+        let command = binary.to_string();
+        let formatted = lettre_message.formatted();
+        let sent = tokio::task::spawn_blocking(move || {
+            use std::io::Write;
+            let mut child = std::process::Command::new(&command)
+                .arg("-t")
+                .arg("-i")
+                .stdin(std::process::Stdio::piped())
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::piped())
+                .spawn()
+                .map_err(|error| format!("Failed to spawn {command}: {error}"))?;
+            if let Some(mut stdin) = child.stdin.take() {
+                stdin
+                    .write_all(&formatted)
+                    .map_err(|error| format!("Failed to write the message to {command}: {error}"))?;
+            }
+            let output = child
+                .wait_with_output()
+                .map_err(|error| format!("Failed to wait for {command}: {error}"))?;
+            if output.status.success() {
+                Ok(())
+            } else {
+                Err(format!(
+                    "{command} exited with {}: {}",
+                    output.status,
+                    String::from_utf8_lossy(&output.stderr).trim()
+                ))
+            }
+        })
+        .await
+        .map_err(|error| {
+            UnifiedError::internal(format!("Sendmail delivery worker failed: {error}"))
+        })?;
+        sent.map_err(|error| UnifiedError::new(format!("Sendmail delivery failed: {error}"), 502))?;
+        Ok(SendResult {
+            provider_message_id: None,
+            accepted: true,
+            test_mode: false,
+            detail: format!("Accepted by local sendmail ({binary})"),
+        })
+    }
+
+    async fn webhook_verify(&self, _headers: &HeaderMap, _raw_body: &[u8]) -> UnifiedResult<bool> {
         Err(unsupported(self.kind(), "webhook verification", "webhooks"))
     }
 }
@@ -1326,11 +1822,21 @@ mod tests {
             sender_email: None,
             sender_name: None,
             webhook_url: None,
+            smtp_host: None,
+            smtp_port: None,
+            smtp_tls: None,
+            smtp_username: None,
             credentials: EmailCredentials {
                 api_key: Some("key-test".to_string()),
                 access_key_id: None,
                 secret_access_key: None,
                 webhook_secret: Some("webhook-secret".to_string()),
+                password: None,
+                client_id: None,
+                client_secret: None,
+                refresh_token: None,
+                access_token: None,
+                access_token_expires_at: None,
             },
             test_mode: false,
             enabled: true,
@@ -1338,6 +1844,83 @@ mod tests {
             last_status: None,
             created_at: now,
             updated_at: now,
+        }
+    }
+
+    fn smtp_connection() -> EmailConnection {
+        let now = Utc::now();
+        EmailConnection {
+            id: Uuid::now_v7(),
+            name: "test-smtp".to_string(),
+            kind: EmailProviderKind::Smtp,
+            domain: None,
+            region: None,
+            sender_email: Some("news@example.com".to_string()),
+            sender_name: Some("Example News".to_string()),
+            webhook_url: None,
+            smtp_host: Some("smtp.example.com".to_string()),
+            smtp_port: Some(587),
+            smtp_tls: Some("starttls".to_string()),
+            smtp_username: None,
+            credentials: EmailCredentials::default(),
+            test_mode: false,
+            enabled: true,
+            last_tested_at: None,
+            last_status: None,
+            created_at: now,
+            updated_at: now,
+        }
+    }
+
+    fn oauth_connection(kind: EmailProviderKind) -> EmailConnection {
+        let now = Utc::now();
+        EmailConnection {
+            id: Uuid::now_v7(),
+            name: format!("test-{}", kind.as_str()),
+            kind,
+            domain: None,
+            region: None,
+            sender_email: Some("user@example.com".to_string()),
+            sender_name: None,
+            webhook_url: None,
+            smtp_host: None,
+            smtp_port: None,
+            smtp_tls: None,
+            smtp_username: None,
+            credentials: EmailCredentials {
+                api_key: None,
+                access_key_id: None,
+                secret_access_key: None,
+                webhook_secret: None,
+                password: None,
+                client_id: Some("client-id-1".to_string()),
+                client_secret: None,
+                refresh_token: None,
+                access_token: None,
+                access_token_expires_at: None,
+            },
+            test_mode: false,
+            enabled: true,
+            last_tested_at: None,
+            last_status: None,
+            created_at: now,
+            updated_at: now,
+        }
+    }
+
+    fn test_message() -> EmailMessage {
+        EmailMessage {
+            to: "reader@example.com".to_string(),
+            from: None,
+            from_name: None,
+            subject: "Test".to_string(),
+            body_text: Some("Hello".to_string()),
+            body_html: Some("<p>Hello</p>".to_string()),
+            reply_to: None,
+            template_id: None,
+            variables: HashMap::new(),
+            metadata: HashMap::new(),
+            test_mode: false,
         }
     }
 
@@ -1364,5 +1947,125 @@ mod tests {
         // A non-numeric timestamp is refused outright.
         let garbled = mailgun_body("not-a-timestamp", "token-garbled");
         assert!(!adapter.webhook_verify(&headers, &garbled).await.unwrap());
+    }
+
+    #[test]
+    fn build_lettre_message_covers_body_shapes() {
+        let connection = smtp_connection();
+        // Both bodies: multipart alternative builds.
+        assert!(build_lettre_message(&connection, &test_message(), None).is_ok());
+        // Text only and HTML only both build.
+        let mut text_only = test_message();
+        text_only.body_html = None;
+        assert!(build_lettre_message(&connection, &text_only, None).is_ok());
+        let mut html_only = test_message();
+        html_only.body_text = None;
+        assert!(build_lettre_message(&connection, &html_only, None).is_ok());
+        // No body at all is an honest error.
+        let mut empty = test_message();
+        empty.body_text = None;
+        empty.body_html = None;
+        assert!(build_lettre_message(&connection, &empty, None).is_err());
+        // No sender anywhere is an honest error unless a default is given.
+        let mut no_sender = smtp_connection();
+        no_sender.sender_email = None;
+        let mut message = test_message();
+        message.from = None;
+        assert!(build_lettre_message(&no_sender, &message, None).is_err());
+        assert!(build_lettre_message(&no_sender, &message, Some("unified@localhost")).is_ok());
+        // An invalid recipient is rejected by the parser.
+        let mut bad_to = test_message();
+        bad_to.to = "not an address".to_string();
+        assert!(build_lettre_message(&connection, &bad_to, None).is_err());
+    }
+
+    #[test]
+    fn smtp_adapter_rejects_a_connection_without_host() {
+        let mut connection = smtp_connection();
+        connection.smtp_host = None;
+        let err = SmtpAdapter::new(&connection).unwrap_err();
+        assert!(err.to_string().contains("smtp_host"));
+    }
+
+    #[test]
+    fn smtp_adapter_accepts_valid_server_settings() {
+        // Building the adapter only validates settings (no network):
+        // an unreachable host still builds; the connection test is
+        // what reports it.
+        assert!(SmtpAdapter::new(&smtp_connection()).is_ok());
+        let mut implicit = smtp_connection();
+        implicit.smtp_port = Some(465);
+        implicit.smtp_tls = Some("implicit".to_string());
+        assert!(SmtpAdapter::new(&implicit).is_ok());
+        let mut plain = smtp_connection();
+        plain.smtp_tls = Some("none".to_string());
+        assert!(SmtpAdapter::new(&plain).is_ok());
+    }
+
+    #[tokio::test]
+    async fn smtp_test_connection_reports_an_unreachable_host() {
+        // No SMTP server listens on smtp.example.com:587 from the
+        // test runner, so the test must report unreachable — never
+        // a 500, never a hang (the transport timeout applies).
+        let adapter = SmtpAdapter::new(&smtp_connection()).unwrap();
+        let result = adapter.test_connection().await.unwrap();
+        assert!(!result.reachable);
+        assert!(result.detail.contains("smtp.example.com"));
+    }
+
+    #[tokio::test]
+    async fn oauth_adapter_requires_a_linked_account() {
+        // No tokens stored: the refresh path must refuse with a
+        // setup error naming the missing link, without touching
+        // the network.
+        for kind in [
+            EmailProviderKind::Gmail,
+            EmailProviderKind::Yahoo,
+            EmailProviderKind::Outlook,
+        ] {
+            let adapter = OAuthSmtpAdapter::new(&oauth_connection(kind)).unwrap();
+            let err = adapter.ensure_fresh_token().await.unwrap_err();
+            assert!(
+                err.to_string().contains("not linked"),
+                "kind {}: {}",
+                kind.as_str(),
+                err
+            );
+            let result = adapter.test_connection().await.unwrap();
+            assert!(!result.reachable);
+            assert!(result.detail.contains("not linked"));
+        }
+    }
+
+    #[tokio::test]
+    async fn sendmail_test_connection_matches_binary_presence() {
+        // Deterministic on any machine: the result must agree with
+        // the probe, and the detail must name the binary (or its
+        // absence) either way.
+        let adapter = SendmailAdapter::new(&smtp_connection()).unwrap();
+        let result = adapter.test_connection().await.unwrap();
+        assert_eq!(
+            result.reachable,
+            SendmailAdapter::sendmail_binary().is_some()
+        );
+        if result.reachable {
+            assert!(result.detail.contains("Sendmail binary found"));
+        } else {
+            assert!(result.detail.contains("No sendmail binary"));
+        }
+    }
+
+    #[tokio::test]
+    async fn sendmail_send_without_a_binary_fails_closed() {
+        // When no binary exists, send must fail with a 502 naming
+        // the missing binary — never a panic, never a silent drop.
+        if SendmailAdapter::sendmail_binary().is_some() {
+            return;
+        }
+        let mut connection = smtp_connection();
+        connection.kind = EmailProviderKind::Sendmail;
+        let adapter = SendmailAdapter::new(&connection).unwrap();
+        let err = adapter.send(&test_message()).await.unwrap_err();
+        assert!(err.to_string().contains("No sendmail binary"));
     }
 }

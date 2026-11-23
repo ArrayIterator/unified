@@ -20,7 +20,7 @@ example, so the two contexts are never confused:
 | `admin.html` | Admin dashboard — users table, roles, system status |
 | `modules.html` | Module list — client-side search, enable/disable toggles |
 | `module.html` | Module detail — Billing as the example: capabilities, settings, invoices |
-| `settings.html` | Settings — General / Theme / Mail / Security tabs |
+| `settings.html` | Settings — General (WordPress General parity: title, tagline, URLs, admin email, membership, default role, 12 languages, full IANA timezone, date/time formats with live preview, week start) / Theme / Mail (13-provider picker grid with logos + dynamic per-provider fields + Test connection) / Security tabs |
 | `store.html` | Store — product cards, demo cart counter |
 
 System vs tenant: the system site is the control plane (tenants,
@@ -42,6 +42,7 @@ demo/
     demo.js            <- the only script (shell + interactions)
     sprite.js          <- real icon sprite as a JS string (file:// safe)
     modules-sprite.svg <- the copied real sprite (source for sprite.js)
+    logos/             <- copied provider logos (src/modules/email_providers/logos/)
 ```
 
 ## How it stays extensible

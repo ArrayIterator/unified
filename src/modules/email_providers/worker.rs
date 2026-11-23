@@ -1,11 +1,12 @@
 //! email_providers - worker.
 
-use unified_core::error::{UnifiedError, UnifiedResult};
-use serde_json::{json, Value};
+use super::{
+    adapters::*, credentials::*, events::*, handlers::*, hooks::*, http::*, module::*,
+    provider_kinds::*, registry::*, store::*,
+};
+use serde_json::{Value, json};
 use std::collections::HashMap;
-use super::{events::*, provider_kinds::*, credentials::*, store::*, http::*, registry::*, adapters::*, hooks::*, handlers::*, module::*};
-
-
+use unified_core::error::{UnifiedError, UnifiedResult};
 
 // ---------------------------------------------------------------------------
 // Delivery worker (used by the `email.send_requested` hook).
@@ -57,7 +58,6 @@ pub(crate) fn render_template(
     }
 }
 
-
 pub(crate) async fn run_send_job(job: QueuedSend) {
     let mut message = job.message.clone();
     if let Some(template_id) = &message.template_id {
@@ -71,12 +71,7 @@ pub(crate) async fn run_send_job(job: QueuedSend) {
                 }
             }
             Err(error) => {
-                update_log(
-                    &job.job_id,
-                    "failed",
-                    None,
-                    Some(error.message.clone()),
-                );
+                update_log(&job.job_id, "failed", None, Some(error.message.clone()));
                 emit_event(
                     EVENT_EMAIL_FAILED,
                     json!({
@@ -175,7 +170,6 @@ pub(crate) async fn run_send_job(job: QueuedSend) {
     }
 }
 
-
 /// Start the background worker for one queued send. Hook handlers are
 /// synchronous and may run outside a runtime, so spawn on the current
 /// runtime when there is one and fall back to a dedicated thread with
@@ -215,6 +209,10 @@ mod tests {
             sender_email: Some("sender@example.com".to_string()),
             sender_name: None,
             webhook_url: None,
+            smtp_host: None,
+            smtp_port: None,
+            smtp_tls: None,
+            smtp_username: None,
             credentials: EmailCredentials::default(),
             test_mode: false,
             enabled: false,

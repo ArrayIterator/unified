@@ -121,6 +121,12 @@ pub struct ProviderDefinition {
     pub family: String,
     pub id: String,
     pub display_name: String,
+    /// Logo reference for the settings/catalog UI: a short stem such
+    /// as `"email-gmail"`. The email module serves the matching SVG
+    /// from its `logos/` sprite (`provider-logo-email-gmail`); other
+    /// families leave this empty and the UI falls back to the
+    /// module icon. Never a URL, never fetched from outside.
+    pub logo: Option<String>,
     pub base_url: Option<String>,
     pub sandbox_base_url: Option<String>,
     /// Protocol shape for families whose adapters differ by wire
@@ -160,6 +166,7 @@ impl Default for ProviderDefinition {
             family: String::new(),
             id: String::new(),
             display_name: String::new(),
+            logo: None,
             base_url: None,
             sandbox_base_url: None,
             api_style: None,
@@ -556,7 +563,7 @@ mod tests {
     fn builtin_catalog_counts_match_the_program_brief() {
         let registry = fresh();
         assert_eq!(registry.count_family(FAMILY_PAYMENTS), 12);
-        assert_eq!(registry.count_family(FAMILY_EMAIL), 9);
+        assert_eq!(registry.count_family(FAMILY_EMAIL), 13);
         assert_eq!(registry.count_family(FAMILY_STORAGE), 5);
         assert_eq!(registry.count_family(FAMILY_VCS), 3);
         assert_eq!(registry.count_family(FAMILY_AI), 4);
@@ -570,7 +577,7 @@ mod tests {
     #[test]
     fn builtin_ids_are_unique_and_valid() {
         let defs = builtin_definitions();
-        assert_eq!(defs.len(), 50);
+        assert_eq!(defs.len(), 54);
         let mut seen = std::collections::HashSet::new();
         for def in &defs {
             assert!(valid_provider_id(&def.id), "bad id {}", def.id);
@@ -578,6 +585,15 @@ mod tests {
             assert!(!def.display_name.trim().is_empty());
             assert!(!def.adapter_kind.trim().is_empty());
             assert!(seen.insert((def.family.clone(), def.id.clone())));
+            // Task 350: every email provider carries a logo reference
+            // (the catalog serves it; the demo renders it).
+            if def.family == FAMILY_EMAIL {
+                assert!(
+                    def.logo.as_deref().is_some_and(|logo| !logo.trim().is_empty()),
+                    "email provider {} has no logo",
+                    def.id
+                );
+            }
         }
     }
 
@@ -645,7 +661,7 @@ mod tests {
         let def = registry.get(FAMILY_EMAIL, "acme_mail").unwrap();
         assert!(def.capability("charge"));
         assert!(def.host_allowed("api.acme.test"));
-        assert_eq!(registry.count_family(FAMILY_EMAIL), 10);
+        assert_eq!(registry.count_family(FAMILY_EMAIL), 14);
     }
 
     #[test]

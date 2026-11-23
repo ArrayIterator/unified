@@ -11,8 +11,9 @@ use chrono::{DateTime, Utc};
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use std::collections::HashMap;
 use std::sync::Arc;
-use super::{types::*, module::*};
+use super::{types::*, module::*, definitions::*};
 
 /// Merge settings contributed by another module into the settings
 /// store (`settings.merge`, payload
@@ -91,6 +92,67 @@ pub(crate) fn on_settings_merge(store: SettingsStore, ctx: &mut HookContext) {
         "merged": merged,
         "namespace": namespace,
     }));
+}
+
+/// Validate `site/*` writes against the site definitions (task
+/// 351): the generic KV store accepts any namespace/key, and this
+/// `config.validate` handler is the layer that makes the site
+/// namespace behave like WordPress General Settings. Other
+/// namespaces pass through untouched — this handler never marks
+/// them invalid — and unknown `site/*` keys pass too (the KV store
+/// stays open for modules that keep their own site keys). A value
+/// for a KNOWN key that fails its definition is refused with 422:
+/// the handler sets `valid: false` plus a `message` on the hook
+/// context, which `validate_via_hooks` turns into the refusal.
+pub(crate) fn on_config_validate(ctx: &mut HookContext) {
+    let namespace = ctx
+        .get("namespace")
+        .and_then(|value| value.as_str())
+        .unwrap_or("");
+    if namespace != "site" {
+        return;
+    }
+    let key = ctx
+        .get("key")
+        .and_then(|value| value.as_str())
+        .unwrap_or("");
+    let Some(value) = ctx.get("value").cloned() else {
+        return;
+    };
+    if let Err(message) = validate_site_value(key, &value) {
+        ctx.set("valid", Value::Bool(false));
+        ctx.set("message", Value::String(message));
+    }
+}
+
+/// The definitions endpoint: `GET /api/v1/settings/definitions`,
+/// `?namespace=site` (the default). Returns the namespace's field
+/// definitions with their effective values (stored value, or the
+/// compiled-in default when nothing is stored). Any other namespace
+/// is a 404: no other namespace has definitions yet.
+pub(crate) async fn list_definitions(
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+    store: web::Data<SettingsStore>,
+    query: web::Query<HashMap<String, String>>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+    if let Err(error) = authorize(&ctx, &req, PERM_SETTINGS_VIEW) {
+        return error_response(&error, debug);
+    }
+    let namespace = query
+        .get("namespace")
+        .cloned()
+        .unwrap_or_else(|| "site".to_string());
+    match namespace.as_str() {
+        "site" => success_response(site_definitions_json(&store), 200),
+        _ => error_response(
+            &UnifiedError::not_found(format!(
+                "No setting definitions for namespace \"{namespace}\""
+            )),
+            debug,
+        ),
+    }
 }
 
 /// Ask the hook bus whether a setting value is acceptable. Returns an
@@ -655,5 +717,51 @@ mod tests {
         assert_eq!(event.get("type").and_then(|v| v.as_str()), Some("string"));
         assert_eq!(event.get("value"), Some(&json!("visa")));
         assert_eq!(event.get("deleted").and_then(|v| v.as_bool()), Some(true));
+    }
+
+    /// Task 351: the site-namespace validate handler refuses an
+    /// invalid value (and names the problem) while leaving valid
+    /// values and other namespaces untouched.
+    #[test]
+    fn config_validate_refuses_invalid_site_values() {
+        let mut ctx = HookContext::new(
+            "config.validate",
+            json!({
+                "namespace": "site",
+                "key": "timezone",
+                "value": "Mars/Olympus",
+            }),
+        );
+        on_config_validate(&mut ctx);
+        assert_eq!(ctx.get("valid"), Some(&Value::Bool(false)));
+        let Some(Value::String(message)) = ctx.get("message") else {
+            panic!("a refused write must carry a message");
+        };
+        assert!(message.contains("timezone"), "message names the problem: {message}");
+    }
+
+    #[test]
+    fn config_validate_accepts_valid_site_values_and_passes_other_namespaces() {
+        let mut ctx = HookContext::new(
+            "config.validate",
+            json!({
+                "namespace": "site",
+                "key": "timezone",
+                "value": "Asia/Jakarta",
+            }),
+        );
+        on_config_validate(&mut ctx);
+        assert_eq!(ctx.get("valid"), None);
+
+        let mut other = HookContext::new(
+            "config.validate",
+            json!({
+                "namespace": "mail",
+                "key": "anything",
+                "value": "Mars/Olympus",
+            }),
+        );
+        on_config_validate(&mut other);
+        assert_eq!(other.get("valid"), None);
     }
 }

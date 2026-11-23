@@ -1,15 +1,16 @@
 //! email_providers - hooks.
 
-use unified_core::error::{UnifiedError, UnifiedResult};
-use unified_core::hooks::{HookContext};
-use chrono::{Utc};
+use super::{
+    adapters::*, credentials::*, events::*, handlers::*, http::*, module::*, provider_kinds::*,
+    registry::*, store::*, worker::*,
+};
+use chrono::Utc;
 use reqwest::header::{HeaderMap, HeaderValue};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::collections::HashMap;
+use unified_core::error::{UnifiedError, UnifiedResult};
+use unified_core::hooks::HookContext;
 use uuid::Uuid;
-use super::{events::*, provider_kinds::*, credentials::*, store::*, http::*, registry::*, adapters::*, worker::*, handlers::*, module::*};
-
-
 
 // ---------------------------------------------------------------------------
 // Hook handlers.
@@ -25,15 +26,14 @@ pub(crate) fn on_email_send_requested(ctx: &mut HookContext) {
         ctx.add_result(json!({ "error": error.message }));
         return;
     }
-    let connection = match resolve_connection(
-        data.get("connection_id").and_then(|value| value.as_str()),
-    ) {
-        Ok(connection) => connection,
-        Err(error) => {
-            ctx.add_result(json!({ "error": error.message }));
-            return;
-        }
-    };
+    let connection =
+        match resolve_connection(data.get("connection_id").and_then(|value| value.as_str())) {
+            Ok(connection) => connection,
+            Err(error) => {
+                ctx.add_result(json!({ "error": error.message }));
+                return;
+            }
+        };
     if !connection.enabled {
         ctx.add_result(json!({
             "error": format!("Email provider connection \"{}\" is disabled", connection.name)
@@ -120,7 +120,6 @@ pub(crate) fn on_email_send_requested(ctx: &mut HookContext) {
     }));
 }
 
-
 pub(crate) fn on_webhook_verify(ctx: &mut HookContext) {
     let data = ctx.data.clone();
     let provider = data
@@ -140,7 +139,9 @@ pub(crate) fn on_webhook_verify(ctx: &mut HookContext) {
         Some(Ok(id)) => match get_connection(&id) {
             Some(connection) => connection,
             None => {
-                ctx.add_result(json!({ "error": format!("Email provider connection not found: {id}") }));
+                ctx.add_result(
+                    json!({ "error": format!("Email provider connection not found: {id}") }),
+                );
                 return;
             }
         },
@@ -170,7 +171,9 @@ pub(crate) fn on_webhook_verify(ctx: &mut HookContext) {
         for (name, value) in map {
             if let (Ok(header_name), Some(header_value)) = (
                 name.parse::<reqwest::header::HeaderName>(),
-                value.as_str().and_then(|text| HeaderValue::from_str(text).ok()),
+                value
+                    .as_str()
+                    .and_then(|text| HeaderValue::from_str(text).ok()),
             ) {
                 headers.insert(header_name, header_value);
             }
@@ -206,9 +209,8 @@ pub(crate) fn on_webhook_verify(ctx: &mut HookContext) {
             })();
             let _ = tx.send(outcome);
         });
-        rx.recv().map_err(|_| {
-            UnifiedError::internal("Webhook verification worker failed")
-        })?
+        rx.recv()
+            .map_err(|_| UnifiedError::internal("Webhook verification worker failed"))?
     })();
     match result {
         Ok(valid) => ctx.add_result(json!({ "valid": valid })),

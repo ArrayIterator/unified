@@ -165,7 +165,7 @@
     }
 ,
     {
-      "family": "email", "id": "mailchimp", "display_name": "Mailchimp Transactional (Mandrill)",
+      "family": "email", "id": "mailchimp", "display_name": "Mailchimp Transactional (Mandrill)", "logo": "email-mailchimp",
       "base_url": "https://mandrillapp.com", "sandbox_base_url": null,
       "allowed_hosts": ["mandrillapp.com"],
       "capabilities": {"transactional": true, "bulk": true, "templates": true, "webhooks": true, "tracking": true, "sandbox": false},
@@ -182,7 +182,7 @@
       "notes": "Sending domains must be verified in Mandrill (Settings > Sending Domains); add SPF and DKIM records for the domain before sending bulk mail. Mandrill webhooks are verified with HMAC-SHA1 over the webhook URL plus the sorted POST parameters, using the webhook key. Set webhook_url to the exact public webhook URL."
     },
     {
-      "family": "email", "id": "brevo", "display_name": "Brevo (Sendinblue)",
+      "family": "email", "id": "brevo", "display_name": "Brevo (Sendinblue)", "logo": "email-brevo",
       "base_url": "https://api.brevo.com", "sandbox_base_url": null,
       "allowed_hosts": ["api.brevo.com"],
       "capabilities": {"transactional": true, "bulk": true, "templates": true, "webhooks": true, "tracking": true, "sandbox": false},
@@ -198,7 +198,7 @@
       "notes": "Verify the sender domain in Brevo (Senders & IP > Domains) and add the SPF and DKIM records Brevo shows; unverified senders are limited. Brevo sends no signature; set a webhook_secret on the connection and Brevo must send it back as the X-Webhook-Secret header (configure it in the Brevo webhook URL as a custom header)."
     },
     {
-      "family": "email", "id": "sendgrid", "display_name": "SendGrid",
+      "family": "email", "id": "sendgrid", "display_name": "SendGrid", "logo": "email-sendgrid",
       "base_url": "https://api.sendgrid.com", "sandbox_base_url": null,
       "allowed_hosts": ["api.sendgrid.com"],
       "capabilities": {"transactional": true, "bulk": true, "templates": true, "webhooks": true, "tracking": true, "sandbox": true},
@@ -214,7 +214,7 @@
       "notes": "Authenticate the sender domain in SendGrid (Settings > Sender Authentication) with SPF and DKIM; single sender verification is enough for low volume. SendGrid Event Webhook signatures use ECDSA verification, which this module does not implement; set a webhook_secret on the connection and require it as the X-Webhook-Secret header instead."
     },
     {
-      "family": "email", "id": "mailgun", "display_name": "Mailgun",
+      "family": "email", "id": "mailgun", "display_name": "Mailgun", "logo": "email-mailgun",
       "base_url": "https://api.mailgun.net", "sandbox_base_url": null,
       "allowed_hosts": ["api.mailgun.net", "api.eu.mailgun.net"],
       "capabilities": {"transactional": true, "bulk": true, "templates": true, "webhooks": true, "tracking": true, "sandbox": true},
@@ -232,7 +232,7 @@
       "notes": "Add and verify the domain in Mailgun (Sending > Domains) with the SPF and DKIM TXT records; sandbox domains only deliver to authorized recipients. Mailgun webhooks are verified with HMAC-SHA256 over timestamp + token, using the webhook signing key (webhook_secret)."
     },
     {
-      "family": "email", "id": "postmark", "display_name": "Postmark",
+      "family": "email", "id": "postmark", "display_name": "Postmark", "logo": "email-postmark",
       "base_url": "https://api.postmarkapp.com", "sandbox_base_url": null,
       "allowed_hosts": ["api.postmarkapp.com"],
       "capabilities": {"transactional": true, "bulk": false, "templates": true, "webhooks": true, "tracking": true, "sandbox": false},
@@ -248,7 +248,7 @@
       "notes": "Verify the sender signature (Sender Signatures) or the whole domain with DKIM in Postmark; every From address must be verified. Postmark sends no signature; set a webhook_secret on the connection and require it as the X-Webhook-Secret header (Postmark supports basic auth on the webhook URL as an alternative)."
     },
     {
-      "family": "email", "id": "ses", "display_name": "Amazon SES",
+      "family": "email", "id": "ses", "display_name": "Amazon SES", "logo": "email-ses",
       "base_url": null, "sandbox_base_url": null,
       "allowed_hosts": [],
       "capabilities": {"transactional": true, "bulk": true, "templates": false, "webhooks": true, "tracking": true, "sandbox": false},
@@ -266,7 +266,7 @@
       "notes": "Verify the sender identity (email address or domain) in SES; new accounts are in the SES sandbox and can only send to verified addresses until production access is granted. SES endpoints are per-region (email.<region>.amazonaws.com). SES delivers events through SNS, whose signatures need RSA certificate verification, which this module does not implement; set a webhook_secret on the connection and require it as the X-Webhook-Secret header instead."
     },
     {
-      "family": "email", "id": "resend", "display_name": "Resend",
+      "family": "email", "id": "resend", "display_name": "Resend", "logo": "email-resend",
       "base_url": "https://api.resend.com", "sandbox_base_url": null,
       "allowed_hosts": ["api.resend.com"],
       "capabilities": {"transactional": true, "bulk": true, "templates": false, "webhooks": true, "tracking": true, "sandbox": false},
@@ -282,7 +282,7 @@
       "notes": "Verify the sending domain in Resend (Domains) with SPF and DKIM; unverified accounts can only send to the account owner address. Resend webhooks are Svix-signed and verified with HMAC-SHA256 over the svix id, timestamp and body, using the webhook signing secret (webhook_secret)."
     },
     {
-      "family": "email", "id": "sparkpost", "display_name": "SparkPost",
+      "family": "email", "id": "sparkpost", "display_name": "SparkPost", "logo": "email-sparkpost",
       "base_url": "https://api.sparkpost.com", "sandbox_base_url": null,
       "allowed_hosts": ["api.sparkpost.com", "api.eu.sparkpost.com"],
       "capabilities": {"transactional": true, "bulk": true, "templates": true, "webhooks": true, "tracking": true, "sandbox": false},
@@ -299,18 +299,89 @@
       "notes": "Verify the sending domain in SparkPost (Account > Sending Domains) with SPF and DKIM records. SparkPost sends no signature; set a webhook_secret on the connection and require it as the X-Webhook-Secret header."
     },
     {
-      "family": "email", "id": "smtp", "display_name": "SMTP (via Mail Manager)",
+      "family": "email", "id": "smtp", "display_name": "SMTP (Custom server)", "logo": "email-smtp",
       "base_url": null, "sandbox_base_url": null,
       "allowed_hosts": [],
       "capabilities": {"transactional": true, "bulk": true, "templates": false, "webhooks": false, "tracking": false, "sandbox": false},
       "currencies": [],
       "credentials_shape": [
-        {"name": "sender_email", "label": "Sender email override", "type": "email", "required": false, "secret": false, "placeholder": "news@example.com", "description": "Optional From override for the Mail Manager SMTP settings; empty means the SMTP settings apply."},
-        {"name": "webhook_secret", "label": "Webhook secret / signing key", "type": "password", "required": false, "secret": true, "description": "Secret used to verify incoming webhooks from this provider (see the webhook notes for the kind)."},
+        {"name": "host", "label": "SMTP host", "type": "text", "required": true, "secret": false, "placeholder": "smtp.example.com", "description": "SMTP server hostname."},
+        {"name": "port", "label": "SMTP port", "type": "number", "required": true, "secret": false, "placeholder": "587", "description": "SMTP port: 587 for STARTTLS, 465 for implicit TLS."},
+        {"name": "tls_mode", "label": "TLS mode", "type": "select", "required": true, "secret": false, "placeholder": "starttls", "description": "starttls (port 587), implicit (port 465), or none (plaintext, local servers only)."},
+        {"name": "username", "label": "SMTP username", "type": "text", "required": false, "secret": false, "placeholder": "user@example.com", "description": "SMTP username (usually the sender address). Leave empty for servers without authentication."},
+        {"name": "password", "label": "SMTP password", "type": "password", "required": false, "secret": true, "description": "SMTP password. Stored encrypted; never shown again."},
+        {"name": "sender_email", "label": "Default sender email", "type": "email", "required": true, "secret": false, "placeholder": "news@example.com", "description": "From address used when a send does not supply its own."},
+        {"name": "sender_name", "label": "Default sender name", "type": "text", "required": false, "secret": false, "placeholder": "Example News", "description": "Display name shown next to the sender email."},
         {"name": "test_mode", "label": "Test mode (sandbox)", "type": "boolean", "required": false, "secret": false, "description": "When on, mail is accepted by the provider sandbox where one exists, otherwise recorded as a simulated delivery and never sent."}
       ],
       "adapter_kind": "smtp",
-      "notes": "Delivery uses the Mail Manager SMTP settings; the From domain should have SPF and DKIM records for the SMTP host. SMTP has no webhooks; bounce and complaint handling is not available for this provider."
+      "notes": "Direct SMTP delivery to any server: host, port, TLS mode and credentials live on this connection. Port 465 uses implicit TLS, other TLS ports use STARTTLS. SMTP has no webhooks; bounce and complaint handling is not available for this provider."
+    }
+,
+    {
+      "family": "email", "id": "gmail", "display_name": "Gmail", "logo": "email-gmail",
+      "base_url": "https://smtp.gmail.com", "sandbox_base_url": null,
+      "allowed_hosts": ["smtp.gmail.com", "accounts.google.com", "oauth2.googleapis.com"],
+      "capabilities": {"transactional": true, "bulk": false, "templates": false, "webhooks": false, "tracking": false, "sandbox": false},
+      "currencies": [],
+      "credentials_shape": [
+        {"name": "client_id", "label": "OAuth client ID", "type": "text", "required": true, "secret": false, "placeholder": "123456789012-abc.apps.googleusercontent.com", "description": "OAuth client ID from Google Cloud Console (APIs & Services > Credentials)."},
+        {"name": "client_secret", "label": "OAuth client secret", "type": "password", "required": true, "secret": true, "description": "OAuth client secret from the provider console. Stored encrypted; never shown again."},
+        {"name": "sender_email", "label": "Sender email", "type": "email", "required": true, "secret": false, "placeholder": "you@gmail.com", "description": "Gmail address that sends the mail (the linked Google account). Used as the XOAUTH2 identity."},
+        {"name": "sender_name", "label": "Default sender name", "type": "text", "required": false, "secret": false, "placeholder": "Example News", "description": "Display name shown next to the sender email."},
+        {"name": "test_mode", "label": "Test mode (sandbox)", "type": "boolean", "required": false, "secret": false, "description": "When on, mail is accepted by the provider sandbox where one exists, otherwise recorded as a simulated delivery and never sent."}
+      ],
+      "adapter_kind": "gmail",
+      "notes": "Sends through smtp.gmail.com:587 with OAuth2 (XOAUTH2) — no app passwords. Link the Google account from the connection (OAuth authorize); the access token refreshes automatically. Scope: https://mail.google.com/."
+    }
+,
+    {
+      "family": "email", "id": "yahoo", "display_name": "Yahoo Mail", "logo": "email-yahoo",
+      "base_url": "https://smtp.mail.yahoo.com", "sandbox_base_url": null,
+      "allowed_hosts": ["smtp.mail.yahoo.com", "api.login.yahoo.com"],
+      "capabilities": {"transactional": true, "bulk": false, "templates": false, "webhooks": false, "tracking": false, "sandbox": false},
+      "currencies": [],
+      "credentials_shape": [
+        {"name": "client_id", "label": "OAuth client ID", "type": "text", "required": true, "secret": false, "placeholder": "dj0yJmk9QUJDREVGR0gmazEyMw--", "description": "OAuth client ID (Consumer Key) from the Yahoo Developer Network app."},
+        {"name": "client_secret", "label": "OAuth client secret", "type": "password", "required": true, "secret": true, "description": "OAuth client secret from the provider console. Stored encrypted; never shown again."},
+        {"name": "sender_email", "label": "Sender email", "type": "email", "required": true, "secret": false, "placeholder": "you@yahoo.com", "description": "Yahoo Mail address that sends the mail (the linked Yahoo account). Used as the XOAUTH2 identity."},
+        {"name": "sender_name", "label": "Default sender name", "type": "text", "required": false, "secret": false, "placeholder": "Example News", "description": "Display name shown next to the sender email."},
+        {"name": "test_mode", "label": "Test mode (sandbox)", "type": "boolean", "required": false, "secret": false, "description": "When on, mail is accepted by the provider sandbox where one exists, otherwise recorded as a simulated delivery and never sent."}
+      ],
+      "adapter_kind": "yahoo",
+      "notes": "Sends through smtp.mail.yahoo.com:587 with OAuth2 (XOAUTH2). Link the Yahoo account from the connection (OAuth authorize); the access token refreshes automatically. Scope: mail-w."
+    }
+,
+    {
+      "family": "email", "id": "outlook", "display_name": "Outlook / Microsoft 365", "logo": "email-outlook",
+      "base_url": "https://smtp.office365.com", "sandbox_base_url": null,
+      "allowed_hosts": ["smtp.office365.com", "login.microsoftonline.com"],
+      "capabilities": {"transactional": true, "bulk": false, "templates": false, "webhooks": false, "tracking": false, "sandbox": false},
+      "currencies": [],
+      "credentials_shape": [
+        {"name": "client_id", "label": "OAuth client ID", "type": "text", "required": true, "secret": false, "placeholder": "00000000-0000-0000-0000-000000000000", "description": "Application (client) ID from Microsoft Entra (Azure AD) app registration."},
+        {"name": "client_secret", "label": "OAuth client secret", "type": "password", "required": true, "secret": true, "description": "OAuth client secret from the provider console. Stored encrypted; never shown again."},
+        {"name": "sender_email", "label": "Sender email", "type": "email", "required": true, "secret": false, "placeholder": "you@outlook.com", "description": "Outlook address that sends the mail (the linked Microsoft account). Used as the XOAUTH2 identity."},
+        {"name": "sender_name", "label": "Default sender name", "type": "text", "required": false, "secret": false, "placeholder": "Example News", "description": "Display name shown next to the sender email."},
+        {"name": "test_mode", "label": "Test mode (sandbox)", "type": "boolean", "required": false, "secret": false, "description": "When on, mail is accepted by the provider sandbox where one exists, otherwise recorded as a simulated delivery and never sent."}
+      ],
+      "adapter_kind": "outlook",
+      "notes": "Sends through smtp.office365.com:587 with OAuth2 (XOAUTH2). Link the Microsoft account from the connection (OAuth authorize); the access token refreshes automatically. Scope: https://outlook.office365.com/SMTP.Send offline_access."
+    }
+,
+    {
+      "family": "email", "id": "sendmail", "display_name": "Local Sendmail", "logo": "email-sendmail",
+      "base_url": null, "sandbox_base_url": null,
+      "allowed_hosts": [],
+      "capabilities": {"transactional": true, "bulk": true, "templates": false, "webhooks": false, "tracking": false, "sandbox": false},
+      "currencies": [],
+      "credentials_shape": [
+        {"name": "sender_email", "label": "Default sender email", "type": "email", "required": false, "secret": false, "placeholder": "noreply@example.com", "description": "From address used when a send does not supply its own; defaults to unified@localhost."},
+        {"name": "sender_name", "label": "Default sender name", "type": "text", "required": false, "secret": false, "placeholder": "Example News", "description": "Display name shown next to the sender email."},
+        {"name": "test_mode", "label": "Test mode (sandbox)", "type": "boolean", "required": false, "secret": false, "description": "When on, mail is accepted by the provider sandbox where one exists, otherwise recorded as a simulated delivery and never sent."}
+      ],
+      "adapter_kind": "sendmail",
+      "notes": "Delivers through the local sendmail binary (/usr/sbin/sendmail or /usr/bin/sendmail), like the PHP mail() default. No credentials needed. The binary must exist on the server; the connection test reports whether it is present."
     }
 ,
     {

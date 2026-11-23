@@ -1,41 +1,39 @@
 //! email_providers - store.
 
-use unified_core::error::{UnifiedError, UnifiedResult};
+use super::{
+    adapters::*, credentials::*, events::*, handlers::*, hooks::*, http::*, module::*,
+    provider_kinds::*, registry::*, worker::*,
+};
 use dashmap::DashMap;
-use serde::{Serialize};
-use serde_json::{Value};
+use serde::Serialize;
+use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::{OnceLock, RwLock};
+use unified_core::error::{UnifiedError, UnifiedResult};
 use uuid::Uuid;
-use super::{events::*, provider_kinds::*, credentials::*, http::*, registry::*, adapters::*, worker::*, hooks::*, handlers::*, module::*};
-
-
 
 // ---------------------------------------------------------------------------
 // In-memory stores (same pattern as the cloud provider connections).
 // ---------------------------------------------------------------------------
 pub(crate) static CONNECTIONS: OnceLock<DashMap<Uuid, EmailConnection>> = OnceLock::new();
 
-
 pub(crate) fn connections_store() -> &'static DashMap<Uuid, EmailConnection> {
     CONNECTIONS.get_or_init(DashMap::new)
 }
-
 
 /// The global default connection id (fallback only; every send takes
 /// an explicit connection id first).
 pub(crate) static DEFAULT_CONNECTION: OnceLock<RwLock<Option<Uuid>>> = OnceLock::new();
 
-
 pub(crate) fn default_connection_store() -> &'static RwLock<Option<Uuid>> {
     DEFAULT_CONNECTION.get_or_init(|| RwLock::new(None))
 }
 
-
 pub fn get_connection(id: &Uuid) -> Option<EmailConnection> {
-    connections_store().get(id).map(|entry| entry.value().clone())
+    connections_store()
+        .get(id)
+        .map(|entry| entry.value().clone())
 }
-
 
 pub fn default_connection() -> Option<EmailConnection> {
     let id = (*default_connection_store()
@@ -44,14 +42,12 @@ pub fn default_connection() -> Option<EmailConnection> {
     get_connection(&id)
 }
 
-
 /// Resolve the connection for a send: an explicit id wins, otherwise
 /// the global default. Fails honestly when neither resolves.
 pub fn resolve_connection(connection_id: Option<&str>) -> UnifiedResult<EmailConnection> {
     if let Some(raw) = connection_id {
-        let id = Uuid::parse_str(raw).map_err(|_| {
-            UnifiedError::bad_request(format!("Invalid connection id \"{raw}\""))
-        })?;
+        let id = Uuid::parse_str(raw)
+            .map_err(|_| UnifiedError::bad_request(format!("Invalid connection id \"{raw}\"")))?;
         return get_connection(&id).ok_or_else(|| {
             UnifiedError::not_found(format!("Email provider connection not found: {raw}"))
         });
@@ -63,7 +59,6 @@ pub fn resolve_connection(connection_id: Option<&str>) -> UnifiedResult<EmailCon
     })
 }
 
-
 pub(crate) fn first_enabled_connection(kind: EmailProviderKind) -> Option<EmailConnection> {
     connections_store()
         .iter()
@@ -71,8 +66,6 @@ pub(crate) fn first_enabled_connection(kind: EmailProviderKind) -> Option<EmailC
         .filter(|connection| connection.kind == kind && connection.enabled)
         .min_by_key(|connection| connection.created_at)
 }
-
-
 
 #[derive(Debug, Clone)]
 // ---------------------------------------------------------------------------
@@ -96,7 +89,6 @@ pub struct EmailMessage {
     pub test_mode: bool,
 }
 
-
 impl EmailMessage {
     pub(crate) fn sender(&self, connection: &EmailConnection) -> (String, Option<String>) {
         let from = self
@@ -112,7 +104,6 @@ impl EmailMessage {
     }
 }
 
-
 #[derive(Debug, Clone, Serialize)]
 pub struct SendResult {
     pub provider_message_id: Option<String>,
@@ -122,7 +113,6 @@ pub struct SendResult {
     pub test_mode: bool,
     pub detail: String,
 }
-
 
 #[derive(Debug, Clone, Serialize)]
 pub struct SendLogEntry {
@@ -138,14 +128,11 @@ pub struct SendLogEntry {
     pub created_at: String,
 }
 
-
 pub(crate) static SEND_LOG: OnceLock<RwLock<Vec<SendLogEntry>>> = OnceLock::new();
-
 
 pub(crate) fn send_log_store() -> &'static RwLock<Vec<SendLogEntry>> {
     SEND_LOG.get_or_init(|| RwLock::new(Vec::new()))
 }
-
 
 pub(crate) fn append_log(entry: SendLogEntry) {
     send_log_store()
@@ -154,8 +141,12 @@ pub(crate) fn append_log(entry: SendLogEntry) {
         .push(entry);
 }
 
-
-pub(crate) fn update_log(id: &str, status: &str, provider_message_id: Option<String>, error: Option<String>) {
+pub(crate) fn update_log(
+    id: &str,
+    status: &str,
+    provider_message_id: Option<String>,
+    error: Option<String>,
+) {
     let mut log = send_log_store().write().expect("send log lock poisoned");
     if let Some(entry) = log.iter_mut().find(|entry| entry.id == id) {
         entry.status = status.to_string();
@@ -163,7 +154,6 @@ pub(crate) fn update_log(id: &str, status: &str, provider_message_id: Option<Str
         entry.error = error;
     }
 }
-
 
 /// A queued send job (created by the `email.send_requested` hook).
 #[derive(Debug, Clone)]

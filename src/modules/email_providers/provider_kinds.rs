@@ -1,14 +1,15 @@
 //! email_providers - provider kinds.
 
+use super::{
+    adapters::*, credentials::*, events::*, handlers::*, hooks::*, http::*, module::*, registry::*,
+    store::*, worker::*,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
 use unified_core::provider_registry::{
     ProviderDefinition, leak_str, leak_str_slice, provider_registry,
 };
-use super::{events::*, credentials::*, store::*, http::*, registry::*, adapters::*, worker::*, hooks::*, handlers::*, module::*};
-
-
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -26,8 +27,11 @@ pub enum EmailProviderKind {
     Resend,
     SparkPost,
     Smtp,
+    Gmail,
+    Yahoo,
+    Outlook,
+    Sendmail,
 }
-
 
 impl EmailProviderKind {
     pub fn as_str(&self) -> &'static str {
@@ -41,6 +45,10 @@ impl EmailProviderKind {
             Self::Resend => "resend",
             Self::SparkPost => "sparkpost",
             Self::Smtp => "smtp",
+            Self::Gmail => "gmail",
+            Self::Yahoo => "yahoo",
+            Self::Outlook => "outlook",
+            Self::Sendmail => "sendmail",
         }
     }
 
@@ -55,6 +63,10 @@ impl EmailProviderKind {
             "resend" => Some(Self::Resend),
             "sparkpost" => Some(Self::SparkPost),
             "smtp" => Some(Self::Smtp),
+            "gmail" => Some(Self::Gmail),
+            "yahoo" => Some(Self::Yahoo),
+            "outlook" => Some(Self::Outlook),
+            "sendmail" => Some(Self::Sendmail),
             _ => None,
         }
     }
@@ -70,7 +82,36 @@ impl EmailProviderKind {
             Self::Resend,
             Self::SparkPost,
             Self::Smtp,
+            Self::Gmail,
+            Self::Yahoo,
+            Self::Outlook,
+            Self::Sendmail,
         ]
+    }
+
+    /// Logo reference for the catalog and settings UI: the stem from
+    /// the provider registry (`"email-gmail"`), falling back to
+    /// `email-<id>` when a definition carries no logo. The SVG lives
+    /// in the module's `logos/` sprite as
+    /// `provider-logo-email-gmail`; the catalog returns only this
+    /// stem, never a URL.
+    pub fn logo(&self) -> String {
+        match self.definition().and_then(|def| def.logo.clone()) {
+            Some(logo) if !logo.trim().is_empty() => logo,
+            _ => format!("email-{}", self.as_str()),
+        }
+    }
+
+    /// True for the account providers that authenticate with OAuth2
+    /// (Gmail, Yahoo, Outlook).
+    pub fn is_oauth(&self) -> bool {
+        super::oauth::is_oauth_kind(*self)
+    }
+
+    /// The OAuth2 configuration for the account providers, `None`
+    /// for every other kind.
+    pub fn oauth_config(&self) -> Option<&'static super::oauth::OAuthProviderConfig> {
+        super::oauth::config_for(*self)
     }
 
     /// Human-readable display name, from the provider registry.
@@ -94,15 +135,45 @@ impl EmailProviderKind {
     /// Notes on sender-domain validation for the settings page.
     pub fn domain_notes(&self) -> &'static str {
         match self {
-            Self::Mailchimp => "Sending domains must be verified in Mandrill (Settings > Sending Domains); add SPF and DKIM records for the domain before sending bulk mail.",
-            Self::Brevo => "Verify the sender domain in Brevo (Senders & IP > Domains) and add the SPF and DKIM records Brevo shows; unverified senders are limited.",
-            Self::SendGrid => "Authenticate the sender domain in SendGrid (Settings > Sender Authentication) with SPF and DKIM; single sender verification is enough for low volume.",
-            Self::Mailgun => "Add and verify the domain in Mailgun (Sending > Domains) with the SPF and DKIM TXT records; sandbox domains only deliver to authorized recipients.",
-            Self::Postmark => "Verify the sender signature (Sender Signatures) or the whole domain with DKIM in Postmark; every From address must be verified.",
-            Self::Ses => "Verify the sender identity (email address or domain) in SES; new accounts are in the SES sandbox and can only send to verified addresses until production access is granted.",
-            Self::Resend => "Verify the sending domain in Resend (Domains) with SPF and DKIM; unverified accounts can only send to the account owner address.",
-            Self::SparkPost => "Verify the sending domain in SparkPost (Account > Sending Domains) with SPF and DKIM records.",
-            Self::Smtp => "Delivery uses the Mail Manager SMTP settings; the From domain should have SPF and DKIM records for the SMTP host.",
+            Self::Mailchimp => {
+                "Sending domains must be verified in Mandrill (Settings > Sending Domains); add SPF and DKIM records for the domain before sending bulk mail."
+            }
+            Self::Brevo => {
+                "Verify the sender domain in Brevo (Senders & IP > Domains) and add the SPF and DKIM records Brevo shows; unverified senders are limited."
+            }
+            Self::SendGrid => {
+                "Authenticate the sender domain in SendGrid (Settings > Sender Authentication) with SPF and DKIM; single sender verification is enough for low volume."
+            }
+            Self::Mailgun => {
+                "Add and verify the domain in Mailgun (Sending > Domains) with the SPF and DKIM TXT records; sandbox domains only deliver to authorized recipients."
+            }
+            Self::Postmark => {
+                "Verify the sender signature (Sender Signatures) or the whole domain with DKIM in Postmark; every From address must be verified."
+            }
+            Self::Ses => {
+                "Verify the sender identity (email address or domain) in SES; new accounts are in the SES sandbox and can only send to verified addresses until production access is granted."
+            }
+            Self::Resend => {
+                "Verify the sending domain in Resend (Domains) with SPF and DKIM; unverified accounts can only send to the account owner address."
+            }
+            Self::SparkPost => {
+                "Verify the sending domain in SparkPost (Account > Sending Domains) with SPF and DKIM records."
+            }
+            Self::Smtp => {
+                "Delivery goes directly to the SMTP host on this connection; the From domain should have SPF and DKIM records for that host."
+            }
+            Self::Gmail => {
+                "The sender address must be the linked Google account; Gmail rejects mail sent from any other address over XOAUTH2."
+            }
+            Self::Yahoo => {
+                "The sender address must be the linked Yahoo account; Yahoo rejects mail sent from any other address over XOAUTH2."
+            }
+            Self::Outlook => {
+                "The sender address must be the linked Microsoft account; Outlook rejects mail sent from any other address over XOAUTH2."
+            }
+            Self::Sendmail => {
+                "Local delivery only: the From domain needs no DNS records, but receiving servers may reject mail from an unconfigured host."
+            }
         }
     }
 
@@ -118,15 +189,45 @@ impl EmailProviderKind {
     /// Webhook signature support, stated honestly per provider.
     pub fn webhook_notes(&self) -> &'static str {
         match self {
-            Self::Mailchimp => "Mandrill webhooks are verified with HMAC-SHA1 over the webhook URL plus the sorted POST parameters, using the webhook key. Set webhook_url to the exact public webhook URL.",
-            Self::Brevo => "Brevo sends no signature; set a webhook_secret on the connection and Brevo must send it back as the X-Webhook-Secret header (configure it in the Brevo webhook URL as a custom header).",
-            Self::SendGrid => "SendGrid Event Webhook signatures use ECDSA verification, which this module does not implement; set a webhook_secret on the connection and require it as the X-Webhook-Secret header instead.",
-            Self::Mailgun => "Mailgun webhooks are verified with HMAC-SHA256 over timestamp + token, using the webhook signing key (webhook_secret).",
-            Self::Postmark => "Postmark sends no signature; set a webhook_secret on the connection and require it as the X-Webhook-Secret header (Postmark supports basic auth on the webhook URL as an alternative).",
-            Self::Ses => "SES delivers events through SNS, whose signatures need RSA certificate verification, which this module does not implement; set a webhook_secret on the connection and require it as the X-Webhook-Secret header instead.",
-            Self::Resend => "Resend webhooks are Svix-signed and verified with HMAC-SHA256 over the svix id, timestamp and body, using the webhook signing secret (webhook_secret).",
-            Self::SparkPost => "SparkPost sends no signature; set a webhook_secret on the connection and require it as the X-Webhook-Secret header.",
-            Self::Smtp => "SMTP has no webhooks; bounce and complaint handling is not available for this provider.",
+            Self::Mailchimp => {
+                "Mandrill webhooks are verified with HMAC-SHA1 over the webhook URL plus the sorted POST parameters, using the webhook key. Set webhook_url to the exact public webhook URL."
+            }
+            Self::Brevo => {
+                "Brevo sends no signature; set a webhook_secret on the connection and Brevo must send it back as the X-Webhook-Secret header (configure it in the Brevo webhook URL as a custom header)."
+            }
+            Self::SendGrid => {
+                "SendGrid Event Webhook signatures use ECDSA verification, which this module does not implement; set a webhook_secret on the connection and require it as the X-Webhook-Secret header instead."
+            }
+            Self::Mailgun => {
+                "Mailgun webhooks are verified with HMAC-SHA256 over timestamp + token, using the webhook signing key (webhook_secret)."
+            }
+            Self::Postmark => {
+                "Postmark sends no signature; set a webhook_secret on the connection and require it as the X-Webhook-Secret header (Postmark supports basic auth on the webhook URL as an alternative)."
+            }
+            Self::Ses => {
+                "SES delivers events through SNS, whose signatures need RSA certificate verification, which this module does not implement; set a webhook_secret on the connection and require it as the X-Webhook-Secret header instead."
+            }
+            Self::Resend => {
+                "Resend webhooks are Svix-signed and verified with HMAC-SHA256 over the svix id, timestamp and body, using the webhook signing secret (webhook_secret)."
+            }
+            Self::SparkPost => {
+                "SparkPost sends no signature; set a webhook_secret on the connection and require it as the X-Webhook-Secret header."
+            }
+            Self::Smtp => {
+                "SMTP has no webhooks; bounce and complaint handling is not available for this provider."
+            }
+            Self::Gmail => {
+                "Gmail has no webhooks; bounce and complaint handling is not available for this provider."
+            }
+            Self::Yahoo => {
+                "Yahoo has no webhooks; bounce and complaint handling is not available for this provider."
+            }
+            Self::Outlook => {
+                "Outlook has no webhooks; bounce and complaint handling is not available for this provider."
+            }
+            Self::Sendmail => {
+                "Local sendmail has no webhooks; bounces go to the sender mailbox on the server."
+            }
         }
     }
 
@@ -195,7 +296,6 @@ pub struct EmailCapabilities {
     pub sandbox: bool,
 }
 
-
 /// Capabilities per kind, from the provider registry (C12, task
 /// 269). A missing definition reads as "supports nothing" (fail
 /// closed) instead of falling back to another provider.
@@ -223,7 +323,6 @@ pub fn capabilities_for(kind: EmailProviderKind) -> EmailCapabilities {
     }
 }
 
-
 /// Result of a connection test.
 #[derive(Debug, Clone, Serialize)]
 pub struct ConnectionTestResult {
@@ -234,9 +333,8 @@ pub struct ConnectionTestResult {
     pub detail: String,
 }
 
-
 /// One field of the per-provider settings page.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SettingsFieldDef {
     pub key: String,
     pub label: String,
@@ -247,7 +345,6 @@ pub struct SettingsFieldDef {
     pub placeholder: String,
     pub help: String,
 }
-
 
 /// Settings-page field definitions per provider kind, from the
 /// provider registry (C12, task 269). The seed holds the full
@@ -320,9 +417,84 @@ mod tests {
         let fields = settings_fields(EmailProviderKind::Mailgun);
         assert_eq!(fields[0].key, "api_key");
         assert!(fields[0].required && fields[0].secret);
-        assert!(fields.iter().any(|field| field.key == "domain" && field.required));
+        assert!(
+            fields
+                .iter()
+                .any(|field| field.key == "domain" && field.required)
+        );
         assert!(fields.iter().any(|field| field.key == "sender_email"));
         assert!(fields.iter().any(|field| field.key == "test_mode"));
+    }
+
+    #[test]
+    fn new_kinds_have_capabilities_logos_and_fields() {
+        assert_eq!(EmailProviderKind::all().len(), 13);
+        // OAuth kinds: transactional only, no webhooks, no sandbox.
+        for kind in [
+            EmailProviderKind::Gmail,
+            EmailProviderKind::Yahoo,
+            EmailProviderKind::Outlook,
+        ] {
+            let caps = capabilities_for(kind);
+            assert!(caps.transactional);
+            assert!(
+                !caps.bulk && !caps.templates && !caps.webhooks && !caps.tracking && !caps.sandbox
+            );
+            assert!(kind.is_oauth());
+            assert!(kind.oauth_config().is_some());
+            assert_eq!(kind.logo(), format!("email-{}", kind.as_str()));
+        }
+        // Sendmail: no credentials, no OAuth, bulk-capable local delivery.
+        let sendmail = capabilities_for(EmailProviderKind::Sendmail);
+        assert!(sendmail.transactional && sendmail.bulk);
+        assert!(!sendmail.webhooks);
+        assert!(!EmailProviderKind::Sendmail.is_oauth());
+        assert_eq!(EmailProviderKind::Sendmail.logo(), "email-sendmail");
+        // SMTP shape now carries the full connection settings.
+        let smtp_fields = settings_fields(EmailProviderKind::Smtp);
+        for key in [
+            "host",
+            "port",
+            "tls_mode",
+            "username",
+            "password",
+            "sender_email",
+        ] {
+            assert!(
+                smtp_fields.iter().any(|field| field.key == key),
+                "smtp field {key} missing"
+            );
+        }
+        assert!(
+            smtp_fields
+                .iter()
+                .any(|field| field.key == "password" && field.secret)
+        );
+        // OAuth shapes carry the app credentials and the sender address.
+        let gmail_fields = settings_fields(EmailProviderKind::Gmail);
+        assert!(
+            gmail_fields
+                .iter()
+                .any(|field| field.key == "client_id" && field.required)
+        );
+        assert!(
+            gmail_fields
+                .iter()
+                .any(|field| field.key == "client_secret" && field.required && field.secret)
+        );
+        assert!(
+            gmail_fields
+                .iter()
+                .any(|field| field.key == "sender_email" && field.required)
+        );
+        // Sendmail shape needs no secret at all.
+        let sendmail_fields = settings_fields(EmailProviderKind::Sendmail);
+        assert!(!sendmail_fields.iter().any(|field| field.secret));
+        assert!(
+            sendmail_fields
+                .iter()
+                .any(|field| field.key == "sender_email")
+        );
     }
 
     #[test]

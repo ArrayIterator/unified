@@ -35,7 +35,7 @@ def main():
           f"{len(rows)} providers). Do not hand-edit: regenerate instead.")
     for provider in rows:
         columns = (
-            "family", "provider_id", "display_name", "base_url",
+            "family", "provider_id", "display_name", "logo", "base_url",
             "sandbox_base_url", "api_style", "auth_scheme",
             "webhook_signature_header", "allowed_hosts", "capabilities",
             "currencies", "credentials_shape", "models", "default_model",
@@ -46,6 +46,7 @@ def main():
             sql_str(provider["family"]),
             sql_str(provider["id"]),
             sql_str(provider["display_name"]),
+            sql_str(provider.get("logo")),
             sql_str(provider.get("base_url")),
             sql_str(provider.get("sandbox_base_url")),
             sql_str(provider.get("api_style")),

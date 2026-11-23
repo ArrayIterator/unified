@@ -1,20 +1,21 @@
 //! email_providers - handlers.
 
-use unified_core::error::{UnifiedError, UnifiedResult};
-use unified_core::hooks::{HookBus};
-use unified_core::json as api_json;
-use unified_core::pagination::{PageResult, PaginationParams};
-use actix_web::{web, HttpRequest, HttpResponse};
-use chrono::{Utc};
-use serde::{Deserialize};
-use serde_json::{json, Value};
+use super::{
+    adapters::*, credentials::*, crypto::*, events::*, hooks::*, http::*, module::*,
+    provider_kinds::*, registry::*, store::*, worker::*,
+};
+use actix_web::{HttpRequest, HttpResponse, web};
+use chrono::Utc;
+use serde::Deserialize;
+use serde_json::{Value, json};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
+use unified_core::error::{UnifiedError, UnifiedResult};
+use unified_core::hooks::HookBus;
+use unified_core::json as api_json;
+use unified_core::pagination::{PageResult, PaginationParams};
 use uuid::Uuid;
-use super::{events::*, provider_kinds::*, credentials::*, store::*, http::*, registry::*, adapters::*, worker::*, hooks::*, module::*};
-
-
 
 // ---------------------------------------------------------------------------
 // HTTP handlers.
@@ -23,7 +24,6 @@ pub struct EmailProviderState {
     pub(crate) hooks: RwLock<Option<Arc<HookBus>>>,
     pub(crate) debug: AtomicBool,
 }
-
 
 impl EmailProviderState {
     pub(crate) fn new() -> Self {
@@ -55,7 +55,6 @@ impl EmailProviderState {
         }
     }
 }
-
 
 // ---------------------------------------------------------------------------
 // Caller identity and capability checks (same trusted-parameter
@@ -101,9 +100,7 @@ pub(crate) fn caller_company(
         .company_id
         .filter(|value| !value.is_empty());
     match (&tenant.company_id, &verified) {
-        (Some(tenant_company), Some(verified_company))
-            if tenant_company != verified_company =>
-        {
+        (Some(tenant_company), Some(verified_company)) if tenant_company != verified_company => {
             Err(UnifiedError::forbidden(
                 "Verified caller company does not match the tenant company scope",
             ))
@@ -166,7 +163,6 @@ pub(crate) fn require_permission(
     }
 }
 
-
 pub(crate) async fn list_catalog() -> HttpResponse {
     let catalog: Vec<Value> = EmailProviderKind::all()
         .iter()
@@ -174,8 +170,9 @@ pub(crate) async fn list_catalog() -> HttpResponse {
             json!({
                 "kind": kind.as_str(),
                 "name": kind.display_name(),
+                "logo": kind.logo(),
                 "capabilities": capabilities_for(*kind),
-                "settings_fields": settings_fields(*kind),
+                "settings_fields": settings_fields_for_catalog(*kind),
                 "domain_notes": kind.domain_notes(),
                 "webhook_notes": kind.webhook_notes(),
             })
@@ -184,6 +181,76 @@ pub(crate) async fn list_catalog() -> HttpResponse {
     api_json::success_response(json!({ "providers": catalog }), 200)
 }
 
+/// Settings fields for one provider kind, after the
+/// `email_provider.settings_fields` hook has had its say (task 350,
+/// addition A).
+///
+/// Contract: the catalog builds the base list from the registry
+/// definition, then emits `email_provider.settings_fields` with
+/// `{ kind, fields }`. A hook handler may contribute one of:
+/// - `{ "add": [field, ...] }` — fields appended to the base list
+///   (a field whose `key` already exists replaces the base field);
+/// - `{ "remove": ["key", ...] }` — base fields dropped by key;
+/// - `{ "fields": [field, ...] }` — the whole list replaced.
+/// Malformed contributions are ignored, never fatal: a broken hook
+/// must not break the catalog. Field objects use the same shape as
+/// `SettingsFieldDef` (`key`, `label`, `type`, `required`, `secret`,
+/// `placeholder`, `help`). With no hook bus (unit tests, module not
+/// initialized) the base list is returned unchanged.
+pub(crate) fn settings_fields_for_catalog(kind: EmailProviderKind) -> Vec<SettingsFieldDef> {
+    let mut fields = settings_fields(kind);
+    let Some(hooks) = email_hooks() else {
+        return fields;
+    };
+    let emitted = hooks.emit(
+        EVENT_EMAIL_PROVIDER_SETTINGS_FIELDS,
+        json!({ "kind": kind.as_str(), "fields": fields }),
+    );
+    for result in &emitted.results {
+        if let Some(replacement) = result.get("fields").and_then(|value| value.as_array()) {
+            let parsed: Vec<SettingsFieldDef> = replacement
+                .iter()
+                .filter_map(|value| serde_json::from_value(value.clone()).ok())
+                .collect();
+            if !parsed.is_empty() {
+                fields = parsed;
+            }
+        }
+        if let Some(remove) = result.get("remove").and_then(|value| value.as_array()) {
+            let keys: Vec<String> = remove
+                .iter()
+                .filter_map(|value| value.as_str().map(str::to_string))
+                .collect();
+            fields.retain(|field| !keys.contains(&field.key));
+        }
+        if let Some(add) = result.get("add").and_then(|value| value.as_array()) {
+            for value in add {
+                let Ok(field) = serde_json::from_value::<SettingsFieldDef>(value.clone()) else {
+                    continue;
+                };
+                if field.key.trim().is_empty() {
+                    continue;
+                }
+                if let Some(existing) = fields.iter_mut().find(|item| item.key == field.key) {
+                    *existing = field;
+                } else {
+                    fields.push(field);
+                }
+            }
+        }
+    }
+    fields
+}
+
+/// Encrypt one OAuth secret for storage, when a value was supplied.
+/// Empty means "not set". When no `app.secret_key` is configured the
+/// write is refused (fail closed) instead of storing plaintext.
+pub(crate) fn encrypt_stored_secret(value: &Option<String>) -> UnifiedResult<Option<String>> {
+    match value.as_deref().filter(|value| !value.trim().is_empty()) {
+        None => Ok(None),
+        Some(plaintext) => encrypt_secret(plaintext).map(Some),
+    }
+}
 
 pub(crate) fn paginate_connections(
     mut items: Vec<EmailConnectionView>,
@@ -197,9 +264,11 @@ pub(crate) fn paginate_connections(
         .skip(start)
         .take(pagination.per_page as usize)
         .collect();
-    api_json::success_response(PageResult::new(page_items, total, &pagination).to_json(), 200)
+    api_json::success_response(
+        PageResult::new(page_items, total, &pagination).to_json(),
+        200,
+    )
 }
-
 
 pub(crate) async fn list_connections(
     req: HttpRequest,
@@ -242,7 +311,6 @@ pub(crate) async fn list_connections(
     paginate_connections(views, &params)
 }
 
-
 pub(crate) async fn create_connection(
     state: web::Data<Arc<EmailProviderState>>,
     req: HttpRequest,
@@ -265,6 +333,41 @@ pub(crate) async fn create_connection(
         Ok(kind) => kind,
         Err(error) => return api_json::error_response(&error, debug),
     };
+    // OAuth secrets are encrypted at rest (crypto.rs). When no
+    // app.secret_key is configured the create is refused instead of
+    // storing them in plaintext.
+    let credentials = match (|| -> UnifiedResult<EmailCredentials> {
+        Ok(EmailCredentials {
+            api_key: input
+                .api_key
+                .clone()
+                .filter(|value| !value.trim().is_empty()),
+            access_key_id: input
+                .access_key_id
+                .clone()
+                .filter(|value| !value.trim().is_empty()),
+            secret_access_key: input
+                .secret_access_key
+                .clone()
+                .filter(|value| !value.trim().is_empty()),
+            webhook_secret: input
+                .webhook_secret
+                .clone()
+                .filter(|value| !value.trim().is_empty()),
+            password: encrypt_stored_secret(&input.password)?,
+            client_id: input
+                .client_id
+                .clone()
+                .filter(|value| !value.trim().is_empty()),
+            client_secret: encrypt_stored_secret(&input.client_secret)?,
+            refresh_token: encrypt_stored_secret(&input.refresh_token)?,
+            access_token: encrypt_stored_secret(&input.access_token)?,
+            access_token_expires_at: input.access_token_expires_at,
+        })
+    })() {
+        Ok(credentials) => credentials,
+        Err(error) => return api_json::error_response(&error, debug),
+    };
     let now = Utc::now();
     let connection = EmailConnection {
         id: Uuid::now_v7(),
@@ -275,12 +378,11 @@ pub(crate) async fn create_connection(
         sender_email: input.sender_email.filter(|value| !value.trim().is_empty()),
         sender_name: input.sender_name.filter(|value| !value.trim().is_empty()),
         webhook_url: input.webhook_url.filter(|value| !value.trim().is_empty()),
-        credentials: EmailCredentials {
-            api_key: input.api_key.filter(|value| !value.trim().is_empty()),
-            access_key_id: input.access_key_id.filter(|value| !value.trim().is_empty()),
-            secret_access_key: input.secret_access_key.filter(|value| !value.trim().is_empty()),
-            webhook_secret: input.webhook_secret.filter(|value| !value.trim().is_empty()),
-        },
+        smtp_host: input.smtp_host.filter(|value| !value.trim().is_empty()),
+        smtp_port: input.smtp_port,
+        smtp_tls: input.smtp_tls.filter(|value| !value.trim().is_empty()),
+        smtp_username: input.smtp_username.filter(|value| !value.trim().is_empty()),
+        credentials,
         test_mode: input.test_mode.unwrap_or(false),
         enabled: input.enabled.unwrap_or(true),
         last_tested_at: None,
@@ -300,11 +402,10 @@ pub(crate) async fn create_connection(
     api_json::success_response(connection.view(), 201)
 }
 
-
 pub(crate) fn parse_connection_id(path: &str) -> UnifiedResult<Uuid> {
-    Uuid::parse_str(path).map_err(|_| UnifiedError::bad_request(format!("Invalid connection id \"{path}\"")))
+    Uuid::parse_str(path)
+        .map_err(|_| UnifiedError::bad_request(format!("Invalid connection id \"{path}\"")))
 }
-
 
 pub(crate) async fn get_connection_handler(
     state: web::Data<Arc<EmailProviderState>>,
@@ -332,7 +433,6 @@ pub(crate) async fn get_connection_handler(
         ),
     }
 }
-
 
 pub(crate) async fn update_connection(
     state: web::Data<Arc<EmailProviderState>>,
@@ -367,14 +467,42 @@ pub(crate) async fn update_connection(
     // Re-validate the merged record so a partial update cannot drop a
     // credential the provider kind requires.
     let merged = CreateConnectionRequest {
-        name: input.name.clone().unwrap_or_else(|| connection.name.clone()),
+        name: input
+            .name
+            .clone()
+            .unwrap_or_else(|| connection.name.clone()),
         kind: connection.kind.as_str().to_string(),
         domain: input.domain.clone().or_else(|| connection.domain.clone()),
         region: input.region.clone().or_else(|| connection.region.clone()),
-        sender_email: input.sender_email.clone().or_else(|| connection.sender_email.clone()),
-        sender_name: input.sender_name.clone().or_else(|| connection.sender_name.clone()),
-        webhook_url: input.webhook_url.clone().or_else(|| connection.webhook_url.clone()),
-        api_key: input.api_key.clone().or_else(|| connection.credentials.api_key.clone()),
+        sender_email: input
+            .sender_email
+            .clone()
+            .or_else(|| connection.sender_email.clone()),
+        sender_name: input
+            .sender_name
+            .clone()
+            .or_else(|| connection.sender_name.clone()),
+        webhook_url: input
+            .webhook_url
+            .clone()
+            .or_else(|| connection.webhook_url.clone()),
+        smtp_host: input
+            .smtp_host
+            .clone()
+            .or_else(|| connection.smtp_host.clone()),
+        smtp_port: input.smtp_port.or(connection.smtp_port),
+        smtp_tls: input
+            .smtp_tls
+            .clone()
+            .or_else(|| connection.smtp_tls.clone()),
+        smtp_username: input
+            .smtp_username
+            .clone()
+            .or_else(|| connection.smtp_username.clone()),
+        api_key: input
+            .api_key
+            .clone()
+            .or_else(|| connection.credentials.api_key.clone()),
         access_key_id: input
             .access_key_id
             .clone()
@@ -387,6 +515,29 @@ pub(crate) async fn update_connection(
             .webhook_secret
             .clone()
             .or_else(|| connection.credentials.webhook_secret.clone()),
+        password: input
+            .password
+            .clone()
+            .or_else(|| connection.credentials.password.clone()),
+        client_id: input
+            .client_id
+            .clone()
+            .or_else(|| connection.credentials.client_id.clone()),
+        client_secret: input
+            .client_secret
+            .clone()
+            .or_else(|| connection.credentials.client_secret.clone()),
+        refresh_token: input
+            .refresh_token
+            .clone()
+            .or_else(|| connection.credentials.refresh_token.clone()),
+        access_token: input
+            .access_token
+            .clone()
+            .or_else(|| connection.credentials.access_token.clone()),
+        access_token_expires_at: input
+            .access_token_expires_at
+            .or(connection.credentials.access_token_expires_at),
         test_mode: input.test_mode.or(Some(connection.test_mode)),
         enabled: input.enabled.or(Some(connection.enabled)),
     };
@@ -397,35 +548,135 @@ pub(crate) async fn update_connection(
         connection.name = name.trim().to_string();
     }
     if let Some(domain) = input.domain {
-        connection.domain = if domain.trim().is_empty() { None } else { Some(domain) };
+        connection.domain = if domain.trim().is_empty() {
+            None
+        } else {
+            Some(domain)
+        };
     }
     if let Some(region) = input.region {
-        connection.region = if region.trim().is_empty() { None } else { Some(region) };
+        connection.region = if region.trim().is_empty() {
+            None
+        } else {
+            Some(region)
+        };
     }
     if let Some(sender_email) = input.sender_email {
-        connection.sender_email = if sender_email.trim().is_empty() { None } else { Some(sender_email) };
+        connection.sender_email = if sender_email.trim().is_empty() {
+            None
+        } else {
+            Some(sender_email)
+        };
     }
     if let Some(sender_name) = input.sender_name {
-        connection.sender_name = if sender_name.trim().is_empty() { None } else { Some(sender_name) };
+        connection.sender_name = if sender_name.trim().is_empty() {
+            None
+        } else {
+            Some(sender_name)
+        };
     }
     if let Some(webhook_url) = input.webhook_url {
-        connection.webhook_url = if webhook_url.trim().is_empty() { None } else { Some(webhook_url) };
+        connection.webhook_url = if webhook_url.trim().is_empty() {
+            None
+        } else {
+            Some(webhook_url)
+        };
     }
     // Secrets are write-only: an omitted field keeps the stored value,
     // an empty string clears it.
     if let Some(api_key) = input.api_key {
-        connection.credentials.api_key = if api_key.is_empty() { None } else { Some(api_key) };
+        connection.credentials.api_key = if api_key.is_empty() {
+            None
+        } else {
+            Some(api_key)
+        };
     }
     if let Some(access_key_id) = input.access_key_id {
-        connection.credentials.access_key_id = if access_key_id.is_empty() { None } else { Some(access_key_id) };
+        connection.credentials.access_key_id = if access_key_id.is_empty() {
+            None
+        } else {
+            Some(access_key_id)
+        };
     }
     if let Some(secret_access_key) = input.secret_access_key {
-        connection.credentials.secret_access_key =
-            if secret_access_key.is_empty() { None } else { Some(secret_access_key) };
+        connection.credentials.secret_access_key = if secret_access_key.is_empty() {
+            None
+        } else {
+            Some(secret_access_key)
+        };
     }
     if let Some(webhook_secret) = input.webhook_secret {
-        connection.credentials.webhook_secret =
-            if webhook_secret.is_empty() { None } else { Some(webhook_secret) };
+        connection.credentials.webhook_secret = if webhook_secret.is_empty() {
+            None
+        } else {
+            Some(webhook_secret)
+        };
+    }
+    if let Some(smtp_host) = input.smtp_host {
+        connection.smtp_host = if smtp_host.trim().is_empty() {
+            None
+        } else {
+            Some(smtp_host)
+        };
+    }
+    if let Some(smtp_port) = input.smtp_port {
+        connection.smtp_port = Some(smtp_port);
+    }
+    if let Some(smtp_tls) = input.smtp_tls {
+        connection.smtp_tls = if smtp_tls.trim().is_empty() {
+            None
+        } else {
+            Some(smtp_tls)
+        };
+    }
+    if let Some(smtp_username) = input.smtp_username {
+        connection.smtp_username = if smtp_username.trim().is_empty() {
+            None
+        } else {
+            Some(smtp_username)
+        };
+    }
+    // OAuth secrets are write-only and encrypted at rest: an omitted
+    // field keeps the stored value, an empty string clears it, a new
+    // value is encrypted (refused when no app.secret_key is set).
+    // Pre-encrypt first so a refused write changes nothing.
+    let new_password = match encrypt_stored_secret(&input.password) {
+        Ok(value) => value,
+        Err(error) => return api_json::error_response(&error, debug),
+    };
+    let new_client_secret = match encrypt_stored_secret(&input.client_secret) {
+        Ok(value) => value,
+        Err(error) => return api_json::error_response(&error, debug),
+    };
+    let new_refresh_token = match encrypt_stored_secret(&input.refresh_token) {
+        Ok(value) => value,
+        Err(error) => return api_json::error_response(&error, debug),
+    };
+    let new_access_token = match encrypt_stored_secret(&input.access_token) {
+        Ok(value) => value,
+        Err(error) => return api_json::error_response(&error, debug),
+    };
+    if input.password.is_some() {
+        connection.credentials.password = new_password;
+    }
+    if let Some(client_id) = input.client_id {
+        connection.credentials.client_id = if client_id.trim().is_empty() {
+            None
+        } else {
+            Some(client_id)
+        };
+    }
+    if input.client_secret.is_some() {
+        connection.credentials.client_secret = new_client_secret;
+    }
+    if input.refresh_token.is_some() {
+        connection.credentials.refresh_token = new_refresh_token;
+    }
+    if input.access_token.is_some() {
+        connection.credentials.access_token = new_access_token;
+    }
+    if input.access_token_expires_at.is_some() {
+        connection.credentials.access_token_expires_at = input.access_token_expires_at;
     }
     if let Some(test_mode) = input.test_mode {
         connection.test_mode = test_mode;
@@ -438,7 +689,6 @@ pub(crate) async fn update_connection(
     drop(connections);
     api_json::success_response(view, 200)
 }
-
 
 pub(crate) async fn delete_connection(
     state: web::Data<Arc<EmailProviderState>>,
@@ -487,7 +737,6 @@ pub(crate) async fn delete_connection(
         ),
     }
 }
-
 
 pub(crate) async fn test_connection_handler(
     state: web::Data<Arc<EmailProviderState>>,
@@ -551,7 +800,6 @@ pub(crate) async fn test_connection_handler(
     }
 }
 
-
 #[derive(Debug, Deserialize)]
 pub(crate) struct SendInput {
     pub(crate) connection_id: Option<String>,
@@ -568,8 +816,10 @@ pub(crate) struct SendInput {
     pub(crate) test_mode: Option<bool>,
 }
 
-
-pub(crate) fn send_input_to_message(input: &SendInput, connection: &EmailConnection) -> UnifiedResult<EmailMessage> {
+pub(crate) fn send_input_to_message(
+    input: &SendInput,
+    connection: &EmailConnection,
+) -> UnifiedResult<EmailMessage> {
     validate_email_address(&input.to)?;
     let subject = input.subject.clone().unwrap_or_default();
     if subject.trim().is_empty() && input.template_id.is_none() {
@@ -596,7 +846,6 @@ pub(crate) fn send_input_to_message(input: &SendInput, connection: &EmailConnect
         test_mode: input.test_mode.unwrap_or(connection.test_mode),
     })
 }
-
 
 pub(crate) async fn send_mail_handler(
     state: web::Data<Arc<EmailProviderState>>,
@@ -704,7 +953,6 @@ pub(crate) async fn send_mail_handler(
     }
 }
 
-
 #[derive(Debug, Deserialize)]
 pub(crate) struct SendBatchInput {
     pub(crate) connection_id: Option<String>,
@@ -720,7 +968,6 @@ pub(crate) struct SendBatchInput {
     pub(crate) metadata: Option<HashMap<String, String>>,
     pub(crate) test_mode: Option<bool>,
 }
-
 
 pub(crate) async fn send_batch_handler(
     state: web::Data<Arc<EmailProviderState>>,
@@ -859,7 +1106,6 @@ pub(crate) async fn send_batch_handler(
     )
 }
 
-
 pub(crate) async fn list_send_log(
     req: HttpRequest,
     query: web::Query<PaginationParams>,
@@ -911,9 +1157,11 @@ pub(crate) async fn list_send_log(
         .skip(start)
         .take(pagination.per_page as usize)
         .collect();
-    api_json::success_response(PageResult::new(page_items, total, &pagination).to_json(), 200)
+    api_json::success_response(
+        PageResult::new(page_items, total, &pagination).to_json(),
+        200,
+    )
 }
-
 
 pub(crate) async fn get_default_connection(req: HttpRequest) -> HttpResponse {
     let _tenant = match require_tenant(&req) {
@@ -929,16 +1177,16 @@ pub(crate) async fn get_default_connection(req: HttpRequest) -> HttpResponse {
             json!({ "connection_id": connection.id.to_string(), "connection": connection.view() }),
             200,
         ),
-        None => api_json::success_response(json!({ "connection_id": null, "connection": null }), 200),
+        None => {
+            api_json::success_response(json!({ "connection_id": null, "connection": null }), 200)
+        }
     }
 }
-
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct SetDefaultInput {
     pub(crate) connection_id: Option<String>,
 }
-
 
 pub(crate) async fn set_default_connection(
     state: web::Data<Arc<EmailProviderState>>,
@@ -971,7 +1219,7 @@ pub(crate) async fn set_default_connection(
             return api_json::error_response(
                 &UnifiedError::bad_request(format!("Invalid connection id \"{raw}\"")),
                 debug,
-            )
+            );
         }
     };
     match get_connection(&id) {
@@ -1044,8 +1292,8 @@ mod tests {
     }
 
     use super::*;
-    use unified_core::hooks::HookBus;
     use actix_web::test::TestRequest;
+    use unified_core::hooks::HookBus;
 
     fn test_state() -> Arc<EmailProviderState> {
         let state = Arc::new(EmailProviderState::new());
@@ -1062,10 +1310,20 @@ mod tests {
             sender_email: None,
             sender_name: None,
             webhook_url: None,
+            smtp_host: None,
+            smtp_port: None,
+            smtp_tls: None,
+            smtp_username: None,
             api_key: None,
             access_key_id: None,
             secret_access_key: None,
             webhook_secret: None,
+            password: None,
+            client_id: None,
+            client_secret: None,
+            refresh_token: None,
+            access_token: None,
+            access_token_expires_at: None,
             test_mode: None,
             enabled: None,
         }
@@ -1101,12 +1359,8 @@ mod tests {
         let data = web::Data::new(state.clone());
         // No identity headers at all: refused with 401 before any work.
         let anonymous = TestRequest::default().to_http_request();
-        let response = create_connection(
-            data.clone(),
-            anonymous,
-            web::Json(test_connection_input()),
-        )
-        .await;
+        let response =
+            create_connection(data.clone(), anonymous, web::Json(test_connection_input())).await;
         assert_eq!(response.status(), actix_web::http::StatusCode::UNAUTHORIZED);
         // Identity headers present, but no `role.check` handler answers:
         // fail closed with 403.

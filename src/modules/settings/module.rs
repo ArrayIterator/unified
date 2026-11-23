@@ -58,11 +58,20 @@ impl Module for SettingsModule {
                 on_settings_merge(store.clone(), ctx)
             }),
         );
+        // Task 351: validate `site/*` writes against the site
+        // definitions (WordPress General Settings parity). Other
+        // namespaces pass through untouched.
+        bus.register(
+            events::CONFIG_VALIDATE,
+            "settings",
+            Arc::new(move |ctx: &mut HookContext| on_config_validate(ctx)),
+        );
     }
 
     fn route_info(&self) -> Vec<RouteInfo> {
         vec![
             RouteInfo { method: "GET", path: "/api/v1/settings", owner: "settings", description: "List settings (requires X-User-Id + X-Role and settings.view via role.check, fail-closed; no namespace is public)", auth: unified_core::auth::RouteAuth::Authenticated},
+            RouteInfo { method: "GET", path: "/api/v1/settings/definitions", owner: "settings", description: "Setting definitions for a namespace (site: WordPress General Settings parity — title, tagline, URLs, admin email, membership, default role, language, timezone, date/time formats, week start) with effective values.", auth: unified_core::auth::RouteAuth::Authenticated},
             RouteInfo { method: "GET", path: "/api/v1/settings/{namespace}/{key}", owner: "settings", description: "Get setting (requires X-User-Id + X-Role and settings.view via role.check, fail-closed)", auth: unified_core::auth::RouteAuth::Authenticated},
             RouteInfo { method: "PUT", path: "/api/v1/settings/{namespace}/{key}", owner: "settings", description: "Put setting (requires X-User-Id + X-Role and settings.manage via role.check, fail-closed)", auth: unified_core::auth::RouteAuth::Authenticated},
             RouteInfo { method: "DELETE", path: "/api/v1/settings/{namespace}/{key}", owner: "settings", description: "Delete setting (requires X-User-Id + X-Role and settings.manage via role.check, fail-closed)", auth: unified_core::auth::RouteAuth::Authenticated},
@@ -74,6 +83,7 @@ impl Module for SettingsModule {
             web::scope("/api/v1/settings")
                 .app_data(web::Data::new(self.store.clone()))
                 .route("", web::get().to(list_settings))
+                .route("/definitions", web::get().to(list_definitions))
                 .route("/{namespace}/{key}", web::get().to(get_setting))
                 .route("/{namespace}/{key}", web::put().to(put_setting))
                 .route("/{namespace}/{key}", web::delete().to(delete_setting)),

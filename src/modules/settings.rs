@@ -16,11 +16,18 @@
 // `settings.manage` for writes. No namespace is public.
 // The module also listens for `settings.merge` from other modules
 // and persists their flags under the `vcs.*`, `auth.*`, and
-// `cloudflare` namespaces.
+// `cloudflare` namespaces. Task 351 adds data-driven definitions
+// for the `site` namespace (`definitions.rs`: WordPress General
+// Settings parity — title, tagline, URLs, admin email, membership,
+// default role, language, full IANA timezone, date/time formats,
+// week start), discoverable at `GET /api/v1/settings/definitions`
+// and enforced on write through the `config.validate` hook.
 
 pub mod types;
+pub mod definitions;
 mod handlers;
 pub mod module;
 
 pub use self::types::{SettingsStore, SettingRecord, PutSettingInput};
+pub use self::definitions::{SiteSettingDef, SiteSettingOption, site_definitions, site_definition, validate_site_value, site_definitions_json, IANA_TIMEZONES};
 pub use self::module::{SettingsModule, register};

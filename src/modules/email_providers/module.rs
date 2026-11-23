@@ -10,10 +10,17 @@
 // the provider's `Retry-After` delay in `error.metadata`.
 //
 // Providers: Mailchimp Transactional (Mandrill), Brevo, SendGrid,
-// Mailgun, Postmark, Amazon SES (SigV4), Resend, SparkPost, and
-// generic SMTP (which delegates to the Mail Manager's SMTP transport
-// through the `mail.send_requested` hook; this module never
-// re-implements SMTP delivery).
+// Mailgun, Postmark, Amazon SES (SigV4), Resend, SparkPost,
+// generic SMTP (direct lettre transport from the connection's own
+// host, port, TLS mode and credentials — the old Mail Manager
+// delegation is gone; see the SMTP note in `adapters.rs`), Gmail /
+// Yahoo / Outlook (OAuth2 + SMTP XOAUTH2, PKCE, token refresh — see
+// `oauth.rs`), and local sendmail (direct spawn of the sendmail
+// binary, no credentials at all, the default builtin like PHP sendmail).
+//
+// Logos: one SVG per provider in `logos/` (sprite
+// `provider-logo-email-<id>`); the catalog returns the logo stem
+// (`"logo": "email-gmail"`), never a URL.
 //
 // Provider selection is PER send: every send call takes an explicit
 // provider connection id. A global default connection may exist as a
@@ -21,11 +28,15 @@
 //
 // Credentials live only on the connection record, are never logged,
 // and are never returned by any API response: read views expose only
-// which credential fields are configured. Provider API hosts are
-// allow-listed per adapter.
+// which credential fields are configured. The OAuth secrets added
+// by task 350 (SMTP password, OAuth client secret, access / refresh
+// tokens) are stored ENCRYPTED (`crypto.rs`, `v1.` format, key
+// `app.secret_key`); the pre-existing API-key fields keep their
+// original write-only treatment. Provider API hosts are allow-listed
+// per adapter.
 //
 // Routes (all under `/api/v1/email-providers`):
-//   GET    /catalog                  - provider kinds, capabilities, settings fields
+//   GET    /catalog                  - provider kinds, capabilities, settings fields, logos
 //   GET    /connections              - paginated connections (filter kind, enabled, search)
 //   POST   /connections              - create a connection
 //   GET    /connections/{id}         - one connection (masked view)
@@ -33,6 +44,10 @@
 //   DELETE /connections/{id}         - delete a connection
 //   POST   /connections/{id}/test    - connection test against the real provider API
 //   POST   /connections/{id}/test-send - send a real test message through the connection
+//   GET    /connections/{id}/oauth/authorize - OAuth authorization URL (Gmail/Yahoo/Outlook)
+//   GET    /oauth/callback           - OAuth callback (provider redirects the browser here)
+//   POST   /connections/{id}/oauth/refresh - refresh the stored OAuth tokens
+//   POST   /connections/{id}/oauth/revoke - unlink the OAuth account
 //   GET    /default                  - the global default connection id (fallback only)
 //   PUT    /default                  - set the global default connection id
 //   POST   /send                     - send one message through an explicit connection
@@ -48,25 +63,32 @@
 //   Answers `email_provider.webhook_verify` with `{ provider,
 //   connection_id?, headers, body }` by adding a result `{ valid }`
 //   (or `{ error }`) using the adapter's signature check.
+//   Emits `email_provider.settings_fields` with `{ kind, fields }`
+//   when the catalog builds a provider's field list; another module
+//   may add, remove, or replace fields — see
+//   `settings_fields_for_catalog` in `handlers.rs` for the result
+//   contract.
 //   Emits `email_provider.connected`, `email_provider.connection.created`,
-//   `email_provider.connection.deleted`, `email.sent`, `email.failed`.
+//   `email_provider.connection.deleted`, `email_provider.oauth_linked`,
+//   `email_provider.oauth_refreshed`, `email.sent`, `email.failed`.
 
+use super::{
+    adapters::*, credentials::*, crypto::*, events::*, handlers::*, hooks::*, http::*, module::*,
+    oauth_handlers::*, provider_kinds::*, registry::*, store::*, worker::*,
+};
+use actix_web::{HttpRequest, HttpResponse, web};
+use chrono::Utc;
+use serde::Deserialize;
+use serde_json::json;
+use std::collections::HashMap;
+use std::sync::Arc;
+use std::sync::atomic::Ordering;
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
 use unified_core::hooks::{HookBus, HookContext};
 use unified_core::json as api_json;
 use unified_core::modules::{Module, ModuleRegistry, RouteInfo};
-use actix_web::{web, HttpRequest, HttpResponse};
-use chrono::{Utc};
-use serde::{Deserialize};
-use serde_json::{json};
-use std::collections::HashMap;
-use std::sync::atomic::{Ordering};
-use std::sync::{Arc};
 use uuid::Uuid;
-use super::{events::*, provider_kinds::*, credentials::*, store::*, http::*, registry::*, adapters::*, worker::*, hooks::*, handlers::*};
-
-
 
 // ---------------------------------------------------------------------------
 // Module
@@ -74,7 +96,6 @@ use super::{events::*, provider_kinds::*, credentials::*, store::*, http::*, reg
 pub struct EmailProvidersModule {
     pub(crate) state: Arc<EmailProviderState>,
 }
-
 
 impl EmailProvidersModule {
     pub fn new() -> Self {
@@ -84,11 +105,9 @@ impl EmailProvidersModule {
     }
 }
 
-
 pub fn register(registry: &ModuleRegistry) {
     registry.register(Arc::new(EmailProvidersModule::new()));
 }
-
 
 impl Module for EmailProvidersModule {
     fn id(&self) -> &'static str {
@@ -100,16 +119,28 @@ impl Module for EmailProvidersModule {
     }
 
     fn description(&self) -> &'static str {
-        "Email provider registry: Mailchimp Transactional, Brevo, SendGrid, Mailgun, Postmark, Amazon SES, Resend, SparkPost, and SMTP (via the Mail Manager), with per-send provider selection, connection tests, and webhook signature verification."
+        "Email provider registry: Mailchimp Transactional, Brevo, SendGrid, Mailgun, Postmark, Amazon SES, Resend, SparkPost, direct SMTP, Gmail / Yahoo / Outlook (OAuth2 + XOAUTH2), and local sendmail, with per-send provider selection, connection tests, webhook signature verification, and per-provider logos."
     }
 
     fn dependencies(&self) -> Vec<&'static str> {
-        vec!["mail", "email-templates"]
+        vec!["email-templates"]
     }
 
     fn init(&self, ctx: &AppContext) -> UnifiedResult<()> {
         self.state.debug.store(ctx.is_debug(), Ordering::SeqCst);
         self.state.set_hooks(ctx.hooks.clone());
+        // Capture app.secret_key for OAuth secret encryption
+        // (crypto.rs): no secret at boot means None, not a fallback
+        // — storing an OAuth secret is refused and adapters needing
+        // one fail closed.
+        let secret = ctx
+            .config
+            .read()
+            .expect("config lock poisoned")
+            .app
+            .secret_key
+            .clone();
+        set_encryption_secret(&secret);
         Ok(())
     }
 
@@ -128,19 +159,125 @@ impl Module for EmailProvidersModule {
 
     fn route_info(&self) -> Vec<RouteInfo> {
         vec![
-            RouteInfo { method: "GET", path: "/api/v1/email-providers/catalog", owner: "email_providers", description: "Provider catalog: kinds, capabilities, settings fields, domain and webhook notes.", auth: unified_core::auth::RouteAuth::Authenticated},
-            RouteInfo { method: "GET", path: "/api/v1/email-providers/connections", owner: "email_providers", description: "Paginated provider connections (masked views).", auth: unified_core::auth::RouteAuth::Authenticated},
-            RouteInfo { method: "POST", path: "/api/v1/email-providers/connections", owner: "email_providers", description: "Create a provider connection.", auth: unified_core::auth::RouteAuth::Authenticated},
-            RouteInfo { method: "GET", path: "/api/v1/email-providers/connections/{id}", owner: "email_providers", description: "One provider connection (masked view).", auth: unified_core::auth::RouteAuth::Authenticated},
-            RouteInfo { method: "PUT", path: "/api/v1/email-providers/connections/{id}", owner: "email_providers", description: "Update a provider connection.", auth: unified_core::auth::RouteAuth::Authenticated},
-            RouteInfo { method: "DELETE", path: "/api/v1/email-providers/connections/{id}", owner: "email_providers", description: "Delete a provider connection.", auth: unified_core::auth::RouteAuth::Authenticated},
-            RouteInfo { method: "POST", path: "/api/v1/email-providers/connections/{id}/test", owner: "email_providers", description: "Test a connection against the real provider API.", auth: unified_core::auth::RouteAuth::Authenticated},
-            RouteInfo { method: "POST", path: "/api/v1/email-providers/connections/{id}/test-send", owner: "email_providers", description: "Send a real test message through the connection.", auth: unified_core::auth::RouteAuth::Authenticated},
-            RouteInfo { method: "GET", path: "/api/v1/email-providers/default", owner: "email_providers", description: "The global default connection (fallback only).", auth: unified_core::auth::RouteAuth::Authenticated},
-            RouteInfo { method: "PUT", path: "/api/v1/email-providers/default", owner: "email_providers", description: "Set or clear the global default connection.", auth: unified_core::auth::RouteAuth::Authenticated},
-            RouteInfo { method: "POST", path: "/api/v1/email-providers/send", owner: "email_providers", description: "Send one message through an explicit provider connection.", auth: unified_core::auth::RouteAuth::Authenticated},
-            RouteInfo { method: "POST", path: "/api/v1/email-providers/send-batch", owner: "email_providers", description: "Send one message to many recipients through an explicit provider connection.", auth: unified_core::auth::RouteAuth::Authenticated},
-            RouteInfo { method: "GET", path: "/api/v1/email-providers/log", owner: "email_providers", description: "Paginated send log.", auth: unified_core::auth::RouteAuth::Authenticated},
+            RouteInfo {
+                method: "GET",
+                path: "/api/v1/email-providers/catalog",
+                owner: "email_providers",
+                description: "Provider catalog: kinds, capabilities, settings fields, domain and webhook notes.",
+                auth: unified_core::auth::RouteAuth::Authenticated,
+            },
+            RouteInfo {
+                method: "GET",
+                path: "/api/v1/email-providers/connections",
+                owner: "email_providers",
+                description: "Paginated provider connections (masked views).",
+                auth: unified_core::auth::RouteAuth::Authenticated,
+            },
+            RouteInfo {
+                method: "POST",
+                path: "/api/v1/email-providers/connections",
+                owner: "email_providers",
+                description: "Create a provider connection.",
+                auth: unified_core::auth::RouteAuth::Authenticated,
+            },
+            RouteInfo {
+                method: "GET",
+                path: "/api/v1/email-providers/connections/{id}",
+                owner: "email_providers",
+                description: "One provider connection (masked view).",
+                auth: unified_core::auth::RouteAuth::Authenticated,
+            },
+            RouteInfo {
+                method: "PUT",
+                path: "/api/v1/email-providers/connections/{id}",
+                owner: "email_providers",
+                description: "Update a provider connection.",
+                auth: unified_core::auth::RouteAuth::Authenticated,
+            },
+            RouteInfo {
+                method: "DELETE",
+                path: "/api/v1/email-providers/connections/{id}",
+                owner: "email_providers",
+                description: "Delete a provider connection.",
+                auth: unified_core::auth::RouteAuth::Authenticated,
+            },
+            RouteInfo {
+                method: "POST",
+                path: "/api/v1/email-providers/connections/{id}/test",
+                owner: "email_providers",
+                description: "Test a connection against the real provider API.",
+                auth: unified_core::auth::RouteAuth::Authenticated,
+            },
+            RouteInfo {
+                method: "POST",
+                path: "/api/v1/email-providers/connections/{id}/test-send",
+                owner: "email_providers",
+                description: "Send a real test message through the connection.",
+                auth: unified_core::auth::RouteAuth::Authenticated,
+            },
+            RouteInfo {
+                method: "GET",
+                path: "/api/v1/email-providers/connections/{id}/oauth/authorize",
+                owner: "email_providers",
+                description: "OAuth authorization URL for a Gmail/Yahoo/Outlook connection.",
+                auth: unified_core::auth::RouteAuth::Authenticated,
+            },
+            RouteInfo {
+                method: "GET",
+                path: "/api/v1/email-providers/oauth/callback",
+                owner: "email_providers",
+                description: "OAuth callback: the provider redirects the admin browser here; authorized by the single-use state token, not by a session.",
+                auth: unified_core::auth::RouteAuth::Authenticated,
+            },
+            RouteInfo {
+                method: "POST",
+                path: "/api/v1/email-providers/connections/{id}/oauth/refresh",
+                owner: "email_providers",
+                description: "Refresh the stored OAuth tokens for a connection.",
+                auth: unified_core::auth::RouteAuth::Authenticated,
+            },
+            RouteInfo {
+                method: "POST",
+                path: "/api/v1/email-providers/connections/{id}/oauth/revoke",
+                owner: "email_providers",
+                description: "Unlink an OAuth account and clear its stored tokens.",
+                auth: unified_core::auth::RouteAuth::Authenticated,
+            },
+            RouteInfo {
+                method: "GET",
+                path: "/api/v1/email-providers/default",
+                owner: "email_providers",
+                description: "The global default connection (fallback only).",
+                auth: unified_core::auth::RouteAuth::Authenticated,
+            },
+            RouteInfo {
+                method: "PUT",
+                path: "/api/v1/email-providers/default",
+                owner: "email_providers",
+                description: "Set or clear the global default connection.",
+                auth: unified_core::auth::RouteAuth::Authenticated,
+            },
+            RouteInfo {
+                method: "POST",
+                path: "/api/v1/email-providers/send",
+                owner: "email_providers",
+                description: "Send one message through an explicit provider connection.",
+                auth: unified_core::auth::RouteAuth::Authenticated,
+            },
+            RouteInfo {
+                method: "POST",
+                path: "/api/v1/email-providers/send-batch",
+                owner: "email_providers",
+                description: "Send one message to many recipients through an explicit provider connection.",
+                auth: unified_core::auth::RouteAuth::Authenticated,
+            },
+            RouteInfo {
+                method: "GET",
+                path: "/api/v1/email-providers/log",
+                owner: "email_providers",
+                description: "Paginated send log.",
+                auth: unified_core::auth::RouteAuth::Authenticated,
+            },
         ]
     }
 
@@ -160,19 +297,36 @@ impl Module for EmailProvidersModule {
                 .route("/connections/{id}", web::get().to(get_connection_handler))
                 .route("/connections/{id}", web::put().to(update_connection))
                 .route("/connections/{id}", web::delete().to(delete_connection))
-                .route("/connections/{id}/test", web::post().to(test_connection_handler))
-                .route("/connections/{id}/test-send", web::post().to(test_connection_send)),
+                .route(
+                    "/connections/{id}/test",
+                    web::post().to(test_connection_handler),
+                )
+                .route(
+                    "/connections/{id}/test-send",
+                    web::post().to(test_connection_send),
+                )
+                .route(
+                    "/connections/{id}/oauth/authorize",
+                    web::get().to(oauth_authorize),
+                )
+                .route("/oauth/callback", web::get().to(oauth_callback))
+                .route(
+                    "/connections/{id}/oauth/refresh",
+                    web::post().to(oauth_refresh),
+                )
+                .route(
+                    "/connections/{id}/oauth/revoke",
+                    web::post().to(oauth_revoke),
+                ),
         );
     }
 }
-
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct TestSendInput {
     pub(crate) to: String,
     pub(crate) subject: Option<String>,
 }
-
 
 pub(crate) async fn test_connection_send(
     state: web::Data<Arc<EmailProviderState>>,
@@ -213,8 +367,13 @@ pub(crate) async fn test_connection_send(
         subject: input
             .subject
             .unwrap_or_else(|| "Unified test message".to_string()),
-        body_text: Some("This is a test message sent from the Unified Email Providers module.".to_string()),
-        body_html: Some("<p>This is a test message sent from the Unified Email Providers module.</p>".to_string()),
+        body_text: Some(
+            "This is a test message sent from the Unified Email Providers module.".to_string(),
+        ),
+        body_html: Some(
+            "<p>This is a test message sent from the Unified Email Providers module.</p>"
+                .to_string(),
+        ),
         reply_to: None,
         template_id: None,
         variables: HashMap::new(),

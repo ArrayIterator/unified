@@ -1,18 +1,19 @@
 //! email_providers - http.
 
-use unified_core::error::{UnifiedError, UnifiedResult};
+use super::{
+    adapters::*, credentials::*, events::*, handlers::*, hooks::*, module::*, provider_kinds::*,
+    registry::*, store::*, worker::*,
+};
 use chrono::{DateTime, Utc};
 use hmac::{Hmac, Mac};
-use reqwest::header::{RETRY_AFTER};
 use reqwest::StatusCode;
-use serde_json::{json, Value};
+use reqwest::header::RETRY_AFTER;
+use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use std::time::Duration;
+use unified_core::error::{UnifiedError, UnifiedResult};
 use url::Url;
 use uuid::Uuid;
-use super::{events::*, provider_kinds::*, credentials::*, store::*, registry::*, adapters::*, worker::*, hooks::*, handlers::*, module::*};
-
-
 
 // ---------------------------------------------------------------------------
 // Shared HTTP helpers (mirroring the cloud providers module).
@@ -27,14 +28,11 @@ pub(crate) fn hex_encode(bytes: &[u8]) -> String {
     out
 }
 
-
 pub(crate) fn sha256_hex(data: &[u8]) -> String {
     hex_encode(&Sha256::digest(data))
 }
 
-
 pub(crate) type HmacSha256 = Hmac<Sha256>;
-
 
 pub(crate) fn hmac_sha256(key: &[u8], message: &[u8]) -> Vec<u8> {
     let mut mac = HmacSha256::new_from_slice(key).expect("HMAC key length is always valid");
@@ -42,16 +40,17 @@ pub(crate) fn hmac_sha256(key: &[u8], message: &[u8]) -> Vec<u8> {
     mac.finalize().into_bytes().to_vec()
 }
 
-
 /// Constant-time-ish comparison for webhook signatures (avoids leaking
 /// the match position through early exit).
 pub(crate) fn signatures_equal(a: &str, b: &str) -> bool {
     if a.len() != b.len() {
         return false;
     }
-    a.bytes().zip(b.bytes()).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0
+    a.bytes()
+        .zip(b.bytes())
+        .fold(0u8, |acc, (x, y)| acc | (x ^ y))
+        == 0
 }
-
 
 pub(crate) fn build_client() -> UnifiedResult<reqwest::Client> {
     reqwest::Client::builder()
@@ -61,7 +60,6 @@ pub(crate) fn build_client() -> UnifiedResult<reqwest::Client> {
         .build()
         .map_err(|error| UnifiedError::internal(format!("Cannot build HTTP client: {error}")))
 }
-
 
 pub(crate) fn check_allowlist(url: &Url, kind: EmailProviderKind) -> UnifiedResult<()> {
     if !kind.has_fixed_hosts() {
@@ -77,7 +75,6 @@ pub(crate) fn check_allowlist(url: &Url, kind: EmailProviderKind) -> UnifiedResu
     Ok(())
 }
 
-
 pub(crate) fn parse_retry_after(response: &reqwest::Response) -> Option<Duration> {
     let value = response.headers().get(RETRY_AFTER)?.to_str().ok()?;
     value
@@ -86,7 +83,6 @@ pub(crate) fn parse_retry_after(response: &reqwest::Response) -> Option<Duration
         .ok()
         .map(|secs| Duration::from_secs(secs).min(MAX_RETRY_AFTER))
 }
-
 
 /// Map a provider HTTP response to an error. A 429 keeps its status
 /// and carries the `Retry-After` delay in metadata; 401/403/404 map to
@@ -114,16 +110,15 @@ pub(crate) fn http_status_error(
         StatusCode::FORBIDDEN => UnifiedError::forbidden(format!(
             "Provider \"{provider}\" refused the request (HTTP 403): the credentials lack permission for this operation"
         )),
-        StatusCode::NOT_FOUND => {
-            UnifiedError::not_found(format!("Provider \"{provider}\" resource not found (HTTP 404)"))
-        }
-        _ if status.is_client_error() => {
-            UnifiedError::bad_request(message).with_metadata("provider", Value::String(provider.to_string()))
-        }
-        _ => UnifiedError::internal(message).with_metadata("provider", Value::String(provider.to_string())),
+        StatusCode::NOT_FOUND => UnifiedError::not_found(format!(
+            "Provider \"{provider}\" resource not found (HTTP 404)"
+        )),
+        _ if status.is_client_error() => UnifiedError::bad_request(message)
+            .with_metadata("provider", Value::String(provider.to_string())),
+        _ => UnifiedError::internal(message)
+            .with_metadata("provider", Value::String(provider.to_string())),
     }
 }
-
 
 pub(crate) async fn send_json(
     client: &reqwest::Client,
@@ -135,7 +130,11 @@ pub(crate) async fn send_json(
     })?;
     let status = response.status();
     if !status.is_success() {
-        return Err(http_status_error(status, provider, parse_retry_after(&response)));
+        return Err(http_status_error(
+            status,
+            provider,
+            parse_retry_after(&response),
+        ));
     }
     response.json::<Value>().await.map_err(|error| {
         UnifiedError::internal(format!(
@@ -143,7 +142,6 @@ pub(crate) async fn send_json(
         ))
     })
 }
-
 
 pub(crate) async fn send_text(
     client: &reqwest::Client,
@@ -155,7 +153,11 @@ pub(crate) async fn send_text(
     })?;
     let status = response.status();
     if !status.is_success() {
-        return Err(http_status_error(status, provider, parse_retry_after(&response)));
+        return Err(http_status_error(
+            status,
+            provider,
+            parse_retry_after(&response),
+        ));
     }
     response.text().await.map_err(|error| {
         UnifiedError::internal(format!(
@@ -163,7 +165,6 @@ pub(crate) async fn send_text(
         ))
     })
 }
-
 
 /// Simulated accepted delivery for test mode on a provider without a
 /// native sandbox. The result is always flagged `test_mode: true` so
@@ -178,7 +179,6 @@ pub(crate) fn simulated_result(provider: &str) -> SendResult {
         ),
     }
 }
-
 
 pub(crate) fn validate_email_address(input: &str) -> UnifiedResult<()> {
     let address = input.trim();
@@ -204,8 +204,6 @@ pub(crate) fn validate_email_address(input: &str) -> UnifiedResult<()> {
     Ok(())
 }
 
-
-
 // ---------------------------------------------------------------------------
 // AWS SigV4 signing (SES), following the same scheme as the cloud
 // providers module: canonical request, credential scope, and the
@@ -219,7 +217,6 @@ pub(crate) struct SigV4Params {
     pub(crate) region: String,
     pub(crate) service: String,
 }
-
 
 /// Percent-encode a query name or value per RFC 3986: only the
 /// unreserved characters stay literal; everything else (including a
@@ -236,7 +233,6 @@ pub(crate) fn percent_encode_rfc3986(value: &str) -> String {
     }
     encoded
 }
-
 
 pub(crate) fn sigv4_authorization(
     params: &SigV4Params,
@@ -286,7 +282,10 @@ pub(crate) fn sigv4_authorization(
         signed_headers.join(";"),
         sha256_hex(payload),
     );
-    let scope = format!("{date_stamp}/{}/{}/aws4_request", params.region, params.service);
+    let scope = format!(
+        "{date_stamp}/{}/{}/aws4_request",
+        params.region, params.service
+    );
     let string_to_sign = format!(
         "AWS4-HMAC-SHA256\n{amz_date}\n{scope}\n{}",
         sha256_hex(canonical_request.as_bytes()),
@@ -369,10 +368,7 @@ mod tests {
 
     #[test]
     fn percent_encode_rfc3986_keeps_unreserved_and_encodes_the_rest() {
-        assert_eq!(
-            percent_encode_rfc3986("abc-_.~123").as_str(),
-            "abc-_.~123"
-        );
+        assert_eq!(percent_encode_rfc3986("abc-_.~123").as_str(), "abc-_.~123");
         assert_eq!(percent_encode_rfc3986("a b+c/d").as_str(), "a%20b%2Bc%2Fd");
     }
 
@@ -403,10 +399,7 @@ mod tests {
             "POST",
             &url,
             &[
-                (
-                    "Host",
-                    "email.us-east-1.amazonaws.com".to_string(),
-                ),
+                ("Host", "email.us-east-1.amazonaws.com".to_string()),
                 ("X-Amz-Date", "20240115T120000Z".to_string()),
                 (
                     "Content-Type",
@@ -453,5 +446,4 @@ mod tests {
         }
         assert_eq!(hex_encode(&[0xde, 0xad, 0xbe, 0xef]), "deadbeef");
     }
-
 }
