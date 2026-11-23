@@ -443,14 +443,17 @@ impl Module for SaasPackagesModule {
             .modules
             .write()
             .expect("modules lock poisoned") = Some(Arc::clone(&ctx.modules));
-        // Seed the example package as data, once. All runtime
-        // behaviour reads the store from here on; the seed is never
-        // consulted again.
-        if self.state.packages.is_empty() {
-            let seed = seed_online_exam_package();
-            self.state.store_version(&seed);
-            self.state.packages.insert(seed.id, seed.clone());
-            log::info!("SaaS Packages module seeded example package \"online-exam-saas\"");
+        // Seed the example packages as data, once each. All runtime
+        // behaviour reads the store from here on; the seeds are never
+        // consulted again. Each seed is inserted by id, so an
+        // existing install picks up a new seed without disturbing
+        // the packages already stored.
+        for seed in [seed_online_exam_package(), seed_site_builder_package()] {
+            if !self.state.packages.contains_key(&seed.id) {
+                self.state.store_version(&seed);
+                self.state.packages.insert(seed.id, seed.clone());
+                log::info!("SaaS Packages module seeded example package \"{}\"", seed.slug);
+            }
         }
         // Warn when a seeded package names a module the registry
         // does not know, so a registration gap is visible at

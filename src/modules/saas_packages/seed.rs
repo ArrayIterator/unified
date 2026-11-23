@@ -48,6 +48,54 @@ use super::{constants::*, types::*, state::*, auth::*, helpers::*, provisioning:
 /// match.
 pub const SEED_ONLINE_EXAM_PACKAGE_ID: &str = "20000000-0000-4000-8000-000000000001";
 
+/// Fixed id for the seeded example Site Builder package, shared with
+/// migration `000130_site_builder_package_seed` exactly like the exam
+/// package above.
+pub const SEED_SITE_BUILDER_PACKAGE_ID: &str = "20000000-0000-4000-8000-000000000002";
+
+/// The example "Site Builder SaaS" package (task 353): the site
+/// builder as a PACKAGE. A tenant ordering this package gets the
+/// builder plus the content module, the theme, and its own domain
+/// (subdomain or custom, with SSL via the domains module). No
+/// pricing is invented here (`product_id` stays `None`; pricing
+/// lives on the store product, if one is ever attached). The control
+/// plane's own system home page does NOT come from this package and
+/// is never tenant-gated.
+pub(crate) fn seed_site_builder_package() -> SaasPackage {
+    let now = Utc::now();
+    SaasPackage {
+        id: Uuid::parse_str(SEED_SITE_BUILDER_PACKAGE_ID)
+            .expect("seed package id is a valid UUID"),
+        slug: "site-builder-saas".to_string(),
+        name: "Site Builder SaaS".to_string(),
+        description: "A website on its own domain, built with the GrapeJS site builder: pages of ordered blocks, a tenant subdomain or custom domain with SSL, and the content module for posts and pages.".to_string(),
+        status: STATUS_PUBLISHED.to_string(),
+        current_version: 1,
+        product_id: None,
+        preset_settings: json!({
+            "welcome_email_enabled": true,
+            "default_language": "en"
+        }),
+        wizard_steps: vec![
+            "business_type".to_string(),
+            "review_modules".to_string(),
+            "apply".to_string(),
+            "settings".to_string(),
+            "done".to_string(),
+        ],
+        modules: vec![
+            PackageModuleEntry { module_id: "site-builder".to_string(), required: true, sort_order: 0 },
+            PackageModuleEntry { module_id: "content".to_string(), required: true, sort_order: 1 },
+            PackageModuleEntry { module_id: "theme".to_string(), required: true, sort_order: 2 },
+            PackageModuleEntry { module_id: "domains".to_string(), required: true, sort_order: 3 },
+        ],
+        created_by: "system".to_string(),
+        vendor_id: None,
+        created_at: now,
+        updated_at: now,
+    }
+}
+
 pub(crate) fn seed_online_exam_package() -> SaasPackage {
     let now = Utc::now();
     SaasPackage {

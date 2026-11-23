@@ -136,11 +136,48 @@ pub(crate) fn require_permission(ctx: &AppContext, role: &str, permission: &str)
     }
 }
 
+/// Package gate for the site builder (task 353): the builder is a
+/// CHOICE, off by default. A request acting in a company scope gets
+/// the builder only when that company's package includes the
+/// `site-builder` module entry; the control plane (no company scope
+/// resolves) is never gated, so the system home page keeps working.
+/// The company is resolved like the saved-views caller scope: the
+/// middleware tenant context first, the verified caller's
+/// server-resolved company otherwise, failing closed when the two
+/// disagree. The `X-Company-Id` header is NEVER trusted here.
+pub(crate) fn require_site_builder_entitlement(
+    ctx: &AppContext,
+    req: &HttpRequest,
+) -> UnifiedResult<()> {
+    let tenant = unified_core::tenancy::TenantContext::from_http_request(req).ok();
+    let tenant_company = tenant.as_ref().and_then(|item| item.company_id.clone());
+    let verified_company = unified_core::caller::caller_from(req)
+        .company_id
+        .filter(|value| !value.is_empty());
+    let company = match (&tenant_company, &verified_company) {
+        (Some(tenant_company), Some(verified_company)) if tenant_company != verified_company => {
+            return Err(UnifiedError::forbidden(
+                "Tenant context company and verified caller company disagree",
+            ));
+        }
+        (Some(tenant_company), _) => Some(tenant_company.clone()),
+        (None, verified_company) => verified_company.clone(),
+    };
+    let Some(company) = company else {
+        // No company scope: the control plane, never package-gated.
+        return Ok(());
+    };
+    crate::modules::licensing::check_module_entitlement(ctx, &company, "site-builder")
+}
+
 /// Resolve the caller and require `permission` in one step, exactly
-/// like the cache module's `authorize`.
+/// like the cache module's `authorize`. The site-builder package
+/// gate runs after the capability check, so a tenant without the
+/// package gets a 403 on every builder route, reads included.
 pub(crate) fn authorize(ctx: &AppContext, req: &HttpRequest, permission: &str) -> UnifiedResult<Caller> {
     let found = caller(req)?;
     require_permission(ctx, &found.role, permission)?;
+    require_site_builder_entitlement(ctx, req)?;
     Ok(found)
 }
 

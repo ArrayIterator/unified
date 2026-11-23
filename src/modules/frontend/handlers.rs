@@ -77,10 +77,19 @@ fn base_data(ctx: &AppContext, state: &FrontendState, title: &str) -> Value {
     })
 }
 
-/// `GET /`: the public home page. Counts only report what this
-/// process knows without a database: the registered module total.
-/// The template guards the database-backed stats, so they stay
-/// hidden instead of rendering as zeroes.
+/// `GET /`: the public home page. The front page IS the site
+/// builder's home page (task 353): it loads the published builder
+/// page with slug `home` through the `site_builder.render_page` hook
+/// and renders its blocks; the tagline and description come from the
+/// hero block's content, and the counts stay live from the module
+/// registry. The hard-coded strings below are ONLY the documented
+/// fallbacks for when no builder page answers (site builder
+/// unregistered, or the home page unpublished); the site settings
+/// namespace from task 351 will supply these values instead once it
+/// lands. Counts only report what this process knows without a
+/// database: the registered module total. The template guards the
+/// database-backed stats, so they stay hidden instead of rendering
+/// as zeroes.
 pub(crate) async fn home_page(
     req: HttpRequest,
     ctx: web::Data<Arc<AppContext>>,
@@ -88,21 +97,46 @@ pub(crate) async fn home_page(
 ) -> HttpResponse {
     let mut data = base_data(&ctx, &state, "Home");
     let modules_total = ctx.modules.summary().len();
+    let mut tagline = "One control plane for everything you run.".to_string();
+    let mut description = "Licensing, downloads, storefront, software and asset management, and day-to-day operations in one place.".to_string();
+    let mut builder_html: Option<String> = None;
+    let answer = ctx.hooks.emit(
+        crate::modules::site_builder::EVENT_RENDER_PAGE,
+        json!({ "slug": "home" }),
+    );
+    if answer.data.get("found").and_then(|value| value.as_bool()) == Some(true) {
+        if let Some(html) = answer.data.get("html").and_then(|value| value.as_str()) {
+            if !html.trim().is_empty() {
+                builder_html = Some(html.to_string());
+            }
+        }
+        if let Some(value) = answer.data.get("tagline").and_then(|value| value.as_str()) {
+            if !value.is_empty() {
+                tagline = value.to_string();
+            }
+        }
+        if let Some(value) = answer.data.get("description").and_then(|value| value.as_str()) {
+            if !value.is_empty() {
+                description = value.to_string();
+            }
+        }
+    }
     if let Some(object) = data.as_object_mut() {
         object.insert(
             "tagline".to_string(),
-            Value::String("One control plane for everything you run.".to_string()),
+            Value::String(tagline),
         );
         object.insert(
             "description".to_string(),
-            Value::String(
-                "Licensing, downloads, storefront, software and asset management, and day-to-day operations in one place.".to_string(),
-            ),
+            Value::String(description),
         );
         object.insert(
             "counts".to_string(),
             json!({ "modules_total": modules_total }),
         );
+        if let Some(html) = builder_html {
+            object.insert("builder_html".to_string(), Value::String(html));
+        }
     }
     render_page(&req, &ctx, &state, "home", "home", data)
 }

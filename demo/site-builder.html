@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Site Builder — Unified Demo</title>
+  <meta name="description" content="Unified demo site builder: the home page as GrapeJS blocks — palette, canvas, traits.">
+  <script>try{var t=localStorage.getItem('unified-demo-theme');if(t==='editorial'){document.documentElement.classList.add('theme-dark');}}catch(e){}</script>
+  <link rel="stylesheet" href="assets/demo.css">
+</head>
+<body data-page="site-builder" data-layout="app">
+  <main class="main" id="demo-main">
+    <div class="page-head">
+      <h1>Site builder</h1>
+      <p class="page-intro">The home page, edited in the builder — GrapeJS blocks, no JSON. Drag blocks from the palette onto the canvas, edit text in place, save to publish.</p>
+    </div>
+
+    <div class="demo-note"><strong>Static demo.</strong> This is the editor for the <a href="index.html">home page</a> — the same blocks the live page renders (hero and text). Blocks are saved in this browser only. The real editor is GrapeJS, bundled with the app — no CDN.</div>
+
+    <div class="sb-toolbar" role="toolbar" aria-label="Page actions">
+      <span class="sb-page-label">Page: <strong>Home page</strong> <span class="badge badge-success" id="sb-status">Published</span></span>
+      <span class="sb-toolbar-actions">
+        <button class="button button-small" type="button" id="sb-save">Save blocks</button>
+        <button class="button button-small button-secondary" type="button" id="sb-publish">Publish</button>
+        <button class="button button-small button-secondary" type="button" id="sb-unpublish">Unpublish</button>
+        <button class="button button-small button-secondary" type="button" id="sb-preview">Preview</button>
+      </span>
+    </div>
+
+    <div class="sb-builder">
+      <aside class="sb-palette card" aria-label="Block palette">
+        <h2>Blocks</h2>
+        <p class="small muted">Drag a block onto the canvas, or click it to append it at the end.</p>
+        <ul class="sb-palette-list">
+          <li><button type="button" class="sb-palette-item" data-sb-palette-type="hero"><strong>Hero</strong><span>Heading, subheading, call to action.</span></button></li>
+          <li><button type="button" class="sb-palette-item" data-sb-palette-type="text"><strong>Text</strong><span>A paragraph, edited in place.</span></button></li>
+          <li><button type="button" class="sb-palette-item" data-sb-palette-type="image"><strong>Image</strong><span>An image with alt text.</span></button></li>
+          <li><button type="button" class="sb-palette-item" data-sb-palette-type="gallery"><strong>Gallery</strong><span>One image per line.</span></button></li>
+          <li><button type="button" class="sb-palette-item" data-sb-palette-type="form"><strong>Form</strong><span>Fields and a submit button.</span></button></li>
+          <li><button type="button" class="sb-palette-item" data-sb-palette-type="custom"><strong>Custom</strong><span>Raw HTML.</span></button></li>
+          <li><button type="button" class="sb-palette-item" data-sb-palette-type="pricing_table"><strong>Pricing table</strong><span>Rendered from a pricing table.</span></button></li>
+          <li><button type="button" class="sb-palette-item" data-sb-palette-type="marketplace_storefront"><strong>Storefront</strong><span>A vendor storefront.</span></button></li>
+        </ul>
+      </aside>
+
+      <div class="sb-canvas-wrap">
+        <p class="small muted">Canvas — this is the home page. Drag a block by its handle to reorder it; click a block to edit its fields on the right.</p>
+        <div class="sb-canvas" id="sb-canvas">
+          <article class="sb-block" data-block-type="hero" data-block-id="blk-hero">
+            <div class="sb-block-bar"><span class="sb-block-handle" title="Drag to reorder">Drag</span><span class="sb-block-type">Hero</span><button type="button" class="sb-block-remove" data-sb-remove-block>Remove</button></div>
+            <h2 data-sb-field="heading" contenteditable="true" spellcheck="false">Unified</h2>
+            <p data-sb-field="subheading" contenteditable="true" spellcheck="false">One control plane for everything you run.</p>
+            <p><a class="button" href="dashboard.html" data-sb-field="cta_text" contenteditable="true" spellcheck="false">Open dashboard</a></p>
+          </article>
+          <article class="sb-block" data-block-type="text" data-block-id="blk-text">
+            <div class="sb-block-bar"><span class="sb-block-handle" title="Drag to reorder">Drag</span><span class="sb-block-type">Text</span><button type="button" class="sb-block-remove" data-sb-remove-block>Remove</button></div>
+            <p data-sb-field="body" contenteditable="true" spellcheck="false">One platform to run your whole business — licensing, store, billing, content and 150 modules, all connected.</p>
+          </article>
+        </div>
+      </div>
+
+      <aside class="sb-traits card" aria-label="Block settings">
+        <h2>Block settings</h2>
+        <div id="sb-traits">
+          <p class="small muted">Select a block on the canvas to edit its fields here.</p>
+        </div>
+      </aside>
+    </div>
+  </main>
+  <script src="assets/sprite.js"></script>
+  <script src="assets/demo.js"></script>
+</body>
+</html>

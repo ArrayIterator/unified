@@ -61,6 +61,7 @@ pub mod surveys_tables;
 pub mod webinars_tables;
 #[path = "schema/workflows.rs"]
 pub mod workflows_tables;
+pub mod widgets;
 
 pub use analytics::*;
 pub use announcements_tables::*;
@@ -85,3 +86,4 @@ pub use studio::*;
 pub use surveys_tables::*;
 pub use webinars_tables::*;
 pub use workflows_tables::*;
+pub use widgets::*;

@@ -13,6 +13,9 @@
   {{> header}}
 
   <main class="home-main" id="home-content">
+    {{#if builder_html}}
+    {{{builder_html}}}
+    {{else}}
     <section class="hero">
       <h1>{{#if app_name}}{{app_name}}{{else}}Unified{{/if}}</h1>
       {{#if tagline}}<p class="hero-tagline">{{tagline}}</p>{{/if}}
@@ -54,6 +57,7 @@
         <p>Companies, sites, domains, billing, and support tickets share one login and one dashboard.</p>
       </article>
     </section>
+    {{/if}}
     {{/if}}
 
     {{#if counts}}

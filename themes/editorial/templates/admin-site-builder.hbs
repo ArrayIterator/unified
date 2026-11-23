@@ -2,6 +2,8 @@
   <h1 id="site-builder-heading">Site Builder</h1>
   <p class="page-intro">Build pages from blocks and sections, then publish them. Pages render with the site builder API.</p>
 
+  <div id="sb-bundle-missing" class="flash flash-error" role="alert" hidden>The site builder bundle is missing. Run <code>npm run build:site-builder</code> and restart the server.</div>
+
   <div id="sb-status" class="flash flash-info" role="status" hidden></div>
 
   <div class="builder-grid">
@@ -42,42 +44,13 @@
         <button class="button button-small" type="button" id="sb-publish">Publish</button>
         <button class="button button-small button-secondary" type="button" id="sb-unpublish">Unpublish</button>
         <button class="button button-small button-secondary" type="button" id="sb-preview">Preview</button>
+        <button class="button button-small" type="button" id="sb-save-blocks">Save blocks</button>
+        <button class="button button-small button-secondary" type="button" id="sb-delete-block">Delete selected block</button>
         <button class="button button-small button-danger" type="button" id="sb-delete-page">Delete page</button>
       </p>
 
-      <h3>Blocks</h3>
-      <p class="field-help">Block types: hero, text, image, gallery, form, custom, pricing_table, marketplace_storefront. Content is JSON; the hint under the editor shows the fields each type reads.</p>
-      <div class="table-wrap">
-        <table class="data-table" aria-label="Page blocks">
-          <thead>
-            <tr><th scope="col">Order</th><th scope="col">Type</th><th scope="col">Content</th><th scope="col">Actions</th></tr>
-          </thead>
-          <tbody id="sb-block-list">
-            <tr><td colspan="4">Select a page to edit its blocks.</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <form id="sb-new-block" autocomplete="off">
-        <div class="field">
-          <label for="sb-block-type" class="field-required">Block type</label>
-          <select id="sb-block-type" name="type">
-            <option value="hero">hero</option>
-            <option value="text">text</option>
-            <option value="image">image</option>
-            <option value="gallery">gallery</option>
-            <option value="form">form</option>
-            <option value="custom">custom</option>
-            <option value="pricing_table">pricing_table</option>
-            <option value="marketplace_storefront">marketplace_storefront</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="sb-block-content">Content (JSON)</label>
-          <textarea id="sb-block-content" name="content" rows="4" placeholder='{"heading": "Welcome"}'></textarea>
-          <p class="field-help" id="sb-block-hint">hero reads heading, subheading, image_url, cta_text, cta_url.</p>
-        </div>
-        <button class="button button-small" type="submit">Add block</button>
-      </form>
+      <div id="gjs" aria-label="Page canvas"></div>
+      <p class="field-help">Drag blocks from the palette onto the canvas, then drag them to reorder. Select a block to edit its fields in the right-hand panel; text blocks edit in place — double-click the text. Save blocks to store the canvas order and content.</p>
 
       <h3>Sections</h3>
       <div class="table-wrap">
@@ -104,4 +77,5 @@
     </section>
   </div>
 </section>
-<script src="/assets/js/site-builder.js" defer></script>
+<link rel="stylesheet" href="/assets/site-builder/dist/editor.css">
+<script src="/assets/site-builder/dist/editor.js" defer onerror="document.getElementById('sb-bundle-missing').hidden=false"></script>

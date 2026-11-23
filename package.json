@@ -12,12 +12,14 @@
   "name": "unified-frontend",
   "private": true,
   "scripts": {
-    "check": "tsc --noEmit && tsc --noEmit -p tsconfig.react.json",
+    "check": "tsc --noEmit && tsc --noEmit -p tsconfig.react.json && tsc --noEmit -p tsconfig.site-builder.json",
     "build:react": "tsc --noEmit -p tsconfig.react.json && vite build",
-    "dev:react": "vite"
+    "dev:react": "vite",
+    "build:site-builder": "vite build --config vite.site-builder.config.ts"
   },
   "version": "0.1.0",
   "dependencies": {
+    "grapesjs": "0.23.9",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-router-dom": "^7.18.6"

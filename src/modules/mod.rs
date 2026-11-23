@@ -158,6 +158,7 @@ pub mod web3;
 pub mod webhooks;
 pub mod webinars;
 pub mod whitelabel;
+pub mod widgets;
 pub mod workflows;
 
 use unified_core::modules::ModuleRegistry;
@@ -210,6 +211,10 @@ pub fn register_all(registry: &ModuleRegistry) {
     appointments::register(registry);
     holidays::register(registry);
     routes::register(registry);
+    // Widgets is a standalone core module: dashboards, the front
+    // page, and the tenant dashboard consume it, so it registers
+    // before them.
+    widgets::register(registry);
     dashboards::register(registry);
     // Public pages (home and auth) live next to the dashboards they
     // lead into; their paths come from the same route registry.

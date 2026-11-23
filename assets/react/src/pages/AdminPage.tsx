@@ -6,9 +6,21 @@
 // /api/v1/dashboards/admin/users (src/modules/dashboards/module.rs).
 // Sections the React track does not cover yet are listed honestly
 // with a link to the matching classic /admin page instead of a
-// fabricated panel.
+// fabricated panel. Sections mapped to widgets (stat-cards,
+// system-status, module-grid) follow the saved widget layout from
+// GET /api/v1/widgets/layouts/admin-dashboard; a failed layout load
+// keeps the fixed order below.
 
-import { ApiError, fetchAdminModules, fetchAdminOverview, fetchAdminUsers, formatDateTime } from "../api";
+import { Fragment, type ReactNode } from "react";
+import {
+  ApiError,
+  fetchAdminModules,
+  fetchAdminOverview,
+  fetchAdminUsers,
+  fetchWidgetLayout,
+  formatDateTime,
+  orderWidgetSections,
+} from "../api";
 import { useLoad } from "../hooks";
 import { Alert, Badge, Card, EmptyState, Skeleton, StatCard } from "../components/ui";
 
@@ -117,6 +129,9 @@ function AdminModulesTable() {
 
 export default function AdminPage() {
   const overview = useLoad(fetchAdminOverview, []);
+  // Widget layout (GET /api/v1/widgets/layouts/admin-dashboard).
+  // A failed load keeps the fixed section order below.
+  const layout = useLoad(() => fetchWidgetLayout("admin-dashboard"), []);
 
   if (
     overview.status === "error" &&
@@ -143,32 +158,31 @@ export default function AdminPage() {
   const counts = overview.status === "ready" ? overview.data.counts : undefined;
   const system = overview.status === "ready" ? overview.data.system : undefined;
 
-  return (
-    <div className="space-y-6">
-      {overview.status === "error" && (
-        <Alert tone="error" title="Could not load the admin overview">
-          {overview.error.message}
-        </Alert>
-      )}
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {overview.status === "loading" &&
-          Array.from({ length: 4 }, (_, index) => (
-            <div key={index} className="rounded-lg border border-border bg-surface p-4">
-              <Skeleton lines={2} />
-            </div>
-          ))}
-        {counts !== undefined && (
-          <>
-            <StatCard label="Users" value={String(counts.users ?? 0)} />
-            <StatCard label="Roles" value={String(counts.roles ?? 0)} />
-            <StatCard label="Licenses" value={String(counts.licenses ?? 0)} />
-            <StatCard label="Orders" value={String(counts.orders ?? 0)} />
-          </>
-        )}
-      </div>
-
-      {system !== undefined && (
+  const sections: { id: string; node: ReactNode }[] = [
+    {
+      id: "stat-cards",
+      node: (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {overview.status === "loading" &&
+            Array.from({ length: 4 }, (_, index) => (
+              <div key={index} className="rounded-lg border border-border bg-surface p-4">
+                <Skeleton lines={2} />
+              </div>
+            ))}
+          {counts !== undefined && (
+            <>
+              <StatCard label="Users" value={String(counts.users ?? 0)} />
+              <StatCard label="Roles" value={String(counts.roles ?? 0)} />
+              <StatCard label="Licenses" value={String(counts.licenses ?? 0)} />
+              <StatCard label="Orders" value={String(counts.orders ?? 0)} />
+            </>
+          )}
+        </div>
+      ),
+    },
+    {
+      id: "system-status",
+      node: system !== undefined ? (
         <Card title="System">
           <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
             <div>
@@ -205,32 +219,62 @@ export default function AdminPage() {
             </div>
           </dl>
         </Card>
+      ) : null,
+    },
+    {
+      id: "module-grid",
+      node: (
+        <Card title="Modules">
+          <AdminModulesTable />
+        </Card>
+      ),
+    },
+    {
+      id: "users",
+      node: (
+        <Card title="Users">
+          <AdminUsersTable />
+        </Card>
+      ),
+    },
+    {
+      id: "classic",
+      node: (
+        <Card title="More in the classic dashboard">
+          <p className="mb-3 text-sm text-muted">
+            These admin sections are not available in the React track yet. They
+            open in the classic server-rendered dashboard.
+          </p>
+          <ul className="divide-y divide-border">
+            {CLASSIC_SECTIONS.map((section) => (
+              <li key={section.href} className="py-3 first:pt-0 last:pb-0">
+                <a href={section.href} className="font-medium text-accent hover:underline">
+                  {section.label}
+                </a>
+                <p className="text-sm text-muted">{section.note}</p>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      ),
+    },
+  ];
+  const ordered = orderWidgetSections(
+    sections,
+    layout.status === "ready" ? layout.data : null,
+  );
+
+  return (
+    <div className="space-y-6">
+      {overview.status === "error" && (
+        <Alert tone="error" title="Could not load the admin overview">
+          {overview.error.message}
+        </Alert>
       )}
 
-      <Card title="Modules">
-        <AdminModulesTable />
-      </Card>
-
-      <Card title="Users">
-        <AdminUsersTable />
-      </Card>
-
-      <Card title="More in the classic dashboard">
-        <p className="mb-3 text-sm text-muted">
-          These admin sections are not available in the React track yet. They
-          open in the classic server-rendered dashboard.
-        </p>
-        <ul className="divide-y divide-border">
-          {CLASSIC_SECTIONS.map((section) => (
-            <li key={section.href} className="py-3 first:pt-0 last:pb-0">
-              <a href={section.href} className="font-medium text-accent hover:underline">
-                {section.label}
-              </a>
-              <p className="text-sm text-muted">{section.note}</p>
-            </li>
-          ))}
-        </ul>
-      </Card>
+      {ordered.map((section) => (
+        <Fragment key={section.id}>{section.node}</Fragment>
+      ))}
     </div>
   );
 }

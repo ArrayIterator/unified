@@ -1053,7 +1053,6 @@ mod tests {
             "auth.ts",
             "client.ts",
             "dashboard.ts",
-            "site-builder.ts",
         ] {
             let path = dir.join(name);
             let Ok(source) = std::fs::read_to_string(&path) else {

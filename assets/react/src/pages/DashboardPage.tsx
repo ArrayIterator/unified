@@ -9,7 +9,7 @@
 // degrades to an honest "unavailable" note when its endpoint does
 // not answer; nothing here invents a number.
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import {
   ApiError,
@@ -18,10 +18,12 @@ import {
   fetchSystemStatus,
   fetchTasks,
   fetchUserOverview,
+  fetchWidgetLayout,
   formatBytes,
   formatRelativeTime,
   formatUptime,
   markNotificationRead,
+  orderWidgetSections,
   type ExtensionInfo,
   type NotificationItem,
   type TaskItem,
@@ -378,6 +380,64 @@ function ModuleGrid() {
 export default function DashboardPage() {
   const overview = useLoad(fetchUserOverview, []);
   const counts = overview.status === "ready" ? overview.data.counts : undefined;
+  // Widget layout (GET /api/v1/widgets/layouts/user-dashboard).
+  // A failed load (signed out, endpoint down) keeps the fixed
+  // section order below; the layout only reorders, never hides.
+  const layout = useLoad(() => fetchWidgetLayout("user-dashboard"), []);
+
+  const sections: { id: string; node: ReactNode }[] = [
+    {
+      id: "stat-cards",
+      node: (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          {overview.status === "loading" &&
+            Array.from({ length: 5 }, (_, index) => (
+              <div key={index} className="rounded-lg border border-border bg-surface p-4">
+                <Skeleton lines={2} />
+              </div>
+            ))}
+          {counts !== undefined && (
+            <>
+              <StatCard label="Licenses" value={String(counts.licenses ?? 0)} />
+              <StatCard label="Active licenses" value={String(counts.active_licenses ?? 0)} />
+              <StatCard label="Orders" value={String(counts.orders ?? 0)} />
+              <StatCard label="Entitlements" value={String(counts.entitlements ?? 0)} />
+              <StatCard label="Downloads" value={String(counts.downloads ?? 0)} />
+            </>
+          )}
+        </div>
+      ),
+    },
+    {
+      id: "system-status",
+      node: (
+        <Card title="System status">
+          <SystemStatusWidget />
+        </Card>
+      ),
+    },
+    {
+      id: "tasks",
+      node: (
+        <Card title="Open tasks">
+          <TasksWidget />
+        </Card>
+      ),
+    },
+    {
+      id: "notifications",
+      node: (
+        <Card title="Notifications">
+          <NotificationsWidget />
+        </Card>
+      ),
+    },
+    { id: "module-grid", node: <ModuleGrid /> },
+  ];
+  const ordered = orderWidgetSections(
+    sections,
+    layout.status === "ready" ? layout.data : null,
+  );
 
   return (
     <div className="space-y-6">
@@ -397,38 +457,35 @@ export default function DashboardPage() {
           </Alert>
         )}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        {overview.status === "loading" &&
-          Array.from({ length: 5 }, (_, index) => (
-            <div key={index} className="rounded-lg border border-border bg-surface p-4">
-              <Skeleton lines={2} />
-            </div>
-          ))}
-        {counts !== undefined && (
-          <>
-            <StatCard label="Licenses" value={String(counts.licenses ?? 0)} />
-            <StatCard label="Active licenses" value={String(counts.active_licenses ?? 0)} />
-            <StatCard label="Orders" value={String(counts.orders ?? 0)} />
-            <StatCard label="Entitlements" value={String(counts.entitlements ?? 0)} />
-            <StatCard label="Downloads" value={String(counts.downloads ?? 0)} />
-          </>
-        )}
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card title="System status">
-          <SystemStatusWidget />
-        </Card>
-        <Card title="Open tasks">
-          <TasksWidget />
-        </Card>
-      </div>
-
-      <Card title="Notifications">
-        <NotificationsWidget />
-      </Card>
-
-      <ModuleGrid />
+      {renderSections(ordered)}
     </div>
   );
+}
+
+/** Render the ordered sections. System status and open tasks share
+ * a two-column row when they end up next to each other (the default
+ * layout); apart, each renders full width. Tasks and notifications
+ * have no widget in the catalogue, so the layout never moves them
+ * away — they always render, after the mapped widgets. */
+function renderSections(ordered: { id: string; node: ReactNode }[]): ReactNode[] {
+  const nodes: ReactNode[] = [];
+  for (let index = 0; index < ordered.length; index += 1) {
+    const section = ordered[index];
+    const next = ordered[index + 1];
+    const pair =
+      (section.id === "system-status" && next?.id === "tasks") ||
+      (section.id === "tasks" && next?.id === "system-status");
+    if (pair && next !== undefined) {
+      nodes.push(
+        <div key="status-tasks" className="grid gap-6 lg:grid-cols-2">
+          {section.node}
+          {next.node}
+        </div>,
+      );
+      index += 1;
+    } else {
+      nodes.push(<Fragment key={section.id}>{section.node}</Fragment>);
+    }
+  }
+  return nodes;
 }

@@ -171,6 +171,10 @@ export function apiPost<T>(url: string, body?: unknown): Promise<T> {
   return request<T>(url, { method: "POST", body: body ?? {}, withCsrf: true });
 }
 
+export function apiPut<T>(url: string, body?: unknown): Promise<T> {
+  return request<T>(url, { method: "PUT", body: body ?? {}, withCsrf: true });
+}
+
 /* ---------- Response shapes ---------- */
 // Field names follow the Rust serializers; optional fields stay
 // optional here because the server omits them when unknown.
@@ -373,6 +377,72 @@ export function fetchAdminUsers(): Promise<AdminUserItem[]> {
   return apiGet<unknown>("/api/v1/dashboards/admin/users?per_page=20").then(
     itemsFromData<AdminUserItem>,
   );
+}
+
+/* ---------- Widgets (src/modules/widgets/module.rs) ---------- */
+
+export interface WidgetItem {
+  widget_id: string;
+  pinned?: boolean;
+}
+
+export interface WidgetLayout {
+  context: string;
+  scope_kind: string;
+  scope_id: string;
+  owner_id: string;
+  items: WidgetItem[];
+  is_default: boolean;
+}
+
+/** GET /api/v1/widgets/layouts/{context} — the caller's layout for
+ * that context, or the built-in default when none is saved. */
+export function fetchWidgetLayout(context: string): Promise<WidgetLayout> {
+  return apiGet<WidgetLayout>(`/api/v1/widgets/layouts/${encodeURIComponent(context)}`);
+}
+
+/** PUT /api/v1/widgets/layouts/{context} — save a layout (pin, add,
+ * remove, reorder). The server validates ids against the catalogue
+ * for that zone. Pass `shared: true` to save the zone's shared
+ * (team) default instead of the caller's own layout. */
+export function saveWidgetLayout(
+  context: string,
+  items: WidgetItem[],
+  shared = false,
+): Promise<WidgetLayout> {
+  return apiPut<WidgetLayout>(`/api/v1/widgets/layouts/${encodeURIComponent(context)}`, {
+    items,
+    shared,
+  });
+}
+
+/** Order page sections by a widget layout: pinned items first (in
+ * layout order), then the remaining layout items, then any section
+ * the layout does not mention, in their fixed order. A failed or
+ * missing layout leaves the fixed order untouched. Sections whose
+ * id has no widget in the catalogue (tasks, notifications, the
+ * admin users table) are never reordered away — they always render,
+ * after the mapped widgets. */
+export function orderWidgetSections<T extends { id: string }>(
+  sections: T[],
+  layout: WidgetLayout | null,
+): T[] {
+  if (!layout) return sections;
+  const byId = new Map(sections.map((section) => [section.id, section]));
+  const ordered: T[] = [];
+  const pinned = layout.items.filter((item) => item.pinned === true);
+  const rest = layout.items.filter((item) => item.pinned !== true);
+  for (const item of [...pinned, ...rest]) {
+    const section = byId.get(item.widget_id);
+    if (section !== undefined && !ordered.includes(section)) {
+      ordered.push(section);
+      byId.delete(item.widget_id);
+    }
+  }
+  for (const section of sections) {
+    if (byId.has(section.id)) ordered.push(section);
+  }
+  return ordered;
 }
 
 /* ---------- Auth ---------- */

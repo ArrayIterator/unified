@@ -1015,3 +1015,293 @@ html.theme-dark .demo-note strong {
   .main { padding: var(--space-4); }
   .user-chip span { display: none; }
 }
+
+/* ==========================================================================
+   Widgets — task 352
+   Demo widget frames: a utility bar (drag handle, pin, remove) injected
+   at the top of every [data-widget], a picker toolbar, and the drag
+   placeholder. The bar spans the full row inside grid/flex widgets.
+   ========================================================================== */
+
+.widget-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: 0.82rem;
+}
+
+/* Headings and bars inside grid widgets span the whole row. */
+.widget > .widget-bar,
+.widget > h2 {
+  grid-column: 1 / -1;
+}
+
+/* Flex widgets: the bar takes its own row. */
+.market-strip.widget .widget-bar,
+.ticker.widget .widget-bar {
+  flex: 1 1 100%;
+}
+
+.ticker.widget {
+  flex-wrap: wrap;
+}
+
+.widget-handle {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.widget-handle:active {
+  cursor: grabbing;
+}
+
+.widget-title {
+  font-weight: 600;
+  margin-right: auto;
+}
+
+.widget-pin,
+.widget-remove {
+  cursor: pointer;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.82rem;
+}
+
+.widget-pin[aria-pressed="true"] {
+  border-color: var(--gold);
+  color: var(--gold-600);
+  font-weight: 600;
+}
+
+.widget-pinned {
+  outline: 1px solid var(--gold);
+  outline-offset: -1px;
+}
+
+.widget-dragging {
+  position: fixed;
+  z-index: 50;
+  pointer-events: none;
+  opacity: 0.55;
+  box-shadow: var(--shadow-sm);
+  margin: 0;
+}
+
+.widget-placeholder {
+  border: 2px dashed var(--gold);
+  border-radius: var(--radius-md);
+  background: var(--gold-soft);
+  min-height: 48px;
+}
+
+.widget-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-5);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.widget-toolbar select {
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+/* ==========================================================================
+   Site Builder — task 353
+   Demo of the GrapeJS editor shape: palette, canvas, traits panel.
+   ========================================================================== */
+
+.sb-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-5);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.sb-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.sb-builder {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr) 280px;
+  gap: var(--space-5);
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .sb-builder {
+    grid-template-columns: 1fr;
+  }
+}
+
+.sb-palette-list {
+  list-style: none;
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.sb-palette-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: grab;
+  touch-action: none;
+  color: var(--text);
+  font: inherit;
+}
+
+.sb-palette-item strong {
+  display: block;
+}
+
+.sb-palette-item span {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.sb-canvas-wrap > p {
+  margin-top: 0;
+}
+
+.sb-canvas {
+  display: grid;
+  gap: var(--space-4);
+  min-height: 200px;
+  padding: var(--space-4);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+}
+
+.sb-block {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+
+.sb-block.sb-selected {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.sb-block-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-bottom: var(--space-2);
+  margin-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.82rem;
+}
+
+.sb-block-handle {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.sb-block-handle:active {
+  cursor: grabbing;
+}
+
+.sb-block-type {
+  font-weight: 600;
+  margin-right: auto;
+}
+
+.sb-block-remove {
+  cursor: pointer;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.82rem;
+}
+
+.sb-block-dragging {
+  position: fixed;
+  z-index: 50;
+  pointer-events: none;
+  opacity: 0.55;
+  box-shadow: var(--shadow-sm);
+  margin: 0;
+}
+
+.sb-block [contenteditable="true"]:hover {
+  outline: 1px dashed var(--gold);
+  outline-offset: 2px;
+}
+
+.sb-block [contenteditable="true"]:focus {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.sb-traits .field {
+  margin-bottom: var(--space-4);
+}
+
+.sb-traits label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: var(--space-1);
+}
+
+.sb-traits input,
+.sb-traits textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}

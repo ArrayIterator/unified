@@ -17,6 +17,7 @@ pub mod module;
 pub use self::ai_capabilities::AI_CAPABILITIES;
 pub use self::constants::EVENT_THEME_EXISTS;
 pub use self::constants::EVENT_THEME_RENDER_BLOCK;
+pub use self::constants::EVENT_RENDER_PAGE;
 pub use self::constants::EVENT_PAGE_PUBLISHED;
 pub use self::constants::EVENT_PAGE_UNPUBLISHED;
 pub use self::constants::BLOCK_TYPES;

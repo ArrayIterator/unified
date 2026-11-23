@@ -29,6 +29,13 @@ pub const EVENT_THEME_EXISTS: &str = "theme.exists";
 
 pub const EVENT_THEME_RENDER_BLOCK: &str = "theme.render_block";
 
+/// Hook the frontend (and any other module) emits to render a page
+/// by slug or id through the builder: payload `{slug}` or
+/// `{page_id}`; the site builder answers in `data` with `{found,
+/// html, title, tagline, description}`. Only published pages render;
+/// drafts answer `found: false`.
+pub const EVENT_RENDER_PAGE: &str = "site_builder.render_page";
+
 pub const EVENT_PAGE_PUBLISHED: &str = "site.page_published";
 
 pub const EVENT_PAGE_UNPUBLISHED: &str = "site.page_unpublished";

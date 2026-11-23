@@ -15,9 +15,9 @@
       <p class="page-intro">Welcome back, Demo Admin. Here is what is happening across your Unified installation.</p>
     </div>
 
-    <div class="demo-note"><strong>Static demo.</strong> This page previews the Unified dashboard. All numbers, prices and names are demo data — nothing is live and nothing is saved.</div>
+    <div class="demo-note"><strong>Static demo.</strong> This page previews the Unified dashboard. All numbers, prices and names are demo data — nothing is live. Your widget layout (pin, add, remove, reorder) is saved in this browser only.</div>
 
-    <div class="market-strip" aria-label="Market snapshot (demo data)">
+    <div class="market-strip widget" data-widget="market-strip" data-widget-title="Market strip" aria-label="Market snapshot (demo data)">
       <span>Gold <strong>Antam Rp 1.942.000/g</strong> ▲ 0.8%</span>
       <span>UBS <strong>Rp 1.938.500/g</strong> ▲ 0.6%</span>
       <span>Galeri 24 <strong>Rp 1.940.000/g</strong> ▲ 0.7%</span>
@@ -26,7 +26,7 @@
       <span>BTC <strong>$97.400</strong> ▲ 1.9%</span>
     </div>
 
-    <div class="ticker" aria-label="Announcements">
+    <div class="ticker widget" data-widget="announcements-ticker" data-widget-title="Announcements" aria-label="Announcements">
       <span class="ticker-label">Breaking</span>
       <span class="ticker-item" data-ticker-item>Unified 0.1.0 demo: 150 modules, 127 migrations.</span>
       <ul hidden>
@@ -37,7 +37,7 @@
       </ul>
     </div>
 
-    <div class="grid grid-stats">
+    <div class="grid grid-stats widget" data-widget="stat-cards" data-widget-title="Key figures">
       <div class="card">
         <div class="stat-value">1,284</div>
         <div class="stat-label">Active users</div>
@@ -60,8 +60,8 @@
       </div>
     </div>
 
-    <h2>Modules</h2>
-    <div class="grid grid-modules">
+    <div class="grid grid-modules widget" data-widget="module-grid" data-widget-title="Modules">
+      <h2>Modules</h2>
       <a class="module-card" href="module.html">
         <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-billing"/></svg>Billing</h3>
         <p>Invoices, subscriptions, dunning and school fees.</p>
@@ -124,8 +124,8 @@
       </a>
     </div>
 
-    <div class="grid grid-two" style="margin-top: 1.5rem;">
-      <section class="card">
+    <div class="grid grid-two widget-row" style="margin-top: 1.5rem;">
+      <section class="card widget" data-widget="recent-activity" data-widget-title="Recent activity">
         <h2>Recent activity</h2>
         <div class="table-wrap">
           <table>
@@ -142,7 +142,7 @@
           </table>
         </div>
       </section>
-      <section class="card">
+      <section class="card widget" data-widget="system-status" data-widget-title="System status">
         <h2>System status</h2>
         <div class="check-row"><div><strong>API</strong><p>Public and core API responding.</p></div><span class="badge badge-success">Online</span></div>
         <div class="check-row"><div><strong>Database</strong><p>PostgreSQL, 127 migrations applied.</p></div><span class="badge badge-success">Connected</span></div>

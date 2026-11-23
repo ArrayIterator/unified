@@ -2,7 +2,7 @@
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
-use unified_core::hooks::HookBus;
+use unified_core::hooks::{HookBus, HookContext};
 use unified_core::json as api_json;
 use unified_core::modules::{Module, ModuleRegistry, RouteInfo};
 use unified_core::pagination::{PageResult, PaginationParams};
@@ -242,6 +242,65 @@ pub(crate) fn render_block(state: &SiteBuilderState, page: &Page, block: &Block)
         }
     }
     default_html
+}
+
+/// Answer the `site_builder.render_page` hook: render a page by slug
+/// (or id) to HTML through the block renderer. Only published pages
+/// render — a draft answers `found: false`, so it can never leak to
+/// the public front page. The tagline and description come from the
+/// page's first hero block, so the front page's words are builder
+/// content, not hard-coded strings.
+pub(crate) fn on_render_page_request(state: &SiteBuilderState, ctx: &mut HookContext) {
+    let slug = ctx
+        .data
+        .get("slug")
+        .and_then(|value| value.as_str())
+        .unwrap_or("");
+    let page_id = ctx
+        .data
+        .get("page_id")
+        .and_then(|value| value.as_str())
+        .unwrap_or("");
+    let page = if !slug.is_empty() {
+        state.get_page_by_slug(slug)
+    } else {
+        None
+    }
+    .or_else(|| {
+        if !page_id.is_empty() {
+            state.get_page(page_id)
+        } else {
+            None
+        }
+    });
+    let mut found = false;
+    let mut html = String::new();
+    let mut title = String::new();
+    let mut tagline = String::new();
+    let mut description = String::new();
+    if let Some(page) = page {
+        if page.status == "published" {
+            let mut blocks = page.blocks.clone();
+            blocks.sort_by_key(|block| block.order);
+            for block in &blocks {
+                html.push_str(&render_block(state, &page, block));
+                html.push('\n');
+            }
+            if let Some(hero) = blocks.iter().find(|block| block.block_type == "hero") {
+                tagline = content_str(&hero.content, "heading").unwrap_or_default();
+                description = content_str(&hero.content, "subheading").unwrap_or_default();
+            }
+            title = page.title.clone();
+            found = true;
+        }
+    }
+    if let Some(object) = ctx.data.as_object_mut() {
+        object.insert("found".to_string(), Value::Bool(found));
+        object.insert("html".to_string(), Value::String(html));
+        object.insert("title".to_string(), Value::String(title));
+        object.insert("tagline".to_string(), Value::String(tagline));
+        object.insert("description".to_string(), Value::String(description));
+    }
 }
 
 #[cfg(test)]

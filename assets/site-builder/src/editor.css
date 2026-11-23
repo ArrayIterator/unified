@@ -1,0 +1,56 @@
+/* Site builder editor styles (GrapeJS, task 353).
+ *
+ * Loaded by the `admin-site-builder` template next to the editor
+ * bundle. The admin theme (dashboard.css) owns the page chrome;
+ * this file only sizes the canvas and keeps the GrapeJS panels
+ * readable inside the admin panel.
+ */
+
+#gjs {
+  min-height: 600px;
+  border: 1px solid var(--border, #d8dde3);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* The builder canvas sits inside a panel; let it use the full width. */
+#sb-editor .builder-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0 0 1rem;
+}
+
+#sb-editor .builder-actions .button {
+  margin: 0;
+}
+
+/* GrapeJS panels inherit the admin font; the trait inputs should
+ * match the admin form controls instead of the editor defaults. */
+#gjs .gjs-field,
+#gjs .gjs-field input,
+#gjs .gjs-field select,
+#gjs .gjs-field textarea {
+  font-family: inherit;
+  font-size: 0.875rem;
+}
+
+#gjs .gjs-field textarea {
+  min-height: 5rem;
+  resize: vertical;
+}
+
+/* Blocks render with the theme's block classes on the live site;
+ * in the canvas they get a visible outline so empty blocks (a hero
+ * without a heading, an image without a URL) stay selectable. */
+#gjs .sb-block {
+  outline: 1px dashed var(--border, #d8dde3);
+  outline-offset: -1px;
+  padding: 0.5rem;
+}
+
+#gjs .sb-block:empty::after {
+  content: "Empty block — select it to edit its fields.";
+  color: var(--muted, #667085);
+  font-size: 0.875rem;
+}

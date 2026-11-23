@@ -253,7 +253,6 @@ mod tests {
         assert!(errors.is_empty(), "transpile errors: {errors:?}");
         for name in [
             "js/dashboard.js",
-            "js/site-builder.js",
             "js/admin-pages.js",
             "js/auth.js",
             "js/admin.js",

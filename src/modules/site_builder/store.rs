@@ -60,6 +60,61 @@ impl SiteBuilderState {
             .cloned()
     }
 
+    pub(crate) fn get_page_by_slug(&self, slug: &str) -> Option<Page> {
+        self.pages
+            .read()
+            .expect("site builder lock poisoned")
+            .values()
+            .find(|page| page.slug == slug)
+            .cloned()
+    }
+
+    /// Seed the default home page as a site-builder page (task 353):
+    /// a hero block and a text block — never a static template. The
+    /// hero carries the tagline and description as editable block
+    /// content (the old hard-coded strings live here as the
+    /// documented fallbacks). Runs once at startup; a page with slug
+    /// `home` already present is left alone.
+    pub(crate) fn seed_default_home_page(&self) {
+        let mut pages = self.pages.write().expect("site builder lock poisoned");
+        if pages.values().any(|page| page.slug == "home") {
+            return;
+        }
+        let now = Utc::now().to_rfc3339();
+        let page = Page {
+            id: "home".to_string(),
+            title: "Unified".to_string(),
+            slug: "home".to_string(),
+            theme_id: "default".to_string(),
+            status: "published".to_string(),
+            blocks: vec![
+                Block {
+                    id: "home-hero".to_string(),
+                    block_type: "hero".to_string(),
+                    content: json!({
+                        "heading": "Unified",
+                        "subheading": "One control plane for everything you run.",
+                        "cta_text": "Open dashboard",
+                        "cta_url": "/dashboard"
+                    }),
+                    order: 0,
+                },
+                Block {
+                    id: "home-intro".to_string(),
+                    block_type: "text".to_string(),
+                    content: json!({
+                        "text": "Licensing, downloads, storefront, software and asset management, and day-to-day operations in one place."
+                    }),
+                    order: 1,
+                },
+            ],
+            sections: Vec::new(),
+            created_at: now.clone(),
+            updated_at: now,
+        };
+        pages.insert(page.id.clone(), page);
+    }
+
     pub(crate) fn slug_taken(&self, slug: &str, except_id: Option<&str>) -> bool {
         self.pages
             .read()

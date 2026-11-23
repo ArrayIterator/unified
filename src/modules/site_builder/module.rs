@@ -101,6 +101,24 @@ impl Module for SiteBuilderModule {
         "Drag-and-drop page building on top of Content and Theme: pages of ordered blocks and sections, server-side HTML rendering, and a draft to published flow."
     }
 
+    /// The builder is a SELLABLE module, not a builtin: a tenant gets
+    /// it only through a package (see the `site-builder-saas` seed
+    /// package) or a license/subscription, via the licensing gate.
+    /// Non-core so the stored-row leg of `check_module_entitlement`
+    /// decides for tenants; the control plane itself is never gated
+    /// (see `helpers::require_site_builder_entitlement`).
+    fn is_core(&self) -> bool {
+        false
+    }
+
+    fn available_as_product(&self) -> bool {
+        true
+    }
+
+    fn product_category(&self) -> Option<&'static str> {
+        Some("productivity")
+    }
+
     fn dependencies(&self) -> Vec<&'static str> {
         vec!["content", "theme"]
     }
@@ -110,10 +128,23 @@ impl Module for SiteBuilderModule {
         ai::register_ai_capabilities("site-builder", AI_CAPABILITIES);
         self.state.debug.store(ctx.is_debug(), Ordering::SeqCst);
         self.state.set_hooks(ctx.hooks.clone());
+        // The default home page is seeded as a site-builder page
+        // (hero + text blocks), never as a static template; see
+        // `SiteBuilderState::seed_default_home_page`.
+        self.state.seed_default_home_page();
         Ok(())
     }
 
-    fn register_hooks(&self, _bus: &HookBus) {}
+    fn register_hooks(&self, bus: &HookBus) {
+        let state = self.state.clone();
+        bus.register(
+            EVENT_RENDER_PAGE,
+            "site-builder",
+            Arc::new(move |ctx: &mut unified_core::hooks::HookContext| {
+                on_render_page_request(&state, ctx);
+            }),
+        );
+    }
 
     fn route_info(&self) -> Vec<RouteInfo> {
         vec![

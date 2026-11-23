@@ -514,3 +514,940 @@
     initForms();
   });
 })();
+
+/* ==========================================================================
+   Widgets — task 352
+
+   Demo widget system: every section marked [data-widget] is a widget.
+   Pin, add (from the picker), remove and drag-to-reorder (Pointer
+   Events only — never HTML5 drag-and-drop). The layout is stored in
+   localStorage, per page, browser only; the real app stores layouts
+   in the widget_layouts table (migration 000129).
+
+   Pinned widgets sort first, always: a pinned widget dragged below
+   an unpinned one moves back to the top on drop. Unpin it to move
+   it down. Per-page registries below list the widgets each page
+   may show; dashboard ids match the server catalogue
+   (admin-dashboard context). Widgets are for admin pages only —
+   the front page (index.html) and the tenant site (tenant.html)
+   have no widgets. The registry key here is the page's widget
+   zone; on the server this page is the `admin-dashboard` zone.
+   ========================================================================== */
+
+(function () {
+  "use strict";
+
+  var REGISTRY = {
+    dashboard: [
+      { id: "stat-cards", title: "Key figures", pinned: true },
+      { id: "market-strip", title: "Market strip" },
+      { id: "announcements-ticker", title: "Announcements" },
+      { id: "module-grid", title: "Modules" },
+      { id: "recent-activity", title: "Recent activity" },
+      { id: "system-status", title: "System status" },
+    ],
+  };
+
+  function $(selector, root) {
+    return (root || document).querySelector(selector);
+  }
+
+  function $all(selector, root) {
+    return Array.prototype.slice.call((root || document).querySelectorAll(selector));
+  }
+
+  var toastTimer = null;
+
+  function demoToast(message) {
+    var toast = document.getElementById("demo-toast");
+    if (!toast) return;
+    toast.textContent = message;
+    toast.classList.add("show");
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () {
+      toast.classList.remove("show");
+    }, 2600);
+  }
+
+  function storageKey(page) {
+    return "unified-demo-widgets:" + page;
+  }
+
+  function loadLayout(page) {
+    try {
+      var raw = localStorage.getItem(storageKey(page));
+      if (!raw) return null;
+      var parsed = JSON.parse(raw);
+      if (!parsed || !Array.isArray(parsed.order)) return null;
+      var strings = function (value) {
+        return Array.isArray(value)
+          ? value.filter(function (id) { return typeof id === "string"; })
+          : [];
+      };
+      return {
+        order: strings(parsed.order),
+        pinned: strings(parsed.pinned),
+        removed: strings(parsed.removed),
+      };
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function saveLayout(page, state) {
+    try {
+      localStorage.setItem(storageKey(page), JSON.stringify({
+        order: state.order,
+        pinned: state.pinned,
+        removed: state.removed,
+      }));
+    } catch (error) {
+      // Private mode or full storage: the layout just does not persist.
+    }
+  }
+
+  function widgetState(page) {
+    var registry = REGISTRY[page] || [];
+    var known = registry.map(function (entry) { return entry.id; });
+    var byId = {};
+    $all("[data-widget]").forEach(function (el) {
+      byId[el.getAttribute("data-widget")] = el;
+    });
+    var order = known.slice();
+    var pinned = registry
+      .filter(function (entry) { return entry.pinned; })
+      .map(function (entry) { return entry.id; });
+    var removed = [];
+    var saved = loadLayout(page);
+    if (saved) {
+      order = saved.order.filter(function (id) { return known.indexOf(id) !== -1; });
+      known.forEach(function (id) {
+        if (order.indexOf(id) === -1) order.push(id);
+      });
+      pinned = saved.pinned.filter(function (id) { return known.indexOf(id) !== -1; });
+      removed = saved.removed.filter(function (id) { return known.indexOf(id) !== -1; });
+    }
+    return { page: page, registry: registry, byId: byId, order: order, pinned: pinned, removed: removed };
+  }
+
+  /** Pinned first (stable), then the rest, in state.order. */
+  function sortedOrder(state) {
+    var pinned = state.order.filter(function (id) { return state.pinned.indexOf(id) !== -1; });
+    var rest = state.order.filter(function (id) { return state.pinned.indexOf(id) === -1; });
+    return pinned.concat(rest);
+  }
+
+  function collapseEmptyRows() {
+    $all(".widget-row").forEach(function (row) {
+      var visible = $all("[data-widget]", row).filter(function (el) { return !el.hidden; });
+      row.hidden = visible.length === 0;
+    });
+  }
+
+  function applyLayout(state) {
+    var ordered = sortedOrder(state);
+    state.order = ordered;
+    var prev = null;
+    var firstVisible = $all("[data-widget]").filter(function (el) { return !el.hidden; })[0];
+    ordered.forEach(function (id) {
+      var el = state.byId[id];
+      if (!el) return;
+      var isRemoved = state.removed.indexOf(id) !== -1;
+      el.hidden = isRemoved;
+      el.classList.toggle("widget-pinned", state.pinned.indexOf(id) !== -1);
+      var pinButton = $(".widget-pin", el);
+      if (pinButton) {
+        var isPinned = state.pinned.indexOf(id) !== -1;
+        pinButton.textContent = isPinned ? "Pinned" : "Pin";
+        pinButton.setAttribute("aria-pressed", isPinned ? "true" : "false");
+      }
+      if (isRemoved) return;
+      if (prev === null) {
+        if (firstVisible && el !== firstVisible) {
+          firstVisible.parentNode.insertBefore(el, firstVisible);
+        }
+      } else {
+        prev.parentNode.insertBefore(el, prev.nextSibling);
+      }
+      prev = el;
+    });
+    collapseEmptyRows();
+  }
+
+  function refreshPicker(state) {
+    var select = document.getElementById("widget-add-select");
+    var addButton = document.getElementById("widget-add");
+    if (!select || !addButton) return;
+    var removed = state.removed.filter(function (id) { return state.byId[id]; });
+    select.innerHTML = "";
+    removed.forEach(function (id) {
+      var entry = null;
+      state.registry.forEach(function (item) {
+        if (item.id === id) entry = item;
+      });
+      var option = document.createElement("option");
+      option.value = id;
+      option.textContent = entry ? entry.title : id;
+      select.appendChild(option);
+    });
+    var empty = removed.length === 0;
+    select.disabled = empty;
+    addButton.disabled = empty;
+    if (empty) {
+      var option = document.createElement("option");
+      option.textContent = "No removed widgets";
+      select.appendChild(option);
+    }
+  }
+
+  function buildPicker(state) {
+    var note = $(".demo-note");
+    if (!note) return;
+    var toolbar = document.createElement("div");
+    toolbar.className = "widget-toolbar";
+    toolbar.innerHTML =
+      '<label for="widget-add-select">Add widget</label>' +
+      '<select id="widget-add-select"></select>' +
+      '<button type="button" class="button button-small" id="widget-add">Add</button>' +
+      '<button type="button" class="button button-small button-secondary" id="widget-reset">Reset layout</button>' +
+      '<span class="small muted">Drag a widget by its handle to reorder it. Layouts save in this browser only.</span>';
+    note.parentNode.insertBefore(toolbar, note.nextSibling);
+    $("#widget-add").addEventListener("click", function () {
+      var select = document.getElementById("widget-add-select");
+      var id = select.value;
+      var el = state.byId[id];
+      if (!el) return;
+      state.removed = state.removed.filter(function (item) { return item !== id; });
+      el.hidden = false;
+      // Added widgets go last (after the last visible widget).
+      var visible = $all("[data-widget]").filter(function (item) { return !item.hidden && item !== el; });
+      var last = visible[visible.length - 1];
+      if (last) last.parentNode.insertBefore(el, last.nextSibling);
+      state.order = $all("[data-widget]").map(function (item) { return item.getAttribute("data-widget"); });
+      saveLayout(state.page, state);
+      applyLayout(state);
+      refreshPicker(state);
+      demoToast("Widget added (demo only).");
+    });
+    $("#widget-reset").addEventListener("click", function () {
+      try { localStorage.removeItem(storageKey(state.page)); } catch (error) { /* ignore */ }
+      window.location.reload();
+    });
+    refreshPicker(state);
+  }
+
+  function injectBars(state) {
+    state.registry.forEach(function (entry) {
+      var el = state.byId[entry.id];
+      if (!el || $(".widget-bar", el)) return;
+      var title = el.getAttribute("data-widget-title") || entry.title;
+      var bar = document.createElement("div");
+      bar.className = "widget-bar";
+      bar.innerHTML =
+        '<span class="widget-handle" title="Drag to reorder">Drag</span>' +
+        '<span class="widget-title"></span>' +
+        '<button type="button" class="widget-pin" aria-pressed="false">Pin</button>' +
+        '<button type="button" class="widget-remove">Remove</button>';
+      $(".widget-title", bar).textContent = title;
+      el.insertBefore(bar, el.firstChild);
+    });
+  }
+
+  function currentOrderFromDom() {
+    return $all("[data-widget]").map(function (el) { return el.getAttribute("data-widget"); });
+  }
+
+  function initWidgets() {
+    var page = document.body.getAttribute("data-page");
+    if (!page || !REGISTRY[page]) return;
+    var state = widgetState(page);
+    injectBars(state);
+    buildPicker(state);
+    applyLayout(state);
+
+    document.addEventListener("click", function (event) {
+      var button = event.target.closest(".widget-pin, .widget-remove");
+      if (!button) return;
+      var widget = button.closest("[data-widget]");
+      if (!widget) return;
+      var id = widget.getAttribute("data-widget");
+      if (button.classList.contains("widget-pin")) {
+        var isPinned = state.pinned.indexOf(id) !== -1;
+        state.pinned = isPinned
+          ? state.pinned.filter(function (item) { return item !== id; })
+          : state.pinned.concat([id]);
+        saveLayout(state.page, state);
+        applyLayout(state);
+        demoToast(isPinned ? "Widget unpinned (demo only)." : "Widget pinned — pinned widgets stay at the top (demo only).");
+      } else {
+        state.removed.push(id);
+        saveLayout(state.page, state);
+        applyLayout(state);
+        refreshPicker(state);
+        demoToast("Widget removed — add it back from the picker (demo only).");
+      }
+    });
+
+    // Drag-to-reorder, Pointer Events only. The widget leaves the
+    // flow (position: fixed, pointer-events: none) while a
+    // placeholder holds its slot; the placeholder moves with the
+    // pointer and the widget drops where it sits.
+    var drag = null;
+
+    document.addEventListener("pointerdown", function (event) {
+      var handle = event.target.closest ? event.target.closest(".widget-handle") : null;
+      if (!handle) return;
+      if (event.button !== undefined && event.button !== 0) return;
+      var widget = handle.closest("[data-widget]");
+      if (!widget || widget.hidden) return;
+      event.preventDefault();
+      var rect = widget.getBoundingClientRect();
+      var placeholder = document.createElement("div");
+      placeholder.className = "widget-placeholder";
+      placeholder.style.height = rect.height + "px";
+      widget.parentNode.insertBefore(placeholder, widget);
+      widget.classList.add("widget-dragging");
+      widget.style.width = rect.width + "px";
+      widget.style.left = rect.left + "px";
+      widget.style.top = rect.top + "px";
+      drag = {
+        widget: widget,
+        placeholder: placeholder,
+        offsetX: event.clientX - rect.left,
+        offsetY: event.clientY - rect.top,
+      };
+      if (handle.setPointerCapture && event.pointerId !== undefined) {
+        try { handle.setPointerCapture(event.pointerId); } catch (error) { /* older browsers */ }
+      }
+    });
+
+    document.addEventListener("pointermove", function (event) {
+      if (!drag) return;
+      drag.widget.style.left = (event.clientX - drag.offsetX) + "px";
+      drag.widget.style.top = (event.clientY - drag.offsetY) + "px";
+      var under = document.elementFromPoint(event.clientX, event.clientY);
+      var target = under && under.closest ? under.closest("[data-widget]") : null;
+      if (!target || target === drag.widget) return;
+      var targetRect = target.getBoundingClientRect();
+      var before = event.clientY < targetRect.top + targetRect.height / 2;
+      if (before) {
+        target.parentNode.insertBefore(drag.placeholder, target);
+      } else {
+        target.parentNode.insertBefore(drag.placeholder, target.nextSibling);
+      }
+    });
+
+    document.addEventListener("pointerup", function () {
+      if (!drag) return;
+      var widget = drag.widget;
+      var placeholder = drag.placeholder;
+      placeholder.parentNode.insertBefore(widget, placeholder);
+      placeholder.remove();
+      widget.classList.remove("widget-dragging");
+      widget.style.width = "";
+      widget.style.left = "";
+      widget.style.top = "";
+      drag = null;
+      state.order = currentOrderFromDom();
+      saveLayout(state.page, state);
+      applyLayout(state);
+      demoToast("Layout saved in this browser (demo only).");
+    });
+
+    document.addEventListener("pointercancel", function () {
+      if (!drag) return;
+      var widget = drag.widget;
+      var placeholder = drag.placeholder;
+      placeholder.parentNode.insertBefore(widget, placeholder);
+      placeholder.remove();
+      widget.classList.remove("widget-dragging");
+      widget.style.width = "";
+      widget.style.left = "";
+      widget.style.top = "";
+      drag = null;
+      applyLayout(state);
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", initWidgets);
+})();
+
+/* ==========================================================================
+   Site Builder — task 353
+
+   Demo of the GrapeJS-based site builder (the real editor is bundled
+   as assets/site-builder/dist/editor.js — no CDN). The canvas shows
+   the home page's blocks; the palette adds blocks (click to append,
+   drag to insert), the traits panel edits the selected block's
+   fields, text blocks edit in place, and Save/Publish persist to
+   localStorage, browser only. Blocks reorder by Pointer Events.
+   ========================================================================== */
+
+(function () {
+  "use strict";
+
+  var STORAGE_KEY = "unified-demo-site-builder:home";
+
+  var FIELDS = {
+    hero: [
+      { name: "heading", label: "Heading", kind: "text" },
+      { name: "subheading", label: "Subheading", kind: "text" },
+      { name: "cta_text", label: "Button text", kind: "text" },
+      { name: "cta_url", label: "Button URL", kind: "url" },
+    ],
+    text: [{ name: "body", label: "Body", kind: "textarea" }],
+    image: [
+      { name: "url", label: "Image URL", kind: "url" },
+      { name: "alt", label: "Alt text", kind: "text" },
+    ],
+    gallery: [{ name: "images", label: "Image URLs (one per line)", kind: "textarea" }],
+    form: [
+      { name: "submit_label", label: "Submit label", kind: "text" },
+      { name: "action", label: "Form action URL", kind: "url" },
+    ],
+    custom: [{ name: "html", label: "HTML", kind: "textarea" }],
+    pricing_table: [{ name: "pricing_table_id", label: "Pricing table ID", kind: "text" }],
+    marketplace_storefront: [{ name: "vendor_slug", label: "Vendor slug", kind: "text" }],
+  };
+
+  var BLOCK_LABELS = {
+    hero: "Hero",
+    text: "Text",
+    image: "Image",
+    gallery: "Gallery",
+    form: "Form",
+    custom: "Custom",
+    pricing_table: "Pricing table",
+    marketplace_storefront: "Storefront",
+  };
+
+  function $(selector, root) {
+    return (root || document).querySelector(selector);
+  }
+
+  function $all(selector, root) {
+    return Array.prototype.slice.call((root || document).querySelectorAll(selector));
+  }
+
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  var toastTimer = null;
+
+  function demoToast(message) {
+    var toast = document.getElementById("demo-toast");
+    if (!toast) return;
+    toast.textContent = message;
+    toast.classList.add("show");
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () {
+      toast.classList.remove("show");
+    }, 2600);
+  }
+
+  var nextId = 1;
+
+  function newId() {
+    nextId += 1;
+    return "blk-" + Date.now().toString(36) + "-" + nextId;
+  }
+
+  function defaultContent(type) {
+    switch (type) {
+      case "hero":
+        return { heading: "New section", subheading: "", cta_text: "Learn more", cta_url: "modules.html" };
+      case "text":
+        return { body: "Write something…" };
+      case "image":
+        return { url: "", alt: "" };
+      case "gallery":
+        return { images: "" };
+      case "form":
+        return { submit_label: "Submit", action: "" };
+      case "custom":
+        return { html: "<p>Custom HTML</p>" };
+      case "pricing_table":
+        return { pricing_table_id: "" };
+      case "marketplace_storefront":
+        return { vendor_slug: "" };
+      default:
+        return {};
+    }
+  }
+
+  function fieldValue(block, name) {
+    var value = block.content[name];
+    return value === undefined || value === null ? "" : String(value);
+  }
+
+  /** Fill a block element's body from its model entry. Text nodes are
+   * set with textContent, never innerHTML — user-typed content
+   * (including the custom block's HTML) is shown as text, not run. */
+  function renderBlockBody(el, block) {
+    var body = $(".sb-block-body", el);
+    if (!body) return;
+    body.innerHTML = "";
+    var type = block.type;
+    if (type === "hero") {
+      var heading = document.createElement("h2");
+      heading.setAttribute("data-sb-field", "heading");
+      heading.setAttribute("contenteditable", "true");
+      heading.setAttribute("spellcheck", "false");
+      heading.textContent = fieldValue(block, "heading");
+      body.appendChild(heading);
+      var sub = document.createElement("p");
+      sub.setAttribute("data-sb-field", "subheading");
+      sub.setAttribute("contenteditable", "true");
+      sub.setAttribute("spellcheck", "false");
+      sub.textContent = fieldValue(block, "subheading");
+      body.appendChild(sub);
+      var ctaWrap = document.createElement("p");
+      var cta = document.createElement("a");
+      cta.className = "button";
+      cta.setAttribute("data-sb-field", "cta_text");
+      cta.setAttribute("contenteditable", "true");
+      cta.setAttribute("spellcheck", "false");
+      cta.setAttribute("href", fieldValue(block, "cta_url") || "#");
+      cta.textContent = fieldValue(block, "cta_text");
+      ctaWrap.appendChild(cta);
+      body.appendChild(ctaWrap);
+    } else if (type === "text") {
+      var text = document.createElement("p");
+      text.setAttribute("data-sb-field", "body");
+      text.setAttribute("contenteditable", "true");
+      text.setAttribute("spellcheck", "false");
+      text.textContent = fieldValue(block, "body");
+      body.appendChild(text);
+    } else if (type === "image") {
+      var url = fieldValue(block, "url");
+      if (url) {
+        var img = document.createElement("img");
+        img.setAttribute("src", url);
+        img.setAttribute("alt", fieldValue(block, "alt"));
+        img.style.maxWidth = "100%";
+        body.appendChild(img);
+      } else {
+        var noImage = document.createElement("p");
+        noImage.className = "small muted";
+        noImage.textContent = "No image yet — set a URL in Block settings.";
+        body.appendChild(noImage);
+      }
+    } else if (type === "gallery") {
+      var lines = fieldValue(block, "images").split("\n").map(function (line) { return line.trim(); }).filter(Boolean);
+      if (lines.length === 0) {
+        var noGallery = document.createElement("p");
+        noGallery.className = "small muted";
+        noGallery.textContent = "No images yet — one URL per line in Block settings.";
+        body.appendChild(noGallery);
+      } else {
+        lines.forEach(function (line, index) {
+          var item = document.createElement("p");
+          item.textContent = "Image " + (index + 1) + ": " + line;
+          body.appendChild(item);
+        });
+      }
+    } else if (type === "form") {
+      var formNote = document.createElement("p");
+      formNote.textContent = "Form — submit button: " + (fieldValue(block, "submit_label") || "Submit");
+      body.appendChild(formNote);
+      var action = fieldValue(block, "action");
+      if (action) {
+        var actionNote = document.createElement("p");
+        actionNote.className = "small muted";
+        actionNote.textContent = "Posts to: " + action;
+        body.appendChild(actionNote);
+      }
+    } else if (type === "custom") {
+      var code = document.createElement("code");
+      code.textContent = fieldValue(block, "html");
+      body.appendChild(code);
+    } else if (type === "pricing_table") {
+      var pricingNote = document.createElement("p");
+      var pricingId = fieldValue(block, "pricing_table_id");
+      pricingNote.textContent = pricingId ? "Pricing table: " + pricingId : "No pricing table selected.";
+      body.appendChild(pricingNote);
+    } else if (type === "marketplace_storefront") {
+      var storeNote = document.createElement("p");
+      var slug = fieldValue(block, "vendor_slug");
+      storeNote.textContent = slug ? "Storefront: " + slug : "No vendor selected.";
+      body.appendChild(storeNote);
+    } else {
+      var unknown = document.createElement("p");
+      unknown.className = "small muted";
+      unknown.textContent = "Unknown block type: " + type;
+      body.appendChild(unknown);
+    }
+  }
+
+  function createBlockElement(block) {
+    var el = document.createElement("article");
+    el.className = "sb-block";
+    el.setAttribute("data-block-type", block.type);
+    el.setAttribute("data-block-id", block.id);
+    var bar = document.createElement("div");
+    bar.className = "sb-block-bar";
+    bar.innerHTML =
+      '<span class="sb-block-handle" title="Drag to reorder">Drag</span>' +
+      '<span class="sb-block-type">' + escapeHtml(BLOCK_LABELS[block.type] || block.type) + "</span>" +
+      '<button type="button" class="sb-block-remove" data-sb-remove-block>Remove</button>';
+    el.appendChild(bar);
+    var body = document.createElement("div");
+    body.className = "sb-block-body";
+    el.appendChild(body);
+    renderBlockBody(el, block);
+    return el;
+  }
+
+  function parseBlock(el) {
+    var type = el.getAttribute("data-block-type") || "text";
+    var content = {};
+    (FIELDS[type] || []).forEach(function (field) {
+      if (field.name === "cta_url") {
+        // The CTA link carries the text field; its URL is the href.
+        var cta = el.querySelector('[data-sb-field="cta_text"]');
+        content[field.name] = cta ? cta.getAttribute("href") || "" : "";
+        return;
+      }
+      var node = el.querySelector('[data-sb-field="' + field.name + '"]');
+      if (!node) return;
+      content[field.name] = node.textContent;
+    });
+    return {
+      id: el.getAttribute("data-block-id") || newId(),
+      type: type,
+      content: content,
+    };
+  }
+
+  function loadSaved() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      var parsed = JSON.parse(raw);
+      if (!parsed || !Array.isArray(parsed.blocks)) return null;
+      var blocks = parsed.blocks.filter(function (block) {
+        return block && typeof block.id === "string" && typeof block.type === "string" &&
+          block.content && typeof block.content === "object";
+      });
+      if (blocks.length === 0) return null;
+      return { blocks: blocks, status: parsed.status === "draft" ? "draft" : "published" };
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function initSiteBuilder() {
+    if (document.body.getAttribute("data-page") !== "site-builder") return;
+    var canvas = document.getElementById("sb-canvas");
+    var traits = document.getElementById("sb-traits");
+    var statusBadge = document.getElementById("sb-status");
+    if (!canvas || !traits) return;
+
+    var saved = loadSaved();
+    var blocks = saved
+      ? saved.blocks
+      : $all(".sb-block", canvas).map(parseBlock);
+    var status = saved ? saved.status : "published";
+    var selectedId = null;
+
+    function blockById(id) {
+      var found = null;
+      blocks.forEach(function (block) {
+        if (block.id === id) found = block;
+      });
+      return found;
+    }
+
+    function elementById(id) {
+      return $('.sb-block[data-block-id="' + id + '"]', canvas);
+    }
+
+    function renderCanvas() {
+      canvas.innerHTML = "";
+      blocks.forEach(function (block) {
+        canvas.appendChild(createBlockElement(block));
+      });
+    }
+
+    function renderStatus() {
+      if (!statusBadge) return;
+      statusBadge.textContent = status === "published" ? "Published" : "Draft";
+      statusBadge.classList.toggle("badge-success", status === "published");
+      statusBadge.classList.toggle("badge-warning", status !== "published");
+    }
+
+    function renderTraits() {
+      traits.innerHTML = "";
+      var block = selectedId ? blockById(selectedId) : null;
+      if (!block) {
+        var hint = document.createElement("p");
+        hint.className = "small muted";
+        hint.textContent = "Select a block on the canvas to edit its fields here.";
+        traits.appendChild(hint);
+        return;
+      }
+      var title = document.createElement("p");
+      title.innerHTML = "<strong>" + escapeHtml(BLOCK_LABELS[block.type] || block.type) + "</strong>";
+      traits.appendChild(title);
+      var fields = FIELDS[block.type] || [];
+      if (fields.length === 0) {
+        var info = document.createElement("p");
+        info.className = "small muted";
+        info.textContent = "Live data — this widget has no fields to edit.";
+        traits.appendChild(info);
+        return;
+      }
+      fields.forEach(function (field) {
+        var wrap = document.createElement("div");
+        wrap.className = "field";
+        var label = document.createElement("label");
+        label.textContent = field.label;
+        label.setAttribute("for", "sb-trait-" + field.name);
+        wrap.appendChild(label);
+        var input;
+        if (field.kind === "textarea") {
+          input = document.createElement("textarea");
+          input.rows = 4;
+        } else {
+          input = document.createElement("input");
+          input.type = field.kind === "number" ? "number" : field.kind === "url" ? "url" : "text";
+        }
+        input.id = "sb-trait-" + field.name;
+        input.value = fieldValue(block, field.name);
+        input.addEventListener("input", function () {
+          block.content[field.name] = input.value;
+          var el = elementById(block.id);
+          if (el) renderBlockBody(el, block);
+        });
+        wrap.appendChild(input);
+        traits.appendChild(wrap);
+      });
+    }
+
+    function selectBlock(id) {
+      selectedId = id;
+      $all(".sb-block", canvas).forEach(function (el) {
+        el.classList.toggle("sb-selected", el.getAttribute("data-block-id") === id);
+      });
+      renderTraits();
+    }
+
+    function save() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ blocks: blocks, status: status }));
+      } catch (error) {
+        demoToast("Could not save — browser storage is unavailable.");
+        return;
+      }
+      demoToast("Blocks saved (demo only).");
+    }
+
+    function syncOrderFromDom() {
+      var order = $all(".sb-block", canvas).map(function (el) { return el.getAttribute("data-block-id"); });
+      blocks.sort(function (a, b) { return order.indexOf(a.id) - order.indexOf(b.id); });
+    }
+
+    // Seed from the static HTML, then render from the model so the
+    // canvas and the traits panel always agree.
+    renderCanvas();
+    renderStatus();
+    renderTraits();
+
+    canvas.addEventListener("click", function (event) {
+      var removeButton = event.target.closest ? event.target.closest("[data-sb-remove-block]") : null;
+      var blockEl = event.target.closest ? event.target.closest(".sb-block") : null;
+      if (!blockEl) return;
+      var id = blockEl.getAttribute("data-block-id");
+      if (removeButton) {
+        blocks = blocks.filter(function (block) { return block.id !== id; });
+        if (selectedId === id) selectedId = null;
+        renderCanvas();
+        renderTraits();
+        demoToast("Block removed (demo only).");
+        return;
+      }
+      selectBlock(id);
+    });
+
+    // In-place text editing: the canvas writes back to the model.
+    canvas.addEventListener("input", function (event) {
+      var field = event.target.closest ? event.target.closest("[data-sb-field]") : null;
+      if (!field) return;
+      var blockEl = field.closest(".sb-block");
+      if (!blockEl) return;
+      var block = blockById(blockEl.getAttribute("data-block-id"));
+      if (!block) return;
+      block.content[field.getAttribute("data-sb-field")] = field.textContent;
+      if (selectedId === block.id) renderTraits();
+    });
+
+    // Palette: a tap (pointerdown + pointerup without moving) appends
+    // at the end — handled in pointerup, not in a click handler,
+    // because the drag's preventDefault() may suppress the click.
+    // Drag-to-reorder (canvas handles) and drag-to-insert (palette
+    // items). Pointer Events only; a dragged palette block dropped
+    // outside the canvas is discarded.
+    var drag = null;
+
+    document.addEventListener("pointerdown", function (event) {
+      var handle = event.target.closest ? event.target.closest(".sb-block-handle") : null;
+      var paletteItem = event.target.closest ? event.target.closest("[data-sb-palette-type]") : null;
+      if (!handle && !paletteItem) return;
+      if (event.button !== undefined && event.button !== 0) return;
+      event.preventDefault();
+      var canvasRect = canvas.getBoundingClientRect();
+      var placeholder = document.createElement("div");
+      placeholder.className = "widget-placeholder";
+      if (handle) {
+        var widget = handle.closest(".sb-block");
+        if (!widget) return;
+        var rect = widget.getBoundingClientRect();
+        placeholder.style.height = rect.height + "px";
+        widget.parentNode.insertBefore(placeholder, widget);
+        widget.classList.add("sb-block-dragging");
+        widget.style.width = rect.width + "px";
+        widget.style.left = rect.left + "px";
+        widget.style.top = rect.top + "px";
+        drag = {
+          el: widget,
+          placeholder: placeholder,
+          offsetX: event.clientX - rect.left,
+          offsetY: event.clientY - rect.top,
+          startX: event.clientX,
+          startY: event.clientY,
+          isNew: false,
+          canvasRect: canvasRect,
+        };
+      } else {
+        var type = paletteItem.getAttribute("data-sb-palette-type");
+        var block = { id: newId(), type: type, content: defaultContent(type) };
+        var el = createBlockElement(block);
+        var paletteRect = paletteItem.getBoundingClientRect();
+        placeholder.style.height = "120px";
+        canvas.appendChild(placeholder);
+        el.classList.add("sb-block-dragging");
+        el.style.width = Math.min(paletteRect.width, canvasRect.width) + "px";
+        el.style.left = (event.clientX - paletteRect.width / 2) + "px";
+        el.style.top = (event.clientY - 20) + "px";
+        document.body.appendChild(el);
+        drag = {
+          el: el,
+          placeholder: placeholder,
+          offsetX: paletteRect.width / 2,
+          offsetY: 20,
+          startX: event.clientX,
+          startY: event.clientY,
+          isNew: true,
+          block: block,
+          canvasRect: canvasRect,
+        };
+      }
+      var target = handle || paletteItem;
+      if (target.setPointerCapture && event.pointerId !== undefined) {
+        try { target.setPointerCapture(event.pointerId); } catch (error) { /* older browsers */ }
+      }
+    });
+
+    document.addEventListener("pointermove", function (event) {
+      if (!drag) return;
+      drag.el.style.left = (event.clientX - drag.offsetX) + "px";
+      drag.el.style.top = (event.clientY - drag.offsetY) + "px";
+      var under = document.elementFromPoint(event.clientX, event.clientY);
+      var target = under && under.closest ? under.closest(".sb-block") : null;
+      var overCanvas = under && under.closest ? !!under.closest("#sb-canvas") : false;
+      if (target && target !== drag.el) {
+        var targetRect = target.getBoundingClientRect();
+        var before = event.clientY < targetRect.top + targetRect.height / 2;
+        if (before) {
+          target.parentNode.insertBefore(drag.placeholder, target);
+        } else {
+          target.parentNode.insertBefore(drag.placeholder, target.nextSibling);
+        }
+      } else if (overCanvas && drag.placeholder.parentNode !== canvas) {
+        canvas.appendChild(drag.placeholder);
+      }
+    });
+
+    function endDrag(commit) {
+      if (!drag) return;
+      var el = drag.el;
+      var placeholder = drag.placeholder;
+      if (commit && placeholder.parentNode === canvas) {
+        placeholder.parentNode.insertBefore(el, placeholder);
+        if (drag.isNew) {
+          blocks.splice(
+            $all(".sb-block", canvas).indexOf(el),
+            0,
+            drag.block,
+          );
+          selectBlock(drag.block.id);
+        }
+        syncOrderFromDom();
+      } else if (!drag.isNew) {
+        placeholder.parentNode.insertBefore(el, placeholder);
+      } else {
+        el.remove();
+        demoToast("Dropped outside the canvas — block discarded.");
+      }
+      placeholder.remove();
+      el.classList.remove("sb-block-dragging");
+      el.style.width = "";
+      el.style.left = "";
+      el.style.top = "";
+      drag = null;
+    }
+
+    document.addEventListener("pointerup", function (event) {
+      if (!drag) return;
+      var moved = Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) > 5;
+      var under = document.elementFromPoint(event.clientX, event.clientY);
+      var overCanvas = !!(under && under.closest && (under.closest("#sb-canvas") || under.closest(".sb-block")));
+      // A palette tap (no movement) appends at the end, where the
+      // placeholder already sits. A palette drag only commits when
+      // it ends over the canvas. A canvas drag always lands where
+      // its placeholder sits.
+      endDrag(drag.isNew ? (moved ? overCanvas : true) : true);
+    });
+
+    document.addEventListener("pointercancel", function () {
+      endDrag(false);
+    });
+
+    var saveButton = document.getElementById("sb-save");
+    if (saveButton) saveButton.addEventListener("click", save);
+
+    var publishButton = document.getElementById("sb-publish");
+    if (publishButton) {
+      publishButton.addEventListener("click", function () {
+        status = "published";
+        renderStatus();
+        save();
+        demoToast("Page published (demo only).");
+      });
+    }
+
+    var unpublishButton = document.getElementById("sb-unpublish");
+    if (unpublishButton) {
+      unpublishButton.addEventListener("click", function () {
+        status = "draft";
+        renderStatus();
+        save();
+        demoToast("Page unpublished — now a draft (demo only).");
+      });
+    }
+
+    var previewButton = document.getElementById("sb-preview");
+    if (previewButton) {
+      previewButton.addEventListener("click", function () {
+        window.open("index.html", "_blank");
+      });
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", initSiteBuilder);
+})();

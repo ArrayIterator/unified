@@ -1,0 +1,1 @@
+{"compilerOptions":{"module":"esnext","moduleResolution":"bundler","noEmit":true,"skipLibCheck":true},"extends":"./tsconfig.json","include":["assets/site-builder/src/**/*.ts","vite.site-builder.config.ts"]}

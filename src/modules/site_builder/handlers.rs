@@ -365,11 +365,12 @@ pub(crate) async fn create_block(
     let debug = state.is_debug();
     let id = path.into_inner();
     let input = body.into_inner();
-    if !BLOCK_TYPES.contains(&input.block_type.as_str()) {
+    let known = BLOCK_TYPES;
+    if !known.contains(&input.block_type.as_str()) {
         return api_json::error_response(
             &UnifiedError::bad_request(format!(
                 "Block type must be one of: {}",
-                BLOCK_TYPES.join(", ")
+                known.join(", ")
             )),
             debug,
         );
@@ -869,6 +870,12 @@ pub(crate) async fn render_page(
         Some(page) => page,
         None => return not_found_page(debug),
     };
+    // A tenant without the site-builder package gets a uniform 404
+    // here, never a confirmation that the page exists.
+    if let Err(error) = require_site_builder_entitlement(&ctx, &req) {
+        let _ = error;
+        return not_found_page(debug);
+    }
     if !render_visible(&page.status, authorize(&ctx, &req, PERM_SITE_BUILDER_MANAGE).is_ok()) {
         return not_found_page(debug);
     }
