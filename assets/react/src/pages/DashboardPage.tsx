@@ -432,6 +432,25 @@ export default function DashboardPage() {
         </Card>
       ),
     },
+    {
+      id: "media-library",
+      node: (
+        <Card
+          title="Media library"
+          action={
+            <Link to="/media" className="text-sm text-accent hover:underline">
+              Open media library →
+            </Link>
+          }
+        >
+          <p className="text-sm text-muted">
+            Files and folders in the shared documents store. Authors see
+            public files plus their own private files; the picker lists
+            public files only, so mark a file public before embedding it.
+          </p>
+        </Card>
+      ),
+    },
     { id: "module-grid", node: <ModuleGrid /> },
   ];
   const ordered = orderWidgetSections(

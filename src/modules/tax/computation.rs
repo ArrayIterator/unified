@@ -39,11 +39,12 @@ pub(crate) fn round_tax(value: f64) -> f64 {
 
 /// True for zero-decimal currencies (no minor units), matching the
 /// billing and store modules' lists.
+/// True for zero-decimal currencies (no minor units). Delegates to the
+/// central ISO 4217 catalogue via `unified_core::db::money`: a currency
+/// is zero-decimal exactly when the catalogue lists it with zero minor
+/// digits. No local list is kept here.
 pub(crate) fn is_zero_decimal_currency(currency: &str) -> bool {
-    matches!(
-        currency,
-        "JPY" | "KRW" | "VND" | "CLP" | "ISK" | "UGX" | "XAF" | "XOF" | "XPF"
-    )
+    unified_core::db::money::is_zero_decimal_currency(currency)
 }
 
 /// Convert a major-unit amount to integer minor units, rounding

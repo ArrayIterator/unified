@@ -86,6 +86,14 @@ pub(crate) async fn initiate_session(
         let visibility = valid_visibility(
             input.visibility.as_deref().unwrap_or("private"),
         )?;
+        // Requested folder for the completed document; the folder
+        // must exist and be in the caller's company scope, checked
+        // now so a session never finalizes into a folder the
+        // caller cannot see.
+        let folder_id = input.folder_id.clone().unwrap_or_default();
+        if !folder_id.is_empty() && !state.folder_accepts(&folder_id, &_scope) {
+            return Err(UnifiedError::not_found("Folder not found"));
+        }
         let document_id = match &input.document_id {
             Some(id) => {
                 let document = state.load_document(id)?;
@@ -124,6 +132,7 @@ pub(crate) async fn initiate_session(
             visibility,
             // Captured now: the finalize worker needs the tenant
             // scope to locate the stored object later.
+            folder_id,
             tenant_id: Some(_tenant.tenant_id),
             expires_at: now() + chrono::Duration::seconds(state.settings().session_ttl_secs),
             created_at,
@@ -499,6 +508,7 @@ pub(crate) async fn complete_session(
                     session.total_size,
                     session.expected_sha256.clone(),
                     session.visibility.clone(),
+                    session.folder_id.clone(),
                     session.document_id.clone(),
                 )
                 .await;

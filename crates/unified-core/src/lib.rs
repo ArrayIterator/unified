@@ -25,6 +25,7 @@ pub mod money;
 pub mod net;
 pub mod pagination;
 pub mod provider_registry;
+pub mod reference_data;
 pub mod reference_id;
 pub mod routes;
 pub mod sharing;

@@ -79,6 +79,27 @@
 // public, unpublish flips it back private (see the content hooks
 // below).
 //
+// Role-scoped media listing (task 355, `list_visible` in
+// validation.rs — the LIST endpoint itself filters; the UI never
+// receives a row the caller may not see):
+//   - `GET /api/v1/documents/picker` (the embed picker): PUBLIC
+//     documents only, for EVERY role. Content embeds a public
+//     URL; a private file would 404 for readers, so it never
+//     appears here until it is flipped public.
+//   - `GET /api/v1/documents` (the manager list): admins
+//     (`documents:admin`) see public + private in the company
+//     scope; author / editor roles see every public document in
+//     scope plus their OWN private documents — so they can mark
+//     their own uploads public ("mark as public", the flip
+//     endpoint, owner-or-admin, scan gate applies). Another
+//     owner's private document never appears: not its name, its
+//     URL, or its existence. Out-of-scope rows are hidden for
+//     every role.
+//   - Single-record reads (`GET /{id}`, preview, versions) stay
+//     owner-or-admin (`can_read`): the list may show another
+//     owner's public document, but its metadata detail still
+//     requires ownership or the admin capability.
+//
 // Lazy finalize: a chunked upload returns as soon as all parts
 // are received — the whole-file SHA-256 does NOT run on the
 // request path. The session moves to `received` and a `pending`
@@ -102,6 +123,10 @@
 //                                            text, caption, description,
 //                                            custom keys; emits search.index)
 //     DELETE /{id}                          delete document + all versions
+//     POST   /{id}/rename                   rename document (file name;
+//                                            title follows when it still
+//                                            equals the old name)
+//     POST   /{id}/move                     move document between folders
 //     GET    /{id}/preview                  preview metadata (mime, size,
 //                                            image dimensions, checksum,
 //                                            version count, scan status)
@@ -114,6 +139,16 @@
 //     POST   /{id}/versions/{version}/restore
 //                                            restore a version (new version)
 //     POST   /{id}/rescan                   re-run the virus scan (admin)
+//   Folders (migration 000132, task 355):
+//     GET    /folders                       folder tree (nested, with
+//                                            direct document counts)
+//     POST   /folders                       create a folder
+//     GET    /folders/{id}                  one folder
+//     PATCH  /folders/{id}                  rename a folder
+//     POST   /folders/{id}/move             move a folder (cycle-safe)
+//     DELETE /folders/{id}                  delete an empty folder
+//                                            (409 while it holds files
+//                                            or subfolders)
 //   Files (direct serving, no /api/vX, no version segment):
 //     GET    /files/public/{key}            serve, zero checks
 //     GET    /files/private/{key}           serve, 4-rule access lock
@@ -310,6 +345,14 @@ impl Module for DocumentsModule {
             RouteInfo { method: "GET", path: "/api/v1/documents/{id}", owner: "documents", description: "Get document", auth: unified_core::auth::RouteAuth::Authenticated},
             RouteInfo { method: "PATCH", path: "/api/v1/documents/{id}", owner: "documents", description: "Update document metadata", auth: unified_core::auth::RouteAuth::Authenticated},
             RouteInfo { method: "DELETE", path: "/api/v1/documents/{id}", owner: "documents", description: "Delete document", auth: unified_core::auth::RouteAuth::Authenticated},
+            RouteInfo { method: "POST", path: "/api/v1/documents/{id}/rename", owner: "documents", description: "Rename document", auth: unified_core::auth::RouteAuth::Authenticated},
+            RouteInfo { method: "POST", path: "/api/v1/documents/{id}/move", owner: "documents", description: "Move document between folders", auth: unified_core::auth::RouteAuth::Authenticated},
+            RouteInfo { method: "GET", path: "/api/v1/documents/folders", owner: "documents", description: "List folder tree", auth: unified_core::auth::RouteAuth::Authenticated},
+            RouteInfo { method: "POST", path: "/api/v1/documents/folders", owner: "documents", description: "Create folder", auth: unified_core::auth::RouteAuth::Authenticated},
+            RouteInfo { method: "GET", path: "/api/v1/documents/folders/{id}", owner: "documents", description: "Get folder", auth: unified_core::auth::RouteAuth::Authenticated},
+            RouteInfo { method: "PATCH", path: "/api/v1/documents/folders/{id}", owner: "documents", description: "Rename folder", auth: unified_core::auth::RouteAuth::Authenticated},
+            RouteInfo { method: "POST", path: "/api/v1/documents/folders/{id}/move", owner: "documents", description: "Move folder", auth: unified_core::auth::RouteAuth::Authenticated},
+            RouteInfo { method: "DELETE", path: "/api/v1/documents/folders/{id}", owner: "documents", description: "Delete empty folder", auth: unified_core::auth::RouteAuth::Authenticated},
             RouteInfo { method: "GET", path: "/api/v1/documents/{id}/preview", owner: "documents", description: "Preview metadata", auth: unified_core::auth::RouteAuth::Authenticated},
             RouteInfo { method: "POST", path: "/api/v1/documents/{id}/flip", owner: "documents", description: "Flip visibility public/private", auth: unified_core::auth::RouteAuth::Authenticated},
             RouteInfo { method: "POST", path: "/api/v1/documents/{id}/signed-url", owner: "documents", description: "Issue signed download URL", auth: unified_core::auth::RouteAuth::Authenticated},
@@ -347,13 +390,24 @@ impl Module for DocumentsModule {
         cfg.service(
             web::scope("/api/v1/documents")
                 // Literal segments first: `/picker` must win over
-                // `/{id}` for the shared media picker.
+                // `/{id}` for the shared media picker, and
+                // `/folders` must win over `/{id}` for the folder
+                // tree (a folder id must never be read as a
+                // document id).
                 .route("/picker", web::get().to(list_picker))
+                .route("/folders", web::get().to(list_folders))
+                .route("/folders", web::post().to(create_folder))
+                .route("/folders/{id}", web::get().to(get_folder))
+                .route("/folders/{id}", web::patch().to(rename_folder))
+                .route("/folders/{id}/move", web::post().to(move_folder))
+                .route("/folders/{id}", web::delete().to(delete_folder))
                 .route("", web::get().to(list_documents))
                 .route("/upload", web::post().to(upload_documents))
                 .route("/{id}", web::get().to(get_document))
                 .route("/{id}", web::patch().to(super::handlers::update_document_metadata))
                 .route("/{id}", web::delete().to(delete_document))
+                .route("/{id}/rename", web::post().to(rename_document))
+                .route("/{id}/move", web::post().to(move_document))
                 .route("/{id}/preview", web::get().to(preview_document))
                 .route("/{id}/flip", web::post().to(flip_document_visibility))
                 .route("/{id}/signed-url", web::post().to(issue_signed_url))

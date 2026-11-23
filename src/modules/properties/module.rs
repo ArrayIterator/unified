@@ -56,11 +56,24 @@ impl Module for PropertiesModule {
     }
 
     fn requires(&self) -> &[&'static str] {
-        &["users", "roles", "store", "billing", "notifications", "company", "crm", "storage"]
+        // Locations are the shared maps module's job: parcels,
+        // blocks, and developments are all located, and this
+        // module consumes the maps contract for pins, nearby
+        // search, and geofences instead of keeping its own
+        // geospatial store. Maps is core (always active), so
+        // this only documents the dependency and blocks
+        // disabling maps while properties is enabled.
+        &[
+            "users", "roles", "store", "billing", "notifications", "company", "crm", "storage",
+            "maps",
+        ]
     }
 
     fn dependencies(&self) -> Vec<&'static str> {
-        vec!["users", "roles", "store", "billing", "notifications", "company", "crm", "storage"]
+        vec![
+            "users", "roles", "store", "billing", "notifications", "company", "crm", "storage",
+            "maps",
+        ]
     }
 
     fn available_as_product(&self) -> bool {

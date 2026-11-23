@@ -12,20 +12,29 @@
 //! exact integer arithmetic: no float ever holds the amount.
 //!
 //! Scale is 2 for two-decimal currencies and 0 for zero-decimal
-//! currencies (JPY, KRW, VND, CLP, ISK, UGX, XAF, XOF, XPF),
-//! matching the billing and store modules' lists. Reading a
-//! stored value with more decimals than the currency carries
-//! rounds half away from zero to minor units, matching the
-//! long-standing `round_money` behaviour.
+//! currencies, derived from the central ISO 4217 catalogue
+//! (`crate::reference_data::currencies`): the exponent-0 set is BIF,
+//! CLP, DJF, GNF, ISK, JPY, KMF, KRW, PYG, RWF, UGX, VND, VUV, XAF,
+//! XOF and XPF. Reading a stored value with more decimals than the
+//! currency carries rounds half away from zero to minor units,
+//! matching the long-standing `round_money` behaviour.
 
+use crate::reference_data::currencies::is_zero_decimal_currency as catalogue_is_zero_decimal;
 use diesel::data_types::PgNumeric;
 
 /// True for zero-decimal currencies (no minor units).
+///
+/// Derived from the central ISO 4217 catalogue
+/// (`crate::reference_data::currencies::is_zero_decimal_currency`):
+/// a currency is zero-decimal exactly when the catalogue lists it
+/// with zero minor digits. Unknown codes return `false`. This is the
+/// single implementation every module delegates to -- no module keeps
+/// its own zero-decimal list (the one exception is
+/// `properties::listeners`, which additionally treats MGA as
+/// zero-decimal; ISO 4217 lists MGA with 2 minor digits, so that
+/// deviation is documented there and is a follow-up, not a rule).
 pub fn is_zero_decimal_currency(currency: &str) -> bool {
-    matches!(
-        currency,
-        "JPY" | "KRW" | "VND" | "CLP" | "ISK" | "UGX" | "XAF" | "XOF" | "XPF"
-    )
+    catalogue_is_zero_decimal(currency)
 }
 
 /// Minor-unit scale for a currency: 0 for zero-decimal

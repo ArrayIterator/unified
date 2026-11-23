@@ -393,7 +393,59 @@ the user's dispatch brief 2026-11-23 ~08:27 WIB.
     (JSON `{"data": {"url": "/files/private/{key}?token=<redacted>}}`) +
     upload stay under `/api/v1`. No file route under `/api/vX`;
     `/files/*` has no version segment.
-12. [x] Shared media uploader/picker (scope C): `GET
+13. [x] Task 355 — media manager / file explorer (folders +
+    role-scoped listing + React UI):
+    - Migration `2026-11-23-000132_documents_folders`:
+      `document_folders` table (id / name / parent_id / company_id
+      / owner_id / timestamps; nesting by id reference, never by
+      path) + `documents.folder_id` ('' = library root) + indexes.
+      The in-memory DashMap store stays authoritative at runtime;
+      the tables are the persistence targets (same convention as
+      000123/000124). No merge with the files module store — the
+      files-vs-documents merge stays an open decision.
+    - Folder endpoints under `/api/v1/documents/folders` (tree,
+      create, get, rename, move, delete) + `POST /{id}/move` and
+      `POST /{id}/rename` for documents; uploads (single-shot +
+      chunked sessions) accept a target `folder_id`, validated
+      before any byte is stored. Folder delete refuses (409)
+      while the folder holds documents or subfolders; folder
+      moves refuse cycles (409) and cross-company targets (403).
+    - ROLE-SCOPED LISTING (user rule, 2026-11-23 ~18:36): the
+      list endpoint itself filters (`list_visible` in
+      `src/modules/documents/validation.rs`, unit test
+      `list_visible_role_rules` — an author-role list call
+      returns zero private rows belonging to another owner):
+      admins (`documents:admin`) see public + private in scope;
+      author / editor roles see every public document in scope
+      plus their OWN private documents (so they can mark their
+      own uploads public via the flip endpoint — the visible
+      "mark as public" action, owner-or-admin, scan gate
+      applies); another owner's private document never appears
+      (no name, URL, or existence leak). The picker endpoint
+      (`GET /picker`) stays public-only for every role, because
+      content embeds a public URL and a private file would 404
+      for readers. Single-record reads stay owner-or-admin
+      (`can_read`).
+    - React media manager (`assets/react/src/components/
+      FileExplorer.tsx` + `MediaManager.tsx` + `MediaPicker.tsx`,
+      page `pages/MediaPage.tsx`, route `/media`): grid/list
+      view, search, type/visibility/folder filters, drag-drop
+      multi-upload with real per-file progress (XHR), copy URL,
+      delete with confirm, rename, move between folders,
+      visibility flip ("Make public" / "Make private"). All data
+      via fetch — zero full page reloads. The vanilla picker
+      (`templates/default/documents/picker.hbs` +
+      `assets/js/media-picker.ts`) is KEPT: the classic HBS edit
+      forms still open it via `data-media-picker-open`; the React
+      picker serves the React editors.
+    - Verification (same limits as item 8: root-bin compile/test
+      NOT run — VM OOM wall; the `list_visible` rule is covered
+      by the in-file unit test, live endpoint checks with role
+      headers are still unproven): rustfmt parse clean on all
+      touched files; `cargo check -p unified-core` exit 0;
+      `cargo check -p unified-db-platform` exit 0; `npm run
+      check` exit 0; `npm run build:react` exit 0.
+14. [x] Shared media uploader/picker (scope C): `GET
     /api/v1/documents/picker` (public-only + company scope + search +
     module/mime filters; returns `/files/public/{key}` URLs);
     `templates/default/documents/picker.hbs` + `assets/js/media-picker.ts`
@@ -456,3 +508,12 @@ not, yet.
   reference contract, content publish/unpublish flips. Honest
   limitation recorded in the checklist: finalize_jobs has no DB
   write-through yet (C11, task 271).
+- Task 355 (2026-11-23 ~18:36, user rule): role-scoped media
+  listing. Author / post-editor roles see ONLY public documents
+  in the picker (a private file appears only after it is marked
+  public); the manager list shows authors public-in-scope plus
+  their OWN private files (mark-as-public via flip); admins see
+  public + private. The list endpoint itself filters
+  (`list_visible`); no private metadata leaks to unauthorized
+  roles. Folders added (`document_folders` + `documents.folder_id`,
+  migration 000132) with a React media manager / file explorer.

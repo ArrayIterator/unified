@@ -86,6 +86,7 @@ pub mod loyalty;
 pub mod mail;
 pub mod maintenance;
 pub mod manufacturing;
+pub mod maps;
 pub mod marketing;
 pub mod mcp;
 pub mod meetings;
@@ -114,6 +115,7 @@ pub mod providers;
 pub mod quality;
 pub mod records;
 pub mod recruitment;
+pub mod reference_data;
 pub mod referral;
 pub mod rental;
 pub mod risk;
@@ -215,6 +217,10 @@ pub fn register_all(registry: &ModuleRegistry) {
     // page, and the tenant dashboard consume it, so it registers
     // before them.
     widgets::register(registry);
+    // Maps is a core shared foundation: logistics, properties
+    // and every future location consumer declare requires() on
+    // it, so it registers before them.
+    maps::register(registry);
     dashboards::register(registry);
     // Public pages (home and auth) live next to the dashboards they
     // lead into; their paths come from the same route registry.
@@ -231,6 +237,7 @@ pub fn register_all(registry: &ModuleRegistry) {
     content::register(registry);
     seo::register(registry);
     i18n::register(registry);
+    reference_data::register(registry);
     theme::register(registry);
     presets::register(registry);
     whitelabel::register(registry);

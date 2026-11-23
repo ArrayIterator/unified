@@ -32,6 +32,8 @@ pub mod approvals;
 pub mod bi_portals;
 pub mod calendar;
 pub mod community;
+#[path = "schema/content.rs"]
+pub mod content_tables;
 #[path = "schema/contracts.rs"]
 pub mod contracts_tables;
 #[path = "schema/documents.rs"]
@@ -46,6 +48,7 @@ pub mod forms_tables;
 pub mod forums_tables;
 pub mod inbox;
 pub mod joins;
+pub mod maps;
 pub mod meetings;
 #[path = "schema/notifications.rs"]
 pub mod notifications_tables;
@@ -59,9 +62,9 @@ pub mod studio;
 pub mod surveys_tables;
 #[path = "schema/webinars.rs"]
 pub mod webinars_tables;
+pub mod widgets;
 #[path = "schema/workflows.rs"]
 pub mod workflows_tables;
-pub mod widgets;
 
 pub use analytics::*;
 pub use announcements_tables::*;
@@ -69,6 +72,7 @@ pub use approvals::*;
 pub use bi_portals::*;
 pub use calendar::*;
 pub use community::*;
+pub use content_tables::*;
 pub use contracts_tables::*;
 pub use documents_tables::*;
 pub use email::*;
@@ -77,6 +81,7 @@ pub use events_tables::*;
 pub use forms_tables::*;
 pub use forums_tables::*;
 pub use inbox::*;
+pub use maps::*;
 pub use meetings::*;
 pub use notifications_tables::*;
 pub use presets_tables::*;
@@ -85,5 +90,5 @@ pub use saved_views_tables::*;
 pub use studio::*;
 pub use surveys_tables::*;
 pub use webinars_tables::*;
-pub use workflows_tables::*;
 pub use widgets::*;
+pub use workflows_tables::*;

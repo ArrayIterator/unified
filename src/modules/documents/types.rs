@@ -621,6 +621,12 @@ pub struct DocumentRecord {
     /// source of truth for the `/files/private/` rule 1 check and
     /// for public listings; the stored key carries no visibility.
     pub visibility: String,
+    /// Folder this document lives in (`document_folders.id`).
+    /// Empty string means the library root. The folder is a
+    /// grouping only: it never changes the stored key, the area,
+    /// or the serving URL.
+    #[serde(default)]
+    pub folder_id: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -671,6 +677,11 @@ pub struct UploadSession {
     /// `private`, default `private`); captured at initiation so a
     /// later change never moves an in-flight session's file.
     pub visibility: String,
+    /// Folder the completed document lands in
+    /// (`document_folders.id`, empty = library root); captured at
+    /// initiation, like the visibility above.
+    #[serde(default)]
+    pub folder_id: String,
     /// Resolved tenant id from `require_tenant` at initiation
     /// (the scope the object is stored under). The lazy-finalize
     /// worker needs it to locate the object; `None` only for
@@ -844,6 +855,87 @@ pub struct DocumentPreview {
     pub updated_at: DateTime<Utc>,
 }
 
+/// Maximum length of a document folder name (128 characters,
+/// matching the files module folder limit).
+pub(crate) const MAX_FOLDER_NAME_LEN: usize = 128;
+
+// ---------------------------------------------------------------------------
+// Folders (migration 000132, task 355)
+// ---------------------------------------------------------------------------
+
+/// One folder in the documents media library. Folders are a
+/// grouping only: they never change a document's stored key, its
+/// visibility area, or its serving URL. `parent_id` is empty for a
+/// top-level folder; nesting is by id reference, never by path, so
+/// a rename never re-keys children. `company_id` is empty when
+/// unscoped (same convention as the document row).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DocumentFolder {
+    pub id: String,
+    pub name: String,
+    /// Parent folder id, empty for a top-level folder.
+    #[serde(default)]
+    pub parent_id: String,
+    pub company_id: String,
+    /// Opaque actor id of the creator (`X-User-Id` value).
+    pub owner_id: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// One node of the folder tree returned by `GET /folders`:
+/// the folder, its direct document count, and its children
+/// (recursively nested, sorted by name).
+#[derive(Debug, Clone, Serialize)]
+pub struct DocumentFolderTree {
+    pub folder: DocumentFolder,
+    /// Documents directly in this folder (not in subfolders).
+    pub document_count: u64,
+    pub children: Vec<DocumentFolderTree>,
+}
+
+/// Body of `POST /api/v1/documents/folders`.
+#[derive(Debug, Clone, Deserialize)]
+pub struct CreateFolderRequest {
+    pub name: String,
+    /// Parent folder id; absent or empty means top-level.
+    #[serde(default)]
+    pub parent_id: Option<String>,
+}
+
+/// Body of `PATCH /api/v1/documents/folders/{id}`.
+#[derive(Debug, Clone, Deserialize)]
+pub struct UpdateFolderRequest {
+    #[serde(default)]
+    pub name: Option<String>,
+}
+
+/// Body of `POST /api/v1/documents/folders/{id}/move`.
+#[derive(Debug, Clone, Deserialize)]
+pub struct MoveFolderRequest {
+    /// New parent folder id; empty means top-level. A folder may
+    /// not move into itself or one of its descendants (cycle).
+    #[serde(default)]
+    pub parent_id: String,
+}
+
+/// Body of `POST /api/v1/documents/{id}/move`.
+#[derive(Debug, Clone, Deserialize)]
+pub struct MoveDocumentRequest {
+    /// Target folder id; empty means the library root.
+    #[serde(default)]
+    pub folder_id: String,
+}
+
+/// Body of `POST /api/v1/documents/{id}/rename`. Renaming sets the
+/// file name; the display title follows only when it still equals
+/// the old file name, so an explicit custom title survives a
+/// rename. The stored key and the serving URL never change.
+#[derive(Debug, Clone, Deserialize)]
+pub struct RenameDocumentRequest {
+    pub name: String,
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct InitiateSessionRequest {
     pub name: String,
@@ -863,6 +955,11 @@ pub struct InitiateSessionRequest {
     /// still force `private` when the scan is not clean.
     #[serde(default)]
     pub visibility: Option<String>,
+    /// Folder the completed document lands in
+    /// (`document_folders.id`); absent means the library root.
+    /// The folder must exist and be in the caller's company scope.
+    #[serde(default)]
+    pub folder_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

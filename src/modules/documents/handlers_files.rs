@@ -553,6 +553,7 @@ mod tests {
             scan_status: "clean".to_string(),
             scan_threat: None,
             visibility: visibility.to_string(),
+            folder_id: String::new(),
             created_at: now(),
             updated_at: now(),
         }

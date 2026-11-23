@@ -18,10 +18,10 @@
 // skipped while it is already running on the same thread, which stops
 // accidental infinite recursion instead of overflowing the stack.
 
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
-use std::panic::{AssertUnwindSafe, catch_unwind};
+use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, RwLock};
 
@@ -52,6 +52,14 @@ pub mod events {
     pub const SSL_RENEW: &str = "ssl.renew";
     pub const SSL_SWAP: &str = "ssl.swap";
     pub const GEO_LOOKUP: &str = "geo.lookup";
+    pub const MAPS_LOCATION_CREATED: &str = "maps.location_created";
+    pub const MAPS_LOCATION_UPDATED: &str = "maps.location_updated";
+    pub const MAPS_LOCATION_DELETED: &str = "maps.location_deleted";
+    pub const MAPS_LOCATION_ATTACHED: &str = "maps.location_attached";
+    pub const MAPS_LOCATION_DETACHED: &str = "maps.location_detached";
+    pub const MAPS_POSITION_RECORDED: &str = "maps.position_recorded";
+    pub const MAPS_GEOFENCE_ENTERED: &str = "maps.geofence_entered";
+    pub const MAPS_GEOFENCE_EXITED: &str = "maps.geofence_exited";
     pub const LICENSE_ISSUED: &str = "license.issued";
     pub const LICENSE_REVOKED: &str = "license.revoked";
     pub const DOWNLOAD_STARTED: &str = "download.started";
@@ -273,21 +281,30 @@ impl HookBus {
         once: bool,
     ) -> u64 {
         let id = self.next_id.fetch_add(1, Ordering::SeqCst);
-        let mut handlers = self.handlers.write().unwrap_or_else(|poisoned| poisoned.into_inner());
-        handlers.entry(event.to_string()).or_default().push(HandlerEntry {
-            id,
-            owner: owner.to_string(),
-            priority,
-            once,
-            handler,
-        });
+        let mut handlers = self
+            .handlers
+            .write()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        handlers
+            .entry(event.to_string())
+            .or_default()
+            .push(HandlerEntry {
+                id,
+                owner: owner.to_string(),
+                priority,
+                once,
+                handler,
+            });
         id
     }
 
     /// Remove every handler registered by `owner` for `event`.
     /// Returns how many handlers were removed.
     pub fn unregister(&self, event: &str, owner: &str) -> usize {
-        let mut handlers = self.handlers.write().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let mut handlers = self
+            .handlers
+            .write()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         let Some(list) = handlers.get_mut(event) else {
             return 0;
         };
@@ -303,7 +320,10 @@ impl HookBus {
     /// Remove one handler by the id returned from `register`.
     /// Returns true when a handler was removed.
     pub fn unregister_by_id(&self, event: &str, id: u64) -> bool {
-        let mut handlers = self.handlers.write().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let mut handlers = self
+            .handlers
+            .write()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         let Some(list) = handlers.get_mut(event) else {
             return false;
         };
@@ -387,13 +407,19 @@ impl HookBus {
 
     /// True when at least one handler is registered for the event.
     pub fn has(&self, event: &str) -> bool {
-        let handlers = self.handlers.read().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let handlers = self
+            .handlers
+            .read()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         handlers.get(event).is_some_and(|list| !list.is_empty())
     }
 
     /// List every registered event name.
     pub fn events(&self) -> Vec<String> {
-        let handlers = self.handlers.read().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let handlers = self
+            .handlers
+            .read()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         let mut events: Vec<String> = handlers.keys().cloned().collect();
         events.sort();
         events
@@ -401,7 +427,10 @@ impl HookBus {
 
     /// List every registered handler as (event, owner) pairs.
     pub fn registrations(&self) -> Vec<(String, String)> {
-        let handlers = self.handlers.read().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let handlers = self
+            .handlers
+            .read()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         let mut out = Vec::new();
         for (event, list) in handlers.iter() {
             for entry in list {
@@ -416,7 +445,10 @@ impl HookBus {
     /// one-shot flag, ordered by event, then priority (highest
     /// first), then registration order.
     pub fn registrations_detailed(&self) -> Vec<HookRegistration> {
-        let handlers = self.handlers.read().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let handlers = self
+            .handlers
+            .read()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         let mut out: Vec<HookRegistration> = Vec::new();
         let mut events: Vec<&String> = handlers.keys().collect();
         events.sort();

@@ -284,11 +284,12 @@ pub(crate) fn paginate<T: Serialize + Clone>(items: Vec<T>, params: &PaginationP
 /// `minor_to_major` (same shape as the store and billing modules).
 /// Struct fields use `unified_core::money::serde_major` instead,
 /// which assumes two decimal places; see that module's docs.
+/// True for zero-decimal currencies (no minor units). Delegates to the
+/// central ISO 4217 catalogue via `unified_core::db::money`: a currency
+/// is zero-decimal exactly when the catalogue lists it with zero minor
+/// digits. No local list is kept here.
 pub(crate) fn is_zero_decimal_currency(currency: &str) -> bool {
-    matches!(
-        currency,
-        "JPY" | "KRW" | "VND" | "CLP" | "ISK" | "UGX" | "XAF" | "XOF" | "XPF"
-    )
+    unified_core::db::money::is_zero_decimal_currency(currency)
 }
 
 /// Convert a major-unit amount to integer minor units, rounding

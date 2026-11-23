@@ -7,7 +7,7 @@ Module catalogue for the Unified Pentagonal Project, moved out of README.md to k
 
 ## Core modules
 
-Core modules ship inside the binary and cannot be removed. The 149 modules
+Core modules ship inside the binary and cannot be removed. The 150 modules
 below are grouped by business area, Odoo-style: each top-level category has
 subcategories, and every module appears exactly once. Counts are verified
 against `src/modules/mod.rs` (`pub mod` lines).
@@ -72,7 +72,7 @@ against `src/modules/mod.rs` (`pub mod` lines).
 - **Downloader** — secure, resumable downloads for licensed files and assets.
 - **Third-Party VCS Integrations** — GitHub, GitLab, and Bitbucket integrations: repository connections linked to software records, release import as review drafts (never auto-published), HMAC / token-verified webhooks, allowlisted release-asset downloads with streamed SHA-256 verification, manual sync with rate-limit handling, and sync history. Provider tokens are write-only and never logged or returned; configuration flags are merged into the settings store under `vcs.<provider>`.
 
-#### Infrastructure & Network > Platform Services (8)
+#### Infrastructure & Network > Platform Services (9)
 
 - **Panels** — hosting/billing panel connectors (WHMCS, cPanel/WHM, DirectAdmin, Plesk, CyberPanel, generic).
 - **Providers** — cloud/VPS/container provider connectors (AWS, DigitalOcean, Linode, Hetzner, Huawei, OVH, Tencent, and others), plus server management for Redshift, OpenStack, KVM, Proxmox, and Xen.
@@ -80,6 +80,7 @@ against `src/modules/mod.rs` (`pub mod` lines).
 - **Routes** — customizable page routes: login, register, admin and user dashboard paths are changeable via admin or config.
 - **Global Search** — global search across modules, with a timeline.
 - **Translations / i18n Manager** — dynamic translations and translation management.
+- **Reference Data** — platform-shared, read-only reference lists: countries with flags (ISO 3166-1), currencies (ISO 4217), timezones (IANA) and languages (ISO 639-1); one single source per list, never tenant-scoped.
 - **Application Connection & Sync** — connection and sync core for desktop app integration.
 - **Web3** — blockchain integration: chain networks and providers (EVM, Cardano, Stellar, plus a fake provider), watched addresses, transaction records, anchors with verification, and wallet links.
 

@@ -38,6 +38,7 @@ impl DocumentsState {
         scan_status: ScanStatus,
         scan_threat: Option<String>,
         visibility: String,
+        folder_id: String,
         existing_document_id: Option<String>,
     ) -> UnifiedResult<DocumentRecord> {
         // Re-uploads serialize on the per-document lock from the
@@ -123,6 +124,11 @@ impl DocumentsState {
                     scan_status: scan_status.as_str().to_string(),
                     scan_threat: scan_threat.clone(),
                     visibility: visibility.clone(),
+                    // A re-upload keeps the existing document's
+                    // folder: the branch above never assigns this
+                    // field, so `folder_id` only applies to new
+                    // documents.
+                    folder_id: folder_id.clone(),
                     created_at: now(),
                     updated_at: now(),
                 };
@@ -188,6 +194,7 @@ impl DocumentsState {
         size: u64,
         expected_sha256: String,
         visibility: String,
+        folder_id: String,
         existing_document_id: Option<String>,
     ) -> UnifiedResult<DocumentRecord> {
         // Fail before storing anything when the target document of a
@@ -262,6 +269,7 @@ impl DocumentsState {
             scan_status,
             scan_threat,
             effective_visibility,
+            folder_id,
             existing_document_id,
         )
     }
@@ -295,6 +303,7 @@ impl DocumentsState {
         kind: Option<ContentKind>,
         bytes: Vec<u8>,
         visibility: String,
+        folder_id: String,
         existing_document_id: Option<String>,
     ) -> UnifiedResult<DocumentRecord> {
         // Fail before storing anything when the target document of a
@@ -364,6 +373,7 @@ impl DocumentsState {
             scan_status,
             scan_threat,
             effective_visibility,
+            folder_id,
             existing_document_id,
         )
     }

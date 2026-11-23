@@ -246,6 +246,70 @@ pub(crate) fn valid_visibility(value: &str) -> UnifiedResult<String> {
     }
 }
 
+/// Validate a folder name: non-empty, no path separators, at most
+/// `MAX_FOLDER_NAME_LEN` characters (same rules as the files
+/// module, so a name can never smuggle a path segment into any
+/// derived path). A name is display text only — folders are
+/// addressed by id, never by path.
+pub(crate) fn validate_folder_name(raw: &str) -> UnifiedResult<String> {
+    let name = raw.trim();
+    if name.is_empty() || name.contains('/') || name.contains('\\') {
+        return Err(UnifiedError::bad_request(
+            "Folder name must not be empty and must not contain path separators",
+        ));
+    }
+    if name.chars().count() > super::types::MAX_FOLDER_NAME_LEN {
+        return Err(UnifiedError::bad_request(format!(
+            "Folder name must be at most {} characters",
+            super::types::MAX_FOLDER_NAME_LEN
+        )));
+    }
+    if name.chars().any(|c| c.is_control()) {
+        return Err(UnifiedError::bad_request(
+            "Folder name must not contain control characters",
+        ));
+    }
+    Ok(name.to_string())
+}
+
+/// Coarse file type for the list `type` filter, derived from the
+/// stored MIME only (never from the extension at serve time, but
+/// the list filter is display-side grouping, so MIME is the right
+/// source). Known values: `image`, `video`, `audio`, `document`,
+/// `archive`, `other`. Anything unrecognized is `other` — the
+/// filter never rejects a row for an unknown MIME.
+pub(crate) fn document_type(mime: &str) -> &'static str {
+    if mime.starts_with("image/") {
+        return "image";
+    }
+    if mime.starts_with("video/") {
+        return "video";
+    }
+    if mime.starts_with("audio/") {
+        return "audio";
+    }
+    match mime {
+        "application/pdf"
+        | "application/msword"
+        | "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        | "application/vnd.ms-excel"
+        | "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        | "application/vnd.ms-powerpoint"
+        | "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+        | "text/plain"
+        | "text/markdown"
+        | "text/csv"
+        | "text/html" => "document",
+        "application/zip"
+        | "application/x-tar"
+        | "application/gzip"
+        | "application/x-7z-compressed"
+        | "application/vnd.rar"
+        | "application/x-rar-compressed" => "archive",
+        _ => "other",
+    }
+}
+
 /// Maximum bytes accumulated for one multipart text field
 /// (`module_id`, `company_id`, `scope`, `part_index`, `checksum`).
 /// Text fields are short identifiers; without a cap a client could
@@ -447,6 +511,35 @@ pub(crate) fn in_company_scope(record_company_id: &str, caller_company: &Option<
         None => record_company_id.is_empty(),
         Some(company) => record_company_id == company.as_str(),
     }
+}
+
+/// Role-scoped media-listing rule (task 355) — the list endpoint
+/// itself filters; the UI never gets a row the caller may not see.
+///   - Admins (`documents:admin`) see every document in the
+///     company scope, public and private.
+///   - Author / editor roles see every PUBLIC document in the
+///     company scope, plus their OWN private documents — so they
+///     can mark their own uploads public ("mark as public") via
+///     the flip endpoint. Another owner's private document never
+///     appears: not its name, its URL, or its existence.
+///   - Out-of-scope rows are hidden for every role (same rule as
+///     `in_company_scope`).
+/// The picker endpoint (`GET /picker`) is stricter still: public
+/// only, for every role — content embeds a public URL, and a
+/// private file would 404 for readers.
+pub(crate) fn list_visible(
+    document: &DocumentRecord,
+    caller_company: &Option<String>,
+    is_admin: bool,
+    actor: &str,
+) -> bool {
+    if !in_company_scope(&document.company_id, caller_company) {
+        return false;
+    }
+    if is_admin {
+        return true;
+    }
+    document.visibility == "public" || document.owner_id == actor
 }
 
 /// Fail closed (403) when a stored record is outside the caller's
@@ -966,6 +1059,127 @@ mod tests {
         assert!(push_multipart_text(&mut other, &vec![b'y'; MAX_MULTIPART_TEXT_BYTES + 1])
             .is_err());
         assert!(other.is_empty());
+    }
+
+    #[test]
+    fn list_visible_role_rules() {
+        fn doc(visibility: &str, company_id: &str, owner_id: &str) -> DocumentRecord {
+            DocumentRecord {
+                id: "doc-1".to_string(),
+                name: "cover.jpg".to_string(),
+                title: "cover.jpg".to_string(),
+                alt_text: None,
+                caption: None,
+                description: None,
+                custom_metadata: serde_json::Map::new(),
+                module_id: "content".to_string(),
+                company_id: company_id.to_string(),
+                owner_id: owner_id.to_string(),
+                scope: "owner".to_string(),
+                mime: "image/jpeg".to_string(),
+                size: 1024,
+                checksum: Some("aa".repeat(32)),
+                storage_key: "media/2026/11/23/019a1234-5678-7abc-def0-123456789abc.jpg"
+                    .to_string(),
+                current_version: 1,
+                version_count: 1,
+                scan_status: "clean".to_string(),
+                scan_threat: None,
+                visibility: visibility.to_string(),
+                folder_id: String::new(),
+                created_at: chrono::Utc::now(),
+                updated_at: chrono::Utc::now(),
+            }
+        }
+        let scope = Some("company-1".to_string());
+        let other_company = Some("company-2".to_string());
+        // Admin: public and private, any owner, in scope.
+        assert!(list_visible(
+            &doc("private", "company-1", "user-2"),
+            &scope,
+            true,
+            "user-1"
+        ));
+        assert!(list_visible(
+            &doc("public", "company-1", "user-2"),
+            &scope,
+            true,
+            "user-1"
+        ));
+        // Author: another owner's PUBLIC document is visible.
+        assert!(list_visible(
+            &doc("public", "company-1", "user-2"),
+            &scope,
+            false,
+            "user-1"
+        ));
+        // Author: their OWN private document is visible, so they
+        // can mark it public.
+        assert!(list_visible(
+            &doc("private", "company-1", "user-1"),
+            &scope,
+            false,
+            "user-1"
+        ));
+        // Author: another owner's PRIVATE document is invisible —
+        // zero private rows leak through the list endpoint.
+        assert!(!list_visible(
+            &doc("private", "company-1", "user-2"),
+            &scope,
+            false,
+            "user-1"
+        ));
+        // Out-of-scope rows are hidden for every role, admin
+        // included.
+        assert!(!list_visible(
+            &doc("public", "company-1", "user-2"),
+            &other_company,
+            true,
+            "user-1"
+        ));
+        assert!(!list_visible(
+            &doc("private", "company-1", "user-1"),
+            &other_company,
+            false,
+            "user-1"
+        ));
+        // An unscoped caller sees only unscoped rows.
+        assert!(list_visible(
+            &doc("public", "", "user-2"),
+            &None,
+            false,
+            "user-1"
+        ));
+        assert!(!list_visible(
+            &doc("public", "company-1", "user-2"),
+            &None,
+            false,
+            "user-1"
+        ));
+    }
+
+    #[test]
+    fn folder_name_validation() {
+        assert_eq!(validate_folder_name("  Photos  ").unwrap(), "Photos");
+        assert!(validate_folder_name("").is_err());
+        assert!(validate_folder_name("   ").is_err());
+        assert!(validate_folder_name("a/b").is_err());
+        assert!(validate_folder_name("a\\b").is_err());
+        assert!(validate_folder_name("a\u{1}b").is_err());
+        assert!(validate_folder_name(&"x".repeat(128)).is_ok());
+        assert!(validate_folder_name(&"x".repeat(129)).is_err());
+    }
+
+    #[test]
+    fn document_type_classifies_mime() {
+        assert_eq!(document_type("image/png"), "image");
+        assert_eq!(document_type("video/mp4"), "video");
+        assert_eq!(document_type("audio/mpeg"), "audio");
+        assert_eq!(document_type("application/pdf"), "document");
+        assert_eq!(document_type("text/plain"), "document");
+        assert_eq!(document_type("application/zip"), "archive");
+        assert_eq!(document_type("application/octet-stream"), "other");
+        assert_eq!(document_type(""), "other");
     }
 
     #[test]

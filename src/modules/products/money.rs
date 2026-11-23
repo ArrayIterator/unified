@@ -27,11 +27,12 @@ pub struct MoneyInput {
 
 /// True for zero-decimal currencies (no minor units), matching the
 /// store and payments modules' lists.
+/// True for zero-decimal currencies (no minor units). Delegates to the
+/// central ISO 4217 catalogue via `unified_core::db::money`: a currency
+/// is zero-decimal exactly when the catalogue lists it with zero minor
+/// digits. No local list is kept here.
 pub(crate) fn is_zero_decimal_currency(currency: &str) -> bool {
-    matches!(
-        currency,
-        "JPY" | "KRW" | "VND" | "CLP" | "ISK" | "UGX" | "XAF" | "XOF" | "XPF"
-    )
+    unified_core::db::money::is_zero_decimal_currency(currency)
 }
 
 /// Number of fractional digits a currency uses: 0 or 2.

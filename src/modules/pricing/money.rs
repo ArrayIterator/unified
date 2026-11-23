@@ -22,7 +22,9 @@
 //   integer cents (minor units, exponent 2); this module converts
 //   cents to scaled units by multiplying by 100, and scaled units
 //   back to cents with half-up rounding. Zero-decimal currencies
-//   (JPY, KRW, VND, CLP, ISK, UGX, XAF, XOF, XPF) carry no fraction.
+//   (JPY, KRW, VND, CLP, ISK, UGX, XAF, XOF, XPF, BIF, DJF, GNF, KMF,
+//   PYG, RWF, VUV -- the ISO 4217 exponent-0 set, see
+//   `unified_core::reference_data::currencies`) carry no fraction.
 // - Percentages and rates are integer basis points: 10,000 basis
 //   points equal 100%. A tax rate, a margin target, and a discount
 //   percent are all basis points.
@@ -292,14 +294,6 @@ pub const PRORATION_KINDS: [&str; 4] =
 /// mapped to a different rule.
 pub const ROUNDING_MODES: [&str; 1] = ["half_up"];
 
-/// Zero-decimal currencies (ISO 4217 codes with exponent 0). These
-/// codes are standard constants, not behaviour: the list itself is
-/// data in the `pricing_currencies` table and an admin may extend
-/// it, but the seeded set matches the products, store, and payments
-/// modules.
-pub const ZERO_DECIMAL_CURRENCIES: [&str; 9] =
-    ["JPY", "KRW", "VND", "CLP", "ISK", "UGX", "XAF", "XOF", "XPF"];
-
 /// Seeded currencies. ISO 4217 codes are the sanctioned standard
 /// constants; the rows are data and admin-editable through the
 /// currency endpoints.
@@ -356,9 +350,12 @@ impl Money {
     }
 }
 
-/// True for zero-decimal currencies (no minor units).
+/// True for zero-decimal currencies (no minor units). Delegates to the
+/// central ISO 4217 catalogue via `unified_core::db::money`: a currency
+/// is zero-decimal exactly when the catalogue lists it with zero minor
+/// digits. No local list is kept here.
 pub fn is_zero_decimal_currency(currency: &str) -> bool {
-    ZERO_DECIMAL_CURRENCIES.contains(&currency)
+    unified_core::db::money::is_zero_decimal_currency(currency)
 }
 
 /// Number of fractional digits a currency uses in everyday prices:
@@ -598,7 +595,9 @@ mod tests {
         assert!(is_zero_decimal_currency("JPY"));
         assert!(is_zero_decimal_currency("KRW"));
         assert!(!is_zero_decimal_currency("USD"));
-        assert!(!is_zero_decimal_currency("jpy"));
+        // The central catalogue lookup normalises case, so a
+        // lowercase code resolves the same as the uppercase one.
+        assert!(is_zero_decimal_currency("jpy"));
         assert_eq!(currency_exponent("JPY"), 0);
         assert_eq!(currency_exponent("USD"), 2);
     }

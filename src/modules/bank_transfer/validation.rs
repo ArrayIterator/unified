@@ -102,17 +102,14 @@ pub(crate) fn validate_transfer_date(value: &str) -> UnifiedResult<String> {
     Ok(date.format("%Y-%m-%d").to_string())
 }
 
-/// True for zero-decimal currencies (no minor units). The list is
-/// the full ISO 4217 zero-decimal set: BIF, CLP, DJF, GNF, ISK, JPY,
-/// KMF, KRW, PYG, RWF, UGX, VUV, XAF, XOF and XPF. Leaving any of
+/// True for zero-decimal currencies (no minor units). Delegates to the
+/// central ISO 4217 catalogue via `unified_core::db::money`: the list
+/// is the full ISO 4217 zero-decimal set (BIF, CLP, DJF, GNF, ISK, JPY,
+/// KMF, KRW, PYG, RWF, UGX, VND, VUV, XAF, XOF and XPF). Leaving any of
 /// them out would convert their amounts x100 and flag every proof
 /// for them as an amount mismatch that can never reconcile.
 fn is_zero_decimal_currency(currency: &str) -> bool {
-    matches!(
-        currency,
-        "BIF" | "CLP" | "DJF" | "GNF" | "ISK" | "JPY" | "KMF" | "KRW" | "PYG" | "RWF"
-            | "UGX" | "VND" | "VUV" | "XAF" | "XOF" | "XPF"
-    )
+    unified_core::db::money::is_zero_decimal_currency(currency)
 }
 
 /// Convert a major-unit amount (as the store reports order totals)

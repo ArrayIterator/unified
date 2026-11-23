@@ -28,6 +28,7 @@ pub mod access;
 pub mod uploads;
 pub mod sessions;
 pub mod finalize;
+pub mod folders;
 use uuid::Uuid;
 
 // ---------------------------------------------------------------------------
@@ -37,6 +38,11 @@ use uuid::Uuid;
 pub struct DocumentsState {
     pub(crate) hooks: RwLock<Arc<HookBus>>,
     pub(crate) documents: DashMap<String, DocumentRecord>,
+    /// Folders keyed by folder id (migration 000132, task 355).
+    /// The in-memory map is the runtime authority; the
+    /// `document_folders` table is the persistence target (same
+    /// convention as the documents map itself).
+    pub(crate) folders: DashMap<String, DocumentFolder>,
     pub(crate) versions: DashMap<String, DocumentVersion>,
     pub(crate) sessions: DashMap<String, UploadSession>,
     /// Parts keyed by session id, then part index.
@@ -103,6 +109,7 @@ impl DocumentsState {
         let state = Self {
             hooks: RwLock::new(Arc::new(HookBus::new())),
             documents: DashMap::new(),
+            folders: DashMap::new(),
             versions: DashMap::new(),
             sessions: DashMap::new(),
             parts: DashMap::new(),
@@ -317,6 +324,7 @@ mod tests {
             scan_status: scan_status.to_string(),
             scan_threat: None,
             visibility: "private".to_string(),
+            folder_id: String::new(),
             created_at: now(),
             updated_at: now(),
         }
@@ -338,6 +346,7 @@ mod tests {
             missing_parts: vec![0],
             status: status.to_string(),
             visibility: "private".to_string(),
+            folder_id: String::new(),
             tenant_id: Some(Uuid::parse_str("019a1234-5678-7abc-def0-123456789abc").unwrap()),
             expires_at: now() + Duration::hours(1),
             created_at: now(),
@@ -841,6 +850,7 @@ mod tests {
                 total as u64,
                 expected.clone(),
                 "private".to_string(),
+                String::new(),
                 None,
             )
             .await
@@ -1235,6 +1245,7 @@ mod tests {
                 None,
                 pdf.to_vec(),
                 "private".to_string(),
+                String::new(),
                 None,
             )
             .await

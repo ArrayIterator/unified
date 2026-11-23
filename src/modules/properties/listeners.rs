@@ -270,8 +270,16 @@ pub(crate) fn find_purchase_for_payment(state: &PropertiesState, ctx: &HookConte
 }
 
 /// Zero-decimal currencies (ISO 4217): the minor unit is the
-/// major unit, so no division by 100 applies. This is the full
-/// ISO 4217 zero-decimal set.
+/// major unit, so no division by 100 applies.
+///
+/// KNOWN DEVIATION, kept deliberately: this list also treats MGA as
+/// zero-decimal, but ISO 4217 lists the Malagasy ariary with 2 minor
+/// digits, and the central catalogue
+/// (`unified_core::reference_data::currencies`) agrees. The local list
+/// stays until the coordinator confirms the MGA behaviour change for
+/// property purchases -- do not "fix" it by delegating to the central
+/// `is_zero_decimal_currency` without that confirmation, and do not
+/// copy this list anywhere else.
 pub(crate) fn is_zero_decimal_currency(currency: &str) -> bool {
     matches!(
         currency.to_uppercase().as_str(),

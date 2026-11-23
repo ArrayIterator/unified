@@ -72,8 +72,14 @@ impl Module for FleetModule {
     }
 
     /// This module needs nothing else, so it declares no requirements.
+    /// GPS positions are the shared maps module's job: vehicles
+    /// carry a last known position and trips record GPS fixes, and
+    /// this module consumes the maps contract for pins, tracks, and
+    /// geofences instead of keeping its own geospatial store. Maps
+    /// is core (always active), so this only documents the
+    /// dependency and blocks disabling maps while fleet is enabled.
     fn requires(&self) -> &[&'static str] {
-        &[]
+        &["maps"]
     }
 
     /// One hook listener: when the application starts, contribute a

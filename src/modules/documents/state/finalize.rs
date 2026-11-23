@@ -906,6 +906,7 @@ mod tests {
             missing_parts: vec![0],
             status: status.to_string(),
             visibility: "private".to_string(),
+            folder_id: String::new(),
             tenant_id: Some(
                 Uuid::parse_str("019a1234-5678-7abc-def0-123456789abc").unwrap(),
             ),

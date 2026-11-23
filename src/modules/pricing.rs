@@ -41,7 +41,6 @@ pub use self::money::RECOMMENDATION_KINDS;
 pub use self::money::PRORATION_BASES;
 pub use self::money::PRORATION_KINDS;
 pub use self::money::ROUNDING_MODES;
-pub use self::money::ZERO_DECIMAL_CURRENCIES;
 pub use self::money::SEEDED_CURRENCIES;
 pub use self::money::MoneyInput;
 pub use self::money::Money;

@@ -222,9 +222,12 @@ pub(super) async fn delete_category(
         .posts
         .iter()
         .any(|entry| entry.value().category_id == Some(id))
+        || state.custom_entries.iter().any(|entry| {
+            entry.value().tenant_id == tenant.tenant_id && entry.value().category_id == Some(id)
+        })
     {
         return api_json::error_response(
-            &UnifiedError::conflict("category is still used by one or more posts"),
+            &UnifiedError::conflict("category is still used by one or more posts or entries"),
             ctx.is_debug(),
         );
     }

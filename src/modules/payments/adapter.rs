@@ -332,8 +332,10 @@ pub(crate) fn fee_from(body: &Value) -> Option<i64> {
 
 
 /// Currencies with no minor unit (amounts are already whole units).
+/// Delegates to the central ISO 4217 catalogue via
+/// `unified_core::db::money`; no local list is kept here.
 pub(crate) fn is_zero_decimal(currency: &str) -> bool {
-    matches!(currency, "JPY" | "KRW" | "VND" | "CLP")
+    unified_core::db::money::is_zero_decimal_currency(currency)
 }
 
 

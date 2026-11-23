@@ -8,6 +8,7 @@ use super::helpers::*;
 use super::module::*;
 use super::pages::*;
 use super::state::*;
+use super::tags::*;
 use super::types::*;
 
 use unified_core::context::AppContext;
@@ -53,6 +54,21 @@ pub(super) async fn list_posts(
     };
     let category_filter = params.filters.get("category_id").cloned();
     let author_filter = params.filters.get("author_id").cloned();
+    // A `tag` filter names a tag id or slug; an unknown tag matches
+    // nothing (same as the category filter above).
+    let tag_filter = params.filters.get("tag").cloned();
+    let tag_ids: Vec<Uuid> = match &tag_filter {
+        Some(raw) => state
+            .tags
+            .iter()
+            .filter(|entry| {
+                entry.value().tenant_id == tenant.tenant_id
+                    && (entry.value().id.to_string() == *raw || entry.value().slug == *raw)
+            })
+            .map(|entry| *entry.key())
+            .collect(),
+        None => Vec::new(),
+    };
     let mut items: Vec<Post> = state
         .posts
         .iter()
@@ -70,6 +86,12 @@ pub(super) async fn list_posts(
             }
             if let Some(author_id) = &author_filter {
                 if post.author_id.map(|id| id.to_string()) != Some(author_id.clone()) {
+                    return false;
+                }
+            }
+            if tag_filter.is_some() {
+                let attached = tag_ids_for_target(&state, tenant.tenant_id, TAG_TARGET_POST, post.id);
+                if !tag_ids.iter().any(|tag_id| attached.contains(tag_id)) {
                     return false;
                 }
             }
@@ -340,10 +362,15 @@ pub(super) async fn delete_post(
     }
     let id = id.into_inner();
     match state.posts.remove(&id) {
-        Some((_, post)) => api_json::success_response(
-            json!({ "id": post.id, "deleted": true }),
-            200,
-        ),
+        Some((_, post)) => {
+            // Detach the post's tags with it (the join must not
+            // outlive its target).
+            remove_all_tags_for_target(&state, tenant.tenant_id, TAG_TARGET_POST, id);
+            api_json::success_response(
+                json!({ "id": post.id, "deleted": true }),
+                200,
+            )
+        }
         None => api_json::error_response(&UnifiedError::not_found("post not found"), ctx.is_debug()),
     }
 }

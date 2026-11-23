@@ -45,12 +45,12 @@ pub(crate) async fn list_documents(
         .documents
         .iter()
         .map(|entry| entry.value().clone())
-        .filter(|document| in_company_scope(&document.company_id, &_scope))
+        // Role-scoped listing (task 355): the endpoint itself
+        // filters — an author never receives another owner's
+        // private row (see `list_visible` in validation.rs).
+        .filter(|document| list_visible(document, &_scope, is_admin, &found.actor))
         .filter(|document| {
-            // Non-admin callers only see their own documents in the
-            // list; admins see everything (filters still apply).
-            (is_admin || document.owner_id == found.actor)
-                && matches_search(&document.name, &params)
+            matches_search(&document.name, &params)
                 && params
                     .filters
                     .get("module_id")
@@ -75,6 +75,15 @@ pub(crate) async fn list_documents(
                     .filters
                     .get("visibility")
                     .is_none_or(|value| document.visibility == *value)
+                && params.filters.get("folder_id").is_none_or(|value| {
+                    // Present-but-empty means the library root; a
+                    // missing filter means every folder.
+                    document.folder_id == *value
+                })
+                && params
+                    .filters
+                    .get("type")
+                    .is_none_or(|value| document_type(&document.mime) == value.as_str())
         })
         .collect();
     items.sort_by(|a, b| b.created_at.cmp(&a.created_at));
@@ -161,7 +170,9 @@ pub(crate) async fn update_document_metadata(
 /// Multipart multi-file upload (drag-drop): text fields
 /// `module_id`, `company_id` (optional), `scope` (optional,
 /// default `owner`), `visibility` (optional, `public` or
-/// `private`, default `private`) plus one `file` field per file.
+/// `private`, default `private`), `folder_id` (optional, the
+/// target folder — empty or absent means the library root) plus
+/// one `file` field per file.
 /// Each file is validated against the per-module allowlist before
 /// acceptance; per-file outcomes are reported so one bad file does
 /// not lose the rest of the batch. A requested `public` visibility
@@ -192,6 +203,7 @@ pub(crate) async fn upload_documents(
         let mut company_id = String::new();
         let mut scope = "owner".to_string();
         let mut visibility = "private".to_string();
+        let mut folder_id = String::new();
         let mut files: Vec<(String, Vec<u8>)> = Vec::new();
         while let Some(mut field) = payload
             .try_next()
@@ -204,7 +216,7 @@ pub(crate) async fn upload_documents(
                 .unwrap_or("")
                 .to_string();
             match name.as_str() {
-                "module_id" | "company_id" | "scope" | "visibility" => {
+                "module_id" | "company_id" | "scope" | "visibility" | "folder_id" => {
                     let mut text = String::new();
                     while let Some(chunk) = field
                         .try_next()
@@ -217,6 +229,7 @@ pub(crate) async fn upload_documents(
                         "module_id" => module_id = text,
                         "company_id" => company_id = text,
                         "visibility" => visibility = text,
+                        "folder_id" => folder_id = text.trim().to_string(),
                         _ => scope = text,
                     }
                 }
@@ -272,6 +285,12 @@ pub(crate) async fn upload_documents(
         .unwrap_or_default();
         let scope = valid_scope(&scope)?;
         let visibility = valid_visibility(&visibility)?;
+        // The target folder must exist and be in the caller's
+        // company scope before any byte is stored, so a bad folder
+        // never leaves an uploaded file stranded at the root.
+        if !folder_id.is_empty() && !state.folder_accepts(&folder_id, &_scope) {
+            return Err(UnifiedError::not_found("Folder not found"));
+        }
         let mut uploaded: Vec<DocumentRecord> = Vec::new();
         let mut failed: Vec<Value> = Vec::new();
         for (file_name, bytes) in files {
@@ -286,6 +305,7 @@ pub(crate) async fn upload_documents(
                     None,
                     bytes,
                     visibility.clone(),
+                    folder_id.clone(),
                     None,
                 )
                 .await
@@ -557,7 +577,8 @@ pub(crate) async fn upload_new_version(
             .ok_or_else(|| UnifiedError::bad_request("Multipart field \"file\" is required"))?;
         // A re-upload inherits the document's visibility (it never
         // changes it); the new version's object lands in the
-        // document's current area.
+        // document's current area. It also keeps the document's
+        // folder, so the folder argument is empty here.
         let visibility = document.visibility.clone();
         state
             .finalize_upload(
@@ -570,6 +591,7 @@ pub(crate) async fn upload_new_version(
                 None,
                 bytes,
                 visibility,
+                String::new(),
                 Some(document.id.clone()),
             )
             .await
@@ -953,6 +975,13 @@ pub(crate) async fn list_picker(
                     .filters
                     .get("mime")
                     .is_none_or(|value| document.mime == *value)
+                && params.filters.get("folder_id").is_none_or(|value| {
+                    document.folder_id == *value
+                })
+                && params
+                    .filters
+                    .get("type")
+                    .is_none_or(|value| document_type(&document.mime) == value.as_str())
         })
         .map(|document| PickerItem {
             document_id: document.id.clone(),
@@ -998,6 +1027,7 @@ mod tests {
             scan_status: "clean".to_string(),
             scan_threat: None,
             visibility: visibility.to_string(),
+            folder_id: String::new(),
             created_at: chrono::Utc::now(),
             updated_at: chrono::Utc::now(),
         }

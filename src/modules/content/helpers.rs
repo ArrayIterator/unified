@@ -413,6 +413,144 @@ pub(super) fn sort_categories(
     items
 }
 
+pub(super) fn sort_tags(mut items: Vec<Tag>, params: &PaginationParams) -> Vec<Tag> {
+    let sort = params.allowed_sort(&["created_at", "name"], "created_at");
+    let descending = params.normalized().order == "desc";
+    items.sort_by(|a, b| {
+        let ordering = match sort.as_str() {
+            "name" => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
+            _ => a.created_at.cmp(&b.created_at),
+        };
+        if descending {
+            ordering.reverse()
+        } else {
+            ordering
+        }
+    });
+    items
+}
+
+pub(super) fn sort_post_types(
+    mut items: Vec<PostTypeDefinition>,
+    params: &PaginationParams,
+) -> Vec<PostTypeDefinition> {
+    let sort = params.allowed_sort(&["created_at", "plural_label", "menu_position"], "created_at");
+    let descending = params.normalized().order == "desc";
+    items.sort_by(|a, b| {
+        let ordering = match sort.as_str() {
+            "plural_label" => a.plural_label.to_lowercase().cmp(&b.plural_label.to_lowercase()),
+            "menu_position" => a.menu_position.cmp(&b.menu_position),
+            _ => a.created_at.cmp(&b.created_at),
+        };
+        if descending {
+            ordering.reverse()
+        } else {
+            ordering
+        }
+    });
+    items
+}
+
+pub(super) fn sort_custom_entries(
+    mut items: Vec<CustomEntry>,
+    params: &PaginationParams,
+) -> Vec<CustomEntry> {
+    let sort = params.allowed_sort(&["created_at", "updated_at", "title"], "created_at");
+    let descending = params.normalized().order == "desc";
+    items.sort_by(|a, b| {
+        let ordering = match sort.as_str() {
+            "title" => a.title.to_lowercase().cmp(&b.title.to_lowercase()),
+            "updated_at" => a.updated_at.cmp(&b.updated_at),
+            _ => a.created_at.cmp(&b.created_at),
+        };
+        if descending {
+            ordering.reverse()
+        } else {
+            ordering
+        }
+    });
+    items
+}
+
+/// Validate a caller-supplied kebab-case slug (post type slugs,
+/// tag slugs supplied explicitly): lowercase ASCII letters,
+/// digits, and single hyphens only; no leading/trailing hyphen,
+/// no `--`, 1..=64 characters. Returns the slug unchanged on
+/// success. Derived slugs from `slugify` already satisfy this.
+pub(super) fn validate_kebab_slug(raw: &str, what: &str) -> Result<String, UnifiedError> {
+    let slug = raw.trim().to_lowercase();
+    if slug.is_empty() || slug.len() > 64 {
+        return Err(UnifiedError::bad_request(format!(
+            "{what} slug must be 1-64 characters"
+        )));
+    }
+    let mut previous_dash = true; // rejects a leading dash
+    for ch in slug.chars() {
+        if ch.is_ascii_lowercase() || ch.is_ascii_digit() {
+            previous_dash = false;
+        } else if ch == '-' && !previous_dash {
+            previous_dash = true;
+        } else {
+            return Err(UnifiedError::bad_request(format!(
+                "{what} slug must be kebab-case: lowercase letters, digits, and single hyphens only"
+            )));
+        }
+    }
+    if previous_dash {
+        return Err(UnifiedError::bad_request(format!(
+            "{what} slug must not end with a hyphen"
+        )));
+    }
+    Ok(slug)
+}
+
+/// Validate a dynamic field key: snake_case, starts with a
+/// lowercase letter, 1..=64 characters.
+pub(super) fn validate_field_key(raw: &str) -> Result<String, UnifiedError> {
+    let key = raw.trim().to_lowercase();
+    if key.is_empty() || key.len() > 64 {
+        return Err(UnifiedError::bad_request(
+            "field key must be 1-64 characters",
+        ));
+    }
+    let mut chars = key.chars();
+    if !chars.next().is_some_and(|ch| ch.is_ascii_lowercase()) {
+        return Err(UnifiedError::bad_request(
+            "field key must start with a lowercase letter",
+        ));
+    }
+    if !key
+        .chars()
+        .all(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == '_')
+    {
+        return Err(UnifiedError::bad_request(
+            "field key must be snake_case: lowercase letters, digits, and underscores only",
+        ));
+    }
+    Ok(key)
+}
+
+/// Validate a module sprite symbol name (post type icon):
+/// lowercase letters, digits, hyphens, and underscores, 1..=64
+/// characters.
+pub(super) fn validate_icon_name(raw: &str) -> Result<String, UnifiedError> {
+    let icon = raw.trim().to_lowercase();
+    if icon.is_empty() || icon.len() > 64 {
+        return Err(UnifiedError::bad_request(
+            "icon must be 1-64 characters",
+        ));
+    }
+    if !icon
+        .chars()
+        .all(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == '-' || ch == '_')
+    {
+        return Err(UnifiedError::bad_request(
+            "icon must be a module sprite symbol name: lowercase letters, digits, hyphens, and underscores only",
+        ));
+    }
+    Ok(icon)
+}
+
 #[cfg(test)]
 mod tests {
 
@@ -778,5 +916,45 @@ mod tests {
         let req = tenant_request(&company, Some(&company));
         let tenant = require_tenant(&req).expect("tenant context must resolve");
         assert_eq!(require_caller_company(&tenant, &req).unwrap(), company);
+    }
+
+    #[test]
+    fn validate_kebab_slug_cases() {
+        assert_eq!(validate_kebab_slug("events", "post type").unwrap(), "events");
+        assert_eq!(
+            validate_kebab_slug("  My-Type  ", "post type").unwrap(),
+            "my-type"
+        );
+        assert_eq!(
+            validate_kebab_slug("a-b-2", "post type").unwrap(),
+            "a-b-2"
+        );
+        for invalid in ["", "-lead", "trail-", "double--dash", "has space", "UPPER_OK", "under_score", "café"] {
+            assert!(
+                validate_kebab_slug(invalid, "post type").is_err(),
+                "slug {invalid:?} must be rejected"
+            );
+        }
+        assert!(validate_kebab_slug(&"a".repeat(65), "post type").is_err());
+    }
+
+    #[test]
+    fn validate_field_key_cases() {
+        assert_eq!(validate_field_key("event_date").unwrap(), "event_date");
+        assert_eq!(validate_field_key("field2").unwrap(), "field2");
+        for invalid in ["", "2fast", "_lead", "has-dash", "has space", "Upper", "a".repeat(65).as_str()] {
+            assert!(
+                validate_field_key(invalid).is_err(),
+                "key {invalid:?} must be rejected"
+            );
+        }
+    }
+
+    #[test]
+    fn validate_icon_name_cases() {
+        assert_eq!(validate_icon_name("calendar").unwrap(), "calendar");
+        assert_eq!(validate_icon_name("file-text").unwrap(), "file-text");
+        assert!(validate_icon_name("has space").is_err());
+        assert!(validate_icon_name("").is_err());
     }
 }

@@ -34,6 +34,23 @@ pub const FINALIZE_FAILED: &str = "document.finalize.failed";
 /// Emitted when a document's visibility flips. Payload:
 /// `{"document_id", "visibility", "previous", "actor"}`.
 pub const VISIBILITY_FLIPPED: &str = "document.visibility.flipped";
+/// Emitted when a folder is created. Payload is the folder record.
+pub const FOLDER_CREATED: &str = "document.folder.created";
+/// Emitted when a folder is renamed. Payload:
+/// `{"folder_id", "name", "previous", "actor"}`.
+pub const FOLDER_UPDATED: &str = "document.folder.updated";
+/// Emitted when a folder is deleted. Payload:
+/// `{"id", "name", "owner_id", "company_id"}`.
+pub const FOLDER_DELETED: &str = "document.folder.deleted";
+/// Emitted when a folder moves to a new parent. Payload:
+/// `{"folder_id", "parent_id", "previous_parent_id", "actor"}`.
+pub const FOLDER_MOVED: &str = "document.folder.moved";
+/// Emitted when a document moves to another folder. Payload:
+/// `{"document_id", "folder_id", "previous_folder_id", "actor"}`.
+pub const DOCUMENT_MOVED: &str = "document.moved";
+/// Emitted when a document is renamed. Payload:
+/// `{"document_id", "name", "previous", "actor"}`.
+pub const DOCUMENT_RENAMED: &str = "document.renamed";
 /// Emitted to the Search module (owned by the search module) when
 /// a document is created or its metadata changes, so the instant
 /// search index carries the current title and description.

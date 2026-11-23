@@ -19,6 +19,7 @@ pub use self::ai_capabilities::AI_CAPABILITIES;
 pub use self::languages::Language;
 pub use self::languages::builtin_languages;
 pub use self::languages::is_builtin_language;
+pub use self::languages::language_info;
 // Re-exported from types.rs.
 pub use self::types::LoadPoCatalogInput;
 pub use self::types::TranslateInput;

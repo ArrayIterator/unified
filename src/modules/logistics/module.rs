@@ -266,11 +266,22 @@ impl Module for LogisticsModule {
     }
 
     fn requires(&self) -> &[&'static str] {
-        &["users", "roles", "store", "notifications", "scheduler", "assets"]
+        // Locations are the shared maps module's job: shipments,
+        // routes, vehicles, drivers, and warehouses all carry
+        // coordinates, and this module consumes the maps contract
+        // for pins, nearby search, and geofences instead of
+        // keeping its own geospatial store. Maps is core (always
+        // active), so this only documents the dependency and
+        // blocks disabling maps while logistics is enabled.
+        &[
+            "users", "roles", "store", "notifications", "scheduler", "assets", "maps",
+        ]
     }
 
     fn dependencies(&self) -> Vec<&'static str> {
-        vec!["users", "roles", "store", "notifications", "scheduler", "assets"]
+        vec![
+            "users", "roles", "store", "notifications", "scheduler", "assets", "maps",
+        ]
     }
 
     fn available_as_product(&self) -> bool {
