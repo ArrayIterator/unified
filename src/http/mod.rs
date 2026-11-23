@@ -5,5 +5,6 @@
 pub mod acme;
 pub mod auth;
 pub mod cert_swap;
+pub mod react;
 pub mod server;
 pub mod websocket;

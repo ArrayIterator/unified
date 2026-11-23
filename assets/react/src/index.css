@@ -1,0 +1,169 @@
+@import "tailwindcss";
+
+/* Tailwind v4 setup for the React track.
+ *
+ * Palette is mirrored from the Handlebars track's design tokens
+ * (assets/css/dashboard.css) so both tracks look like one product.
+ * Semantic colours live in CSS variables that flip under `.dark`;
+ * `@theme inline` maps them to Tailwind utilities (bg-surface,
+ * text-muted, border-border, ...) so `dark:` classes are not needed
+ * for themed surfaces — the variable does the switching.
+ * Static scales (brand, gold) are declared directly in @theme.
+ *
+ * Dark mode is class-based: the toggle adds `.dark` to <html>
+ * (see src/theme.ts). The editorial theme variant is not mirrored
+ * here; it ships its own token overrides in themes/editorial/.
+ */
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  color-scheme: light;
+
+  --bg: #f4f6f8;
+  --surface: #ffffff;
+  --surface-muted: #eef1f4;
+  --surface-hover: #e7ecf0;
+  --surface-raised: #ffffff;
+  --text: #1a2230;
+  --muted: #5b6774;
+  --faint: #8593a1;
+  --border: #d9dee4;
+  --border-strong: #c3cad2;
+  --accent: #0b6b3a;
+  --accent-hover: #095c32;
+  --accent-contrast: #ffffff;
+  --accent-soft: #d3eddd;
+  --gold: #c9a227;
+  --gold-soft: #fdf3d7;
+  --danger: #b3261e;
+  --danger-soft: #fdecea;
+  --danger-contrast: #ffffff;
+  --warning: #8a5a00;
+  --warning-soft: #fff4d6;
+  --success: #0b6b3a;
+  --success-soft: #d3eddd;
+  --info: #175cd3;
+  --info-soft: #e7effd;
+  --focus: #175cd3;
+}
+
+.dark {
+  color-scheme: dark;
+
+  --bg: #0e1216;
+  --surface: #171d23;
+  --surface-muted: #1f2730;
+  --surface-hover: #27313c;
+  --surface-raised: #1d252e;
+  --text: #e8edf2;
+  --muted: #9aa7b4;
+  --faint: #6f7d8c;
+  --border: #2c3641;
+  --border-strong: #3d4a58;
+  --accent: #2fbf71;
+  --accent-hover: #45cf84;
+  --accent-contrast: #06281a;
+  --accent-soft: #123626;
+  --gold: #e3b93e;
+  --gold-soft: #332a10;
+  --danger: #f97066;
+  --danger-soft: #3a1d1a;
+  --danger-contrast: #2b0a08;
+  --warning: #fdb022;
+  --warning-soft: #33270e;
+  --success: #32d583;
+  --success-soft: #123626;
+  --info: #84adff;
+  --info-soft: #1a2740;
+  --focus: #84adff;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-hover: var(--surface-hover);
+  --color-surface-raised: var(--surface-raised);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-contrast: var(--accent-contrast);
+  --color-accent-soft: var(--accent-soft);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-contrast: var(--danger-contrast);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-focus: var(--focus);
+
+  --color-brand-50: #eaf6ef;
+  --color-brand-100: #d3eddd;
+  --color-brand-200: #a9dcc0;
+  --color-brand-500: #0b6b3a;
+  --color-brand-600: #095c32;
+  --color-brand-700: #074d2b;
+  --color-gold-100: #fdf3d7;
+  --color-gold-300: #f2c94c;
+  --color-gold-500: #c9a227;
+  --color-gold-600: #a9861d;
+
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas,
+    monospace;
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
+  --shadow-md:
+    0 1px 3px rgba(16, 24, 40, 0.08), 0 1px 2px rgba(16, 24, 40, 0.06);
+  --shadow-lg:
+    0 8px 24px rgba(16, 24, 40, 0.12), 0 2px 6px rgba(16, 24, 40, 0.08);
+}
+
+.dark {
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md:
+    0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-lg:
+    0 8px 24px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--text);
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--text);
+}

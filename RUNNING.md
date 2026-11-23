@@ -156,12 +156,17 @@ migrations, and listens on the configured addresses (defaults
 
 - User dashboard: <http://127.0.0.1:8080/dashboard>
 - Admin dashboard: <http://127.0.0.1:8080/admin>
+- React track: <http://127.0.0.1:8080/react> (same sign-in as the
+  dashboard; anonymous requests get 401, exactly like `/dashboard`)
 - Login / register: <http://127.0.0.1:8080/login>,
   <http://127.0.0.1:8080/register>
 
 Route paths are configurable in the `routes:` section of `config.yaml`
 (login, register, dashboard, admin, status page); the previous path
-keeps working as a 301 redirect to the new one.
+keeps working as a 301 redirect to the new one. The React mount
+(`/react`) is the exception: it is a fixed constant, not a `routes:`
+override, because the Vite `base` is baked into the committed build
+output — renaming it needs a rebuild (`npm run build:react`).
 
 **There is no default admin account seeded in the code.** Create the
 first account on the register page. Roles and capabilities are managed
@@ -258,6 +263,26 @@ strict `tsconfig.json`); there are no `.js` files in the repository.
   are built once at startup, not watched).
 - `cargo test -p unified-ts` runs the transpiler unit tests, including
   transpiling all six dashboard scripts.
+
+### React track (Vite + Tailwind)
+
+The React dashboard is built by Vite into `assets/react/dist/`; the
+output is committed and included in releases, and the Rust server
+serves it from disk under `/react/` — Node/npm are build-time only
+and the server never builds it.
+
+- Build it before a release (type-checks first, then builds):
+  `npm run build:react` (`tsc --noEmit -p tsconfig.react.json && vite build`;
+  run `npm install` once first). Debug runs may use the same committed
+  `dist/`; there is no dev-server proxy.
+- The files are already minified by esbuild, so they bypass the startup
+  minification pipeline; hashed filenames (`index-<hash>.js` / `.css`)
+  are the cache fingerprint and are served immutable for a year, while
+  `index.html` is served `no-cache` with an SPA fallback for
+  client-side routes. A missing `dist/index.html` answers 404.
+- Auth and tenant-host blocking match `/dashboard` exactly: anonymous
+  requests get 401 from the global auth middleware, and tenant hosts
+  get 403 (see `src/http/react.rs`).
 
 ### Faster local builds (optional)
 

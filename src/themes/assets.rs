@@ -662,8 +662,10 @@ pub async fn serve_theme_asset(
 }
 
 /// Content type by file extension. Unknown extensions fall back to
-/// `application/octet-stream`.
-fn content_type_for(path: &Path) -> &'static str {
+/// `application/octet-stream`. Shared with the React track handler
+/// (`crate::http::react`), which serves the same extensions from the
+/// Vite build output.
+pub(crate) fn content_type_for(path: &Path) -> &'static str {
     match path
         .extension()
         .and_then(|extension| extension.to_str())

@@ -1,1 +1,25 @@
-{"description":"TypeScript sources for the Unified dashboard frontend. The Rust server transpiles these in-memory at startup (see crates/unified-ts); no .js files are kept in the repo.","devDependencies":{"typescript":"^5.9.3"},"name":"unified-frontend","private":true,"scripts":{"check":"tsc --noEmit"},"version":"0.1.0"}
+{
+  "description": "Unified frontend: Handlebars + TypeScript track (transpiled in-RAM by the Rust server) and React + Tailwind track (built by Vite into assets/react/dist/, served under /react/).",
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "tailwindcss": "^4.3.5",
+    "typescript": "^5.9.3",
+    "vite": "^8.3.8"
+  },
+  "name": "unified-frontend",
+  "private": true,
+  "scripts": {
+    "check": "tsc --noEmit && tsc --noEmit -p tsconfig.react.json",
+    "build:react": "tsc --noEmit -p tsconfig.react.json && vite build",
+    "dev:react": "vite"
+  },
+  "version": "0.1.0",
+  "dependencies": {
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-router-dom": "^7.18.6"
+  }
+}

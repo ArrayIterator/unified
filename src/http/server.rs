@@ -274,10 +274,25 @@ pub async fn run_server(ctx: Arc<AppContext>) -> UnifiedResult<()> {
         // the `saas.*` config keys — see `TenantResolutionConfig` —
         // and this is the single construction site: when the typed
         // `[saas]` config section lands, it plugs in here.
-        middleware_manager.register(TenantResolutionMiddleware::new(
-            ctx.clone(),
-            TenantResolutionConfig::from_environment(),
-        ));
+        // The React track is a dashboard surface, so on tenant hosts
+        // it is blocked exactly when the user dashboard is blocked:
+        // `/react` follows the `/dashboard` block entry instead of
+        // carrying its own default, so an operator who unblocks the
+        // dashboard (or replaces the list) unblocks the React track
+        // with it, and vice versa.
+        let mut tenant_config = TenantResolutionConfig::from_environment();
+        if tenant_config
+            .blocked_paths
+            .iter()
+            .any(|path| path == "/dashboard")
+            && !tenant_config
+                .blocked_paths
+                .iter()
+                .any(|path| path == "/react")
+        {
+            tenant_config.blocked_paths.push("/react".to_string());
+        }
+        middleware_manager.register(TenantResolutionMiddleware::new(ctx.clone(), tenant_config));
         // Global authentication (inspection C1/C2, 2026-11-22): every
         // request outside the public allowlist must carry a valid
         // Auth Manager JWT, verified by `AuthMiddleware` (see
@@ -393,6 +408,18 @@ pub async fn run_server(ctx: Arc<AppContext>) -> UnifiedResult<()> {
                 cfg.route(
                     "/theme/{id}/assets/{path:.*}",
                     web::get().to(serve_theme_asset),
+                );
+                // React track: the Vite build output under `/react/`,
+                // served from disk by `crate::http::react` (already
+                // minified by esbuild — it bypasses the startup
+                // minification pipeline). Auth is the global
+                // `AuthMiddleware`, exactly as for `/dashboard`:
+                // `/react` is not a public route, so anonymous
+                // requests get 401 before this handler runs.
+                cfg.service(
+                    web::scope(crate::http::react::REACT_MOUNT)
+                        .route("", web::get().to(crate::http::react::serve_react_root))
+                        .route("/{path:.*}", web::get().to(crate::http::react::serve_react)),
                 );
                 // Unmatched routes answer with the standard error
                 // envelope instead of Actix's default plain 404.

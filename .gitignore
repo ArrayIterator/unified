@@ -22,6 +22,9 @@ credentials.json
 
 # Node / frontend
 node_modules/
+# React track build output is committed (releases ship it), so it must NOT
+# be ignored. The root-anchored /dist/ rule above does not match it.
+!assets/react/dist/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
