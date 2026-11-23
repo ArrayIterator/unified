@@ -1,1 +1,9 @@
-<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><title>Community</title><path d="M12 4H4V12H12V4Z" fill="#2F88FF" stroke="#64748B" stroke-width="4" stroke-linejoin="round"/><path d="M44 36H36V44H44V36Z" fill="#2F88FF" stroke="#64748B" stroke-width="4" stroke-linejoin="round"/><path d="M12 36H4V44H12V36Z" fill="#2F88FF" stroke="#64748B" stroke-width="4" stroke-linejoin="round"/><path d="M44 4H36V12H44V4Z" fill="#2F88FF" stroke="#64748B" stroke-width="4" stroke-linejoin="round"/><path d="M8 36V12" stroke="#64748B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M40 36V12" stroke="#64748B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 8H36" stroke="#64748B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 40H36" stroke="#64748B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path fill-rule="evenodd" clip-rule="evenodd" d="M16 16H25.6V22.4H32V32H22.4V25.6H16V16Z" fill="#2F88FF" stroke="#64748B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-users" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" />
+  <path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+  <path d="M21 21v-2a4 4 0 0 0 -3 -3.85" />
+</svg>
+
+

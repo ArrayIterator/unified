@@ -1,1 +1,11 @@
-<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><title>To Do List</title><path d="M5 10L8 13L14 7" stroke="#64748B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 24L8 27L14 21" stroke="#64748B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 38L8 41L14 35" stroke="#64748B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 24H43" stroke="#64748B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 38H43" stroke="#64748B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 10H43" stroke="#64748B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-list-check" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M3.5 5.5l1.5 1.5l2.5 -2.5" />
+  <path d="M3.5 11.5l1.5 1.5l2.5 -2.5" />
+  <path d="M3.5 17.5l1.5 1.5l2.5 -2.5" />
+  <path d="M11 6l9 0" />
+  <path d="M11 12l9 0" />
+  <path d="M11 18l9 0" />
+</svg>
+
+

@@ -1,1 +1,7 @@
-<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><title>Expenses</title><path d="M31 34L43 34" stroke="#64748B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M38 39L43 34L38.0004 29" stroke="#64748B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M43 26V10C43 8.34315 41.6569 7 40 7H8C6.34315 7 5 8.34315 5 10V38C5 39.6569 6.34315 41 8 41H28.4706" stroke="#64748B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 15L20 21L25 15" stroke="#64748B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 27H26" stroke="#64748B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 21H26" stroke="#64748B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M20 21V33" stroke="#64748B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-wallet" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M17 8v-3a1 1 0 0 0 -1 -1h-10a2 2 0 0 0 0 4h12a1 1 0 0 1 1 1v3m0 4v3a1 1 0 0 1 -1 1h-12a2 2 0 0 1 -2 -2v-12" />
+  <path d="M20 12v4h-4a2 2 0 0 1 0 -4h4" />
+</svg>
+
+

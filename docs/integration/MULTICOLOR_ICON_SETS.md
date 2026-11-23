@@ -1,10 +1,12 @@
 # Multi-Colour Icon Sets — Research & Replacement Proposal
 
 Date: 2026-11-23
-Status: IMPLEMENTED 2026-11-23 — all 156 module icons replaced with
-multi-colour IconPark icons (151 vendored) + 5 custom-drawn gap icons.
-See §8 for the implementation record. Nothing committed or pushed yet
-(parent does the push).
+Status: HISTORICAL — the IconPark set was implemented 2026-11-23, then
+SUPERSEDED the same day by ColorTicons per user decision (task 371).
+The IconPark set is fully removed from the repo; this document is kept
+only as the research record of the candidates considered. See
+COLORTICONS_MAPPING.md for the set that replaced it. Nothing in this
+document describes the current icon set.
 Context: the 156 module icons in `assets/icons/modules/*.svg` (built into
 `assets/icons/modules-sprite.svg`) are flat fill-only vectors, mostly a single
 colour via `var(--icon-*, #hex)`. The user finds them ugly and wants
@@ -425,6 +427,11 @@ which can carry 156 admin modules.
   `iconsList` sample.
 
 ## 8. Implementation record (2026-11-23)
+
+NOTE — this section is a historical record only: it describes the
+IconPark set implemented that morning, which was REMOVED the same
+day, superseded by ColorTicons per user decision (task 371). The
+current set is described in COLORTICONS_MAPPING.md, not here.
 
 Decision: IconPark multi-color (Apache 2.0) adopted as planned in §5.
 151 icons vendored from `@icon-park/svg` 1.4.2 (pinned), theme

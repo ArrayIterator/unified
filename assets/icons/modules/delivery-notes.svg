@@ -1,1 +1,9 @@
-<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><title>Delivery Notes</title><path d="M8 31L8.00002 42C8.00002 43.1046 8.89545 44 10 44H38C39.1046 44 40 43.1046 40 42V31" stroke="#64748B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M38 14H10C8.89543 14 8 14.8954 8 16L8.00002 22C8.00002 23.1046 8.89545 24 10 24H38C39.1046 24 40 23.1046 40 22V16C40 14.8954 39.1046 14 38 14Z" fill="#2F88FF" stroke="#64748B" stroke-width="4" stroke-linejoin="round"/><path d="M16 4V8" stroke="#64748B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M24 4V8" stroke="#64748B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M32 4V8" stroke="#64748B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 34H32" stroke="#64748B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-truck-delivery" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M7 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+  <path d="M17 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+  <path d="M5 17h-2v-4m-1 -8h11v12m-4 0h6m4 0h2v-6h-8m0 -5h5l3 5" />
+  <path d="M3 9l4 0" />
+</svg>
+
+

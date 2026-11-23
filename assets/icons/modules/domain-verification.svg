@@ -1,1 +1,11 @@
-<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><title>Domain Verification</title><g clip-path="url(#icon-6d052d4353e4f38)"><path d="M42 20V39C42 40.6569 40.6569 42 39 42H9C7.34315 42 6 40.6569 6 39V9C6 7.34315 7.34315 6 9 6H30" stroke="#64748B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 20L26 28L41 7" stroke="#64748B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></g><defs><clipPath id="icon-6d052d4353e4f38"><rect width="48" height="48" fill="#FFFFFF"/></clipPath></defs></svg>
+<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-world-check" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M20.946 12.99a9 9 0 1 0 -9.46 7.995" />
+  <path d="M3.6 9h16.8" />
+  <path d="M3.6 15h13.9" />
+  <path d="M11.5 3a17 17 0 0 0 0 18" />
+  <path d="M12.5 3a16.997 16.997 0 0 1 2.311 12.001" />
+  <path d="M15 19l2 2l4 -4" />
+</svg>
+
+

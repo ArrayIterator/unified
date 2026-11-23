@@ -13,15 +13,18 @@ icon set is the union of central filenames and discovered module-owned
 icon.svg owners. A module-owned icon overrides the central file of
 the same name; the build prints every override so it is visible.
 
-One <symbol id="module-icon-<module>" viewBox="0 0 48 48"> per icon.
-Icons are multi-colour IconPark (Apache 2.0) multi-color theme, 48x48
-grid, stroke width 4, one fixed palette for light and dark
-(see assets/icons/README.md). Each shape carries its own explicit
-fill/stroke, so each <symbol> carries only fill="none" — a shape
-without an explicit fill renders invisible instead of a black blob.
-A per-module data-animation="spin|wiggle|pulse|bounce" attribute on
-the icon file's <svg> root is copied onto the <symbol>
-(see assets/icons/ANIMATION.md).
+One <symbol id="module-icon-<module>" viewBox="0 0 24 24"> per icon.
+Icons are Tabler 2.11.0 outline icons (ColorTicons, MIT — see
+assets/icons/LICENSE.colorticons), 24x24 grid, stroke width 2,
+single-colour strokes that inherit the surrounding text colour
+(`stroke="currentColor" fill="none"`, round caps and joins). Each
+<symbol> carries the Tabler root attributes so shapes without an
+explicit stroke inherit them; the leading no-op canvas rect
+(`M0 0h24v24H0z`) is stripped. Because strokes inherit text colour,
+the icons adapt to light and dark themes automatically — there is no
+second dark sprite. A per-module data-animation="spin|wiggle|pulse|
+bounce" attribute on the icon file's <svg> root is copied onto the
+<symbol> (see assets/icons/ANIMATION.md).
 
 Deterministic: symbols sorted by id. No network, no extra deps.
 Set UNIFIED_ICON_ROOT to build from a different tree (used by tests).
@@ -47,10 +50,20 @@ OWNED_PATTERNS = [
 
 ANIMATIONS = {"spin", "wiggle", "pulse", "bounce"}
 
-# Multi-colour icons: stroke + fill per shape, 48x48 grid. fill="none"
-# on the symbol means a shape that forgot its explicit fill renders
-# invisible (caught by the visual render check) instead of a black blob.
-SYMBOL_ATTRS = {"fill": "none"}
+# Tabler outline icons: strokes inherit the surrounding text colour.
+# The symbol carries the Tabler root attributes so a shape without an
+# explicit stroke still renders (caught by the visual render check
+# if it renders wrong) instead of a black blob.
+SYMBOL_ATTRS = {
+    "stroke": "currentColor",
+    "fill": "none",
+    "stroke-width": "2",
+    "stroke-linecap": "round",
+    "stroke-linejoin": "round",
+}
+
+# The no-op canvas rect every Tabler icon carries as its first path.
+CANVAS_PATH_D = "M0 0h24v24H0z"
 
 
 def collect() -> dict[str, tuple[Path, str]]:
@@ -75,8 +88,8 @@ def build() -> None:
         path, _origin = icons[name]
         tree = ET.parse(path)
         root = tree.getroot()
-        assert root.get("viewBox") == "0 0 48 48", f"{path}: bad viewBox"
-        attrs = {"id": f"module-icon-{name}", "viewBox": "0 0 48 48"}
+        assert root.get("viewBox") == "0 0 24 24", f"{path}: bad viewBox"
+        attrs = {"id": f"module-icon-{name}", "viewBox": "0 0 24 24"}
         attrs.update(SYMBOL_ATTRS)
         anim = root.get("data-animation")
         if anim is not None:
@@ -84,6 +97,12 @@ def build() -> None:
             attrs["data-animation"] = anim
         sym = ET.Element(f"{{{NS}}}symbol", attrs)
         for child in list(root):
+            # Strip the no-op canvas rect Tabler icons carry.
+            if (
+                child.tag == f"{{{NS}}}path"
+                and child.get("d") == CANVAS_PATH_D
+            ):
+                continue
             sym.append(child)
         symbols.append(sym)
 

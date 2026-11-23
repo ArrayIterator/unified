@@ -1,10 +1,10 @@
 # Icons preview
 
-Every icon in the Unified set, in one file, for visual review. Module icons are multi-colour IconPark (ByteDance, Apache 2.0 — see `LICENSE.icon-park`) multi-color theme icons on a 48 grid, plus 5 custom-drawn gap icons in the same style (`load-balancer`, `vault`, `tenant-destroy`, `site-builder`, `placeholder`); mail logos are real brand marks from [simple-icons](https://github.com/simple-icons/simple-icons) (CC0) where available, otherwise lettermark fallbacks in a consistent style.
+Every icon in the Unified set, in one file, for visual review. Module icons are Tabler 2.11.0 outline icons (ColorTicons, MIT — see `LICENSE.colorticons`): 24x24 grid, 2px stroke, `currentColor` — single-colour strokes that inherit the surrounding text colour, so they adapt to light and dark themes automatically. Payment and brand logos are real brand marks from [simple-icons](https://github.com/simple-icons/simple-icons) (CC0) where available, otherwise lettermark fallbacks in a consistent style.
 
 ## Module icons (156)
 
-Built from `modules/*.svg` into `modules-sprite.svg` (`python3 scripts/build-module-icons-sprite.py`, 156 symbols). One palette for light and dark (outline `#64748B`, blue `#2F88FF`, white `#FFFFFF`, light blue `#43CCF8`); see `README.md`.
+Built from `modules/*.svg` into `modules-sprite.svg` (`python3 scripts/build-module-icons-sprite.py`, 156 symbols). Full module → Tabler name mapping: `docs/integration/COLORTICONS_MAPPING.md`.
 
 | <img src="modules/academic.svg" width="32" height="32"><br>academic | <img src="modules/admissions.svg" width="32" height="32"><br>admissions | <img src="modules/advisor.svg" width="32" height="32"><br>advisor | <img src="modules/affiliates.svg" width="32" height="32"><br>affiliates | <img src="modules/ai.svg" width="32" height="32"><br>ai | <img src="modules/ai-support.svg" width="32" height="32"><br>ai-support |
 | --- | --- | --- | --- | --- | --- |
@@ -59,35 +59,50 @@ Built from `modules/*.svg` into `modules-sprite.svg` (`python3 scripts/build-mod
 | <img src="modules/vcs.svg" width="32" height="32"><br>vcs | <img src="modules/web3.svg" width="32" height="32"><br>web3 | <img src="modules/webhooks.svg" width="32" height="32"><br>webhooks | <img src="modules/webinars.svg" width="32" height="32"><br>webinars | <img src="modules/whitelabel.svg" width="32" height="32"><br>whitelabel | <img src="modules/workflows.svg" width="32" height="32"><br>workflows |
 | --- | --- | --- | --- | --- | --- |
 
-## Mail provider logos (56)
+## Payment logos (25)
 
-### Real brand marks (22)
+Built from `src/modules/payments/logos/*.svg` into `src/modules/payments/logos/sprite.svg` (`python3 scripts/build-provider-logos-sprite.py --src src/modules/payments/logos --glob 'payment-*.svg'`, 25 symbols).
 
-| <img src="../../src/modules/email_providers/logos/email-brevo.svg" width="32" height="32"><br>brevo | <img src="../../src/modules/email_providers/logos/email-campaign-monitor.svg" width="32" height="32"><br>campaign-monitor | <img src="../../src/modules/email_providers/logos/email-gandi.svg" width="32" height="32"><br>gandi | <img src="../../src/modules/email_providers/logos/email-gmail.svg" width="32" height="32"><br>gmail | <img src="../../src/modules/email_providers/logos/email-gmx.svg" width="32" height="32"><br>gmx | <img src="../../src/modules/email_providers/logos/email-icloud.svg" width="32" height="32"><br>icloud |
-| --- | --- | --- | --- | --- | --- |
-| <img src="../../src/modules/email_providers/logos/email-infomaniak.svg" width="32" height="32"><br>infomaniak | <img src="../../src/modules/email_providers/logos/email-loops.svg" width="32" height="32"><br>loops | <img src="../../src/modules/email_providers/logos/email-mail-com.svg" width="32" height="32"><br>mail-com | <img src="../../src/modules/email_providers/logos/email-mail-ru.svg" width="32" height="32"><br>mail-ru | <img src="../../src/modules/email_providers/logos/email-mailchimp.svg" width="32" height="32"><br>mailchimp | <img src="../../src/modules/email_providers/logos/email-mailgun.svg" width="32" height="32"><br>mailgun |
-| --- | --- | --- | --- | --- | --- |
-| <img src="../../src/modules/email_providers/logos/email-mailtrap.svg" width="32" height="32"><br>mailtrap | <img src="../../src/modules/email_providers/logos/email-migadu.svg" width="32" height="32"><br>migadu | <img src="../../src/modules/email_providers/logos/email-namecheap.svg" width="32" height="32"><br>namecheap | <img src="../../src/modules/email_providers/logos/email-ovh.svg" width="32" height="32"><br>ovh | <img src="../../src/modules/email_providers/logos/email-proton.svg" width="32" height="32"><br>proton | <img src="../../src/modules/email_providers/logos/email-qq-mail.svg" width="32" height="32"><br>qq-mail |
-| --- | --- | --- | --- | --- | --- |
-| <img src="../../src/modules/email_providers/logos/email-resend.svg" width="32" height="32"><br>resend | <img src="../../src/modules/email_providers/logos/email-sparkpost.svg" width="32" height="32"><br>sparkpost | <img src="../../src/modules/email_providers/logos/email-zoho.svg" width="32" height="32"><br>zoho | <img src="../../src/modules/email_providers/logos/email-zoho-eu.svg" width="32" height="32"><br>zoho-eu |
-| --- | --- | --- | --- |
+### Providers — real brand marks (6)
 
-### Lettermark fallbacks (34)
+| <img src="../../src/modules/payments/logos/payment-xendit.svg" width="32" height="32"><br>xendit | <img src="../../src/modules/payments/logos/payment-mastercard.svg" width="32" height="32"><br>mastercard | <img src="../../src/modules/payments/logos/payment-googlepay.svg" width="32" height="32"><br>googlepay | <img src="../../src/modules/payments/logos/payment-applepay.svg" width="32" height="32"><br>applepay | <img src="../../src/modules/payments/logos/payment-paypal.svg" width="32" height="32"><br>paypal | <img src="../../src/modules/payments/logos/payment-stripe.svg" width="32" height="32"><br>stripe |
+| --- | --- | --- | --- | --- | --- |
 
-| <img src="../../src/modules/email_providers/logos/email-aol.svg" width="32" height="32"><br>aol | <img src="../../src/modules/email_providers/logos/email-courier.svg" width="32" height="32"><br>courier | <img src="../../src/modules/email_providers/logos/email-dreamhost.svg" width="32" height="32"><br>dreamhost | <img src="../../src/modules/email_providers/logos/email-elastic-email.svg" width="32" height="32"><br>elastic-email | <img src="../../src/modules/email_providers/logos/email-fastmail.svg" width="32" height="32"><br>fastmail | <img src="../../src/modules/email_providers/logos/email-kolabnow.svg" width="32" height="32"><br>kolabnow |
+### Providers — lettermark fallbacks (6)
+
+| <img src="../../src/modules/payments/logos/payment-hyperpay.svg" width="32" height="32"><br>hyperpay | <img src="../../src/modules/payments/logos/payment-twocheckout.svg" width="32" height="32"><br>twocheckout | <img src="../../src/modules/payments/logos/payment-card.svg" width="32" height="32"><br>card | <img src="../../src/modules/payments/logos/payment-midtrans.svg" width="32" height="32"><br>midtrans | <img src="../../src/modules/payments/logos/payment-custom.svg" width="32" height="32"><br>custom | <img src="../../src/modules/payments/logos/payment-banktransfer.svg" width="32" height="32"><br>banktransfer |
 | --- | --- | --- | --- | --- | --- |
-| <img src="../../src/modules/email_providers/logos/email-mail-126.svg" width="32" height="32"><br>mail-126 | <img src="../../src/modules/email_providers/logos/email-mail-163.svg" width="32" height="32"><br>mail-163 | <img src="../../src/modules/email_providers/logos/email-mailersend.svg" width="32" height="32"><br>mailersend | <img src="../../src/modules/email_providers/logos/email-mailfence.svg" width="32" height="32"><br>mailfence | <img src="../../src/modules/email_providers/logos/email-mailjet.svg" width="32" height="32"><br>mailjet | <img src="../../src/modules/email_providers/logos/email-mxroute.svg" width="32" height="32"><br>mxroute |
+
+### Card schemes — real brand marks (5)
+
+| <img src="../../src/modules/payments/logos/payment-visa.svg" width="32" height="32"><br>visa | <img src="../../src/modules/payments/logos/payment-americanexpress.svg" width="32" height="32"><br>americanexpress | <img src="../../src/modules/payments/logos/payment-discover.svg" width="32" height="32"><br>discover | <img src="../../src/modules/payments/logos/payment-dinersclub.svg" width="32" height="32"><br>dinersclub | <img src="../../src/modules/payments/logos/payment-jcb.svg" width="32" height="32"><br>jcb |
+| --- | --- | --- | --- | --- |
+
+### Indonesian methods — lettermarks (8)
+
+| <img src="../../src/modules/payments/logos/payment-dana.svg" width="32" height="32"><br>dana | <img src="../../src/modules/payments/logos/payment-ovo.svg" width="32" height="32"><br>ovo | <img src="../../src/modules/payments/logos/payment-gopay.svg" width="32" height="32"><br>gopay | <img src="../../src/modules/payments/logos/payment-qris.svg" width="32" height="32"><br>qris | <img src="../../src/modules/payments/logos/payment-shopeepay.svg" width="32" height="32"><br>shopeepay | <img src="../../src/modules/payments/logos/payment-linkaja.svg" width="32" height="32"><br>linkaja |
 | --- | --- | --- | --- | --- | --- |
-| <img src="../../src/modules/email_providers/logos/email-onesignal.svg" width="32" height="32"><br>onesignal | <img src="../../src/modules/email_providers/logos/email-outlook.svg" width="32" height="32"><br>outlook | <img src="../../src/modules/email_providers/logos/email-pepipost.svg" width="32" height="32"><br>pepipost | <img src="../../src/modules/email_providers/logos/email-plunk.svg" width="32" height="32"><br>plunk | <img src="../../src/modules/email_providers/logos/email-posteo.svg" width="32" height="32"><br>posteo | <img src="../../src/modules/email_providers/logos/email-postmark.svg" width="32" height="32"><br>postmark |
+| <img src="../../src/modules/payments/logos/payment-indomaret.svg" width="32" height="32"><br>indomaret | <img src="../../src/modules/payments/logos/payment-alfamart.svg" width="32" height="32"><br>alfamart |
+| --- | --- |
+
+## Brand icons (14)
+
+Built from `brands/*.svg` into `brands-sprite.svg` (`python3 scripts/build-provider-logos-sprite.py --src assets/icons/brands --glob 'brand-*.svg' --prefix '' --out assets/icons/brands-sprite.svg`, 14 symbols).
+
+### Real brand marks (11)
+
+| <img src="brands/brand-cloudflare.svg" width="32" height="32"><br>cloudflare | <img src="brands/brand-whatsapp.svg" width="32" height="32"><br>whatsapp | <img src="brands/brand-telegram.svg" width="32" height="32"><br>telegram | <img src="brands/brand-google.svg" width="32" height="32"><br>google | <img src="brands/brand-apple.svg" width="32" height="32"><br>apple | <img src="brands/brand-github.svg" width="32" height="32"><br>github |
 | --- | --- | --- | --- | --- | --- |
-| <img src="../../src/modules/email_providers/logos/email-runbox.svg" width="32" height="32"><br>runbox | <img src="../../src/modules/email_providers/logos/email-sender-net.svg" width="32" height="32"><br>sender-net | <img src="../../src/modules/email_providers/logos/email-sendgrid.svg" width="32" height="32"><br>sendgrid | <img src="../../src/modules/email_providers/logos/email-sendlayer.svg" width="32" height="32"><br>sendlayer | <img src="../../src/modules/email_providers/logos/email-sendmail.svg" width="32" height="32"><br>sendmail | <img src="../../src/modules/email_providers/logos/email-sendpulse.svg" width="32" height="32"><br>sendpulse |
-| --- | --- | --- | --- | --- | --- |
-| <img src="../../src/modules/email_providers/logos/email-ses.svg" width="32" height="32"><br>ses | <img src="../../src/modules/email_providers/logos/email-sina.svg" width="32" height="32"><br>sina | <img src="../../src/modules/email_providers/logos/email-smtp.svg" width="32" height="32"><br>smtp | <img src="../../src/modules/email_providers/logos/email-smtp-com.svg" width="32" height="32"><br>smtp-com | <img src="../../src/modules/email_providers/logos/email-smtp2go.svg" width="32" height="32"><br>smtp2go | <img src="../../src/modules/email_providers/logos/email-socketlabs.svg" width="32" height="32"><br>socketlabs |
-| --- | --- | --- | --- | --- | --- |
-| <img src="../../src/modules/email_providers/logos/email-startmail.svg" width="32" height="32"><br>startmail | <img src="../../src/modules/email_providers/logos/email-yahoo.svg" width="32" height="32"><br>yahoo | <img src="../../src/modules/email_providers/logos/email-yandex.svg" width="32" height="32"><br>yandex | <img src="../../src/modules/email_providers/logos/email-zeptomail.svg" width="32" height="32"><br>zeptomail |
-| --- | --- | --- | --- |
+| <img src="brands/brand-gitlab.svg" width="32" height="32"><br>gitlab | <img src="brands/brand-facebook.svg" width="32" height="32"><br>facebook | <img src="brands/brand-x.svg" width="32" height="32"><br>x | <img src="brands/brand-zoom.svg" width="32" height="32"><br>zoom | <img src="brands/brand-bitbucket.svg" width="32" height="32"><br>bitbucket |
+| --- | --- | --- | --- | --- |
+
+### Lettermark fallbacks (3)
+
+| <img src="brands/brand-microsoft.svg" width="32" height="32"><br>microsoft | <img src="brands/brand-slack.svg" width="32" height="32"><br>slack | <img src="brands/brand-amazon.svg" width="32" height="32"><br>amazon |
+| --- | --- | --- |
 
 ## Notes
 
 - Country flags live in `flags/` (4x3 + 1x1, flag-icons MIT) — see `flags/PREVIEW.md`.
+- Sub-module icons (582 Rust sub-module names) live in `submodules/` — see `SUBMODULES.md` and `docs/integration/SUBMODULE_ICONS.md`.
 - The 17 snake_case `fn id()` modules have icons here, but they still cannot render in-app (needs the kebab unification decision).

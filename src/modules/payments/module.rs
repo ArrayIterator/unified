@@ -321,7 +321,7 @@ impl Module for PaymentsModule {
 
     fn route_info(&self) -> Vec<RouteInfo> {
         vec![
-            RouteInfo { method: "GET", path: "/api/v1/payments/providers", owner: "payments", description: "Provider catalog with capability matrix, currencies, and settings fields", auth: unified_core::auth::RouteAuth::Authenticated},
+            RouteInfo { method: "GET", path: "/api/v1/payments/providers", owner: "payments", description: "Provider catalog with capability matrix, currencies, settings fields, and logos", auth: unified_core::auth::RouteAuth::Authenticated},
             RouteInfo { method: "GET", path: "/api/v1/payments/providers/{kind}", owner: "payments", description: "One provider's catalog entry", auth: unified_core::auth::RouteAuth::Authenticated},
             RouteInfo { method: "GET", path: "/api/v1/payments/providers/{kind}/settings", owner: "payments", description: "Settings-page field definitions for one provider", auth: unified_core::auth::RouteAuth::Authenticated},
             RouteInfo { method: "GET", path: "/api/v1/payments/cards/settings", owner: "payments", description: "Card validation contract: capabilities, validation event and reason codes, and pointers to the canonical card and reference-id settings surfaces (admin-only, cards:read)", auth: unified_core::auth::RouteAuth::Authenticated},

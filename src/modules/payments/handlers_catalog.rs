@@ -392,6 +392,9 @@ pub(crate) fn notify(state: &PaymentsState, user_id: &str, kind: &str, title: &s
 pub(crate) struct ProviderCatalogView {
     pub(crate) kind: String,
     pub(crate) display_name: String,
+    /// Logo stem only (for example `"payment-paypal"`), never a URL —
+    /// see `src/modules/payments/logos.rs`.
+    pub(crate) logo: String,
     pub(crate) capabilities: PaymentCapabilities,
     pub(crate) currencies: Vec<String>,
     pub(crate) settings_fields: Vec<SettingField>,
@@ -405,6 +408,7 @@ pub(crate) fn catalog_view(kind: PaymentProviderKind) -> ProviderCatalogView {
     ProviderCatalogView {
         kind: kind.as_str().to_string(),
         display_name: kind.display_name().to_string(),
+        logo: kind.logo_stem().to_string(),
         capabilities: capabilities_for(kind),
         currencies: currencies_for(kind)
             .iter()
@@ -457,6 +461,7 @@ pub(crate) async fn get_provider_settings(
         Ok(json!({
             "kind": kind.as_str(),
             "display_name": kind.display_name(),
+            "logo": kind.logo_stem(),
             "fields": settings_fields_for(kind),
             "currencies": currencies_for(kind),
             "capabilities": capabilities_for(kind),

@@ -1,1 +1,7 @@
-<svg data-animation="spin" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><title>App Sync</title><path d="M30 7.979L19 8.00006V18.0001H4V32H20.9995" stroke="#64748B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M20 42L31 41.9789V31.5789H44V18H30.3448" stroke="#64748B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<svg data-animation="spin" xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-refresh" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4" />
+  <path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4" />
+</svg>
+
+

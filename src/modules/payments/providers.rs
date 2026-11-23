@@ -68,6 +68,29 @@ impl PaymentProviderKind {
         }
     }
 
+    /// Logo stem for this provider kind (for example
+    /// `"payment-paypal"`), matching a file in
+    /// `src/modules/payments/logos/` and a symbol
+    /// `provider-logo-payment-<id>` in `logos/sprite.svg`. A stem,
+    /// never a URL — the catalog returns the stem and the UI resolves
+    /// it against the embedded sprite.
+    pub fn logo_stem(&self) -> &'static str {
+        match self {
+            Self::Xendit => "payment-xendit",
+            Self::HyperPay => "payment-hyperpay",
+            Self::TwoCheckout => "payment-twocheckout",
+            Self::Card => "payment-card",
+            Self::Mastercard => "payment-mastercard",
+            Self::GooglePay => "payment-googlepay",
+            Self::ApplePay => "payment-applepay",
+            Self::PayPal => "payment-paypal",
+            Self::Stripe => "payment-stripe",
+            Self::Midtrans => "payment-midtrans",
+            Self::Custom => "payment-custom",
+            Self::BankTransfer => "payment-banktransfer",
+        }
+    }
+
     /// All kinds, in a stable order for the catalog endpoint.
     pub fn all() -> &'static [PaymentProviderKind] {
         &[
