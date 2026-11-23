@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in — Unified Demo</title>
+  <meta name="description" content="Unified demo sign-in page.">
+  <script>try{var t=localStorage.getItem('unified-demo-theme');if(t==='editorial'){document.documentElement.classList.add('theme-dark');}}catch(e){}</script>
+  <link rel="stylesheet" href="assets/demo.css">
+</head>
+<body data-page="login" data-layout="auth">
+  <main class="main" id="demo-main">
+    <div class="auth-wrap">
+      <section class="auth-card" aria-labelledby="login-heading">
+        <h1 id="login-heading">Sign in</h1>
+        <p class="page-intro">Sign in to open your dashboard.</p>
+        <div class="demo-note"><strong>Demo only.</strong> Any email and password works here — there is no real authentication.</div>
+        <form data-demo-form data-demo-redirect="index.html" autocomplete="on">
+          <div class="field">
+            <label for="login-email">Email</label>
+            <input id="login-email" name="email" type="email" required autocomplete="username" placeholder="you@example.com" value="demo@unified.example">
+          </div>
+          <div class="field">
+            <label for="login-password">Password</label>
+            <input id="login-password" name="password" type="password" required autocomplete="current-password" placeholder="Your password" value="demo-password">
+          </div>
+          <div class="field" id="login-totp-field" hidden>
+            <label for="login-totp">Authenticator code</label>
+            <input id="login-totp" name="totp_code" type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="6-digit code">
+            <p class="field-help">Your account has two-factor authentication enabled. Enter the code from your authenticator app.</p>
+          </div>
+          <p class="auth-toggle">
+            <button type="button" class="button-ghost" id="login-show-totp">Use an authenticator code</button>
+          </p>
+          <button class="button button-block" type="submit">Sign in</button>
+        </form>
+        <p class="auth-links">
+          <a href="register.html">Create an account</a>
+          &middot;
+          <a href="index.html">Continue to the dashboard →</a>
+        </p>
+      </section>
+    </div>
+  </main>
+  <script src="assets/sprite.js"></script>
+  <script src="assets/demo.js"></script>
+</body>
+</html>

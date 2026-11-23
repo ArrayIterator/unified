@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Create an account — Unified Demo</title>
+  <meta name="description" content="Unified demo registration page.">
+  <script>try{var t=localStorage.getItem('unified-demo-theme');if(t==='editorial'){document.documentElement.classList.add('theme-dark');}}catch(e){}</script>
+  <link rel="stylesheet" href="assets/demo.css">
+</head>
+<body data-page="register" data-layout="auth">
+  <main class="main" id="demo-main">
+    <div class="auth-wrap">
+      <section class="auth-card" aria-labelledby="register-heading">
+        <h1 id="register-heading">Create an account</h1>
+        <p class="page-intro">One account for the dashboard, the store and your tenants.</p>
+        <div class="demo-note"><strong>Demo only.</strong> No account is created — the form just previews the registration flow.</div>
+        <form data-demo-form data-demo-redirect="index.html" autocomplete="on">
+          <div class="field">
+            <label for="register-name">Full name</label>
+            <input id="register-name" name="name" type="text" required autocomplete="name" placeholder="Jane Demo">
+          </div>
+          <div class="field">
+            <label for="register-email">Email</label>
+            <input id="register-email" name="email" type="email" required autocomplete="email" placeholder="you@example.com">
+          </div>
+          <div class="field">
+            <label for="register-company">Company / organization</label>
+            <input id="register-company" name="company" type="text" autocomplete="organization" placeholder="Acme Corp">
+          </div>
+          <div class="field">
+            <label for="register-plan">Plan</label>
+            <select id="register-plan" name="plan">
+              <option>Starter — free, 3 users</option>
+              <option selected>Pro — $29/month, 25 users</option>
+              <option>Business — $99/month, unlimited users</option>
+            </select>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="register-password">Password</label>
+              <input id="register-password" name="password" type="password" required autocomplete="new-password" placeholder="At least 12 characters">
+            </div>
+            <div class="field">
+              <label for="register-password-confirm">Confirm password</label>
+              <input id="register-password-confirm" name="password_confirm" type="password" required autocomplete="new-password" placeholder="Repeat password">
+            </div>
+          </div>
+          <div class="field">
+            <label><input type="checkbox" required style="width: auto;"> I agree to the demo terms of service</label>
+          </div>
+          <button class="button button-block" type="submit">Create account</button>
+        </form>
+        <p class="auth-links">
+          Already have an account? <a href="login.html">Sign in</a>
+        </p>
+      </section>
+    </div>
+  </main>
+  <script src="assets/sprite.js"></script>
+  <script src="assets/demo.js"></script>
+</body>
+</html>

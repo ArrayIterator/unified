@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Modules — Unified Demo</title>
+  <meta name="description" content="Unified demo module list: search, enable and open modules.">
+  <script>try{var t=localStorage.getItem('unified-demo-theme');if(t==='editorial'){document.documentElement.classList.add('theme-dark');}}catch(e){}</script>
+  <link rel="stylesheet" href="assets/demo.css">
+</head>
+<body data-page="modules" data-layout="app">
+  <main class="main" id="demo-main">
+    <div class="page-head">
+      <h1>Modules</h1>
+      <p class="page-intro">150 modules ship with Unified. Search below, or toggle a module on and off — demo state only.</p>
+    </div>
+
+    <label for="module-search" class="small muted" style="display:block;margin-bottom:0.4rem;">Search modules</label>
+    <input id="module-search" class="search-box" type="search" placeholder="Try “billing”, “mail”, “shop”… " autocomplete="off">
+    <p id="module-empty" class="muted" hidden>No modules match your search.</p>
+
+    <div class="grid grid-modules">
+      <article class="module-card" data-module-name="Billing">
+        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-billing"/></svg>Billing</h3>
+        <p>Invoices, subscriptions, dunning and school fees.</p>
+        <span><span class="badge badge-success">Enabled</span> <span class="badge">v0.1.0</span></span>
+        <span style="display:flex;justify-content:space-between;align-items:center;"><a href="module.html">View details →</a><button type="button" class="switch" aria-pressed="true" data-label="Billing" aria-label="Toggle Billing"></button></span>
+      </article>
+      <article class="module-card" data-module-name="CRM">
+        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-crm"/></svg>CRM</h3>
+        <p>Contacts, deals, pipelines and customer history.</p>
+        <span><span class="badge badge-success">Enabled</span> <span class="badge">v0.1.0</span></span>
+        <span style="display:flex;justify-content:flex-end;"><button type="button" class="switch" aria-pressed="true" data-label="CRM" aria-label="Toggle CRM"></button></span>
+      </article>
+      <article class="module-card" data-module-name="Content">
+        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-content"/></svg>Content</h3>
+        <p>Pages, posts, categories and the media library.</p>
+        <span><span class="badge badge-success">Enabled</span> <span class="badge">v0.1.0</span></span>
+        <span style="display:flex;justify-content:flex-end;"><button type="button" class="switch" aria-pressed="true" data-label="Content" aria-label="Toggle Content"></button></span>
+      </article>
+      <article class="module-card" data-module-name="Documents">
+        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-documents"/></svg>Documents</h3>
+        <p>Uploads, versions, sharing and the virus-scan gate.</p>
+        <span><span class="badge badge-success">Enabled</span> <span class="badge">v0.1.0</span></span>
+        <span style="display:flex;justify-content:flex-end;"><button type="button" class="switch" aria-pressed="true" data-label="Documents" aria-label="Toggle Documents"></button></span>
+      </article>
+      <article class="module-card" data-module-name="Store">
+        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-store"/></svg>Store</h3>
+        <p>Product catalogue, cart, orders and digital delivery.</p>
+        <span><span class="badge badge-success">Enabled</span> <span class="badge">v0.1.0</span></span>
+        <span style="display:flex;justify-content:flex-end;"><button type="button" class="switch" aria-pressed="true" data-label="Store" aria-label="Toggle Store"></button></span>
+      </article>
+      <article class="module-card" data-module-name="Licensing">
+        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-licensing"/></svg>Licensing</h3>
+        <p>License keys, activations and SaaS packages.</p>
+        <span><span class="badge badge-success">Enabled</span> <span class="badge">v0.1.0</span></span>
+        <span style="display:flex;justify-content:flex-end;"><button type="button" class="switch" aria-pressed="true" data-label="Licensing" aria-label="Toggle Licensing"></button></span>
+      </article>
+      <article class="module-card" data-module-name="Users">
+        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-users"/></svg>Users</h3>
+        <p>Accounts, roles, permissions and sessions.</p>
+        <span><span class="badge badge-success">Enabled</span> <span class="badge">v0.1.0</span></span>
+        <span style="display:flex;justify-content:flex-end;"><button type="button" class="switch" aria-pressed="true" data-label="Users" aria-label="Toggle Users"></button></span>
+      </article>
+      <article class="module-card" data-module-name="Security">
+        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-security"/></svg>Security</h3>
+        <p>Audit log, two-factor auth and brute-force guard.</p>
+        <span><span class="badge badge-success">Enabled</span> <span class="badge">v0.1.0</span></span>
+        <span style="display:flex;justify-content:flex-end;"><button type="button" class="switch" aria-pressed="true" data-label="Security" aria-label="Toggle Security"></button></span>
+      </article>
+      <article class="module-card" data-module-name="Backup">
+        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-backup"/></svg>Backup</h3>
+        <p>Scheduled backups, storage providers and restore drills.</p>
+        <span><span class="badge badge-success">Enabled</span> <span class="badge">v0.1.0</span></span>
+        <span style="display:flex;justify-content:flex-end;"><button type="button" class="switch" aria-pressed="true" data-label="Backup" aria-label="Toggle Backup"></button></span>
+      </article>
+      <article class="module-card" data-module-name="Analytics">
+        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-analytics"/></svg>Analytics</h3>
+        <p>Dashboards, reports and custom metrics.</p>
+        <span><span class="badge badge-success">Enabled</span> <span class="badge">v0.1.0</span></span>
+        <span style="display:flex;justify-content:flex-end;"><button type="button" class="switch" aria-pressed="true" data-label="Analytics" aria-label="Toggle Analytics"></button></span>
+      </article>
+      <article class="module-card" data-module-name="AI">
+        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-ai"/></svg>AI</h3>
+        <p>Providers, capabilities and per-module AI wiring.</p>
+        <span><span class="badge badge-gold">Beta</span> <span class="badge">v0.1.0</span></span>
+        <span style="display:flex;justify-content:flex-end;"><button type="button" class="switch" aria-pressed="true" data-label="AI" aria-label="Toggle AI"></button></span>
+      </article>
+      <article class="module-card" data-module-name="AI Support">
+        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-ai-support"/></svg>AI Support</h3>
+        <p>Chat support, knowledgebase and ticket triage.</p>
+        <span><span class="badge badge-gold">Beta</span> <span class="badge">v0.1.0</span></span>
+        <span style="display:flex;justify-content:flex-end;"><button type="button" class="switch" aria-pressed="true" data-label="AI Support" aria-label="Toggle AI Support"></button></span>
+      </article>
+      <article class="module-card" data-module-name="API Manager">
+        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-api-manager"/></svg>API Manager</h3>
+        <p>Public API keys, versions and per-endpoint rules.</p>
+        <span><span class="badge badge-success">Enabled</span> <span class="badge">v0.1.0</span></span>
+        <span style="display:flex;justify-content:flex-end;"><button type="button" class="switch" aria-pressed="true" data-label="API Manager" aria-label="Toggle API Manager"></button></span>
+      </article>
+      <article class="module-card" data-module-name="App Sync">
+        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-app-sync"/></svg>App Sync</h3>
+        <p>Multi-cluster sync and application connections.</p>
+        <span><span class="badge badge-success">Enabled</span> <span class="badge">v0.1.0</span></span>
+        <span style="display:flex;justify-content:flex-end;"><button type="button" class="switch" aria-pressed="true" data-label="App Sync" aria-label="Toggle App Sync"></button></span>
+      </article>
+      <article class="module-card" data-module-name="Auth Manager">
+        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-auth-manager"/></svg>Auth Manager</h3>
+        <p>SSO, OAuth, social login and JWT.</p>
+        <span><span class="badge badge-success">Enabled</span> <span class="badge">v0.1.0</span></span>
+        <span style="display:flex;justify-content:flex-end;"><button type="button" class="switch" aria-pressed="true" data-label="Auth Manager" aria-label="Toggle Auth Manager"></button></span>
+      </article>
+      <article class="module-card" data-module-name="Bank Transfer">
+        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-bank-transfer"/></svg>Bank Transfer</h3>
+        <p>Manual bank payments with split bills.</p>
+        <span><span class="badge badge-success">Enabled</span> <span class="badge">v0.1.0</span></span>
+        <span style="display:flex;justify-content:flex-end;"><button type="button" class="switch" aria-pressed="true" data-label="Bank Transfer" aria-label="Toggle Bank Transfer"></button></span>
+      </article>
+      <article class="module-card" data-module-name="Calendar">
+        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-calendar"/></svg>Calendar</h3>
+        <p>Aggregation view over events and appointments.</p>
+        <span><span class="badge badge-success">Enabled</span> <span class="badge">v0.1.0</span></span>
+        <span style="display:flex;justify-content:flex-end;"><button type="button" class="switch" aria-pressed="true" data-label="Calendar" aria-label="Toggle Calendar"></button></span>
+      </article>
+      <article class="module-card" data-module-name="Chat">
+        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-chat"/></svg>Chat</h3>
+        <p>Support chat, WebRTC meetings and channels.</p>
+        <span><span class="badge badge-success">Enabled</span> <span class="badge">v0.1.0</span></span>
+        <span style="display:flex;justify-content:flex-end;"><button type="button" class="switch" aria-pressed="true" data-label="Chat" aria-label="Toggle Chat"></button></span>
+      </article>
+      <article class="module-card" data-module-name="Cloudflare">
+        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-cloudflare"/></svg>Cloudflare</h3>
+        <p>DNS, tunnels and cache control.</p>
+        <span><span class="badge badge-success">Enabled</span> <span class="badge">v0.1.0</span></span>
+        <span style="display:flex;justify-content:flex-end;"><button type="button" class="switch" aria-pressed="true" data-label="Cloudflare" aria-label="Toggle Cloudflare"></button></span>
+      </article>
+      <article class="module-card" data-module-name="Email Templates">
+        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-email-templates"/></svg>Email Templates</h3>
+        <p>GrapeJS builder for transactional mail.</p>
+        <span><span class="badge badge-success">Enabled</span> <span class="badge">v0.1.0</span></span>
+        <span style="display:flex;justify-content:flex-end;"><button type="button" class="switch" aria-pressed="true" data-label="Email Templates" aria-label="Toggle Email Templates"></button></span>
+      </article>
+      <article class="module-card" data-module-name="Events">
+        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-events"/></svg>Events</h3>
+        <p>Event pages, tickets and paid registrations.</p>
+        <span><span class="badge badge-success">Enabled</span> <span class="badge">v0.1.0</span></span>
+        <span style="display:flex;justify-content:flex-end;"><button type="button" class="switch" aria-pressed="true" data-label="Events" aria-label="Toggle Events"></button></span>
+      </article>
+      <article class="module-card" data-module-name="Files">
+        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-files"/></svg>Files</h3>
+        <p>Folders, sharing and the file explorer.</p>
+        <span><span class="badge badge-success">Enabled</span> <span class="badge">v0.1.0</span></span>
+        <span style="display:flex;justify-content:flex-end;"><button type="button" class="switch" aria-pressed="true" data-label="Files" aria-label="Toggle Files"></button></span>
+      </article>
+      <article class="module-card" data-module-name="Forums">
+        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-forums"/></svg>Forums</h3>
+        <p>Public community forums per tenant.</p>
+        <span><span class="badge">Disabled</span> <span class="badge">v0.1.0</span></span>
+        <span style="display:flex;justify-content:flex-end;"><button type="button" class="switch" aria-pressed="false" data-label="Forums" aria-label="Toggle Forums"></button></span>
+      </article>
+      <article class="module-card" data-module-name="Hosting">
+        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-hosting"/></svg>Hosting</h3>
+        <p>Servers, clusters and load balancing.</p>
+        <span><span class="badge badge-success">Enabled</span> <span class="badge">v0.1.0</span></span>
+        <span style="display:flex;justify-content:flex-end;"><button type="button" class="switch" aria-pressed="true" data-label="Hosting" aria-label="Toggle Hosting"></button></span>
+      </article>
+    </div>
+    <p class="small muted" style="margin-top: 1.5rem;">Showing 24 of 150 modules in this demo. The full list will arrive in a later phase.</p>
+  </main>
+  <script src="assets/sprite.js"></script>
+  <script src="assets/demo.js"></script>
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Store — Unified Demo</title>
+  <meta name="description" content="Unified demo store: themes, plugins and modules for sale.">
+  <script>try{var t=localStorage.getItem('unified-demo-theme');if(t==='editorial'){document.documentElement.classList.add('theme-dark');}}catch(e){}</script>
+  <link rel="stylesheet" href="assets/demo.css">
+</head>
+<body data-page="store" data-layout="app">
+  <main class="main" id="demo-main">
+    <div class="page-head">
+      <h1>Store</h1>
+      <p class="page-intro">Themes, plugins and modules for your Unified installation. Adding to the cart is demo state — there is no checkout here.</p>
+    </div>
+
+    <div class="grid grid-store">
+      <article class="card">
+        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-ai-support"/></svg> Editorial Dark Theme</h3>
+        <p class="muted">Dark canvas, serif headlines and gold accents — the newspaper-style variant of the default theme.</p>
+        <p><span class="store-price">$49 <small>one-time</small></span> <span class="badge badge-gold">Theme</span></p>
+        <p><button type="button" class="button" data-add-cart="Editorial Dark Theme">Add to cart</button></p>
+      </article>
+      <article class="card">
+        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-store"/></svg> POS Module</h3>
+        <p class="muted">Point of sale with barcode printing, cash drawers and offline receipts.</p>
+        <p><span class="store-price">$99 <small>one-time</small></span> <span class="badge">Module</span></p>
+        <p><button type="button" class="button" data-add-cart="POS Module">Add to cart</button></p>
+      </article>
+      <article class="card">
+        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-academic"/></svg> E-Learning Suite</h3>
+        <p class="muted">Courses, online exams with verifiable certificates, and student progress tracking.</p>
+        <p><span class="store-price">$149 <small>one-time</small></span> <span class="badge">Module</span></p>
+        <p><button type="button" class="button" data-add-cart="E-Learning Suite">Add to cart</button></p>
+      </article>
+      <article class="card">
+        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-chat"/></svg> SMS Marketing</h3>
+        <p class="muted">Campaigns, sender IDs and delivery reports for SMS outreach.</p>
+        <p><span class="store-price">$29 <small>/ month</small></span> <span class="badge">Module</span></p>
+        <p><button type="button" class="button" data-add-cart="SMS Marketing">Add to cart</button></p>
+      </article>
+      <article class="card">
+        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-analytics"/></svg> Advanced Analytics</h3>
+        <p class="muted">Custom reports, funnels, exports and scheduled report delivery.</p>
+        <p><span class="store-price">$79 <small>one-time</small></span> <span class="badge">Module</span></p>
+        <p><button type="button" class="button" data-add-cart="Advanced Analytics">Add to cart</button></p>
+      </article>
+      <article class="card">
+        <h3><svg class="module-icon" aria-hidden="true"><use href="#module-icon-calendar"/></svg> Booking &amp; Appointments</h3>
+        <p class="muted">Calendars, staff schedules, reminders and online payment for bookings.</p>
+        <p><span class="store-price">$59 <small>one-time</small></span> <span class="badge">Module</span></p>
+        <p><button type="button" class="button" data-add-cart="Booking &amp; Appointments">Add to cart</button></p>
+      </article>
+    </div>
+
+    <section class="card" style="margin-top: 1.5rem;">
+      <h2>How the demo cart works</h2>
+      <p>Use <strong>Add to cart</strong> on any product — the counter in the header updates, and clicking <strong>Cart</strong> shows a summary. There is no checkout, no payment and no order in this demo; the cart resets when you reload the page.</p>
+      <p style="margin-bottom: 0;"><a href="modules.html">Browse all modules →</a></p>
+    </section>
+  </main>
+  <script src="assets/sprite.js"></script>
+  <script src="assets/demo.js"></script>
+</body>
+</html>

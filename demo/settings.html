@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Settings — Unified Demo</title>
+  <meta name="description" content="Unified demo settings: general, theme, mail and security.">
+  <script>try{var t=localStorage.getItem('unified-demo-theme');if(t==='editorial'){document.documentElement.classList.add('theme-dark');}}catch(e){}</script>
+  <link rel="stylesheet" href="assets/demo.css">
+</head>
+<body data-page="settings" data-layout="app">
+  <main class="main" id="demo-main">
+    <div class="page-head">
+      <h1>Settings</h1>
+      <p class="page-intro">General, theme, mail and security. Everything here is demo state — nothing is saved.</p>
+    </div>
+
+    <div class="tabs" role="tablist" aria-label="Settings sections">
+      <button type="button" role="tab" data-tab="general" aria-selected="true">General</button>
+      <button type="button" role="tab" data-tab="theme" aria-selected="false">Theme</button>
+      <button type="button" role="tab" data-tab="mail" aria-selected="false">Mail</button>
+      <button type="button" role="tab" data-tab="security" aria-selected="false">Security</button>
+    </div>
+
+    <section class="card" data-tab-panel="general">
+      <h2>General</h2>
+      <form data-demo-form>
+        <div class="field">
+          <label for="settings-site-name">Site name</label>
+          <input id="settings-site-name" name="site_name" type="text" value="Unified">
+        </div>
+        <div class="field">
+          <label for="settings-site-url">Site URL</label>
+          <input id="settings-site-url" name="site_url" type="url" value="https://unified.example">
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="settings-timezone">Timezone</label>
+            <select id="settings-timezone" name="timezone">
+              <option selected>Asia/Jakarta (WIB, UTC+7)</option>
+              <option>Asia/Singapore (UTC+8)</option>
+              <option>UTC</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="settings-language">Default language</label>
+            <select id="settings-language" name="language">
+              <option selected>English</option>
+              <option>Indonesian (Bahasa Indonesia)</option>
+            </select>
+          </div>
+        </div>
+        <p><button class="button" type="submit">Save general settings</button></p>
+      </form>
+    </section>
+
+    <section class="card" data-tab-panel="theme" hidden>
+      <h2>Theme</h2>
+      <p>Pick a theme. The same switcher lives in the header on every page — it is demo-only and persists in this browser.</p>
+      <div class="grid grid-two">
+        <div class="card">
+          <h3>Default</h3>
+          <p class="muted">Light theme. Cooperative green #0b6b3a with gold #c9a227 accents, system font stack.</p>
+          <p><button type="button" class="button button-secondary" data-theme-pick="default" aria-pressed="true">Use Default</button></p>
+        </div>
+        <div class="card">
+          <h3>Editorial Dark</h3>
+          <p class="muted">Dark canvas, serif headlines, gold accents — the newspaper-style variant of the default theme.</p>
+          <p><button type="button" class="button button-secondary" data-theme-pick="editorial" aria-pressed="false">Use Editorial Dark</button></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" data-tab-panel="mail" hidden>
+      <h2>Mail</h2>
+      <form data-demo-form>
+        <div class="field">
+          <label for="mail-provider">Mail provider</label>
+          <select id="mail-provider" name="provider">
+            <option selected>SMTP</option>
+            <option>SendGrid</option>
+            <option>Mailgun</option>
+            <option>Postmark</option>
+            <option>Amazon SES</option>
+            <option>Resend</option>
+          </select>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="mail-from-name">From name</label>
+            <input id="mail-from-name" name="from_name" type="text" value="Unified">
+          </div>
+          <div class="field">
+            <label for="mail-from-address">From address</label>
+            <input id="mail-from-address" name="from_address" type="email" value="noreply@unified.example">
+          </div>
+        </div>
+        <p>
+          <button class="button" type="submit">Save mail settings</button>
+          <button type="button" class="button button-secondary" data-toast="Test email sent (demo) — check the demo outbox.">Send test email</button>
+        </p>
+      </form>
+    </section>
+
+    <section class="card" data-tab-panel="security" hidden>
+      <h2>Security</h2>
+      <form data-demo-form>
+        <div class="check-row">
+          <div><strong>Require two-factor authentication</strong><p>Staff accounts must set up an authenticator app.</p></div>
+          <button type="button" class="switch" aria-pressed="true" data-label="Two-factor authentication" aria-label="Toggle two-factor authentication"></button>
+        </div>
+        <div class="check-row">
+          <div><strong>Block repeated failed logins</strong><p>Lock an account for 15 minutes after 5 failed attempts.</p></div>
+          <button type="button" class="switch" aria-pressed="true" data-label="Login lockout" aria-label="Toggle login lockout"></button>
+        </div>
+        <div class="field-row" style="margin-top: 1rem;">
+          <div class="field">
+            <label for="security-session">Session timeout</label>
+            <select id="security-session" name="session_timeout">
+              <option>30 minutes</option>
+              <option selected>8 hours</option>
+              <option>7 days</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="security-password-length">Minimum password length</label>
+            <input id="security-password-length" name="password_min_length" type="number" min="8" max="64" value="12">
+          </div>
+        </div>
+        <p><button class="button" type="submit">Save security settings</button></p>
+      </form>
+    </section>
+  </main>
+  <script src="assets/sprite.js"></script>
+  <script src="assets/demo.js"></script>
+</body>
+</html>
