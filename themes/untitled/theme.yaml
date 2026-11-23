@@ -1,0 +1,46 @@
+# Untitled theme manifest.
+#
+# Built on Untitled UI React (free MIT tier) for the React app and the
+# same design tokens for the server-rendered pages. Theme name follows
+# the framework (see docs/integration/THEMES.md).
+name: Untitled
+version: 1.0.0
+description: "Unified theme built on Untitled UI React: clean Tailwind-native components, brand green tokens, and light/dark mode wired to the existing theme switcher."
+# No screenshot ships with this theme; a theme that has one names
+# its file here (for example `screenshot.png`).
+screenshot: ""
+directories:
+  - templates
+  - partials
+  - assets
+  - react
+templates:
+  - layout
+  - dashboard
+  - home
+  - error
+  - admin-layout
+  - admin-dashboard
+  - user-layout
+  - user-dashboard
+  - login
+  - register
+  - forgot-password
+  - reset-password
+  - admin-site-builder
+  - admin-email-templates
+  - admin-settings
+  - admin-themes
+# Capabilities this theme requires. `react` means the theme mounts
+# the React app; activation fails closed when the per-theme React
+# bundle is not built (see ThemeEngine::check_requirements).
+require:
+  - react
+# UI framework the theme is built on.
+framework: untitled
+# Theme-relative JS/CSS the engine loads for this theme, resolved
+# under the theme's `assets/` directory. No external URLs.
+assets:
+  css:
+    - untitled.css
+  js: []

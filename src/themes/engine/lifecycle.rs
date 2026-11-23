@@ -49,6 +49,7 @@ impl ThemeEngine {
             variables: Arc::new(VariableRegistry::with_builtins()),
             module_templates: ModuleTemplateRegistry::new(),
             theme_module_templates: RwLock::new(HashSet::new()),
+            react_dist_dir: RwLock::new(None),
         };
         if let Err(error) = engine.register_embedded_default() {
             tracing::warn!("Failed to register embedded default theme: {error}");
@@ -62,6 +63,81 @@ impl ThemeEngine {
     pub fn with_assets_dir(mut self, dir: impl Into<PathBuf>) -> Self {
         self.assets_dir = dir.into();
         self
+    }
+
+    /// Point the engine at the root of the built React bundles
+    /// (`assets/react/dist`). A theme that requires `react` is
+    /// satisfied only when its per-theme bundle exists there.
+    pub fn with_react_dist_dir(mut self, dir: impl Into<PathBuf>) -> Self {
+        *self
+            .react_dist_dir
+            .write()
+            .expect("react dist dir lock poisoned") = Some(dir.into());
+        self
+    }
+
+    /// True when the built React bundle for `theme_id` exists
+    /// (`<react_dist_dir>/<theme_id>/index.html`).
+    pub fn react_bundle_available(&self, theme_id: &str) -> bool {
+        let Some(dist) = self
+            .react_dist_dir
+            .read()
+            .expect("react dist dir lock poisoned")
+            .clone()
+        else {
+            return false;
+        };
+        dist.join(theme_id).join("index.html").is_file()
+    }
+
+    /// Built bundle directory for `theme_id`
+    /// (`<react_dist_dir>/<theme_id>`), when the bundle exists.
+    /// `None` when no dist dir is configured or the theme has no
+    /// built bundle. This is the single place that turns a theme id
+    /// into a bundle path, so the React HTTP layer never joins paths
+    /// itself and can never serve a theme whose bundle is absent.
+    pub fn react_bundle_dir(&self, theme_id: &str) -> Option<PathBuf> {
+        if !self.react_bundle_available(theme_id) {
+            return None;
+        }
+        let dist = self
+            .react_dist_dir
+            .read()
+            .expect("react dist dir lock poisoned")
+            .clone()?;
+        Some(dist.join(theme_id))
+    }
+
+    /// Metadata of the currently active theme, when the active theme
+    /// is a discovered disk theme. The embedded default has no
+    /// discovered metadata; callers fall back to
+    /// [`embedded_default_meta`] for it.
+    pub fn active_theme_meta(&self) -> Option<ThemeMeta> {
+        self.discovered
+            .read()
+            .expect("discovered themes lock poisoned")
+            .get(&self.active_theme())
+            .cloned()
+    }
+
+    /// Check a theme's `require` list against what the engine can
+    /// satisfy. Fails closed: an unsatisfied requirement is an error
+    /// naming the missing capability, so activation never renders a
+    /// theme whose React app (or other capability) is not built.
+    pub fn check_requirements(&self, meta: &ThemeMeta) -> UnifiedResult<()> {
+        for required in &meta.require {
+            let satisfied = match required.as_str() {
+                "react" => self.react_bundle_available(&meta.id),
+                _ => false,
+            };
+            if !satisfied {
+                return Err(UnifiedError::bad_request(format!(
+                    "Theme \"{}\" requires \"{}\" but it is not available (build the React bundle for this theme first)",
+                    meta.id, required
+                )));
+            }
+        }
+        Ok(())
     }
 
     /// Attach the shared named-route registry (the same instance the
@@ -389,6 +465,9 @@ impl ThemeEngine {
             version: manifest.version,
             description: manifest.description,
             screenshot,
+            require: manifest.require,
+            framework: manifest.framework,
+            assets: manifest.assets,
         };
         self.discovered
             .write()
@@ -424,6 +503,17 @@ impl ThemeEngine {
             ));
         }
         let meta = self.load_theme(id)?;
+        // Fail closed: a theme whose requirements are not satisfied
+        // (e.g. `require: [react]` with no built bundle) never
+        // becomes active, so the site never renders a broken theme.
+        // The previously active theme is left untouched.
+        if let Err(error) = self.check_requirements(&meta) {
+            return Err(error
+                .with_metadata("theme_id", Value::String(id.to_string()))
+                .with_metadata("unsatisfied_requirement", Value::String(
+                    meta.require.join(","),
+                )));
+        }
         *self
             .active_theme
             .write()
@@ -557,6 +647,9 @@ impl ThemeEngine {
                 version: manifest.version,
                 description: manifest.description,
                 screenshot,
+                require: manifest.require,
+                framework: manifest.framework,
+                assets: manifest.assets,
             };
             self.discovered
                 .write()

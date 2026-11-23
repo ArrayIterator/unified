@@ -16,7 +16,8 @@ import {
   fetchExtension,
 } from "../api";
 import { useLoad } from "../hooks";
-import { Alert, Badge, Card, EmptyState, Skeleton } from "../components/ui";
+import { Alert, Badge, Card, EmptyState, Skeleton } from "@theme/components/ui";
+import { Button } from "@theme/components/controls";
 import ModuleIcon from "../components/ModuleIcon";
 
 export default function ModuleDetailPage() {
@@ -96,14 +97,13 @@ export default function ModuleDetailPage() {
               {module.is_core && <Badge tone="info">Core module</Badge>}
             </p>
           </div>
-          <button
-            type="button"
-            disabled={mutating}
+          <Button
+            color="secondary"
+            isDisabled={mutating}
             onClick={() => handleToggle(!module.enabled)}
-            className="rounded-md border border-border px-3 py-2 text-sm text-muted hover:bg-surface-hover disabled:opacity-50"
           >
             {mutating ? "Saving…" : module.enabled ? "Disable" : "Enable"}
-          </button>
+          </Button>
         </div>
         <p className="mt-4 text-muted">{module.description || "No description."}</p>
         {notice !== null && (

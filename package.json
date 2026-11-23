@@ -1,29 +1,34 @@
 {
-  "description": "Unified frontend: Handlebars + TypeScript track (transpiled in-RAM by the Rust server) and React + Tailwind track (built by Vite into assets/react/dist/, served under /react/).",
-  "devDependencies": {
-    "@tailwindcss/vite": "^4.3.5",
-    "@types/leaflet": "^1.9.12",
-    "@types/react": "^19.3.0",
-    "@types/react-dom": "^19.3.0",
-    "@vitejs/plugin-react": "^6.3.0",
-    "tailwindcss": "^4.3.5",
-    "typescript": "^5.9.3",
-    "vite": "^8.3.8"
-  },
   "name": "unified-frontend",
   "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "themes/*"
+  ],
+  "description": "Unified frontend: Handlebars + TypeScript track (transpiled in-RAM by the Rust server) and React + Tailwind track (built by Vite into assets/react/dist/, served under /react/).",
   "scripts": {
     "check": "tsc --noEmit && tsc --noEmit -p tsconfig.react.json && tsc --noEmit -p tsconfig.site-builder.json",
     "build:react": "tsc --noEmit -p tsconfig.react.json && vite build",
     "dev:react": "vite",
-    "build:site-builder": "vite build --config vite.site-builder.config.ts"
+    "build:site-builder": "vite build --config vite.site-builder.config.ts",
+    "build:react:all": "node scripts/build-react-all.mjs"
   },
-  "version": "0.1.0",
   "dependencies": {
     "grapesjs": "0.23.9",
     "leaflet": "^1.9.4",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-router-dom": "^7.18.6"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.5",
+    "@types/leaflet": "^1.9.12",
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "tailwindcss": "^4.3.5",
+    "typescript": "^5.9.3",
+    "vite": "^8.3.8"
   }
 }

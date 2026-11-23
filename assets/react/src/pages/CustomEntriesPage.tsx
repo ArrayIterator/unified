@@ -24,15 +24,15 @@ import {
   type PostTypeDefinition,
 } from "../api";
 import { useLoad } from "../hooks";
-import { Alert, Badge, Card, EmptyState, Skeleton } from "../components/ui";
-
-const inputClass =
-  "w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text";
-const labelClass = "mb-1 block text-sm font-medium";
-const buttonClass =
-  "rounded-md border border-border px-3 py-1.5 text-sm text-muted hover:bg-surface-hover";
-const primaryButtonClass =
-  "rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-on-accent hover:opacity-90";
+import { Alert, Badge, Card, EmptyState, Skeleton } from "@theme/components/ui";
+import {
+  Button,
+  Checkbox,
+  DatePicker,
+  Input,
+  Select,
+  TextArea,
+} from "@theme/components/controls";
 
 function fieldValueLabel(value: unknown): string {
   if (value === null || value === undefined) return "—";
@@ -40,6 +40,15 @@ function fieldValueLabel(value: unknown): string {
   if (Array.isArray(value)) return value.map(String).join(", ");
   if (typeof value === "object") return JSON.stringify(value);
   return String(value);
+}
+
+// ISO string -> local "YYYY-MM-DDTHH:mm" (the shape a
+// datetime-local input shows), for the datetime field type.
+function isoToLocalInput(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  const pad = (n: number): string => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 function FieldInput({
@@ -56,63 +65,68 @@ function FieldInput({
     case "textarea":
     case "richtext":
       return (
-        <textarea
-          className={inputClass}
+        <TextArea
           rows={4}
           value={typeof value === "string" ? value : ""}
-          onChange={(event) => onChange(event.target.value)}
+          onChange={onChange}
         />
       );
     case "number":
+      // No step prop: the vendored Input has none (React Aria), and
+      // this field is controlled (value/onChange -> Number) with no
+      // native form validation, so decimal entry is unaffected.
       return (
-        <input
-          className={inputClass}
+        <Input
           type="number"
-          step="any"
-          value={typeof value === "number" ? value : ""}
-          onChange={(event) =>
-            onChange(event.target.value === "" ? "" : Number(event.target.value))
-          }
+          value={typeof value === "number" ? String(value) : ""}
+          onChange={(next) => onChange(next === "" ? "" : Number(next))}
         />
       );
     case "date":
       return (
-        <input
-          className={inputClass}
-          type="date"
-          value={typeof value === "string" ? value : ""}
-          onChange={(event) => onChange(event.target.value)}
+        <DatePicker
+          value={typeof value === "string" ? value : null}
+          onChange={(iso) => onChange(iso ?? "")}
         />
       );
-    case "datetime":
+    case "datetime": {
+      // The free date picker has no time selection, so the date and
+      // the time are two theme controls combined back into the same
+      // ISO string the API stores.
+      const local = typeof value === "string" ? isoToLocalInput(value) : "";
+      const datePart = local.slice(0, 10);
+      const timePart = local.slice(11, 16);
+      const emit = (date: string, time: string): void => {
+        if (!date) {
+          onChange("");
+          return;
+        }
+        onChange(new Date(`${date}T${time || "00:00"}`).toISOString());
+      };
       return (
-        <input
-          className={inputClass}
-          type="datetime-local"
-          value={typeof value === "string" ? value.slice(0, 16) : ""}
-          onChange={(event) =>
-            onChange(
-              event.target.value
-                ? new Date(event.target.value).toISOString()
-                : "",
-            )
-          }
-        />
+        <div className="flex gap-2">
+          <DatePicker
+            value={datePart || null}
+            onChange={(iso) => emit(iso ?? "", timePart)}
+          />
+          <Input
+            type="time"
+            value={timePart}
+            onChange={(next) => emit(datePart, next)}
+          />
+        </div>
       );
+    }
     case "select":
       return (
-        <select
-          className={inputClass}
-          value={typeof value === "string" ? value : ""}
-          onChange={(event) => onChange(event.target.value)}
-        >
-          <option value="">— Select —</option>
-          {options.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
+        <Select
+          items={[
+            { id: "", label: "— Select —" },
+            ...options.map((option) => ({ id: option, label: option })),
+          ]}
+          selectedKey={typeof value === "string" ? value : ""}
+          onSelectionChange={onChange}
+        />
       );
     case "multiselect":
       return (
@@ -121,33 +135,30 @@ function FieldInput({
             const selected =
               Array.isArray(value) && (value as unknown[]).includes(option);
             return (
-              <label key={option} className="flex items-center gap-1 text-sm">
-                <input
-                  type="checkbox"
-                  checked={selected}
-                  onChange={(event) => {
-                    const current = Array.isArray(value)
-                      ? [...(value as unknown[])]
-                      : [];
-                    onChange(
-                      event.target.checked
-                        ? [...current, option]
-                        : current.filter((item) => item !== option),
-                    );
-                  }}
-                />
-                {option}
-              </label>
+              <Checkbox
+                key={option}
+                label={option}
+                isSelected={selected}
+                onChange={(checked) => {
+                  const current = Array.isArray(value)
+                    ? [...(value as unknown[])]
+                    : [];
+                  onChange(
+                    checked
+                      ? [...current, option]
+                      : current.filter((item) => item !== option),
+                  );
+                }}
+              />
             );
           })}
         </div>
       );
     case "checkbox":
       return (
-        <input
-          type="checkbox"
-          checked={value === true}
-          onChange={(event) => onChange(event.target.checked)}
+        <Checkbox
+          isSelected={value === true}
+          onChange={onChange}
         />
       );
     case "media":
@@ -155,12 +166,11 @@ function FieldInput({
     case "text":
     default:
       return (
-        <input
-          className={inputClass}
+        <Input
           type="text"
           placeholder={def.type === "media" ? "Document id" : def.type === "relation" ? "Post, page, or entry UUID" : undefined}
           value={typeof value === "string" ? value : ""}
-          onChange={(event) => onChange(event.target.value)}
+          onChange={onChange}
         />
       );
   }
@@ -255,13 +265,9 @@ export default function CustomEntriesPage() {
             </Badge>
           </p>
         </div>
-        <button
-          type="button"
-          className={primaryButtonClass}
-          onClick={() => setEditing("new")}
-        >
+        <Button color="primary" size="sm" onClick={() => setEditing("new")}>
           New {definition.singular_label}
-        </button>
+        </Button>
       </div>
 
       {formError && <Alert title="Could not save">{formError}</Alert>}
@@ -279,22 +285,21 @@ export default function CustomEntriesPage() {
 
       <Card title="Entries">
         <div className="mb-4 flex flex-wrap gap-2">
-          <select
-            className="rounded-md border border-border bg-surface px-2 py-1.5 text-sm"
-            value={statusFilter}
-            onChange={(event) => setStatusFilter(event.target.value)}
-            aria-label="Filter by status"
-          >
-            <option value="">All statuses</option>
-            <option value="published">Published</option>
-            <option value="draft">Draft</option>
-          </select>
-          <input
-            className="rounded-md border border-border bg-surface px-3 py-1.5 text-sm"
+          <Select
+            ariaLabel="Filter by status"
+            items={[
+              { id: "", label: "All statuses" },
+              { id: "published", label: "Published" },
+              { id: "draft", label: "Draft" },
+            ]}
+            selectedKey={statusFilter}
+            onSelectionChange={setStatusFilter}
+          />
+          <Input
             type="search"
             placeholder="Search entries"
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={setSearch}
           />
         </div>
         {entriesLoad.status === "loading" ? (
@@ -319,20 +324,20 @@ export default function CustomEntriesPage() {
                         .join(" · ")}`}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  className={buttonClass}
+                <Button
+                  color="secondary"
+                  size="sm"
                   onClick={() => setEditing(entry)}
                 >
                   Edit
-                </button>
-                <button
-                  type="button"
-                  className={buttonClass}
+                </Button>
+                <Button
+                  color="secondary"
+                  size="sm"
                   onClick={() => void removeEntry(entry)}
                 >
                   Delete
-                </button>
+                </Button>
               </li>
             ))}
           </ul>
@@ -386,67 +391,39 @@ function EntryForm({
     <Card title={entry ? `Edit ${definition.singular_label}` : `New ${definition.singular_label}`}>
       <div className="space-y-4">
         {supports("title") && (
-          <div>
-            <label className={labelClass} htmlFor="entry-title">Title</label>
-            <input
-              id="entry-title"
-              className={inputClass}
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-            />
-          </div>
+          <Input label="Title" value={title} onChange={setTitle} />
         )}
-        <div>
-          <label className={labelClass} htmlFor="entry-slug">Slug</label>
-          <input
-            id="entry-slug"
-            className={inputClass}
-            value={slug}
-            onChange={(event) => setSlug(event.target.value)}
-            placeholder="Leave empty to derive from the title"
-          />
-        </div>
+        <Input
+          label="Slug"
+          value={slug}
+          onChange={setSlug}
+          placeholder="Leave empty to derive from the title"
+        />
         {supports("editor") && (
-          <div>
-            <label className={labelClass} htmlFor="entry-content">Content</label>
-            <textarea
-              id="entry-content"
-              className={inputClass}
-              rows={6}
-              value={content}
-              onChange={(event) => setContent(event.target.value)}
-            />
-          </div>
+          <TextArea
+            label="Content"
+            rows={6}
+            value={content}
+            onChange={setContent}
+          />
         )}
         {supports("excerpt") && (
-          <div>
-            <label className={labelClass} htmlFor="entry-excerpt">Excerpt</label>
-            <input
-              id="entry-excerpt"
-              className={inputClass}
-              value={excerpt}
-              onChange={(event) => setExcerpt(event.target.value)}
-            />
-          </div>
+          <Input label="Excerpt" value={excerpt} onChange={setExcerpt} />
         )}
         {supports("thumbnail") && (
-          <div>
-            <label className={labelClass} htmlFor="entry-thumbnail">Thumbnail (document id)</label>
-            <input
-              id="entry-thumbnail"
-              className={inputClass}
-              value={thumbnail}
-              onChange={(event) => setThumbnail(event.target.value)}
-            />
-          </div>
+          <Input
+            label="Thumbnail (document id)"
+            value={thumbnail}
+            onChange={setThumbnail}
+          />
         )}
         {supports("custom-fields") &&
           definition.fields.map((field) => (
             <div key={field.key}>
-              <label className={labelClass}>
+              <span className="mb-1 block text-sm font-medium">
                 {field.label}
                 {field.required ? " *" : ""}
-              </label>
+              </span>
               <FieldInput
                 def={field}
                 value={fields[field.key]}
@@ -458,51 +435,41 @@ function EntryForm({
           ))}
         {supports("tags") && tags.length > 0 && (
           <div>
-            <span className={labelClass}>Tags</span>
+            <span className="mb-1 block text-sm font-medium">Tags</span>
             <div className="flex flex-wrap gap-3">
               {tags.map((tag) => (
-                <label key={tag.id} className="flex items-center gap-1 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={tagIds.includes(tag.id)}
-                    onChange={(event) =>
-                      setTagIds((current) =>
-                        event.target.checked
-                          ? [...current, tag.id]
-                          : current.filter((id) => id !== tag.id),
-                      )
-                    }
-                  />
-                  {tag.name}
-                </label>
+                <Checkbox
+                  key={tag.id}
+                  label={tag.name}
+                  isSelected={tagIds.includes(tag.id)}
+                  onChange={(checked) =>
+                    setTagIds((current) =>
+                      checked
+                        ? [...current, tag.id]
+                        : current.filter((id) => id !== tag.id),
+                    )
+                  }
+                />
               ))}
             </div>
           </div>
         )}
-        <div>
-          <label className={labelClass} htmlFor="entry-status">Status</label>
-          <select
-            id="entry-status"
-            className={inputClass}
-            value={status}
-            onChange={(event) => setStatus(event.target.value as ContentStatus)}
-          >
-            <option value="draft">Draft</option>
-            <option value="published">Published</option>
-          </select>
-        </div>
+        <Select
+          label="Status"
+          items={[
+            { id: "draft", label: "Draft" },
+            { id: "published", label: "Published" },
+          ]}
+          selectedKey={status}
+          onSelectionChange={(value) => setStatus(value as ContentStatus)}
+        />
         <div className="flex gap-2">
-          <button
-            type="button"
-            className={primaryButtonClass}
-            disabled={saving}
-            onClick={submit}
-          >
+          <Button color="primary" isDisabled={saving} onClick={submit}>
             {saving ? "Saving…" : "Save"}
-          </button>
-          <button type="button" className={buttonClass} onClick={onCancel}>
+          </Button>
+          <Button color="secondary" onClick={onCancel}>
             Cancel
-          </button>
+          </Button>
         </div>
       </div>
     </Card>

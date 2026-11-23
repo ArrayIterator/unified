@@ -1,0 +1,9 @@
+<nav class="sidebar-nav client-nav" aria-label="Dashboard sections">
+  <p class="sidebar-section">Your account</p>
+  {{#each nav}}
+  <a class="sidebar-link{{#if active}} is-active{{/if}}" href="{{href}}"{{#if active}} aria-current="page"{{/if}}>
+    <svg class="icon" aria-hidden="true"><use href="#{{icon}}"></use></svg>
+    <span class="sidebar-label">{{label}}</span>
+  </a>
+  {{/each}}
+</nav>

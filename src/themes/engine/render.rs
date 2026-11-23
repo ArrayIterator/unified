@@ -110,10 +110,60 @@ impl ThemeEngine {
         for (key, value) in call_data {
             merged.insert(key.clone(), value.clone());
         }
+        // Active theme, for templates: its metadata (`active_theme`),
+        // its manifest-declared assets as resolved URLs
+        // (`theme_styles` / `theme_scripts`), and the flags templates
+        // branch on (`theme_requires_react`, `theme_framework`).
+        // Injected after the call data so a caller cannot spoof the
+        // active theme's assets. The existing `theme` variable
+        // (light/dark scheme) is untouched. Themes with no declared
+        // assets (default, editorial) get empty lists, so layouts
+        // that render these blocks change nothing for them.
+        let active_id = self.active_theme();
+        let meta = self
+            .active_theme_meta()
+            .unwrap_or_else(embedded_default_meta);
+        let styles: Vec<Value> = meta
+            .assets
+            .css
+            .iter()
+            .map(|path| {
+                Value::String(resolve_asset_url(
+                    &self.assets_dir,
+                    &self.themes_dir,
+                    &active_id,
+                    &format!("theme:{path}"),
+                ))
+            })
+            .collect();
+        let scripts: Vec<Value> = meta
+            .assets
+            .js
+            .iter()
+            .map(|path| {
+                Value::String(resolve_asset_url(
+                    &self.assets_dir,
+                    &self.themes_dir,
+                    &active_id,
+                    &format!("theme:{path}"),
+                ))
+            })
+            .collect();
         merged.insert(
-            "has_data".to_string(),
-            Value::Bool(!call_data.is_empty()),
+            "active_theme".to_string(),
+            serde_json::to_value(&meta).unwrap_or(Value::Null),
         );
+        merged.insert("theme_styles".to_string(), Value::Array(styles));
+        merged.insert("theme_scripts".to_string(), Value::Array(scripts));
+        merged.insert(
+            "theme_requires_react".to_string(),
+            Value::Bool(meta.require.iter().any(|name| name == "react")),
+        );
+        merged.insert(
+            "theme_framework".to_string(),
+            Value::String(meta.framework.clone()),
+        );
+        merged.insert("has_data".to_string(), Value::Bool(!call_data.is_empty()));
         Value::Object(merged)
     }
 

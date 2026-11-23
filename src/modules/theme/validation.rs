@@ -7,6 +7,8 @@ use std::path::Path;
 use std::sync::OnceLock;
 
 use super::*;
+use crate::themes::engine::{REQUIRED_TEMPLATES, ThemeAssets, ThemeManifest};
+use crate::themes::validity::validate_theme_directory;
 
 // ---------------------------------------------------------------------------
 // Validation
@@ -41,70 +43,41 @@ pub fn validate_theme_id(id: &str) -> Result<String, UnifiedError> {
 
 pub(crate) const SCREENSHOT_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg", "webp"];
 
-/// Check one declared template path: it must be relative, must not
-/// contain `..`, must exist, and must resolve inside the theme directory.
-pub(crate) fn check_template_file(
-    dir: &Path,
-    canonical_dir: &Path,
-    declared: &str,
-    field: &str,
-    problems: &mut Vec<String>,
-) {
-    if declared.trim().is_empty() {
-        problems.push(format!("{field} must not be empty"));
-        return;
-    }
-    let declared_path = Path::new(declared);
-    if declared_path.is_absolute() {
-        problems.push(format!(
-            "{field} must be a relative path, got \"{declared}\""
-        ));
-        return;
-    }
-    if declared
-        .split('/')
-        .any(|segment| segment == "..")
-    {
-        problems.push(format!(
-            "{field} must not contain \"..\": \"{declared}\""
-        ));
-        return;
-    }
-    let full = dir.join(declared_path);
-    if !full.is_file() {
-        problems.push(format!(
-            "{field} file \"{declared}\" does not exist"
-        ));
-        return;
-    }
-    match full.canonicalize() {
-        Ok(canonical) => {
-            if !canonical.starts_with(canonical_dir) {
-                problems.push(format!(
-                    "{field} file \"{declared}\" escapes the theme directory"
-                ));
-            }
-        }
-        Err(_) => problems.push(format!(
-            "{field} file \"{declared}\" cannot be resolved"
-        )),
-    }
-}
-
 /// Validate a theme directory thoroughly. Returns the parsed manifest on
 /// success, or the full list of problems on failure.
+///
+/// There is exactly one `theme.yaml` shape: the rendering engine's
+/// (`crate::themes::engine::ThemeManifest`). Structural validation
+/// (manifest shape, required templates, Handlebars syntax, declared
+/// `require` capabilities and `assets`) is delegated to the engine's
+/// `validate_theme_directory`, so the admin API and the renderer can
+/// never disagree about whether a theme is valid. This module keeps
+/// only its own stricter admin-facing checks on top: the version must
+/// be semver, the description must not be empty, and the screenshot
+/// (when declared) must be a supported image type. Requirement
+/// *satisfaction* (e.g. the React bundle for `require: [react]`
+/// actually being built) is checked by the engine at activation time
+/// (`ThemeEngine::check_requirements`), not here.
 pub fn validate_theme(dir: &Path) -> Result<ThemeManifest, Vec<String>> {
     let mut problems: Vec<String> = Vec::new();
     if !dir.is_dir() {
         problems.push("theme directory does not exist".to_string());
         return Err(problems);
     }
-    let manifest_path = dir.join("theme.yaml");
-    if !manifest_path.is_file() {
-        problems.push("theme.yaml is missing".to_string());
+    let Some(id) = dir.file_name().and_then(|name| name.to_str()) else {
+        problems.push("theme directory name is not a valid theme id".to_string());
+        return Err(problems);
+    };
+    let Some(themes_dir) = dir.parent() else {
+        problems.push("theme directory has no parent directory".to_string());
+        return Err(problems);
+    };
+    let report = validate_theme_directory(id, dir, &[]);
+    if !report.valid {
+        problems.extend(report.errors.iter().map(|issue| issue.message.clone()));
         return Err(problems);
     }
-    let text = match std::fs::read_to_string(&manifest_path) {
+    let text = match std::fs::read_to_string(dir.join("theme.yaml")) {
         Ok(text) => text,
         Err(error) => {
             problems.push(format!("cannot read theme.yaml: {error}"));
@@ -118,15 +91,10 @@ pub fn validate_theme(dir: &Path) -> Result<ThemeManifest, Vec<String>> {
             return Err(problems);
         }
     };
-    if manifest.name.trim().is_empty() {
-        problems.push("theme.yaml: name must not be empty".to_string());
-    }
     if manifest.name.chars().count() > 200 {
         problems.push("theme.yaml: name must be at most 200 characters".to_string());
     }
-    if manifest.version.trim().is_empty() {
-        problems.push("theme.yaml: version must not be empty".to_string());
-    } else if Version::parse(manifest.version.trim()).is_err() {
+    if Version::parse(manifest.version.trim()).is_err() {
         problems.push(format!(
             "theme.yaml: version \"{}\" is not a valid semver version",
             manifest.version
@@ -135,41 +103,18 @@ pub fn validate_theme(dir: &Path) -> Result<ThemeManifest, Vec<String>> {
     if manifest.description.trim().is_empty() {
         problems.push("theme.yaml: description must not be empty".to_string());
     }
-    let canonical_dir = match dir.canonicalize() {
-        Ok(path) => path,
-        Err(_) => {
-            problems.push("theme directory cannot be resolved".to_string());
-            return Err(problems);
-        }
-    };
-    check_template_file(
-        dir,
-        &canonical_dir,
-        &manifest.templates.layout,
-        "templates.layout",
-        &mut problems,
-    );
-    for (field, declared) in [
-        ("templates.index", &manifest.templates.index),
-        ("templates.post", &manifest.templates.post),
-        ("templates.page", &manifest.templates.page),
-    ] {
-        if let Some(declared) = declared {
-            check_template_file(dir, &canonical_dir, declared, field, &mut problems);
-        }
-    }
     if let Some(screenshot) = &manifest.screenshot {
-        let extension = Path::new(screenshot)
-            .extension()
-            .and_then(|extension| extension.to_str())
-            .unwrap_or("")
-            .to_lowercase();
-        if !SCREENSHOT_EXTENSIONS.contains(&extension.as_str()) {
-            problems.push(format!(
-                "screenshot \"{screenshot}\" must be a png, jpg, jpeg, or webp file"
-            ));
-        } else {
-            check_template_file(dir, &canonical_dir, screenshot, "screenshot", &mut problems);
+        if !screenshot.trim().is_empty() {
+            let extension = Path::new(screenshot)
+                .extension()
+                .and_then(|extension| extension.to_str())
+                .unwrap_or("")
+                .to_lowercase();
+            if !SCREENSHOT_EXTENSIONS.contains(&extension.as_str()) {
+                problems.push(format!(
+                    "screenshot \"{screenshot}\" must be a png, jpg, jpeg, or webp file"
+                ));
+            }
         }
     }
     if problems.is_empty() {
@@ -186,16 +131,25 @@ pub(crate) fn screenshot_present(dir: &Path) -> bool {
 }
 
 pub(crate) fn template_files(dir: &Path, manifest: &ThemeManifest) -> Vec<String> {
-    let mut files = vec![manifest.templates.layout.clone()];
-    for declared in [
-        &manifest.templates.index,
-        &manifest.templates.post,
-        &manifest.templates.page,
-    ] {
-        if let Some(declared) = declared {
-            files.push(declared.clone());
+    // Declared templates plus the required set, as `templates/<stem>.hbs`
+    // paths — the engine's shape, not the old `.html` layout mapping.
+    let mut names: Vec<String> = manifest.templates.clone();
+    for required in REQUIRED_TEMPLATES {
+        if !names.iter().any(|name| name == required) {
+            names.push(required.to_string());
         }
     }
+    let mut files: Vec<String> = names
+        .iter()
+        .map(|name| {
+            let stem = manifest
+                .template_files
+                .get(name)
+                .map(String::as_str)
+                .unwrap_or(name);
+            format!("templates/{stem}.hbs")
+        })
+        .collect();
     files.sort();
     files.dedup();
     // Keep only files that actually exist, so the listing is honest.
@@ -216,9 +170,12 @@ pub(crate) fn embedded_default_info(active_id: &str) -> ThemeInfo {
         source: "embedded".to_string(),
         path: None,
         screenshot: false,
-        templates: vec!["layout.html".to_string()],
+        templates: vec!["templates/layout.hbs".to_string()],
         valid: true,
         problems: Vec::new(),
+        require: Vec::new(),
+        framework: String::new(),
+        assets: ThemeAssets::default(),
     }
 }
 
@@ -254,15 +211,21 @@ pub(crate) fn discover_themes(state: &ThemeState) -> Vec<ThemeInfo> {
                 name: manifest.name.clone(),
                 version: manifest.version.clone(),
                 description: manifest.description.clone(),
-                author: manifest.author.clone(),
+                author: None,
                 active: active_id == id,
                 source: "directory".to_string(),
                 path: Some(path.to_string_lossy().to_string()),
-                screenshot: manifest.screenshot.is_some()
+                screenshot: manifest
+                    .screenshot
+                    .as_deref()
+                    .is_some_and(|name| !name.trim().is_empty())
                     || screenshot_present(&path),
                 templates: template_files(&path, &manifest),
                 valid: true,
                 problems: Vec::new(),
+                require: manifest.require.clone(),
+                framework: manifest.framework.clone(),
+                assets: manifest.assets.clone(),
             }),
             Err(problems) => discovered.push(ThemeInfo {
                 id: id.clone(),
@@ -277,6 +240,9 @@ pub(crate) fn discover_themes(state: &ThemeState) -> Vec<ThemeInfo> {
                 templates: Vec::new(),
                 valid: false,
                 problems,
+                require: Vec::new(),
+                framework: String::new(),
+                assets: ThemeAssets::default(),
             }),
         }
     }
@@ -298,10 +264,19 @@ mod tests {
         dir
     }
 
-    fn write_theme(dir: &Path, manifest: &str, layout: bool) {
+    fn write_theme(dir: &Path, manifest: &str, templates: bool) {
         std::fs::write(dir.join("theme.yaml"), manifest).expect("write theme.yaml");
-        if layout {
-            std::fs::write(dir.join("layout.html"), "<html></html>").expect("write layout.html");
+        if templates {
+            // The engine requires layout, dashboard, home and error.
+            let templates_dir = dir.join("templates");
+            std::fs::create_dir_all(&templates_dir).expect("create templates dir");
+            for name in ["layout", "dashboard", "home", "error"] {
+                std::fs::write(
+                    templates_dir.join(format!("{name}.hbs")),
+                    "<html></html>",
+                )
+                .expect("write template");
+            }
         }
     }
 
@@ -352,7 +327,7 @@ mod tests {
     fn validate_theme_rejects_missing_manifest() {
         let dir = temp_dir("no-manifest");
         let problems = validate_theme(&dir).expect_err("missing manifest must fail");
-        assert!(problems.iter().any(|p| p.contains("theme.yaml is missing")));
+        assert!(problems.iter().any(|p| p.contains("has no theme.yaml manifest")));
         let _ = std::fs::remove_dir_all(&dir);
     }
 
@@ -380,35 +355,15 @@ mod tests {
     }
 
     #[test]
-    fn validate_theme_rejects_traversal_layout() {
+    fn validate_theme_rejects_traversal_template_name() {
         let dir = temp_dir("traversal");
         write_theme(
             &dir,
-            "name: Evil\nversion: 1.0.0\ndescription: Traversal.\ntemplates:\n  layout: ../escape.html\n",
+            "name: Evil\nversion: 1.0.0\ndescription: Traversal.\ntemplates:\n  - ../escape\n",
             true,
         );
-        let problems = validate_theme(&dir).expect_err("traversal layout must fail");
-        assert!(problems.iter().any(|p| p.contains("must not contain \"..\"")));
-        let _ = std::fs::remove_dir_all(&dir);
-    }
-
-    #[test]
-    fn check_template_file_rejects_absolute_and_dotdot() {
-        let dir = temp_dir("check-template");
-        write_theme(&dir, MINIMAL_MANIFEST, true);
-        let canonical = dir.canonicalize().expect("canonicalize temp dir");
-        let mut problems = Vec::new();
-        check_template_file(&dir, &canonical, "/etc/passwd", "templates.layout", &mut problems);
-        assert!(problems.iter().any(|p| p.contains("must be a relative path")));
-        problems.clear();
-        check_template_file(&dir, &canonical, "../escape.html", "templates.layout", &mut problems);
-        assert!(problems.iter().any(|p| p.contains("must not contain \"..\"")));
-        problems.clear();
-        check_template_file(&dir, &canonical, "missing.html", "templates.layout", &mut problems);
-        assert!(problems.iter().any(|p| p.contains("does not exist")));
-        problems.clear();
-        check_template_file(&dir, &canonical, "layout.html", "templates.layout", &mut problems);
-        assert!(problems.is_empty());
+        let problems = validate_theme(&dir).expect_err("traversal template must fail");
+        assert!(problems.iter().any(|p| p.contains("invalid name")));
         let _ = std::fs::remove_dir_all(&dir);
     }
 
@@ -425,25 +380,35 @@ mod tests {
     fn template_files_lists_existing_files_only() {
         let dir = temp_dir("template-files");
         write_theme(&dir, MINIMAL_MANIFEST, true);
-        std::fs::write(dir.join("index.html"), "<html></html>").expect("write index");
+        let templates_dir = dir.join("templates");
+        std::fs::write(templates_dir.join("index.hbs"), "<html></html>")
+            .expect("write index");
         let manifest = ThemeManifest {
             name: "Test".to_string(),
             version: "1.0.0".to_string(),
             description: "Test".to_string(),
-            author: None,
-            license: None,
-            templates: ThemeTemplates {
-                layout: "layout.html".to_string(),
-                index: Some("index.html".to_string()),
-                post: Some("post.html".to_string()),
-                page: None,
-            },
             screenshot: None,
+            directories: vec!["templates".to_string()],
+            templates: vec![
+                "layout".to_string(),
+                "index".to_string(),
+                "post".to_string(),
+            ],
+            template_files: std::collections::HashMap::new(),
+            require: Vec::new(),
+            framework: String::new(),
+            assets: ThemeAssets::default(),
         };
-        // post.html does not exist, so it must be dropped; the rest sorted.
+        // post.hbs does not exist, so it must be dropped; the rest sorted.
         assert_eq!(
             template_files(&dir, &manifest),
-            vec!["index.html".to_string(), "layout.html".to_string()]
+            vec![
+                "templates/dashboard.hbs".to_string(),
+                "templates/error.hbs".to_string(),
+                "templates/home.hbs".to_string(),
+                "templates/index.hbs".to_string(),
+                "templates/layout.hbs".to_string(),
+            ]
         );
         let _ = std::fs::remove_dir_all(&dir);
     }

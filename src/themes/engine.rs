@@ -85,4 +85,11 @@ pub struct ThemeEngine {
     /// every registry swap, so a theme switch restores the module
     /// defaults for keys the new theme does not override.
     theme_module_templates: RwLock<HashSet<String>>,
+    /// Root of the built React bundles (`assets/react/dist`), set by
+    /// the application with [`ThemeEngine::with_react_dist_dir`].
+    /// A theme that requires `react` is satisfied only when its own
+    /// per-theme bundle exists under this directory
+    /// (`<theme>/index.html`). `None` means no React bundle is
+    /// available, so every `react` requirement is unsatisfied.
+    react_dist_dir: RwLock<Option<PathBuf>>,
 }

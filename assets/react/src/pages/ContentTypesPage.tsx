@@ -23,15 +23,8 @@ import {
   type PostTypeDefinition,
 } from "../api";
 import { useLoad } from "../hooks";
-import { Alert, Badge, Card, EmptyState, Skeleton } from "../components/ui";
-
-const inputClass =
-  "w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text";
-const labelClass = "mb-1 block text-sm font-medium";
-const buttonClass =
-  "rounded-md border border-border px-3 py-1.5 text-sm text-muted hover:bg-surface-hover";
-const primaryButtonClass =
-  "rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-on-accent hover:opacity-90";
+import { Alert, Badge, Card, EmptyState, Skeleton } from "@theme/components/ui";
+import { Button, Checkbox, Input, Select } from "@theme/components/controls";
 
 const SUPPORT_OPTIONS = [
   "title",
@@ -107,13 +100,13 @@ export default function ContentTypesPage() {
             screens — no code per type.
           </p>
         </div>
-        <button
-          type="button"
-          className={primaryButtonClass}
+        <Button
+          color="primary"
+          size="sm"
           onClick={() => setShowForm((value) => !value)}
         >
           {showForm ? "Close form" : "New post type"}
-        </button>
+        </Button>
       </div>
 
       {error && <Alert title="Action failed">{error}</Alert>}
@@ -154,29 +147,29 @@ export default function ContentTypesPage() {
                   {type.visibility}
                 </Badge>
                 {type.enabled ? (
-                  <button
-                    type="button"
-                    className={buttonClass}
+                  <Button
+                    color="secondary"
+                    size="sm"
                     onClick={() =>
                       void run(() => disablePostType(type.id), typesLoad.reload)
                     }
                   >
                     Disable
-                  </button>
+                  </Button>
                 ) : (
-                  <button
-                    type="button"
-                    className={buttonClass}
+                  <Button
+                    color="secondary"
+                    size="sm"
                     onClick={() =>
                       void run(() => enablePostType(type.id), typesLoad.reload)
                     }
                   >
                     Enable
-                  </button>
+                  </Button>
                 )}
-                <button
-                  type="button"
-                  className={buttonClass}
+                <Button
+                  color="secondary"
+                  size="sm"
                   onClick={() => {
                     if (
                       window.confirm(
@@ -188,7 +181,7 @@ export default function ContentTypesPage() {
                   }}
                 >
                   Delete
-                </button>
+                </Button>
               </li>
             ))}
           </ul>
@@ -297,129 +290,92 @@ function TypeForm({
     <Card title="New post type">
       <div className="space-y-4">
         <div className="grid gap-4 sm:grid-cols-3">
-          <div>
-            <label className={labelClass} htmlFor="type-slug">Slug *</label>
-            <input
-              id="type-slug"
-              className={inputClass}
-              value={slug}
-              onChange={(event) => setSlug(event.target.value)}
-              placeholder="events"
-            />
-          </div>
-          <div>
-            <label className={labelClass} htmlFor="type-singular">Singular label *</label>
-            <input
-              id="type-singular"
-              className={inputClass}
-              value={singular}
-              onChange={(event) => setSingular(event.target.value)}
-              placeholder="Event"
-            />
-          </div>
-          <div>
-            <label className={labelClass} htmlFor="type-plural">Plural label *</label>
-            <input
-              id="type-plural"
-              className={inputClass}
-              value={plural}
-              onChange={(event) => setPlural(event.target.value)}
-              placeholder="Events"
-            />
-          </div>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label className={labelClass} htmlFor="type-icon">Icon (sprite symbol)</label>
-            <input
-              id="type-icon"
-              className={inputClass}
-              value={icon}
-              onChange={(event) => setIcon(event.target.value)}
-            />
-          </div>
-          <div>
-            <label className={labelClass} htmlFor="type-visibility">Visibility</label>
-            <select
-              id="type-visibility"
-              className={inputClass}
-              value={visibility}
-              onChange={(event) => setVisibility(event.target.value)}
-            >
-              <option value="private">Private</option>
-              <option value="public">Public</option>
-            </select>
-          </div>
-        </div>
-        <div>
-          <label className={labelClass} htmlFor="type-description">Description</label>
-          <input
-            id="type-description"
-            className={inputClass}
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
+          <Input
+            label="Slug *"
+            value={slug}
+            onChange={setSlug}
+            placeholder="events"
+          />
+          <Input
+            label="Singular label *"
+            value={singular}
+            onChange={setSingular}
+            placeholder="Event"
+          />
+          <Input
+            label="Plural label *"
+            value={plural}
+            onChange={setPlural}
+            placeholder="Events"
           />
         </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Input
+            label="Icon (sprite symbol)"
+            value={icon}
+            onChange={setIcon}
+          />
+          <Select
+            label="Visibility"
+            items={[
+              { id: "private", label: "Private" },
+              { id: "public", label: "Public" },
+            ]}
+            selectedKey={visibility}
+            onSelectionChange={setVisibility}
+          />
+        </div>
+        <Input
+          label="Description"
+          value={description}
+          onChange={setDescription}
+        />
         <div>
-          <span className={labelClass}>Supports</span>
+          <span className="mb-1 block text-sm font-medium">Supports</span>
           <div className="flex flex-wrap gap-3">
             {SUPPORT_OPTIONS.map((feature) => (
-              <label key={feature} className="flex items-center gap-1 text-sm">
-                <input
-                  type="checkbox"
-                  checked={supports.includes(feature)}
-                  onChange={() => toggleSupport(feature)}
-                />
-                {feature}
-              </label>
+              <Checkbox
+                key={feature}
+                label={feature}
+                isSelected={supports.includes(feature)}
+                onChange={() => toggleSupport(feature)}
+              />
             ))}
           </div>
         </div>
         <div className="flex flex-wrap gap-4 text-sm">
-          <label className="flex items-center gap-1">
-            <input
-              type="checkbox"
-              checked={hasArchive}
-              onChange={(event) => setHasArchive(event.target.checked)}
-            />
-            Has archive
-          </label>
-          <label className="flex items-center gap-1">
-            <input
-              type="checkbox"
-              checked={showInMenu}
-              onChange={(event) => setShowInMenu(event.target.checked)}
-            />
-            Show in menu
-          </label>
-          <label className="flex items-center gap-1">
-            <input
-              type="checkbox"
-              checked={restExposed}
-              onChange={(event) => setRestExposed(event.target.checked)}
-            />
-            REST exposed
-          </label>
-          <label className="flex items-center gap-1">
-            Menu position
-            <input
-              type="number"
-              className="w-20 rounded-md border border-border bg-surface px-2 py-1 text-sm"
-              value={menuPosition}
-              onChange={(event) => setMenuPosition(Number(event.target.value))}
-            />
-          </label>
+          <Checkbox
+            label="Has archive"
+            isSelected={hasArchive}
+            onChange={setHasArchive}
+          />
+          <Checkbox
+            label="Show in menu"
+            isSelected={showInMenu}
+            onChange={setShowInMenu}
+          />
+          <Checkbox
+            label="REST exposed"
+            isSelected={restExposed}
+            onChange={setRestExposed}
+          />
+          <Input
+            label="Menu position"
+            type="number"
+            value={String(menuPosition)}
+            onChange={(value) => setMenuPosition(Number(value))}
+          />
         </div>
         <div>
           <div className="mb-2 flex items-center justify-between">
-            <span className={labelClass}>Custom fields</span>
-            <button
-              type="button"
-              className={buttonClass}
+            <span className="mb-1 block text-sm font-medium">Custom fields</span>
+            <Button
+              color="secondary"
+              size="sm"
               onClick={() => setFieldDrafts((current) => [...current, emptyFieldDraft()])}
             >
               Add field
-            </button>
+            </Button>
           </div>
           {fieldDrafts.length === 0 ? (
             <EmptyState>No custom fields. Add one to store structured data per entry.</EmptyState>
@@ -430,59 +386,42 @@ function TypeForm({
                   key={index}
                   className="grid gap-2 rounded-md border border-border p-3 sm:grid-cols-6"
                 >
-                  <input
-                    className={inputClass}
+                  <Input
                     placeholder="key (snake_case)"
                     value={draft.key}
-                    onChange={(event) => updateDraft(index, { key: event.target.value })}
+                    onChange={(value) => updateDraft(index, { key: value })}
                   />
-                  <input
-                    className={inputClass}
+                  <Input
                     placeholder="Label"
                     value={draft.label}
-                    onChange={(event) => updateDraft(index, { label: event.target.value })}
+                    onChange={(value) => updateDraft(index, { label: value })}
                   />
-                  <select
-                    className={inputClass}
-                    value={draft.type}
-                    onChange={(event) =>
-                      updateDraft(index, { type: event.target.value as CustomFieldType })
+                  <Select
+                    items={FIELD_TYPES.map((type) => ({ id: type, label: type }))}
+                    selectedKey={draft.type}
+                    onSelectionChange={(value) =>
+                      updateDraft(index, { type: value as CustomFieldType })
                     }
-                  >
-                    {FIELD_TYPES.map((type) => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    className={inputClass}
+                  />
+                  <Input
                     placeholder="Options (a, b, c)"
                     value={draft.options}
-                    onChange={(event) => updateDraft(index, { options: event.target.value })}
+                    onChange={(value) => updateDraft(index, { options: value })}
                   />
-                  <input
-                    className={inputClass}
+                  <Input
                     placeholder="Default"
                     value={draft.defaultValue}
-                    onChange={(event) =>
-                      updateDraft(index, { defaultValue: event.target.value })
-                    }
+                    onChange={(value) => updateDraft(index, { defaultValue: value })}
                   />
                   <div className="flex items-center gap-2 text-sm">
-                    <label className="flex items-center gap-1">
-                      <input
-                        type="checkbox"
-                        checked={draft.required}
-                        onChange={(event) =>
-                          updateDraft(index, { required: event.target.checked })
-                        }
-                      />
-                      Required
-                    </label>
-                    <button
-                      type="button"
-                      className={buttonClass}
+                    <Checkbox
+                      label="Required"
+                      isSelected={draft.required}
+                      onChange={(value) => updateDraft(index, { required: value })}
+                    />
+                    <Button
+                      color="secondary"
+                      size="sm"
                       onClick={() =>
                         setFieldDrafts((current) =>
                           current.filter((_, i) => i !== index),
@@ -490,7 +429,7 @@ function TypeForm({
                       }
                     >
                       Remove
-                    </button>
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -498,17 +437,16 @@ function TypeForm({
           )}
         </div>
         <div className="flex gap-2">
-          <button
-            type="button"
-            className={primaryButtonClass}
-            disabled={saving}
+          <Button
+            color="primary"
+            isDisabled={saving}
             onClick={() => void save()}
           >
             {saving ? "Saving…" : "Create post type"}
-          </button>
-          <button type="button" className={buttonClass} onClick={onCancel}>
+          </Button>
+          <Button color="secondary" onClick={onCancel}>
             Cancel
-          </button>
+          </Button>
         </div>
       </div>
     </Card>
@@ -549,32 +487,28 @@ function TagsCard({
   return (
     <Card title="Tags">
       <div className="mb-4 grid gap-2 sm:grid-cols-4">
-        <input
-          className={inputClass}
+        <Input
           placeholder="Tag name *"
           value={name}
-          onChange={(event) => setName(event.target.value)}
+          onChange={setName}
         />
-        <input
-          className={inputClass}
+        <Input
           placeholder="Slug (optional)"
           value={slug}
-          onChange={(event) => setSlug(event.target.value)}
+          onChange={setSlug}
         />
-        <input
-          className={inputClass}
+        <Input
           placeholder="Description (optional)"
           value={description}
-          onChange={(event) => setDescription(event.target.value)}
+          onChange={setDescription}
         />
-        <button
-          type="button"
-          className={primaryButtonClass}
-          disabled={name.trim() === ""}
+        <Button
+          color="primary"
+          isDisabled={name.trim() === ""}
           onClick={() => void saveTag()}
         >
           Add tag
-        </button>
+        </Button>
       </div>
       {tags.length === 0 ? (
         <EmptyState>No tags yet.</EmptyState>
@@ -586,9 +520,9 @@ function TagsCard({
                 <p className="text-sm font-medium">{tag.name}</p>
                 <p className="text-xs text-faint">/{tag.slug}</p>
               </div>
-              <button
-                type="button"
-                className={buttonClass}
+              <Button
+                color="secondary"
+                size="sm"
                 onClick={() => {
                   if (window.confirm(`Delete tag "${tag.name}"?`)) {
                     void onRun(() => deleteContentTag(tag.id), onChanged);
@@ -596,7 +530,7 @@ function TagsCard({
                 }}
               >
                 Delete
-              </button>
+              </Button>
             </li>
           ))}
         </ul>

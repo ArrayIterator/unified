@@ -395,7 +395,13 @@ mod tests {
             "name: Alpha\nversion: 1.2.3\ndescription: A test theme.\n",
         )
         .expect("write theme.yaml");
-        std::fs::write(alpha.join("layout.html"), "<html></html>").expect("write layout.html");
+        // The engine requires layout, dashboard, home and error.
+        let templates_dir = alpha.join("templates");
+        std::fs::create_dir_all(&templates_dir).expect("create templates dir");
+        for name in ["layout", "dashboard", "home", "error"] {
+            std::fs::write(templates_dir.join(format!("{name}.hbs")), "<html></html>")
+                .expect("write template");
+        }
         (base, themes_dir)
     }
 

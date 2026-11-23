@@ -8,8 +8,9 @@
 
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { Alert, Card } from "@theme/components/ui";
+import { Button, Input } from "@theme/components/controls";
 import { ApiError, login } from "../api";
-import { Alert } from "../components/ui";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -52,9 +53,8 @@ export default function LoginPage() {
 
   return (
     <div className="mx-auto max-w-md">
-      <div className="rounded-lg border border-border bg-surface p-6 shadow-md">
-        <h2 className="text-xl font-bold">Sign in</h2>
-        <p className="mt-1 text-sm text-muted">
+      <Card title="Sign in">
+        <p className="mt-1 text-sm text-tertiary">
           Sign in with the account your administrator created for you.
         </p>
 
@@ -65,104 +65,84 @@ export default function LoginPage() {
         )}
 
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
-          <div>
-            <label htmlFor="login-email" className="mb-1 block text-sm font-medium">
-              Email
-            </label>
-            <input
-              id="login-email"
-              type="email"
-              autoComplete="username"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text placeholder:text-faint"
-              placeholder="you@example.com"
-            />
-          </div>
-          <div>
-            <label htmlFor="login-password" className="mb-1 block text-sm font-medium">
-              Password
-            </label>
-            <input
-              id="login-password"
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text placeholder:text-faint"
-            />
-          </div>
+          <Input
+            id="login-email"
+            label="Email"
+            type="email"
+            autoComplete="username"
+            value={email}
+            onChange={setEmail}
+            placeholder="you@example.com"
+          />
+          <Input
+            id="login-password"
+            label="Password"
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={setPassword}
+          />
 
           <div>
-            <button
-              type="button"
+            <Button
+              color="link"
+              size="sm"
               onClick={() => setShowSecondFactor((value) => !value)}
-              className="text-sm text-accent hover:underline"
-              aria-expanded={showSecondFactor}
+              ariaExpanded={showSecondFactor}
             >
               {showSecondFactor ? "Hide second factor" : "Use an authenticator code"}
-            </button>
+            </Button>
             {showSecondFactor && (
               <div className="mt-3 space-y-3">
                 {!useRecovery ? (
-                  <div>
-                    <label htmlFor="login-totp" className="mb-1 block text-sm font-medium">
-                      Authenticator code
-                    </label>
-                    <input
-                      id="login-totp"
-                      type="text"
-                      inputMode="numeric"
-                      autoComplete="one-time-code"
-                      value={totp}
-                      onChange={(event) => setTotp(event.target.value)}
-                      className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text placeholder:text-faint"
-                      placeholder="123456"
-                    />
-                  </div>
+                  <Input
+                    id="login-totp"
+                    label="Authenticator code"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    value={totp}
+                    onChange={setTotp}
+                    placeholder="123456"
+                  />
                 ) : (
-                  <div>
-                    <label htmlFor="login-recovery" className="mb-1 block text-sm font-medium">
-                      Recovery code
-                    </label>
-                    <input
-                      id="login-recovery"
-                      type="text"
-                      autoComplete="off"
-                      value={recovery}
-                      onChange={(event) => setRecovery(event.target.value)}
-                      className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text placeholder:text-faint"
-                    />
-                  </div>
+                  <Input
+                    id="login-recovery"
+                    label="Recovery code"
+                    type="text"
+                    autoComplete="off"
+                    value={recovery}
+                    onChange={setRecovery}
+                  />
                 )}
-                <button
-                  type="button"
+                <Button
+                  color="link"
+                  size="sm"
                   onClick={() => setUseRecovery((value) => !value)}
-                  className="text-sm text-accent hover:underline"
                 >
                   {useRecovery ? "Use an authenticator code" : "Use a recovery code instead"}
-                </button>
+                </Button>
               </div>
             )}
           </div>
 
-          <button
+          <Button
             type="submit"
-            disabled={submitting}
-            className="w-full rounded-md bg-accent px-4 py-2 text-sm font-semibold text-accent-contrast hover:bg-accent-hover disabled:opacity-50"
+            isDisabled={submitting}
+            className="w-full"
           >
             {submitting ? "Signing in…" : "Sign in"}
-          </button>
+          </Button>
         </form>
 
-        <p className="mt-4 text-sm text-muted">
+        <p className="mt-4 text-sm text-tertiary">
           No account yet? Ask an administrator to create one, or{" "}
           <Link to="/" className="text-accent hover:underline">
             go back to the dashboard
           </Link>
           .
         </p>
-      </div>
+      </Card>
     </div>
   );
 }

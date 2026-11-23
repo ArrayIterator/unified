@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Unified</title>
+    <script>
+      // Apply the stored (or OS) theme before first paint; main.tsx
+      // re-applies it once React mounts. Same `unified-theme` key as
+      // the Handlebars track, so the choice carries across tracks.
+      try {
+        var stored = localStorage.getItem("unified-theme");
+        var theme =
+          stored === "dark" || stored === "light"
+            ? stored
+            : matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light";
+        document.documentElement.setAttribute("data-theme", theme);
+        document.documentElement.classList.toggle("dark", theme === "dark");
+        document.documentElement.classList.add("theme-" + theme);
+      } catch (e) {
+        /* Storage or matchMedia unavailable: default (light) theme stands. */
+      }
+    </script>
+    <script type="module" crossorigin src="/react/assets/index-C0Q_zwgl.js"></script>
+    <link rel="stylesheet" crossorigin href="/react/assets/index-CsB8IGYY.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

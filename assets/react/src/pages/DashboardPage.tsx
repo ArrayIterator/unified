@@ -29,7 +29,8 @@ import {
   type TaskItem,
 } from "../api";
 import { useLoad } from "../hooks";
-import { Alert, Badge, Card, EmptyState, Skeleton, StatCard } from "../components/ui";
+import { Alert, Badge, Card, EmptyState, Skeleton, StatCard } from "@theme/components/ui";
+import { Button, Input } from "@theme/components/controls";
 import ModuleIcon from "../components/ModuleIcon";
 
 function errorText(error: Error): string {
@@ -243,14 +244,15 @@ function NotificationsWidget() {
                 </p>
               </div>
               {item.read !== true && (
-                <button
-                  type="button"
-                  disabled={markingId === item.id}
+                <Button
+                  color="tertiary"
+                  size="xs"
+                  isDisabled={markingId === item.id}
                   onClick={() => handleMarkRead(item.id)}
-                  className="shrink-0 rounded-md border border-border px-2 py-1 text-xs text-muted hover:bg-surface-hover disabled:opacity-50"
+                  className="shrink-0"
                 >
                   {markingId === item.id ? "Saving…" : "Mark read"}
-                </button>
+                </Button>
               )}
             </div>
           </li>
@@ -288,16 +290,12 @@ function ModuleGrid() {
       }
     >
       <div className="mb-4">
-        <label htmlFor="module-search" className="sr-only">
-          Search modules
-        </label>
-        <input
-          id="module-search"
+        <Input
           type="search"
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={setQuery}
           placeholder="Search modules by name or description…"
-          className="w-full max-w-md rounded-md border border-border bg-surface px-3 py-2 text-sm text-text placeholder:text-faint"
+          className="w-full max-w-md"
         />
       </div>
       {state.status === "loading" && (
@@ -313,13 +311,9 @@ function ModuleGrid() {
         <Alert tone="error" title="Could not load the module list">
           {errorText(state.error)}
           <div className="mt-2">
-            <button
-              type="button"
-              onClick={state.reload}
-              className="rounded-md border border-border px-3 py-1 text-sm"
-            >
+            <Button color="secondary" size="sm" onClick={state.reload}>
               Retry
-            </button>
+            </Button>
           </div>
         </Alert>
       )}

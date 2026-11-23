@@ -1,0 +1,21 @@
+/* Untitled theme tokens for the server-rendered (Handlebars) track.
+ *
+ * Mirrors the brand ramp in themes/untitled/react/theme.css so the
+ * HBS pages and the React app share the same green. These are
+ * additive variables only: nothing here overrides the dashboard
+ * stylesheet. Templates may use var(--untitled-brand-500) and friends.
+ */
+:root {
+  --untitled-brand-50: #eaf6ef;
+  --untitled-brand-100: #d3eddd;
+  --untitled-brand-200: #a9dcc0;
+  --untitled-brand-300: #7cc8a0;
+  --untitled-brand-400: #3aa76e;
+  --untitled-brand-500: #0b6b3a;
+  --untitled-brand-600: #095c32;
+  --untitled-brand-700: #074d2b;
+  --untitled-brand-800: #053d22;
+  --untitled-brand-900: #042e1a;
+  --untitled-brand-950: #022312;
+  --untitled-gold: #c9a227;
+}

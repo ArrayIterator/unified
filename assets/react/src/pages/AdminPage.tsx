@@ -22,7 +22,8 @@ import {
   orderWidgetSections,
 } from "../api";
 import { useLoad } from "../hooks";
-import { Alert, Badge, Card, EmptyState, Skeleton, StatCard } from "../components/ui";
+import { Alert, Badge, Card, EmptyState, Skeleton, StatCard } from "@theme/components/ui";
+import { Table } from "@theme/components/controls";
 
 // Classic admin sections with no React page yet. The /admin/{section}
 // route exists in the dashboards module (module.rs:386); these links
@@ -48,34 +49,30 @@ function AdminUsersTable() {
     return <EmptyState>No users found.</EmptyState>;
   }
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-left text-sm">
-        <thead>
-          <tr className="border-b border-border text-muted">
-            <th scope="col" className="py-2 pr-3 font-medium">Name</th>
-            <th scope="col" className="py-2 pr-3 font-medium">Email</th>
-            <th scope="col" className="py-2 pr-3 font-medium">Active</th>
-            <th scope="col" className="py-2 pr-3 font-medium">Roles</th>
-            <th scope="col" className="py-2 font-medium">Created</th>
-          </tr>
-        </thead>
-        <tbody>
-          {state.data.map((user) => (
-            <tr key={user.id ?? user.email} className="border-b border-border last:border-0">
-              <td className="py-2 pr-3 font-medium">{user.name || "—"}</td>
-              <td className="py-2 pr-3">{user.email || "—"}</td>
-              <td className="py-2 pr-3">
-                {user.is_active ? <Badge tone="success">Yes</Badge> : <Badge tone="neutral">No</Badge>}
-              </td>
-              <td className="py-2 pr-3 text-muted">{user.roles?.length ?? 0}</td>
-              <td className="py-2 text-muted">
-                {user.created_at ? formatDateTime(user.created_at) : "—"}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <Table aria-label="Users">
+      <Table.Header>
+        <Table.Head>Name</Table.Head>
+        <Table.Head>Email</Table.Head>
+        <Table.Head>Active</Table.Head>
+        <Table.Head>Roles</Table.Head>
+        <Table.Head>Created</Table.Head>
+      </Table.Header>
+      <Table.Body>
+        {state.data.map((user) => (
+          <Table.Row key={user.id ?? user.email}>
+            <Table.Cell>{user.name || "—"}</Table.Cell>
+            <Table.Cell>{user.email || "—"}</Table.Cell>
+            <Table.Cell>
+              {user.is_active ? <Badge tone="success">Yes</Badge> : <Badge tone="neutral">No</Badge>}
+            </Table.Cell>
+            <Table.Cell>{user.roles?.length ?? 0}</Table.Cell>
+            <Table.Cell>
+              {user.created_at ? formatDateTime(user.created_at) : "—"}
+            </Table.Cell>
+          </Table.Row>
+        ))}
+      </Table.Body>
+    </Table>
   );
 }
 
@@ -95,29 +92,25 @@ function AdminModulesTable() {
   }
   return (
     <div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-border text-muted">
-              <th scope="col" className="py-2 pr-3 font-medium">Module</th>
-              <th scope="col" className="py-2 pr-3 font-medium">Version</th>
-              <th scope="col" className="py-2 font-medium">Description</th>
-            </tr>
-          </thead>
-          <tbody>
-            {modules.map((module) => (
-              <tr key={module.id} className="border-b border-border last:border-0">
-                <td className="py-2 pr-3 font-medium">
-                  {module.name || module.id}{" "}
-                  <span className="font-mono text-xs text-faint">({module.id})</span>
-                </td>
-                <td className="py-2 pr-3">{module.version || "—"}</td>
-                <td className="py-2 text-muted">{module.description || "—"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <Table aria-label="Modules">
+        <Table.Header>
+          <Table.Head>Module</Table.Head>
+          <Table.Head>Version</Table.Head>
+          <Table.Head>Description</Table.Head>
+        </Table.Header>
+        <Table.Body>
+          {modules.map((module) => (
+            <Table.Row key={module.id}>
+              <Table.Cell>
+                {module.name || module.id}{" "}
+                <span className="font-mono text-xs text-faint">({module.id})</span>
+              </Table.Cell>
+              <Table.Cell>{module.version || "—"}</Table.Cell>
+              <Table.Cell>{module.description || "—"}</Table.Cell>
+            </Table.Row>
+          ))}
+        </Table.Body>
+      </Table>
       {state.data.dependencies_valid === false && (
         <p className="mt-3 text-sm text-warning">
           Dependency issues found; see the module detail pages for details.

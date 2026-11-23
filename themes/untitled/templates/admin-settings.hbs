@@ -1,0 +1,27 @@
+<section class="admin-section" data-section="settings" aria-labelledby="settings-heading">
+  <h1 id="settings-heading">Settings</h1>
+  <p class="page-intro">Settings are grouped by namespace. Edit a value and save it; the change applies immediately. Route overrides live under the <code>routes</code> namespace only when set through the routes API.</p>
+
+  <div id="st-status" class="flash flash-info" role="status" hidden></div>
+
+  <form id="st-filter" class="builder-toolbar" autocomplete="off">
+    <div class="form-row">
+      <label for="st-namespace">Namespace</label>
+      <select id="st-namespace" name="namespace">
+        <option value="">All namespaces</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label for="st-search">Search</label>
+      <input id="st-search" name="search" type="search" placeholder="Search namespace, key, or value…">
+    </div>
+    <div class="builder-actions">
+      <button class="button" type="submit">Apply</button>
+    </div>
+  </form>
+
+  <div id="st-list">
+    <p>Loading settings…</p>
+  </div>
+</section>
+<script src="/assets/js/admin-pages.js" defer></script>

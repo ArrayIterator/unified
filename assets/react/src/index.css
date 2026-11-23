@@ -1,4 +1,11 @@
 @import "tailwindcss";
+/* Active theme tokens (themes/<theme>/react/theme.css, resolved
+ * through the `@theme` Vite alias): the theme owns the design
+ * tokens — the app only consumes them. tailwindcss-animate provides
+ * the `animate-in` / `animate-out` utilities the Untitled UI
+ * components use. */
+@import "@theme/theme.css";
+@plugin "tailwindcss-animate";
 
 /* Tailwind v4 setup for the React track.
  *

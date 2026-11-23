@@ -13,6 +13,7 @@
 // still open it via `data-media-picker-open`.
 
 import FileExplorer, { type ExplorerItem } from "./FileExplorer";
+import { Button } from "@theme/components/controls";
 
 export interface MediaPickerProps {
   /** Allow attaching several files without closing the picker. */
@@ -45,14 +46,14 @@ export default function MediaPicker({ multiple = false, onAttach, onClose }: Med
               private in the upload box if a file is not ready to embed yet.
             </p>
           </div>
-          <button
-            type="button"
+          <Button
+            color="tertiary"
+            size="sm"
             onClick={onClose}
-            aria-label="Close media picker"
-            className="rounded-md border border-border px-2 py-1 text-sm text-muted hover:bg-surface-hover"
+            ariaLabel="Close media picker"
           >
             ✕
-          </button>
+          </Button>
         </div>
         <FileExplorer
           mode="pick"

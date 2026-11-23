@@ -40,18 +40,9 @@ import {
   type NearbyLocation,
 } from "../api";
 import { useLoad } from "../hooks";
-import { Alert, Badge, Card, EmptyState, Skeleton } from "../components/ui";
+import { Alert, Badge, Card, EmptyState, Skeleton } from "@theme/components/ui";
+import { Button, Checkbox, Input, Select } from "@theme/components/controls";
 import MapView from "../components/MapView";
-
-const inputClass =
-  "w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text";
-const labelClass = "mb-1 block text-sm font-medium";
-const buttonClass =
-  "rounded-md border border-border px-3 py-1.5 text-sm text-muted hover:bg-surface-hover";
-const primaryButtonClass =
-  "rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-on-accent hover:opacity-90";
-const dangerButtonClass =
-  "rounded-md border border-border px-2 py-1 text-xs text-muted hover:bg-surface-hover";
 
 function numberOrNull(value: string): number | null {
   if (value.trim() === "") return null;
@@ -276,101 +267,69 @@ export default function MapsPage() {
             {selected.address ? ` · ${selected.address}` : ""}
           </p>
           <div className="mt-3">
-            <button
-              type="button"
-              className={dangerButtonClass}
+            <Button
+              color="destructive"
+              size="xs"
               onClick={() =>
                 void run(() => deleteMapLocation(selected.id), "Location deleted.")
               }
             >
               Delete location
-            </button>
+            </Button>
           </div>
         </Card>
       )}
 
       <Card title="New location">
         <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <label className={labelClass} htmlFor="maps-label">Label</label>
-            <input
-              id="maps-label"
-              className={inputClass}
-              value={label}
-              onChange={(event) => setLabel(event.target.value)}
-              placeholder="Head office"
-            />
-          </div>
-          <div>
-            <label className={labelClass} htmlFor="maps-kind">Kind</label>
-            <select
-              id="maps-kind"
-              className={inputClass}
-              value={kind}
-              onChange={(event) => setKind(event.target.value)}
-            >
-              {kinds
-                .filter((item) => item.enabled)
-                .map((item) => (
-                  <option key={item.slug} value={item.slug}>
-                    {item.label}
-                  </option>
-                ))}
-            </select>
-          </div>
-          <div>
-            <label className={labelClass} htmlFor="maps-lat">Latitude</label>
-            <input
-              id="maps-lat"
-              className={inputClass}
-              inputMode="decimal"
-              value={latitude}
-              onChange={(event) => setLatitude(event.target.value)}
-              placeholder="-6.200000"
-            />
-          </div>
-          <div>
-            <label className={labelClass} htmlFor="maps-lng">Longitude</label>
-            <input
-              id="maps-lng"
-              className={inputClass}
-              inputMode="decimal"
-              value={longitude}
-              onChange={(event) => setLongitude(event.target.value)}
-              placeholder="106.816666"
-            />
-          </div>
-          <div>
-            <label className={labelClass} htmlFor="maps-address">Address</label>
-            <input
-              id="maps-address"
-              className={inputClass}
-              value={address}
-              onChange={(event) => setAddress(event.target.value)}
-              placeholder="Street address (optional)"
-            />
-          </div>
-          <div>
-            <label className={labelClass} htmlFor="maps-layer">Layer</label>
-            <select
-              id="maps-layer"
-              className={inputClass}
-              value={layerId}
-              onChange={(event) => setLayerId(event.target.value)}
-            >
-              <option value="">No layer</option>
-              {layers.map((layer) => (
-                <option key={layer.id} value={layer.id}>
-                  {layer.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          <Input
+            label="Label"
+            value={label}
+            onChange={setLabel}
+            placeholder="Head office"
+          />
+          <Select
+            label="Kind"
+            items={kinds
+              .filter((item) => item.enabled)
+              .map((item) => ({ id: item.slug, label: item.label }))}
+            selectedKey={kind}
+            onSelectionChange={setKind}
+          />
+          <Input
+            label="Latitude"
+            inputMode="decimal"
+            value={latitude}
+            onChange={setLatitude}
+            placeholder="-6.200000"
+          />
+          <Input
+            label="Longitude"
+            inputMode="decimal"
+            value={longitude}
+            onChange={setLongitude}
+            placeholder="106.816666"
+          />
+          <Input
+            label="Address"
+            value={address}
+            onChange={setAddress}
+            placeholder="Street address (optional)"
+          />
+          <Select
+            label="Layer"
+            items={[
+              { id: "", label: "No layer" },
+              ...layers.map((layer) => ({ id: layer.id, label: layer.name })),
+            ]}
+            selectedKey={layerId}
+            onSelectionChange={setLayerId}
+          />
         </div>
         <div className="mt-3">
-          <button type="button" className={primaryButtonClass} onClick={() => void saveLocation()}>
+          <Button color="primary" size="sm" onClick={() => void saveLocation()}>
             Save location
-          </button>
+          </Button>
         </div>
       </Card>
 
@@ -394,15 +353,15 @@ export default function MapsPage() {
                   </span>
                 </button>
                 <Badge>{location.kind}</Badge>
-                <button
-                  type="button"
-                  className={dangerButtonClass}
+                <Button
+                  color="destructive"
+                  size="xs"
                   onClick={() =>
                     void run(() => deleteMapLocation(location.id), "Location deleted.")
                   }
                 >
                   Delete
-                </button>
+                </Button>
               </li>
             ))}
           </ul>
@@ -411,40 +370,28 @@ export default function MapsPage() {
 
       <Card title="Nearby search">
         <div className="grid gap-3 sm:grid-cols-4">
-          <div>
-            <label className={labelClass} htmlFor="maps-nearby-lat">Latitude</label>
-            <input
-              id="maps-nearby-lat"
-              className={inputClass}
-              inputMode="decimal"
-              value={nearbyLat}
-              onChange={(event) => setNearbyLat(event.target.value)}
-            />
-          </div>
-          <div>
-            <label className={labelClass} htmlFor="maps-nearby-lng">Longitude</label>
-            <input
-              id="maps-nearby-lng"
-              className={inputClass}
-              inputMode="decimal"
-              value={nearbyLng}
-              onChange={(event) => setNearbyLng(event.target.value)}
-            />
-          </div>
-          <div>
-            <label className={labelClass} htmlFor="maps-nearby-radius">Radius (km)</label>
-            <input
-              id="maps-nearby-radius"
-              className={inputClass}
-              inputMode="decimal"
-              value={nearbyRadius}
-              onChange={(event) => setNearbyRadius(event.target.value)}
-            />
-          </div>
+          <Input
+            label="Latitude"
+            inputMode="decimal"
+            value={nearbyLat}
+            onChange={setNearbyLat}
+          />
+          <Input
+            label="Longitude"
+            inputMode="decimal"
+            value={nearbyLng}
+            onChange={setNearbyLng}
+          />
+          <Input
+            label="Radius (km)"
+            inputMode="decimal"
+            value={nearbyRadius}
+            onChange={setNearbyRadius}
+          />
           <div className="flex items-end">
-            <button type="button" className={primaryButtonClass} onClick={() => void searchNearby()}>
+            <Button color="primary" size="sm" onClick={() => void searchNearby()}>
               Search
-            </button>
+            </Button>
           </div>
         </div>
         {nearbyResults !== null && (
@@ -468,29 +415,21 @@ export default function MapsPage() {
           location link.
         </p>
         <div className="grid gap-3 sm:grid-cols-4">
-          <div>
-            <label className={labelClass} htmlFor="maps-entity-type">Entity type</label>
-            <input
-              id="maps-entity-type"
-              className={inputClass}
-              value={entityType}
-              onChange={(event) => setEntityType(event.target.value)}
-            />
-          </div>
-          <div>
-            <label className={labelClass} htmlFor="maps-entity-id">Entity id</label>
-            <input
-              id="maps-entity-id"
-              className={inputClass}
-              value={entityId}
-              onChange={(event) => setEntityId(event.target.value)}
-              placeholder="UUID of the record"
-            />
-          </div>
+          <Input
+            label="Entity type"
+            value={entityType}
+            onChange={setEntityType}
+          />
+          <Input
+            label="Entity id"
+            value={entityId}
+            onChange={setEntityId}
+            placeholder="UUID of the record"
+          />
           <div className="flex items-end">
-            <button type="button" className={buttonClass} onClick={() => void loadEntityLocations()}>
+            <Button color="secondary" size="sm" onClick={() => void loadEntityLocations()}>
               Look up
-            </button>
+            </Button>
           </div>
         </div>
         {entityLocations !== null && (
@@ -511,24 +450,18 @@ export default function MapsPage() {
               Attach the selected location ({selected.label}) to the record above
             </p>
             <div className="flex flex-wrap items-center gap-3">
-              <select
-                className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-text"
-                value={linkRole}
-                onChange={(event) => setLinkRole(event.target.value)}
-                aria-label="Link role"
-              >
-                {roles
+              <Select
+                ariaLabel="Link role"
+                items={roles
                   .filter((role) => role.enabled)
-                  .map((role) => (
-                    <option key={role.slug} value={role.slug}>
-                      {role.label}
-                    </option>
-                  ))}
-              </select>
-              <button
-                type="button"
-                className={primaryButtonClass}
-                disabled={entityId.trim() === ""}
+                  .map((role) => ({ id: role.slug, label: role.label }))}
+                selectedKey={linkRole}
+                onSelectionChange={setLinkRole}
+              />
+              <Button
+                color="primary"
+                size="sm"
+                isDisabled={entityId.trim() === ""}
                 onClick={() =>
                   void run(
                     () =>
@@ -543,7 +476,7 @@ export default function MapsPage() {
                 }
               >
                 Attach
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -551,16 +484,15 @@ export default function MapsPage() {
 
       <Card title="Layers">
         <div className="mb-3 flex flex-wrap gap-2">
-          <input
-            className="min-w-40 flex-1 rounded-md border border-border bg-surface px-3 py-2 text-sm text-text"
+          <Input
             value={layerName}
-            onChange={(event) => setLayerName(event.target.value)}
+            onChange={setLayerName}
             placeholder="New layer name"
-            aria-label="New layer name"
+            className="min-w-40 flex-1"
           />
-          <button
-            type="button"
-            className={primaryButtonClass}
+          <Button
+            color="primary"
+            size="sm"
             onClick={() => {
               if (layerName.trim() === "") return;
               void run(() => createMapLayer({ name: layerName.trim() }), "Layer created.").then(
@@ -571,7 +503,7 @@ export default function MapsPage() {
             }}
           >
             Add layer
-          </button>
+          </Button>
         </div>
         {layers.length === 0 ? (
           <EmptyState>No layers — layers group pins on the map.</EmptyState>
@@ -581,13 +513,13 @@ export default function MapsPage() {
               <li key={layer.id} className="flex items-center gap-3 py-2">
                 <span className="min-w-0 flex-1 truncate text-sm">{layer.name}</span>
                 <Badge>{layer.visible ? "visible" : "hidden"}</Badge>
-                <button
-                  type="button"
-                  className={dangerButtonClass}
+                <Button
+                  color="destructive"
+                  size="xs"
                   onClick={() => void run(() => deleteMapLayer(layer.id), "Layer deleted.")}
                 >
                   Delete
-                </button>
+                </Button>
               </li>
             ))}
           </ul>
@@ -596,24 +528,20 @@ export default function MapsPage() {
 
       <Card title="Geofences">
         <div className="mb-3 grid gap-3 sm:grid-cols-2">
-          <input
-            className={inputClass}
+          <Input
             value={geofenceName}
-            onChange={(event) => setGeofenceName(event.target.value)}
+            onChange={setGeofenceName}
             placeholder="Zone name"
-            aria-label="Geofence name"
           />
-          <input
-            className={inputClass}
+          <Input
             value={geofenceGeometry}
-            onChange={(event) => setGeofenceGeometry(event.target.value)}
+            onChange={setGeofenceGeometry}
             placeholder='GeoJSON Polygon, e.g. {"type":"Polygon","coordinates":[[[106.8,-6.2],[106.9,-6.2],[106.9,-6.1],[106.8,-6.1],[106.8,-6.2]]]}'
-            aria-label="Geofence geometry (GeoJSON)"
           />
         </div>
-        <button
-          type="button"
-          className={primaryButtonClass}
+        <Button
+          color="primary"
+          size="sm"
           onClick={() => {
             if (geofenceName.trim() === "" || geofenceGeometry.trim() === "") return;
             let geometry: unknown;
@@ -635,7 +563,7 @@ export default function MapsPage() {
           }}
         >
           Add geofence
-        </button>
+        </Button>
         {geofences.length === 0 ? (
           <EmptyState>No geofences — a geofence is a named GeoJSON Polygon zone.</EmptyState>
         ) : (
@@ -643,9 +571,9 @@ export default function MapsPage() {
             {geofences.map((fence) => (
               <li key={fence.id} className="flex items-center gap-3 py-2">
                 <span className="min-w-0 flex-1 truncate text-sm">{fence.name}</span>
-                <button
-                  type="button"
-                  className={buttonClass}
+                <Button
+                  color="secondary"
+                  size="sm"
                   onClick={() => {
                     if (selected === null) {
                       setError("Select a location first to test it against this zone.");
@@ -666,14 +594,14 @@ export default function MapsPage() {
                   }}
                 >
                   Test selected
-                </button>
-                <button
-                  type="button"
-                  className={dangerButtonClass}
+                </Button>
+                <Button
+                  color="destructive"
+                  size="xs"
                   onClick={() => void run(() => deleteMapGeofence(fence.id), "Geofence deleted.")}
                 >
                   Delete
-                </button>
+                </Button>
               </li>
             ))}
           </ul>
@@ -682,23 +610,21 @@ export default function MapsPage() {
 
       <Card title="Location kinds">
         <div className="mb-3 flex flex-wrap gap-2">
-          <input
-            className="min-w-32 flex-1 rounded-md border border-border bg-surface px-3 py-2 text-sm text-text"
+          <Input
             value={kindSlug}
-            onChange={(event) => setKindSlug(event.target.value)}
+            onChange={setKindSlug}
             placeholder="slug, e.g. odp"
-            aria-label="Kind slug"
+            className="min-w-32 flex-1"
           />
-          <input
-            className="min-w-32 flex-1 rounded-md border border-border bg-surface px-3 py-2 text-sm text-text"
+          <Input
             value={kindLabel}
-            onChange={(event) => setKindLabel(event.target.value)}
+            onChange={setKindLabel}
             placeholder="Label, e.g. ODP"
-            aria-label="Kind label"
+            className="min-w-32 flex-1"
           />
-          <button
-            type="button"
-            className={primaryButtonClass}
+          <Button
+            color="primary"
+            size="sm"
             onClick={() => {
               if (kindSlug.trim() === "" || kindLabel.trim() === "") return;
               void run(
@@ -713,7 +639,7 @@ export default function MapsPage() {
             }}
           >
             Add kind
-          </button>
+          </Button>
         </div>
         <ul className="divide-y divide-border">
           {kinds.map((item) => (
@@ -728,13 +654,13 @@ export default function MapsPage() {
               {item.is_builtin && <Badge>built-in</Badge>}
               {!item.enabled && <Badge>disabled</Badge>}
               {item.id !== null && (
-                <button
-                  type="button"
-                  className={dangerButtonClass}
+                <Button
+                  color="destructive"
+                  size="xs"
                   onClick={() => void run(() => deleteMapKind(item.id as string), "Kind deleted.")}
                 >
                   Delete
-                </button>
+                </Button>
               )}
             </li>
           ))}
@@ -743,23 +669,21 @@ export default function MapsPage() {
 
       <Card title="Link roles">
         <div className="mb-3 flex flex-wrap gap-2">
-          <input
-            className="min-w-32 flex-1 rounded-md border border-border bg-surface px-3 py-2 text-sm text-text"
+          <Input
             value={roleSlug}
-            onChange={(event) => setRoleSlug(event.target.value)}
+            onChange={setRoleSlug}
             placeholder="slug, e.g. site"
-            aria-label="Role slug"
+            className="min-w-32 flex-1"
           />
-          <input
-            className="min-w-32 flex-1 rounded-md border border-border bg-surface px-3 py-2 text-sm text-text"
+          <Input
             value={roleLabel}
-            onChange={(event) => setRoleLabel(event.target.value)}
+            onChange={setRoleLabel}
             placeholder="Label, e.g. Site"
-            aria-label="Role label"
+            className="min-w-32 flex-1"
           />
-          <button
-            type="button"
-            className={primaryButtonClass}
+          <Button
+            color="primary"
+            size="sm"
             onClick={() => {
               if (roleSlug.trim() === "" || roleLabel.trim() === "") return;
               void run(
@@ -774,7 +698,7 @@ export default function MapsPage() {
             }}
           >
             Add role
-          </button>
+          </Button>
         </div>
         <ul className="divide-y divide-border">
           {roles.map((role) => (
@@ -785,13 +709,13 @@ export default function MapsPage() {
               {role.is_builtin && <Badge>built-in</Badge>}
               {!role.enabled && <Badge>disabled</Badge>}
               {role.id !== null && (
-                <button
-                  type="button"
-                  className={dangerButtonClass}
+                <Button
+                  color="destructive"
+                  size="xs"
                   onClick={() => void run(() => deleteMapRole(role.id as string), "Role deleted.")}
                 >
                   Delete
-                </button>
+                </Button>
               )}
             </li>
           ))}
@@ -807,87 +731,64 @@ export default function MapsPage() {
           server is a custom provider below.
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <label className={labelClass} htmlFor="maps-provider">Active provider</label>
-            <select
-              id="maps-provider"
-              className={inputClass}
-              value={activeProvider}
-              onChange={(event) => setActiveProvider(event.target.value)}
-            >
-              <option value="">Keep current ({settings?.display_name ?? "—"})</option>
-              {providers
+          <Select
+            label="Active provider"
+            items={[
+              { id: "", label: `Keep current (${settings?.display_name ?? "—"})` },
+              ...providers
                 .filter((provider) => provider.enabled)
-                .map((provider) => (
-                  <option key={provider.slug} value={provider.slug}>
-                    {provider.display_name}
-                    {provider.requires_api_key ? " (needs key)" : ""}
-                  </option>
-                ))}
-            </select>
-          </div>
-          <div>
-            <label className={labelClass} htmlFor="maps-api-key">
-              Browser API key {settings?.key_configured ? "(stored — leave blank to keep)" : "(not stored)"}
-            </label>
-            <input
-              id="maps-api-key"
-              className={inputClass}
-              type="password"
-              autoComplete="off"
-              value={apiKey}
-              onChange={(event) => setApiKey(event.target.value)}
-              placeholder="Leave blank to keep the stored key"
-            />
-          </div>
-          <div>
-            <label className={labelClass} htmlFor="maps-default-lat">Default latitude</label>
-            <input
-              id="maps-default-lat"
-              className={inputClass}
-              inputMode="decimal"
-              value={defaultLat}
-              onChange={(event) => setDefaultLat(event.target.value)}
-              placeholder={settings ? String(settings.default_latitude) : ""}
-            />
-          </div>
-          <div>
-            <label className={labelClass} htmlFor="maps-default-lng">Default longitude</label>
-            <input
-              id="maps-default-lng"
-              className={inputClass}
-              inputMode="decimal"
-              value={defaultLng}
-              onChange={(event) => setDefaultLng(event.target.value)}
-              placeholder={settings ? String(settings.default_longitude) : ""}
-            />
-          </div>
-          <div>
-            <label className={labelClass} htmlFor="maps-default-zoom">Default zoom</label>
-            <input
-              id="maps-default-zoom"
-              className={inputClass}
-              inputMode="numeric"
-              value={defaultZoom}
-              onChange={(event) => setDefaultZoom(event.target.value)}
-              placeholder={settings ? String(settings.default_zoom) : ""}
-            />
-          </div>
+                .map((provider) => ({
+                  id: provider.slug,
+                  label: provider.display_name + (provider.requires_api_key ? " (needs key)" : ""),
+                })),
+            ]}
+            selectedKey={activeProvider}
+            onSelectionChange={setActiveProvider}
+          />
+          <Input
+            label={`Browser API key ${settings?.key_configured ? "(stored — leave blank to keep)" : "(not stored)"}`}
+            type="password"
+            autoComplete="off"
+            value={apiKey}
+            onChange={setApiKey}
+            placeholder="Leave blank to keep the stored key"
+          />
+          <Input
+            label="Default latitude"
+            inputMode="decimal"
+            value={defaultLat}
+            onChange={setDefaultLat}
+            placeholder={settings ? String(settings.default_latitude) : ""}
+          />
+          <Input
+            label="Default longitude"
+            inputMode="decimal"
+            value={defaultLng}
+            onChange={setDefaultLng}
+            placeholder={settings ? String(settings.default_longitude) : ""}
+          />
+          <Input
+            label="Default zoom"
+            inputMode="numeric"
+            value={defaultZoom}
+            onChange={setDefaultZoom}
+            placeholder={settings ? String(settings.default_zoom) : ""}
+          />
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
-          <button type="button" className={primaryButtonClass} onClick={() => void saveSettings()}>
+          <Button color="primary" size="sm" onClick={() => void saveSettings()}>
             Save settings
-          </button>
+          </Button>
           {settings?.key_configured && (
-            <button
-              type="button"
-              className={buttonClass}
+            <Button
+              color="secondary"
+              size="sm"
               onClick={() =>
                 void run(() => saveMapSettings({ api_key: "" }), "Stored API key cleared.")
               }
             >
               Clear stored key
-            </button>
+            </Button>
           )}
         </div>
 
@@ -901,62 +802,53 @@ export default function MapsPage() {
               {provider.requires_api_key && <Badge>needs key</Badge>}
               {!provider.enabled && <Badge>disabled</Badge>}
               {provider.tenant_id !== null && (
-                <button
-                  type="button"
-                  className={dangerButtonClass}
+                <Button
+                  color="destructive"
+                  size="xs"
                   onClick={() =>
                     void run(() => deleteMapProvider(provider.id), "Provider deleted.")
                   }
                 >
                   Delete
-                </button>
+                </Button>
               )}
             </li>
           ))}
         </ul>
         <h3 className="mb-2 text-sm font-semibold">Add a custom provider</h3>
         <div className="grid gap-3 sm:grid-cols-2">
-          <input
-            className={inputClass}
+          <Input
             value={providerSlug}
-            onChange={(event) => setProviderSlug(event.target.value)}
+            onChange={setProviderSlug}
             placeholder="slug, e.g. my-tiles"
-            aria-label="Provider slug"
           />
-          <input
-            className={inputClass}
+          <Input
             value={providerName}
-            onChange={(event) => setProviderName(event.target.value)}
+            onChange={setProviderName}
             placeholder="Display name"
-            aria-label="Provider display name"
           />
-          <input
-            className={inputClass}
+          <Input
             value={providerTemplate}
-            onChange={(event) => setProviderTemplate(event.target.value)}
+            onChange={setProviderTemplate}
             placeholder="Tile URL template, e.g. https://tiles.example.com/{z}/{x}/{y}.png"
-            aria-label="Tile URL template"
           />
-          <input
-            className={inputClass}
+          <Input
             value={providerAttribution}
-            onChange={(event) => setProviderAttribution(event.target.value)}
+            onChange={setProviderAttribution}
             placeholder="Attribution, e.g. © Example Tiles"
-            aria-label="Attribution"
           />
         </div>
-        <label className="mt-3 flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={providerNeedsKey}
-            onChange={(event) => setProviderNeedsKey(event.target.checked)}
-          />
-          Requires a browser API key (substituted into {"{key}"} in the template)
-        </label>
         <div className="mt-3">
-          <button
-            type="button"
-            className={primaryButtonClass}
+          <Checkbox
+            label="Requires a browser API key (substituted into {key} in the template)"
+            isSelected={providerNeedsKey}
+            onChange={setProviderNeedsKey}
+          />
+        </div>
+        <div className="mt-3">
+          <Button
+            color="primary"
+            size="sm"
             onClick={() => {
               if (providerSlug.trim() === "" || providerTemplate.trim() === "") return;
               void run(
@@ -982,7 +874,7 @@ export default function MapsPage() {
             }}
           >
             Add provider
-          </button>
+          </Button>
         </div>
       </Card>
     </div>

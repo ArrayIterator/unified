@@ -20,7 +20,7 @@ use unified_core::hardening::{
     HardeningState, IpFilterMiddleware, RateLimitMiddleware, RequestSizeMiddleware,
     SecurityHeadersMiddleware, SecuritySettings,
 };
-use unified_core::hooks::{events, HookBus};
+use unified_core::hooks::{events, HookBus, HookContext};
 use unified_core::json;
 use unified_core::middleware::{
     MiddlewareManager, TenantResolutionConfig, TenantResolutionMiddleware,
@@ -29,6 +29,7 @@ use crate::http::acme::AcmeClient;
 use unified_core::tls::SslStorage;
 use crate::modules::network::connection_stats;
 use crate::themes::assets::{serve_asset, serve_theme_asset, StaticAssetConfig};
+use crate::themes::engine::{ThemeEngine, THEME_ACTIVATED_EVENT};
 use actix_web::dev::Service;
 use actix_web::dev::ServiceResponse;
 use actix_web::http::{header, KeepAlive};
@@ -232,11 +233,33 @@ pub async fn run_server(ctx: Arc<AppContext>) -> UnifiedResult<()> {
         crate::themes::assets::minify::set_served_fingerprints(fingerprints);
     }
 
+    // React track theme engine: one engine for the whole server,
+    // shared by all workers, resolving `/react` to the active
+    // theme's per-theme bundle (see `crate::http::react`). It
+    // follows `theme.activated` exactly like the frontend and
+    // dashboards engines, so its active theme tracks activations
+    // without a restart; its dist root is the committed Vite
+    // output (`assets/react/dist/<theme_id>/`).
+    let react_engine = Arc::new(
+        ThemeEngine::new("themes")
+            .with_react_dist_dir(StaticAssetConfig::default().assets_dir.join("react/dist")),
+    );
+    {
+        let engine = Arc::clone(&react_engine);
+        ctx.hooks.register(
+            THEME_ACTIVATED_EVENT,
+            "react",
+            Arc::new(move |hook_ctx: &mut HookContext| engine.on_theme_activated(hook_ctx)),
+        );
+    }
+
     let factory_ctx = ctx.clone();
     let factory_counter = total_requests.clone();
+    let factory_react_engine = Arc::clone(&react_engine);
     let mut server = HttpServer::new(move || {
         let ctx = factory_ctx.clone();
         let counter = factory_counter.clone();
+        let react_engine = Arc::clone(&factory_react_engine);
         let mw_ctx = ctx.clone();
         let mw_counter = counter.clone();
         // Collect the middleware contributed by every module, ordered
@@ -312,6 +335,7 @@ pub async fn run_server(ctx: Arc<AppContext>) -> UnifiedResult<()> {
         let compiled_styles = Arc::clone(&compiled_styles);
         App::new()
             .app_data(web::Data::new(ctx.clone()))
+            .app_data(web::Data::new(react_engine))
             // The dispatcher wraps the application inside the
             // request-lifecycle middleware below, so pause /
             // maintenance blocking and the request hooks always run

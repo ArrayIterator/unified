@@ -41,7 +41,8 @@ import {
   type PickerItem,
   type UploadProgress,
 } from "../api";
-import { Alert, Badge, EmptyState, Skeleton } from "./ui";
+import { Alert, Badge, EmptyState, Skeleton } from "@theme/components/ui";
+import { Button, Dialog, Input, Select } from "@theme/components/controls";
 
 /** One row in the explorer, adapted from either list source. */
 export interface ExplorerItem {
@@ -474,37 +475,30 @@ export default function FileExplorer({
 
       {/* Toolbar: search, filters, view toggle. */}
       <div className="flex flex-wrap items-center gap-2">
-        <input
+        <Input
           type="search"
           value={search}
-          onChange={(event) => setSearch(event.target.value)}
+          onChange={setSearch}
           placeholder="Search by name"
-          aria-label="Search files by name"
-          className="min-w-40 flex-1 rounded-md border border-border bg-surface px-3 py-2 text-sm text-text"
+          className="min-w-40 flex-1"
         />
-        <select
-          value={typeFilter}
-          onChange={(event) => setTypeFilter(event.target.value)}
-          aria-label="Filter by type"
-          className="rounded-md border border-border bg-surface px-2 py-2 text-sm text-text"
-        >
-          {TYPE_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+        <Select
+          ariaLabel="Filter by type"
+          items={TYPE_OPTIONS.map((option) => ({ id: option.value, label: option.label }))}
+          selectedKey={typeFilter}
+          onSelectionChange={setTypeFilter}
+        />
         {!isPick && (
-          <select
-            value={visibilityFilter}
-            onChange={(event) => setVisibilityFilter(event.target.value)}
-            aria-label="Filter by visibility"
-            className="rounded-md border border-border bg-surface px-2 py-2 text-sm text-text"
-          >
-            <option value="">Public + private</option>
-            <option value="public">Public only</option>
-            <option value="private">Private only</option>
-          </select>
+          <Select
+            ariaLabel="Filter by visibility"
+            items={[
+              { id: "", label: "Public + private" },
+              { id: "public", label: "Public only" },
+              { id: "private", label: "Private only" },
+            ]}
+            selectedKey={visibilityFilter}
+            onSelectionChange={setVisibilityFilter}
+          />
         )}
         <div className="flex rounded-md border border-border" role="group" aria-label="View">
           <button
@@ -541,13 +535,9 @@ export default function FileExplorer({
           <div className="mb-2 flex items-center justify-between gap-2">
             <h3 className="text-sm font-semibold">Folders</h3>
             {!isPick && (
-              <button
-                type="button"
-                onClick={() => setShowNewFolder(true)}
-                className="rounded-md border border-border px-2 py-1 text-xs text-muted hover:bg-surface-hover"
-              >
+              <Button color="secondary" size="xs" onClick={() => setShowNewFolder(true)}>
                 + New folder
-              </button>
+              </Button>
             )}
           </div>
           {treeError !== null && (
@@ -608,33 +598,26 @@ export default function FileExplorer({
                 submitNewFolder();
               }}
             >
-              <label className="block text-xs text-muted">
-                New folder{currentFolderName ? ` in "${currentFolderName}"` : ""}:
-                <input
-                  type="text"
-                  value={newFolderName}
-                  onChange={(event) => setNewFolderName(event.target.value)}
-                  placeholder="Folder name"
-                  maxLength={128}
-                  autoFocus
-                  className="mt-1 w-full rounded-md border border-border bg-surface px-2 py-1 text-sm text-text"
-                />
-              </label>
+              <Input
+                label={`New folder${currentFolderName ? ` in "${currentFolderName}"` : ""}:`}
+                value={newFolderName}
+                onChange={setNewFolderName}
+                placeholder="Folder name"
+                maxLength={128}
+                autoFocus
+              />
               <div className="flex gap-2">
-                <button
-                  type="submit"
-                  disabled={busy || newFolderName.trim() === ""}
-                  className="rounded-md bg-accent px-3 py-1 text-xs text-accent-contrast disabled:opacity-50"
+                <Button
+                  color="primary"
+                  size="xs"
+                  isDisabled={busy || newFolderName.trim() === ""}
+                  onClick={submitNewFolder}
                 >
                   Create
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowNewFolder(false)}
-                  className="rounded-md border border-border px-3 py-1 text-xs text-muted"
-                >
+                </Button>
+                <Button color="secondary" size="xs" onClick={() => setShowNewFolder(false)}>
                   Cancel
-                </button>
+                </Button>
               </div>
             </form>
           )}
@@ -715,47 +698,43 @@ export default function FileExplorer({
           {/* Pagination. */}
           {totalPages > 1 && (
             <div className="mt-3 flex items-center gap-3 text-sm">
-              <button
-                type="button"
-                disabled={page <= 1}
+              <Button
+                color="secondary"
+                size="sm"
+                isDisabled={page <= 1}
                 onClick={() => setPage((value) => Math.max(1, value - 1))}
-                className="rounded-md border border-border px-3 py-1 text-muted disabled:opacity-50"
               >
                 ← Previous
-              </button>
+              </Button>
               <span className="text-muted">
                 Page {page} of {totalPages}
               </span>
-              <button
-                type="button"
-                disabled={page >= totalPages}
+              <Button
+                color="secondary"
+                size="sm"
+                isDisabled={page >= totalPages}
                 onClick={() => setPage((value) => Math.min(totalPages, value + 1))}
-                className="rounded-md border border-border px-3 py-1 text-muted disabled:opacity-50"
               >
                 Next →
-              </button>
+              </Button>
             </div>
           )}
 
           {/* Pick-mode attach bar. */}
           {isPick && (
             <div className="mt-4 flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                disabled={selected.size === 0}
+              <Button
+                color="primary"
+                size="sm"
+                isDisabled={selected.size === 0}
                 onClick={attachSelected}
-                className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-contrast disabled:opacity-50"
               >
                 Attach selected ({selected.size})
-              </button>
+              </Button>
               {onClose !== undefined && (
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="rounded-md border border-border px-4 py-2 text-sm text-muted"
-                >
+                <Button color="secondary" size="sm" onClick={onClose}>
                   Cancel
-                </button>
+                </Button>
               )}
             </div>
           )}
@@ -791,19 +770,20 @@ export default function FileExplorer({
               Files start {uploadVisibility}. A public file appears in the
               picker only when its virus scan is clean.
             </p>
-            <label className="mt-2 inline-flex items-center gap-2 text-xs text-muted">
+            <span className="mt-2 inline-flex items-center gap-2 text-xs text-muted">
               Upload as
-              <select
-                value={uploadVisibility}
-                onChange={(event) =>
-                  setUploadVisibility(event.target.value as "public" | "private")
+              <Select
+                ariaLabel="Upload as"
+                items={[
+                  { id: "private", label: "Private" },
+                  { id: "public", label: "Public" },
+                ]}
+                selectedKey={uploadVisibility}
+                onSelectionChange={(key) =>
+                  setUploadVisibility(key as "public" | "private")
                 }
-                className="rounded-md border border-border bg-surface px-2 py-1 text-sm text-text"
-              >
-                <option value="private">Private</option>
-                <option value="public">Public</option>
-              </select>
-            </label>
+              />
+            </span>
             <input
               ref={fileInputRef}
               type="file"
@@ -855,22 +835,18 @@ export default function FileExplorer({
                       {item.visibility}
                     </Badge>
                     {item.visibility === "private" && (
-                      <button
-                        type="button"
-                        disabled={busy}
+                      <Button
+                        color="primary"
+                        size="xs"
+                        isDisabled={busy}
                         onClick={() => flipUploaded(item)}
-                        className="rounded-md bg-accent px-2 py-1 text-xs text-accent-contrast disabled:opacity-50"
                       >
                         Make public
-                      </button>
+                      </Button>
                     )}
-                    <button
-                      type="button"
-                      onClick={() => void copyUrl(item)}
-                      className="rounded-md border border-border px-2 py-1 text-xs text-muted"
-                    >
+                    <Button color="secondary" size="xs" onClick={() => void copyUrl(item)}>
                       Copy URL
-                    </button>
+                    </Button>
                   </li>
                 ))}
               </ul>
@@ -888,7 +864,13 @@ export default function FileExplorer({
 
       {/* Rename dialog. */}
       {renameTarget !== null && (
-        <Dialog title={`Rename ${renameTarget.kind}`} onClose={() => setRenameTarget(null)}>
+        <Dialog
+          title={`Rename ${renameTarget.kind}`}
+          isOpen
+          onOpenChange={(open) => {
+            if (!open) setRenameTarget(null);
+          }}
+        >
           <form
             onSubmit={(event) => {
               event.preventDefault();
@@ -896,32 +878,25 @@ export default function FileExplorer({
             }}
             className="space-y-3"
           >
-            <label className="block text-sm text-muted">
-              New name
-              <input
-                type="text"
-                value={renameValue}
-                onChange={(event) => setRenameValue(event.target.value)}
-                maxLength={renameTarget.kind === "folder" ? 128 : 255}
-                autoFocus
-                className="mt-1 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text"
-              />
-            </label>
+            <Input
+              label="New name"
+              value={renameValue}
+              onChange={setRenameValue}
+              maxLength={renameTarget.kind === "folder" ? 128 : 255}
+              autoFocus
+            />
             <div className="flex gap-2">
-              <button
+              <Button
+                color="primary"
+                size="sm"
                 type="submit"
-                disabled={busy || renameValue.trim() === ""}
-                className="rounded-md bg-accent px-3 py-2 text-sm text-accent-contrast disabled:opacity-50"
+                isDisabled={busy || renameValue.trim() === ""}
               >
                 Rename
-              </button>
-              <button
-                type="button"
-                onClick={() => setRenameTarget(null)}
-                className="rounded-md border border-border px-3 py-2 text-sm text-muted"
-              >
+              </Button>
+              <Button color="secondary" size="sm" onClick={() => setRenameTarget(null)}>
                 Cancel
-              </button>
+              </Button>
             </div>
           </form>
         </Dialog>
@@ -929,7 +904,13 @@ export default function FileExplorer({
 
       {/* Move dialog. */}
       {moveTarget !== null && (
-        <Dialog title={`Move "${moveTarget.name}"`} onClose={() => setMoveTarget(null)}>
+        <Dialog
+          title={`Move "${moveTarget.name}"`}
+          isOpen
+          onOpenChange={(open) => {
+            if (!open) setMoveTarget(null);
+          }}
+        >
           <form
             onSubmit={(event) => {
               event.preventDefault();
@@ -937,41 +918,29 @@ export default function FileExplorer({
             }}
             className="space-y-3"
           >
-            <label className="block text-sm text-muted">
-              Destination folder
-              <select
-                value={moveDestination}
-                onChange={(event) => setMoveDestination(event.target.value)}
-                className="mt-1 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text"
-              >
-                <option value="">Library root</option>
-                {flatFolders
+            <Select
+              label="Destination folder"
+              items={[
+                { id: "", label: "Library root" },
+                ...flatFolders
                   .filter((folder) =>
                     moveTarget.kind === "folder" ? folder.id !== moveTarget.id : true,
                   )
-                  .map((folder) => (
-                    <option key={folder.id} value={folder.id}>
-                      {"— ".repeat(folder.depth)}
-                      {folder.name}
-                    </option>
-                  ))}
-              </select>
-            </label>
+                  .map((folder) => ({
+                    id: folder.id,
+                    label: `${"— ".repeat(folder.depth)}${folder.name}`,
+                  })),
+              ]}
+              selectedKey={moveDestination}
+              onSelectionChange={setMoveDestination}
+            />
             <div className="flex gap-2">
-              <button
-                type="submit"
-                disabled={busy}
-                className="rounded-md bg-accent px-3 py-2 text-sm text-accent-contrast disabled:opacity-50"
-              >
+              <Button color="primary" size="sm" type="submit" isDisabled={busy}>
                 Move
-              </button>
-              <button
-                type="button"
-                onClick={() => setMoveTarget(null)}
-                className="rounded-md border border-border px-3 py-2 text-sm text-muted"
-              >
+              </Button>
+              <Button color="secondary" size="sm" onClick={() => setMoveTarget(null)}>
                 Cancel
-              </button>
+              </Button>
             </div>
           </form>
         </Dialog>
@@ -982,7 +951,10 @@ export default function FileExplorer({
       {deleteTarget !== null && (
         <Dialog
           title={`Delete ${deleteTarget.kind}`}
-          onClose={() => setDeleteTarget(null)}
+          isOpen
+          onOpenChange={(open) => {
+            if (!open) setDeleteTarget(null);
+          }}
         >
           <p className="text-sm">
             Delete “{deleteTarget.name}” permanently?
@@ -991,52 +963,20 @@ export default function FileExplorer({
             {deleteTarget.kind === "document" && " All versions are deleted too."}
           </p>
           <div className="mt-4 flex gap-2">
-            <button
-              type="button"
-              disabled={busy}
+            <Button
+              color="destructive"
+              size="sm"
+              isDisabled={busy}
               onClick={submitDelete}
-              className="rounded-md bg-danger px-3 py-2 text-sm text-danger-contrast disabled:opacity-50"
             >
               Delete permanently
-            </button>
-            <button
-              type="button"
-              onClick={() => setDeleteTarget(null)}
-              className="rounded-md border border-border px-3 py-2 text-sm text-muted"
-            >
+            </Button>
+            <Button color="secondary" size="sm" onClick={() => setDeleteTarget(null)}>
               Cancel
-            </button>
+            </Button>
           </div>
         </Dialog>
       )}
-    </div>
-  );
-}
-
-function Dialog({
-  title,
-  onClose,
-  children,
-}: {
-  title: string;
-  onClose: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-label={title}
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-md rounded-lg border border-border bg-surface p-5 shadow-md"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <h2 className="mb-3 text-base font-semibold">{title}</h2>
-        {children}
-      </div>
     </div>
   );
 }
@@ -1160,58 +1100,40 @@ function itemActions(props: {
   const isClean = item.scan_status === "" || item.scan_status === "clean";
   return (
     <>
-      <button
-        type="button"
-        onClick={props.onCopy}
-        className="rounded-md border border-border px-2 py-1 text-xs text-muted hover:bg-surface-hover"
-      >
+      <Button color="secondary" size="xs" onClick={props.onCopy}>
         Copy URL
-      </button>
+      </Button>
       {/* Mark as public is the action authors need: a private file
         stays invisible in the picker until it is flipped public.
         The server enforces the scan gate, so an unclean file's
         flip fails honestly instead of silently succeeding. */}
-      <button
-        type="button"
-        disabled={busy || (!isPublic && !isClean)}
+      {/* The tooltip lives on a wrapper span: the theme Button has
+        no title prop, and a span still shows it while disabled. */}
+      <span
         title={
           !isPublic && !isClean
             ? `Cannot make public: scan status is ${item.scan_status}`
             : undefined
         }
-        onClick={props.onFlip}
-        className={`rounded-md px-2 py-1 text-xs ${
-          isPublic
-            ? "border border-border text-muted hover:bg-surface-hover"
-            : "bg-accent text-accent-contrast"
-        } disabled:opacity-50`}
       >
-        {isPublic ? "Make private" : "Make public"}
-      </button>
-      <button
-        type="button"
-        disabled={busy}
-        onClick={props.onRename}
-        className="rounded-md border border-border px-2 py-1 text-xs text-muted hover:bg-surface-hover disabled:opacity-50"
-      >
+        <Button
+          color={isPublic ? "secondary" : "primary"}
+          size="xs"
+          isDisabled={busy || (!isPublic && !isClean)}
+          onClick={props.onFlip}
+        >
+          {isPublic ? "Make private" : "Make public"}
+        </Button>
+      </span>
+      <Button color="secondary" size="xs" isDisabled={busy} onClick={props.onRename}>
         Rename
-      </button>
-      <button
-        type="button"
-        disabled={busy}
-        onClick={props.onMove}
-        className="rounded-md border border-border px-2 py-1 text-xs text-muted hover:bg-surface-hover disabled:opacity-50"
-      >
+      </Button>
+      <Button color="secondary" size="xs" isDisabled={busy} onClick={props.onMove}>
         Move
-      </button>
-      <button
-        type="button"
-        disabled={busy}
-        onClick={props.onDelete}
-        className="rounded-md border border-danger px-2 py-1 text-xs text-danger hover:bg-danger-soft disabled:opacity-50"
-      >
+      </Button>
+      <Button color="destructive" size="xs" isDisabled={busy} onClick={props.onDelete}>
         Delete
-      </button>
+      </Button>
     </>
   );
 }

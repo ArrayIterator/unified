@@ -7,6 +7,7 @@
 
 import { useEffect, useState } from "react";
 import { Link, NavLink, Route, Routes, useLocation } from "react-router-dom";
+import { Button, Toaster } from "@theme/components/controls";
 import { applyTheme, initialTheme, watchSystemTheme, type Theme } from "./theme";
 import { fetchEnabledPostTypes, itemsFromData, type PostTypeDefinition } from "./api";
 import { useLoad } from "./hooks";
@@ -184,26 +185,27 @@ export default function App() {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-15 shrink-0 items-center gap-3 border-b border-border bg-surface px-4">
-          <button
-            type="button"
+          <Button
+            color="tertiary"
+            size="sm"
             onClick={toggleSidebar}
-            className="rounded-md border border-border px-2 py-1 text-sm text-muted hover:bg-surface-hover"
-            aria-label={sidebarOpen || drawerOpen ? "Collapse sidebar" : "Expand sidebar"}
-            aria-expanded={sidebarOpen || drawerOpen}
+            ariaLabel={sidebarOpen || drawerOpen ? "Collapse sidebar" : "Expand sidebar"}
+            ariaExpanded={sidebarOpen || drawerOpen}
           >
             ☰
-          </button>
+          </Button>
           <h1 className="text-lg font-semibold">{titleForPath(location.pathname)}</h1>
-          <button
-            type="button"
+          <Button
+            color="tertiary"
+            size="sm"
             onClick={toggleTheme}
-            className="ml-auto rounded-md border border-border px-3 py-1 text-sm text-muted hover:bg-surface-hover"
-            aria-label={
+            ariaLabel={
               theme === "dark" ? "Switch to light theme" : "Switch to dark theme"
             }
+            className="ml-auto"
           >
             {theme === "dark" ? "☀ Light" : "☾ Dark"}
-          </button>
+          </Button>
         </header>
 
         <main className="flex-1 overflow-auto p-4 sm:p-6">
@@ -222,6 +224,7 @@ export default function App() {
           </div>
         </main>
       </div>
+      <Toaster />
     </div>
   );
 }

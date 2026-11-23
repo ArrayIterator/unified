@@ -11,7 +11,7 @@
 //     clean, enforced server-side).
 
 import FileExplorer from "../components/FileExplorer";
-import { Card } from "../components/ui";
+import { Card } from "@theme/components/ui";
 
 export default function MediaManager() {
   return (

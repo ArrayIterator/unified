@@ -15,7 +15,10 @@
 // registered module templates to the report. `set_active_theme`
 // refuses to activate a theme whose report is invalid.
 
-use crate::themes::engine::{MAX_TEMPLATE_SIZE, REQUIRED_TEMPLATES, ThemeManifest, validate_theme_id};
+use crate::themes::engine::{
+    KNOWN_THEME_REQUIREMENTS, MAX_TEMPLATE_SIZE, REQUIRED_TEMPLATES, ThemeManifest,
+    unknown_theme_requirements, validate_theme_asset_path, validate_theme_id,
+};
 use handlebars::Handlebars;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -32,6 +35,9 @@ const KNOWN_MANIFEST_KEYS: &[&str] = &[
     "directories",
     "templates",
     "template_files",
+    "require",
+    "framework",
+    "assets",
 ];
 
 /// One problem found while validating a theme.
@@ -229,6 +235,12 @@ pub fn report_for_sources(
 /// * `invalid-manifest-field` — the manifest has no (or an empty)
 ///   `name` or `version`.
 /// * `missing-layout` — `templates/layout.hbs` does not exist.
+/// * `invalid-requirement` — the manifest `require` list names a
+///   capability the engine does not know.
+/// * `invalid-asset-path` — a manifest `assets` entry is not a safe
+///   theme-relative `.js`/`.css` path.
+/// * `missing-asset` — a manifest-declared asset file does not exist
+///   under the theme's `assets/` directory.
 /// * `missing-template` — a manifest-declared (or required) template
 ///   file, or a `template_files` mapping target, does not exist.
 /// * `invalid-template-name` — a declared template name or a
@@ -433,6 +445,49 @@ fn finish_report(
             )
             .with_path("templates/layout.hbs"),
         );
+    }
+
+    // Declared requirements and assets (manifest `require` / `assets:`).
+    // An unknown capability is an error; a declared asset must be a
+    // safe theme-relative path to a file that exists under `assets/`.
+    if let Some(manifest) = manifest {
+        for unknown in unknown_theme_requirements(&manifest.require) {
+            report.add_error(
+                ThemeIssue::new(
+                    "invalid-requirement",
+                    format!(
+                        "Theme \"{id}\" requires unknown capability \"{unknown}\" (known: {})",
+                        KNOWN_THEME_REQUIREMENTS.join(", ")
+                    ),
+                )
+                .with_path("theme.yaml"),
+            );
+        }
+        for (kind, paths) in [("js", &manifest.assets.js), ("css", &manifest.assets.css)] {
+            for path in paths {
+                if let Some(message) = validate_theme_asset_path(path, kind) {
+                    report.add_error(
+                        ThemeIssue::new(
+                            "invalid-asset-path",
+                            format!("Theme \"{id}\": {message}"),
+                        )
+                        .with_path("theme.yaml"),
+                    );
+                    continue;
+                }
+                if !dir.join("assets").join(path).is_file() {
+                    report.add_error(
+                        ThemeIssue::new(
+                            "missing-asset",
+                            format!(
+                                "Theme \"{id}\" declares {kind} asset \"{path}\" but assets/{path} does not exist"
+                            ),
+                        )
+                        .with_path(format!("assets/{path}")),
+                    );
+                }
+            }
+        }
     }
 
     // Every declared template (plus the required set) must name a
@@ -945,6 +1000,78 @@ mod tests {
 
         engine.set_active_theme("good").unwrap();
         assert_eq!(engine.active_theme(), "good");
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn unknown_requirement_reports_invalid_requirement() {
+        let base = test_dir("unknown-requirement");
+        let manifest = "name: Test\nversion: 1.2.3\ndescription: Test theme\ntemplates:\n  - layout\n  - dashboard\n  - home\n  - error\nrequire:\n  - teleport\n";
+        let theme = write_theme(&base, "needy", Some(manifest), &valid_files());
+        let report = validate_theme_directory("needy", &theme, &[]);
+        assert!(!report.valid);
+        assert!(report.has_error("invalid-requirement"));
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn declared_assets_must_exist_and_be_safe() {
+        let base = test_dir("assets");
+        // Missing file.
+        let manifest = "name: Test\nversion: 1.2.3\ndescription: Test theme\ntemplates:\n  - layout\n  - dashboard\n  - home\n  - error\nassets:\n  css:\n    - untitled.css\n";
+        let theme = write_theme(&base, "noasset", Some(manifest), &valid_files());
+        let report = validate_theme_directory("noasset", &theme, &[]);
+        assert!(!report.valid);
+        assert!(report.has_error("missing-asset"));
+        // Traversal path.
+        let manifest = "name: Test\nversion: 1.2.3\ndescription: Test theme\ntemplates:\n  - layout\n  - dashboard\n  - home\n  - error\nassets:\n  css:\n    - ../evil.css\n";
+        let theme = write_theme(&base, "escape", Some(manifest), &valid_files());
+        let report = validate_theme_directory("escape", &theme, &[]);
+        assert!(!report.valid);
+        assert!(report.has_error("invalid-asset-path"));
+        // External URL.
+        let manifest = "name: Test\nversion: 1.2.3\ndescription: Test theme\ntemplates:\n  - layout\n  - dashboard\n  - home\n  - error\nassets:\n  js:\n    - https://example.com/evil.js\n";
+        let theme = write_theme(&base, "remote", Some(manifest), &valid_files());
+        let report = validate_theme_directory("remote", &theme, &[]);
+        assert!(!report.valid);
+        assert!(report.has_error("invalid-asset-path"));
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn valid_require_and_assets_pass_validation() {
+        let base = test_dir("valid-require-assets");
+        let manifest = "name: Test\nversion: 1.2.3\ndescription: Test theme\ntemplates:\n  - layout\n  - dashboard\n  - home\n  - error\nrequire:\n  - react\nframework: untitled\nassets:\n  css:\n    - untitled.css\n";
+        let mut files = valid_files();
+        files.push(("assets/untitled.css", "/* theme tokens */"));
+        let theme = write_theme(&base, "good", Some(manifest), &files);
+        let report = validate_theme_directory("good", &theme, &[]);
+        assert!(report.valid, "errors: {:?}", report.errors);
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn engine_set_active_theme_refuses_unsatisfied_requirement() {
+        let base = test_dir("engine-unsatisfied");
+        let manifest = "name: Test\nversion: 1.2.3\ndescription: Test theme\ntemplates:\n  - layout\n  - dashboard\n  - home\n  - error\nrequire:\n  - react\nframework: untitled\n";
+        write_theme(&base, "reacty", Some(manifest), &valid_files());
+        // No React dist configured: the requirement is unsatisfied.
+        let engine = ThemeEngine::new(base.clone());
+        let error = engine.set_active_theme("reacty").unwrap_err();
+        assert_eq!(error.code, 400);
+        assert!(
+            error.message.contains("requires \"react\""),
+            "message: {}",
+            error.message
+        );
+        assert_eq!(engine.active_theme(), "default");
+        // With the per-theme bundle built, activation succeeds.
+        let bundle = base.join("react-dist").join("reacty");
+        std::fs::create_dir_all(&bundle).expect("create bundle dir");
+        std::fs::write(bundle.join("index.html"), "<html></html>").expect("write bundle");
+        let engine = ThemeEngine::new(base.clone()).with_react_dist_dir(base.join("react-dist"));
+        engine.set_active_theme("reacty").unwrap();
+        assert_eq!(engine.active_theme(), "reacty");
         let _ = std::fs::remove_dir_all(&base);
     }
 }

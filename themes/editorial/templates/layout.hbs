@@ -12,6 +12,12 @@
   <link rel="stylesheet" href="{{this}}">
   {{/each}}
   {{/if}}
+  {{!-- Active theme's manifest-declared CSS (`assets:` in theme.yaml). --}}
+  {{#if theme_styles}}
+  {{#each theme_styles}}
+  <link rel="stylesheet" href="{{this}}">
+  {{/each}}
+  {{/if}}
 </head>
 <body>
   <a class="skip-link" href="#layout-content">Skip to content</a>
@@ -32,6 +38,12 @@
   <script src="{{asset_url "js/dashboard.js"}}" defer></script>
   {{#if scripts}}
   {{#each scripts}}
+  <script src="{{this}}" defer></script>
+  {{/each}}
+  {{/if}}
+  {{!-- Active theme's manifest-declared JS (`assets:` in theme.yaml). --}}
+  {{#if theme_scripts}}
+  {{#each theme_scripts}}
   <script src="{{this}}" defer></script>
   {{/each}}
   {{/if}}
