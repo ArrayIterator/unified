@@ -1,0 +1,85 @@
+{{!-- Media picker view (module:documents/picker).
+  The shared media picker over the documents store — never a
+  per-module upload silo. The list shows PUBLIC files only
+  (`GET /api/v1/documents/picker` filters `visibility = 'public'`
+  server-side); a private file is invisible here until a manager or
+  admin flips it public (`POST /api/v1/documents/{id}/flip`).
+  `assets/js/media-picker.ts` fills the list in, wires the search,
+  and handles uploads (`POST /api/v1/documents/upload`); it also
+  exposes `window.UnifiedMediaPicker.open({ onAttach })` so any edit
+  form (posts, pages, digital products, courses, ...) can open the
+  same picker as a dialog. On attach, the caller stores the picked
+  document's `/files/public/{key}` URL on the record's attachment
+  reference — the description lives with that reference, never on
+  the document row (documents metadata is a separate task). --}}
+<section class="admin-section section-panel" data-section="documents-picker" aria-labelledby="media-picker-heading">
+  <h1 id="media-picker-heading">{{#if title}}{{title}}{{else}}Media picker{{/if}}</h1>
+  <p class="page-intro">Public files from the shared media library. Private files stay hidden here until a manager or admin makes them public.</p>
+  <p>
+    <label>Search
+      <input type="search" data-picker-search placeholder="Search by name">
+    </label>
+  </p>
+  <div data-picker-list>
+    {{#if items}}
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">Preview</th>
+          <th scope="col">Name</th>
+          <th scope="col">Size</th>
+          <th scope="col"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each items}}
+        <tr>
+          <td>{{mime}}</td>
+          <td>{{name}}</td>
+          <td>{{size}}</td>
+          <td><button type="button" class="button" data-attach="{{document_id}}">Attach</button></td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+    {{#if pagination}}
+    <nav class="pagination" aria-label="Pagination">
+      {{#if pagination.has_prev}}
+      <a class="pagination-button" href="{{pagination.prev_url}}">Previous</a>
+      {{/if}}
+      <span class="pagination-info">Page {{pagination.page}} of {{pagination.total_pages}} ({{pagination.total}} total)</span>
+      {{#if pagination.has_next}}
+      <a class="pagination-button" href="{{pagination.next_url}}">Next</a>
+      {{/if}}
+    </nav>
+    {{/if}}
+    {{else}}
+    <p class="empty-state"><span class="empty-state-title">No public files yet.</span> Upload one below — it starts private and only appears here once it is public.</p>
+    {{/if}}
+  </div>
+  <nav data-picker-pager aria-label="Pagination"></nav>
+  <hr>
+  <h2>Upload new file</h2>
+  <p>
+    <label>File <input type="file" data-picker-file></label>
+  </p>
+  <p>
+    <label>Visibility
+      <select data-picker-visibility>
+        <option value="private">Private</option>
+        <option value="public">Public</option>
+      </select>
+    </label>
+    <span>Public only takes effect when the virus scan is clean.</span>
+  </p>
+  <p>
+    <button type="button" class="button" data-picker-upload>Upload</button>
+  </p>
+  <p data-picker-status role="status"></p>
+  {{!-- Edit forms open the same picker as a dialog instead of this
+    page: a button with `data-media-picker-open`,
+    `data-media-picker-target` (hidden input receiving the picked
+    document id) and `data-media-picker-url-target` (input receiving
+    the picked /files/ URL). --}}
+  <p><button type="button" class="button" data-media-picker-open data-media-picker-module="content">Open media picker</button></p>
+</section>
