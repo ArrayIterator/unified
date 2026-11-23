@@ -4,13 +4,15 @@
    One source of truth for the shared shell: every page ships only its
    <main> content plus <body data-page="..." data-layout="app|auth"> and
    this script renders the topbar, sidebar, footer and toast around it.
+   Layouts: "app" (topbar + sidebar + footer, signed-in shell),
+   "public" (topbar + footer, no sidebar — public pages such as the home
+   and tenant front pages), "auth" (centred, no sidebar).
 
    HOW TO ADD A PAGE (phase 2):
    1. Copy any existing page. Keep the <head> block verbatim (stylesheet,
       theme bootstrap snippet, sprite.js + this script at the end of body).
-   2. Set <body data-page="your-page" data-layout="app"> (or "auth" for
-      centred auth-style pages) and write only the <main class="main">
-      content.
+   2. Set <body data-page="your-page" data-layout="app"> (or "public" for a
+      public page with no sidebar, "auth" for centred auth-style pages)
    3. If the page needs top-level navigation, add one entry to NAV below
       and, when it is a section of its own, to SIDEBAR_NAV. Do not copy
       the header/sidebar markup into the page.
@@ -100,7 +102,7 @@
 
   function renderTopbar(page, layout) {
     var nav = "";
-    if (layout === "app") {
+    if (layout === "app" || layout === "public") {
       nav = '<nav class="topbar-nav" aria-label="Primary">' +
         NAV.map(function (item) {
           var active = page === item.page || (page === "module" && item.page === "modules");
