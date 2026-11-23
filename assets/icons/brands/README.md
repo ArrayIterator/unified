@@ -30,7 +30,7 @@ no stroke.
 | Cloudflare | `cloudflare` |
 | WhatsApp | `whatsapp` |
 | Telegram | `telegram` |
-| Google | `google` |
+| Google | `google` — see note below |
 | Apple | `apple` |
 | GitHub | `github` |
 | GitLab | `gitlab` |
@@ -38,6 +38,14 @@ no stroke.
 | X | `x` |
 | Zoom | `zoom` |
 | Bitbucket | `bitbucket` |
+
+> Google note (2026-11-23): the simple-icons `google` mark is a
+> single-path monochrome silhouette, which is wrong as a logo — the
+> real Google "G" is four colours. `brand-google.svg` is therefore
+> the official multi-colour G (blue #4285F4, green #34A853, yellow
+> #FBBC05, red #EA4335) from Wikimedia Commons, file
+> `Google "G" logo.svg`, 24x24. The other 10 marks are monochrome
+> by design and keep their single brand-colour fill.
 
 ## Lettermark fallbacks (3)
 
