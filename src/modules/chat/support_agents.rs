@@ -68,7 +68,7 @@ pub(crate) async fn register_agent(
 ) -> HttpResponse {
     let result: UnifiedResult<SupportAgent> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let actor = actor_id(&req)?;
         let body = body.into_inner();
         let now = Utc::now();
@@ -144,7 +144,7 @@ pub(crate) async fn update_agent(
 ) -> HttpResponse {
     let result: UnifiedResult<SupportAgent> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let actor = actor_id(&req)?;
         let user_id = path.into_inner();
         if actor != user_id {
@@ -186,7 +186,7 @@ pub(crate) async fn remove_agent(
 ) -> HttpResponse {
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let actor = actor_id(&req)?;
         let user_id = path.into_inner();
         if actor != user_id {

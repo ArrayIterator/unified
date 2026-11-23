@@ -129,7 +129,7 @@ pub(crate) async fn create_exam(
     let result: UnifiedResult<Exam> = (|| {
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_permission(&ctx, &caller.role, PERM_EXAMS_MANAGE)?;
         let settings = state.settings();
         let input = body.into_inner();
@@ -257,7 +257,7 @@ pub(crate) async fn update_exam(
     let result: UnifiedResult<Exam> = (|| {
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_permission(&ctx, &caller.role, PERM_EXAMS_MANAGE)?;
         let settings = state.settings();
         let input = body.into_inner();
@@ -360,7 +360,7 @@ pub(crate) async fn delete_exam(
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_permission(&ctx, &caller.role, PERM_EXAMS_MANAGE)?;
         let exam = require_exam_by_id_in_scope(&state, path.as_str(), &_scope)?;
         if state
@@ -401,7 +401,7 @@ pub(crate) fn change_exam_status(
         .get(exam_id)
         .map(|entry| entry.value().clone())
         .ok_or_else(|| UnifiedError::not_found("Exam not found"))?;
-    require_record_in_company_scope(&exam.company_id, scope)?;
+    require_record_writable_in_company_scope(&exam.company_id, scope)?;
     if !valid_exam_transition(&exam.status, target) {
         return Err(UnifiedError::conflict(format!(
             "Exam cannot move from {} to {target}",
@@ -447,7 +447,7 @@ pub(crate) async fn publish_exam(
     let result: UnifiedResult<Exam> = (|| {
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_permission(&ctx, &caller.role, PERM_EXAMS_MANAGE)?;
         change_exam_status(&state, &caller, path.as_str(), EXAM_PUBLISHED, EVT_EXAM_PUBLISHED, &_scope)
     })();
@@ -465,7 +465,7 @@ pub(crate) async fn archive_exam(
     let result: UnifiedResult<Exam> = (|| {
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_permission(&ctx, &caller.role, PERM_EXAMS_MANAGE)?;
         change_exam_status(&state, &caller, path.as_str(), EXAM_ARCHIVED, EVT_EXAM_ARCHIVED, &_scope)
     })();
@@ -483,7 +483,7 @@ pub(crate) async fn close_exam(
     let result: UnifiedResult<Exam> = (|| {
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_permission(&ctx, &caller.role, PERM_EXAMS_MANAGE)?;
         change_exam_status(&state, &caller, path.as_str(), EXAM_CLOSED, EVT_EXAM_CLOSED, &_scope)
     })();
@@ -501,7 +501,7 @@ pub(crate) async fn duplicate_exam(
     let result: UnifiedResult<Exam> = (|| {
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_permission(&ctx, &caller.role, PERM_EXAMS_MANAGE)?;
         let source = require_exam_by_id_in_scope(&state, path.as_str(), &_scope)?;
         let mut copy = source.clone();
@@ -617,7 +617,7 @@ pub(crate) async fn attach_exam_question(
     let result: UnifiedResult<ExamQuestion> = (|| {
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_permission(&ctx, &caller.role, PERM_EXAMS_MANAGE)?;
         let settings = state.settings();
         let input = body.into_inner();
@@ -693,7 +693,7 @@ pub(crate) async fn detach_exam_question(
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_permission(&ctx, &caller.role, PERM_EXAMS_MANAGE)?;
         let (exam_id, question_id) = path.into_inner();
         let exam = require_exam_by_id_in_scope(&state, &exam_id, &_scope)?;

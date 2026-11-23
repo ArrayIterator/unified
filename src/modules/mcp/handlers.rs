@@ -98,7 +98,7 @@ pub(crate) async fn create_server(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_MCP_MANAGE)?;
         let company_id = require_company_match_uuid(&scope, &body.company_id)?;
@@ -205,7 +205,7 @@ pub(crate) async fn update_server(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_MCP_MANAGE)?;
         let server = require_server_in_scope(&state, &id, &scope)?;
@@ -296,7 +296,7 @@ pub(crate) async fn delete_server(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_MCP_MANAGE)?;
         let server = require_server_in_scope(&state, &id, &scope)?;

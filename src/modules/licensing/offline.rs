@@ -112,6 +112,7 @@ pub(crate) async fn issue_offline_token(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
+        require_control_plane(&req)?;
         let caller = require_caller_capability(&ctx, &req, "licensing:manage")?;
         let id = id.into_inner();
         let license = load_license(&ctx, id)?
@@ -259,6 +260,7 @@ pub(crate) async fn list_offline_tokens(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
+        require_control_plane(&req)?;
         require_caller_capability(&ctx, &req, "licensing:view")?;
         let id = id.into_inner();
         if load_license(&ctx, id)?.is_none() {
@@ -285,6 +287,7 @@ pub(crate) async fn revoke_offline_token(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
+        require_control_plane(&req)?;
         let caller = require_caller_capability(&ctx, &req, "licensing:manage")?;
         let (license_id, token_id) = path.into_inner();
         let Some(mut record) = license_offline_tokens_store().get_mut(&token_id) else {

@@ -88,7 +88,7 @@ pub(crate) async fn create_escalation_rule(
         Ok(tenant) => tenant,
         Err(error) => return json::error_response(&error, false),
     };
-    let _scope = match caller_company(&_tenant, &req) {
+    let _scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return json::error_response(&error, false),
     };
@@ -190,7 +190,7 @@ pub(crate) async fn update_escalation_rule(
         Ok(tenant) => tenant,
         Err(error) => return json::error_response(&error, false),
     };
-    let _scope = match caller_company(&_tenant, &req) {
+    let _scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return json::error_response(&error, false),
     };
@@ -264,7 +264,7 @@ pub(crate) async fn delete_escalation_rule(
         Ok(tenant) => tenant,
         Err(error) => return json::error_response(&error, false),
     };
-    let _scope = match caller_company(&_tenant, &req) {
+    let _scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return json::error_response(&error, false),
     };

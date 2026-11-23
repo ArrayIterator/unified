@@ -63,7 +63,7 @@ pub(crate) async fn create_scheduled(
 ) -> HttpResponse {
     let result: UnifiedResult<ScheduledReport> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         analytics_authorize(&ctx, &req, PERM_ANALYTICS_MANAGE)?;
         let input = body.into_inner();
         let definition = state.definition(&input.definition_id)?;
@@ -123,7 +123,7 @@ pub(crate) async fn update_scheduled(
 ) -> HttpResponse {
     let result: UnifiedResult<ScheduledReport> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         analytics_authorize(&ctx, &req, PERM_ANALYTICS_MANAGE)?;
         let input = body.into_inner();
         let mut scheduled = state
@@ -166,7 +166,7 @@ pub(crate) async fn delete_scheduled(
 ) -> HttpResponse {
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         analytics_authorize(&ctx, &req, PERM_ANALYTICS_MANAGE)?;
         state
             .scheduled

@@ -110,7 +110,7 @@ pub(crate) async fn health_bucket(
         Ok(found) => found,
         Err(error) => return err_response(error, debug),
     };
-    let is_admin = is_storage_admin(&ctx, &found.role);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BUCKETS);
     let result: UnifiedResult<HealthCheck> = (|| async {
         let bucket = load_bucket(&state, &id)?;
         check_bucket_access(&bucket, _scope.as_deref(), is_admin)?;
@@ -149,7 +149,7 @@ pub(crate) async fn list_health(
     // Tenant scoping: a non-admin lists only checks for buckets
     // they may access; an admin lists all. Checks for deleted
     // buckets are hidden from non-admins.
-    let is_admin = is_storage_admin(&ctx, &found.role);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BUCKETS);
     items.retain(|check| match state.buckets.get(&check.bucket_id) {
         Some(bucket) => bucket_company_visible(&bucket.value().company_id, &_scope, is_admin),
         None => is_admin,
@@ -186,7 +186,7 @@ pub(crate) async fn list_bucket_health(
         Ok(found) => found,
         Err(error) => return err_response(error, debug),
     };
-    let is_admin = is_storage_admin(&ctx, &found.role);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BUCKETS);
     let bucket = match load_bucket(&state, &id) {
         Ok(bucket) => bucket,
         Err(error) => return err_response(error, debug),

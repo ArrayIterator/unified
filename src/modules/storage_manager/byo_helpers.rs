@@ -32,10 +32,13 @@ pub(crate) fn load_byo_connection(
         .ok_or_else(|| UnifiedError::not_found(format!("BYO connection not found: {id}")))
 }
 
-/// Load a BYO connection as one caller may see it. A non-admin
-/// caller who does not own the connection gets the same 404 as for
-/// a missing connection, so existence never leaks across owners
-/// (the per-user 404 pattern the todos module uses).
+/// Load a BYO connection as one caller may see it. The admin arm
+/// is platform-only (C3 task 315, decision (a)): the `is_admin`
+/// flag must come from `is_platform_admin`, never from the bare
+/// `manage_byo` capability — a non-admin caller who does not own
+/// the connection gets the same 404 as for a missing connection,
+/// so existence never leaks across owners (the per-user 404
+/// pattern the todos module uses).
 pub(crate) fn load_byo_connection_for(
     state: &StorageManagerState,
     raw_id: &str,

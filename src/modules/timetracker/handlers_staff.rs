@@ -73,7 +73,7 @@ pub(crate) async fn add_staff(
     let debug = ctx.is_debug();
     let result: UnifiedResult<StaffOverview> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_MANAGE_STAFF)?;
         let company_id = staff_company(&ctx, &req, &caller)?;
@@ -187,7 +187,7 @@ pub(crate) async fn update_staff(
     let debug = ctx.is_debug();
     let result: UnifiedResult<StaffOverview> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_MANAGE_STAFF)?;
         let company_id = staff_company(&ctx, &req, &caller)?;
@@ -277,7 +277,7 @@ pub(crate) async fn remove_staff(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_MANAGE_STAFF)?;
         let company_id = staff_company(&ctx, &req, &caller)?;
@@ -434,7 +434,7 @@ pub(crate) async fn create_invite(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_MANAGE_STAFF)?;
         let company_id = staff_company(&ctx, &req, &caller)?;
@@ -522,7 +522,7 @@ pub(crate) async fn revoke_invite(
     let debug = ctx.is_debug();
     let result: UnifiedResult<StaffInvite> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_MANAGE_STAFF)?;
         let company_id = staff_company(&ctx, &req, &caller)?;

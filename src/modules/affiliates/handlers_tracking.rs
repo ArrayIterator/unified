@@ -23,7 +23,7 @@ use uuid::Uuid;
 use super::constants::{MAX_METHOD_LEN, MAX_NAME_LEN, MAX_PRODUCT_ID_LEN, MAX_REASON_LEN, MAX_REFERRER_LEN, MAX_USER_AGENT_LEN, MAX_USER_ID_LEN, PERM_AFFILIATES_MANAGE, PERM_AFFILIATES_VIEW};
 use super::types::{Affiliate, AffiliateClick, AffiliateCommission, AffiliateConversion, AffiliatePayout, AffiliateStatus, AffiliatesState, CommissionStatus, CreateConversionRequest, MarkPaidRequest, PayoutStatus, RequestPayoutRequest, ReviewRequest, TrackClickRequest};
 use super::helpers::{
-    Caller, caller, caller_company, created, dashboard_for, err, fraud_flags_for_click, hash_ip,
+    Caller, caller, caller_company, require_company_for_write, created, dashboard_for, err, fraud_flags_for_click, hash_ip,
     load_affiliate_by_user, load_commission, load_link, load_link_by_code, load_payout,
     minor_to_major, ok, paginate, parse_uuid, record_conversion, require_affiliate_access,
     require_affiliate_commission_in_scope, require_affiliate_in_scope,
@@ -224,7 +224,7 @@ pub(crate) async fn create_conversion(
     let debug = ctx.is_debug();
     let result: UnifiedResult<AffiliateConversion> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_AFFILIATES_MANAGE)?;
@@ -375,7 +375,7 @@ pub(crate) async fn approve_commission(
     let debug = ctx.is_debug();
     let result: UnifiedResult<AffiliateCommission> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_AFFILIATES_MANAGE)?;
@@ -424,7 +424,7 @@ pub(crate) async fn void_commission(
     let debug = ctx.is_debug();
     let result: UnifiedResult<AffiliateCommission> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_AFFILIATES_MANAGE)?;
@@ -546,7 +546,7 @@ pub(crate) async fn request_payout(
     let debug = ctx.is_debug();
     let result: UnifiedResult<AffiliatePayout> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_AFFILIATES_VIEW)?;
@@ -721,7 +721,7 @@ pub(crate) async fn approve_payout(
     let debug = ctx.is_debug();
     let result: UnifiedResult<AffiliatePayout> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_AFFILIATES_MANAGE)?;
@@ -758,7 +758,7 @@ pub(crate) async fn mark_payout_paid(
     let debug = ctx.is_debug();
     let result: UnifiedResult<AffiliatePayout> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_AFFILIATES_MANAGE)?;
@@ -795,7 +795,7 @@ pub(crate) async fn reject_payout(
     let debug = ctx.is_debug();
     let result: UnifiedResult<AffiliatePayout> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_AFFILIATES_MANAGE)?;

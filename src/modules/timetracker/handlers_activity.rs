@@ -18,7 +18,7 @@ pub(crate) async fn report_activity(
     let debug = ctx.is_debug();
     let result: UnifiedResult<ActivitySample> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_WRITE)?;
         record_activity(&state, &caller.actor, body.into_inner())
@@ -70,7 +70,7 @@ pub(crate) async fn report_usage(
     let debug = ctx.is_debug();
     let result: UnifiedResult<AppUsageRecord> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_WRITE)?;
         record_usage(&state, &caller.actor, body.into_inner())
@@ -226,7 +226,7 @@ pub(crate) async fn delete_screenshot(
         Ok(tenant) => tenant,
         Err(error) => return json::error_response(&error, debug),
     };
-    let _scope = match caller_company(&_tenant, &req) {
+    let _scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return json::error_response(&error, debug),
     };
@@ -279,7 +279,7 @@ pub(crate) async fn purge_screenshots(
         Ok(tenant) => tenant,
         Err(error) => return json::error_response(&error, debug),
     };
-    let _scope = match caller_company(&_tenant, &req) {
+    let _scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return json::error_response(&error, debug),
     };

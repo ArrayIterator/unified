@@ -14,6 +14,7 @@ use std::sync::Arc;
 
 use super::caller::caller_from;
 use super::caller::require_permission;
+use super::caller::require_control_plane;
 use super::events::CAP_MANAGE;
 use super::events::EVENT_SETTINGS_UPDATED;
 use super::requests::ResolveQuery;
@@ -35,6 +36,7 @@ pub(crate) async fn resolve_debug(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
+        require_control_plane(&req)?;
         let caller = caller_from(&req)?;
         require_permission(&ctx, &caller.role, CAP_MANAGE)?;
         let host = normalize_host(&query.host);
@@ -54,6 +56,7 @@ pub(crate) async fn get_settings(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<SaasDomainsSettings> = (|| {
+        require_control_plane(&req)?;
         let caller = caller_from(&req)?;
         require_permission(&ctx, &caller.role, CAP_MANAGE)?;
         Ok(settings())
@@ -68,6 +71,7 @@ pub(crate) async fn update_settings(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<SaasDomainsSettings> = (|| {
+        require_control_plane(&req)?;
         let caller = caller_from(&req)?;
         require_permission(&ctx, &caller.role, CAP_MANAGE)?;
         let mut next = settings();

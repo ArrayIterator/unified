@@ -1,6 +1,11 @@
 //! email_providers - provider kinds.
 
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::{Arc, OnceLock};
+use unified_core::provider_registry::{
+    ProviderDefinition, leak_str, leak_str_slice, provider_registry,
+};
 use super::{events::*, credentials::*, store::*, http::*, registry::*, adapters::*, worker::*, hooks::*, handlers::*, module::*};
 
 
@@ -68,40 +73,22 @@ impl EmailProviderKind {
         ]
     }
 
+    /// Human-readable display name, from the provider registry.
     pub fn display_name(&self) -> &'static str {
-        match self {
-            Self::Mailchimp => "Mailchimp Transactional (Mandrill)",
-            Self::Brevo => "Brevo (Sendinblue)",
-            Self::SendGrid => "SendGrid",
-            Self::Mailgun => "Mailgun",
-            Self::Postmark => "Postmark",
-            Self::Ses => "Amazon SES",
-            Self::Resend => "Resend",
-            Self::SparkPost => "SparkPost",
-            Self::Smtp => "SMTP (via Mail Manager)",
-        }
+        attrs(self).display_name
     }
 
-    /// Hosts this provider's API is allowed to talk to. A request to
-    /// any other host is refused before it is sent.
+    /// Hosts this provider's API is allowed to talk to, from the
+    /// provider registry. A request to any other host is refused
+    /// before it is sent.
     pub fn allowed_hosts(&self) -> &'static [&'static str] {
-        match self {
-            Self::Mailchimp => &["mandrillapp.com"],
-            Self::Brevo => &["api.brevo.com"],
-            Self::SendGrid => &["api.sendgrid.com"],
-            Self::Mailgun => &["api.mailgun.net", "api.eu.mailgun.net"],
-            Self::Postmark => &["api.postmarkapp.com"],
-            Self::Ses => &[],
-            // SES endpoints are per-region (`email.<region>.amazonaws.com`);
-            // validated by `validate_ses_endpoint`.
-            Self::Resend => &["api.resend.com"],
-            Self::SparkPost => &["api.sparkpost.com", "api.eu.sparkpost.com"],
-            Self::Smtp => &[],
-        }
+        attrs(self).allowed_hosts
     }
 
+    /// Whether the API host is fixed (allow-listed) or user-supplied.
+    /// Exactly the providers with a non-empty host list.
     pub fn has_fixed_hosts(&self) -> bool {
-        !matches!(self, Self::Ses | Self::Smtp)
+        !self.allowed_hosts().is_empty()
     }
 
     /// Notes on sender-domain validation for the settings page.
@@ -125,7 +112,7 @@ impl EmailProviderKind {
     /// simulated accepted delivery (clearly flagged in the log and in
     /// the result) instead of calling the provider.
     pub fn has_native_sandbox(&self) -> bool {
-        matches!(self, Self::SendGrid | Self::Mailgun)
+        capabilities_for(*self).sandbox
     }
 
     /// Webhook signature support, stated honestly per provider.
@@ -142,8 +129,58 @@ impl EmailProviderKind {
             Self::Smtp => "SMTP has no webhooks; bounce and complaint handling is not available for this provider.",
         }
     }
+
+    /// The registry definition for this kind, if one is registered.
+    /// Every built-in kind has one; `None` only when the registry
+    /// was built without seeds (tests).
+    pub fn definition(&self) -> Option<Arc<ProviderDefinition>> {
+        provider_registry().get("email", self.as_str())
+    }
 }
 
+/// The enabled provider catalog, built-ins plus any provider an admin
+/// registered, sorted by id. New providers appear here with no code
+/// change; the enum-based `all()` lists built-ins only.
+pub fn catalog() -> Vec<Arc<ProviderDefinition>> {
+    provider_registry().list_family_enabled("email")
+}
+
+// ---------------------------------------------------------------------------
+// Registry-backed attributes (C12, task 269).
+// ---------------------------------------------------------------------------
+/// The `&'static` view of one provider's registry definition; see the
+/// same bridge in the payments module. Capabilities and settings
+/// fields are owned types and read the definition directly, so only
+/// the display name and host list need the leak cache.
+struct EmailAttrs {
+    display_name: &'static str,
+    allowed_hosts: &'static [&'static str],
+}
+
+fn attrs_from_definition(def: &ProviderDefinition) -> EmailAttrs {
+    EmailAttrs {
+        display_name: leak_str(&def.display_name),
+        allowed_hosts: leak_str_slice(&def.allowed_hosts),
+    }
+}
+
+static ATTRS: OnceLock<HashMap<EmailProviderKind, EmailAttrs>> = OnceLock::new();
+
+fn attrs(kind: &EmailProviderKind) -> &'static EmailAttrs {
+    let map = ATTRS.get_or_init(|| {
+        let mut out = HashMap::new();
+        for def in provider_registry().list_family("email") {
+            if let Some(parsed) = EmailProviderKind::from_str(&def.id) {
+                out.insert(parsed, attrs_from_definition(&def));
+            }
+        }
+        out
+    });
+    // Every enum variant has a seed definition; the expect documents
+    // that invariant (a registry built without seeds breaks it).
+    map.get(kind)
+        .expect("every EmailProviderKind has a registry definition")
+}
 
 /// What an adapter can do. Callers must check these flags before
 /// relying on a feature: an unsupported call fails with a 400 naming
@@ -159,80 +196,30 @@ pub struct EmailCapabilities {
 }
 
 
+/// Capabilities per kind, from the provider registry (C12, task
+/// 269). A missing definition reads as "supports nothing" (fail
+/// closed) instead of falling back to another provider.
 pub fn capabilities_for(kind: EmailProviderKind) -> EmailCapabilities {
-    match kind {
-        EmailProviderKind::Mailchimp => EmailCapabilities {
-            transactional: true,
-            bulk: true,
-            templates: true,
-            webhooks: true,
-            tracking: true,
-            sandbox: false,
-        },
-        EmailProviderKind::Brevo => EmailCapabilities {
-            transactional: true,
-            bulk: true,
-            templates: true,
-            webhooks: true,
-            tracking: true,
-            sandbox: false,
-        },
-        EmailProviderKind::SendGrid => EmailCapabilities {
-            transactional: true,
-            bulk: true,
-            templates: true,
-            webhooks: true,
-            tracking: true,
-            sandbox: true,
-        },
-        EmailProviderKind::Mailgun => EmailCapabilities {
-            transactional: true,
-            bulk: true,
-            templates: true,
-            webhooks: true,
-            tracking: true,
-            sandbox: true,
-        },
-        EmailProviderKind::Postmark => EmailCapabilities {
-            transactional: true,
-            bulk: false,
-            templates: true,
-            webhooks: true,
-            tracking: true,
-            sandbox: false,
-        },
-        EmailProviderKind::Ses => EmailCapabilities {
-            transactional: true,
-            bulk: true,
-            templates: false,
-            webhooks: true,
-            tracking: true,
-            sandbox: false,
-        },
-        EmailProviderKind::Resend => EmailCapabilities {
-            transactional: true,
-            bulk: true,
-            templates: false,
-            webhooks: true,
-            tracking: true,
-            sandbox: false,
-        },
-        EmailProviderKind::SparkPost => EmailCapabilities {
-            transactional: true,
-            bulk: true,
-            templates: true,
-            webhooks: true,
-            tracking: true,
-            sandbox: false,
-        },
-        EmailProviderKind::Smtp => EmailCapabilities {
-            transactional: true,
-            bulk: true,
-            templates: false,
-            webhooks: false,
-            tracking: false,
-            sandbox: false,
-        },
+    let def = match kind.definition() {
+        Some(def) => def,
+        None => {
+            return EmailCapabilities {
+                transactional: false,
+                bulk: false,
+                templates: false,
+                webhooks: false,
+                tracking: false,
+                sandbox: false,
+            };
+        }
+    };
+    EmailCapabilities {
+        transactional: def.capability("transactional"),
+        bulk: def.capability("bulk"),
+        templates: def.capability("templates"),
+        webhooks: def.capability("webhooks"),
+        tracking: def.capability("tracking"),
+        sandbox: def.capability("sandbox"),
     }
 }
 
@@ -262,133 +249,32 @@ pub struct SettingsFieldDef {
 }
 
 
+/// Settings-page field definitions per provider kind, from the
+/// provider registry (C12, task 269). The seed holds the full
+/// expanded lists, including the common sender / webhook / test-mode
+/// fields. A missing definition yields no fields.
 pub(crate) fn settings_fields(kind: EmailProviderKind) -> Vec<SettingsFieldDef> {
-    let field = |key: &str,
-                 label: &str,
-                 field_type: &str,
-                 required: bool,
-                 secret: bool,
-                 placeholder: &str,
-                 help: &str| {
-        SettingsFieldDef {
-            key: key.to_string(),
-            label: label.to_string(),
-            field_type: field_type.to_string(),
-            required,
-            secret,
-            placeholder: placeholder.to_string(),
-            help: help.to_string(),
-        }
+    let Some(def) = kind.definition() else {
+        return Vec::new();
     };
-    let sender_email = field(
-        "sender_email",
-        "Default sender email",
-        "email",
-        false,
-        false,
-        "news@example.com",
-        "From address used when a send does not supply its own. Must be verified with the provider.",
-    );
-    let sender_name = field(
-        "sender_name",
-        "Default sender name",
-        "text",
-        false,
-        false,
-        "Example News",
-        "Display name shown next to the sender email.",
-    );
-    let webhook_secret = field(
-        "webhook_secret",
-        "Webhook secret / signing key",
-        "password",
-        false,
-        true,
-        "",
-        "Secret used to verify incoming webhooks from this provider (see the webhook notes for the kind).",
-    );
-    let test_mode = field(
-        "test_mode",
-        "Test mode (sandbox)",
-        "boolean",
-        false,
-        false,
-        "",
-        "When on, mail is accepted by the provider sandbox where one exists, otherwise recorded as a simulated delivery and never sent.",
-    );
-    let mut fields = match kind {
-        EmailProviderKind::Mailchimp => vec![
-            field("api_key", "Mandrill API key", "password", true, true, "", "API key from the Mandrill dashboard (Settings > API Keys)."),
-            field("webhook_url", "Public webhook URL", "url", false, false, "https://example.com/api/v1/newsletter/webhooks/mailchimp", "Exact public URL of the webhook receiver; Mandrill signs webhooks with this URL."),
-        ],
-        EmailProviderKind::Brevo => vec![field(
-            "api_key",
-            "Brevo API key",
-            "password",
-            true,
-            true,
-            "",
-            "API key from Brevo (Settings > SMTP & API > API Keys), version 3.",
-        )],
-        EmailProviderKind::SendGrid => vec![field(
-            "api_key",
-            "SendGrid API key",
-            "password",
-            true,
-            true,
-            "",
-            "API key from SendGrid (Settings > API Keys) with Mail Send permission.",
-        )],
-        EmailProviderKind::Mailgun => vec![
-            field("api_key", "Mailgun API key", "password", true, true, "", "Private API key from Mailgun (Settings > API Keys)."),
-            field("domain", "Mailgun domain", "text", true, false, "mg.example.com", "Verified sending domain in Mailgun."),
-            field("region", "Region", "select", false, false, "us", "us (api.mailgun.net) or eu (api.eu.mailgun.net)."),
-        ],
-        EmailProviderKind::Postmark => vec![field(
-            "api_key",
-            "Postmark server token",
-            "password",
-            true,
-            true,
-            "",
-            "Server API token from Postmark (Servers > API Tokens).",
-        )],
-        EmailProviderKind::Ses => vec![
-            field("access_key_id", "AWS access key id", "text", true, false, "", "IAM access key with ses:SendEmail permission."),
-            field("secret_access_key", "AWS secret access key", "password", true, true, "", "IAM secret access key."),
-            field("region", "AWS region", "text", true, false, "us-east-1", "SES region, for example us-east-1 or eu-west-1."),
-        ],
-        EmailProviderKind::Resend => vec![field(
-            "api_key",
-            "Resend API key",
-            "password",
-            true,
-            true,
-            "",
-            "API key from Resend (API Keys).",
-        )],
-        EmailProviderKind::SparkPost => vec![
-            field("api_key", "SparkPost API key", "password", true, true, "", "API key from SparkPost (Account > API Keys) with Transmissions: Read/Write."),
-            field("region", "Region", "select", false, false, "us", "us (api.sparkpost.com) or eu (api.eu.sparkpost.com)."),
-        ],
-        EmailProviderKind::Smtp => vec![field(
-            "sender_email",
-            "Sender email override",
-            "email",
-            false,
-            false,
-            "news@example.com",
-            "Optional From override for the Mail Manager SMTP settings; empty means the SMTP settings apply.",
-        )],
-    };
-    if kind != EmailProviderKind::Smtp {
-        fields.push(sender_email);
-        fields.push(sender_name);
-    }
-    fields.push(webhook_secret);
-    fields.push(test_mode);
-    fields
+    def.credentials_shape
+        .iter()
+        .map(|shape| SettingsFieldDef {
+            key: shape.name.clone(),
+            label: shape.label.clone(),
+            field_type: shape.field_type.clone(),
+            required: shape.required,
+            secret: shape.secret,
+            placeholder: shape.placeholder.clone(),
+            help: if shape.help.is_empty() {
+                shape.description.clone()
+            } else {
+                shape.help.clone()
+            },
+        })
+        .collect()
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -414,5 +300,54 @@ mod tests {
         let ses = capabilities_for(EmailProviderKind::Ses);
         assert!(!ses.templates);
         assert!(ses.bulk);
+    }
+
+    #[test]
+    fn builtin_attributes_come_from_registry_data() {
+        assert_eq!(
+            EmailProviderKind::Mailchimp.display_name(),
+            "Mailchimp Transactional (Mandrill)"
+        );
+        assert_eq!(
+            EmailProviderKind::Mailgun.allowed_hosts(),
+            &["api.mailgun.net", "api.eu.mailgun.net"]
+        );
+        assert!(EmailProviderKind::SendGrid.has_fixed_hosts());
+        assert!(!EmailProviderKind::Ses.has_fixed_hosts());
+        assert!(!EmailProviderKind::Smtp.has_fixed_hosts());
+        assert!(EmailProviderKind::SendGrid.has_native_sandbox());
+        assert!(!EmailProviderKind::Ses.has_native_sandbox());
+        let fields = settings_fields(EmailProviderKind::Mailgun);
+        assert_eq!(fields[0].key, "api_key");
+        assert!(fields[0].required && fields[0].secret);
+        assert!(fields.iter().any(|field| field.key == "domain" && field.required));
+        assert!(fields.iter().any(|field| field.key == "sender_email"));
+        assert!(fields.iter().any(|field| field.key == "test_mode"));
+    }
+
+    #[test]
+    fn add_one_email_provider_without_code_change() {
+        // Register a brand-new provider through the registry only, then
+        // prove the catalog, the definition lookup, and every attribute
+        // resolve from that data. No enum variant exists for it and no
+        // match arm was added. (Building an adapter for it needs the
+        // string-keyed factory in `registry.rs`; the connection model
+        // still keys on the enum — see INTEGRATION_NOTES_C12.)
+        let mut def = unified_core::provider_registry::ProviderDefinition::new(
+            "email",
+            "acme_mail",
+            "Acme Mail",
+            "smtp",
+        );
+        def.allowed_hosts = vec!["api.acme.test".to_string()];
+        def.capabilities = serde_json::json!({"transactional": true, "bulk": true});
+        provider_registry().register(def).unwrap();
+        assert!(catalog().iter().any(|entry| entry.id == "acme_mail"));
+        let found = provider_registry().get("email", "acme_mail").unwrap();
+        assert_eq!(found.display_name, "Acme Mail");
+        assert!(found.capability("transactional"));
+        assert!(found.capability("bulk"));
+        assert!(!found.capability("templates"));
+        assert!(found.host_allowed("api.acme.test"));
     }
 }

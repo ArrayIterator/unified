@@ -218,7 +218,7 @@ pub(crate) async fn mark_submission_read(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_FORMS_MANAGE)?;
         let submission = load_submission(&state, &path.into_inner())?;
@@ -247,7 +247,7 @@ pub(crate) async fn mark_submission_spam(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_FORMS_MANAGE)?;
         let submission = load_submission(&state, &path.into_inner())?;
@@ -271,7 +271,7 @@ pub(crate) async fn remap_submission(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_FORMS_MANAGE)?;
         let mut submission = load_submission(&state, &path.into_inner())?;

@@ -116,7 +116,7 @@ pub(crate) async fn create_invoice_template(
 ) -> HttpResponse {
     let result: UnifiedResult<InvoiceTemplate> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_BILLING_TEMPLATE_MANAGE)?;
         let input = body.into_inner();
@@ -272,7 +272,7 @@ pub(crate) async fn update_invoice_template(
 ) -> HttpResponse {
     let result: UnifiedResult<InvoiceTemplate> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_BILLING_TEMPLATE_MANAGE)?;
         let id = path.into_inner();
@@ -281,7 +281,7 @@ pub(crate) async fn update_invoice_template(
             .get(&id)
             .map(|entry| entry.value().clone())
             .ok_or_else(|| UnifiedError::not_found("Invoice template not found"))?;
-        require_record_in_company_scope(&template.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&template.company_id, &_scope)?;
         // Archive the pre-edit shape first: the version row must
         // hold the template as it was before this update.
         archive_template_version(&state, &template, &caller.actor);
@@ -412,7 +412,7 @@ pub(crate) async fn delete_invoice_template(
 ) -> HttpResponse {
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_BILLING_TEMPLATE_MANAGE)?;
         let id = path.into_inner();
@@ -421,7 +421,7 @@ pub(crate) async fn delete_invoice_template(
             .get(&id)
             .map(|entry| entry.value().clone())
             .ok_or_else(|| UnifiedError::not_found("Invoice template not found"))?;
-        require_record_in_company_scope(&template.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&template.company_id, &_scope)?;
         if let Some(company) = &template.company_id {
             if let Some(default_id) = state.company_default_templates.get(company) {
                 if default_id.value().as_str() == id {
@@ -491,7 +491,7 @@ pub(crate) async fn restore_invoice_template_version(
 ) -> HttpResponse {
     let result: UnifiedResult<InvoiceTemplate> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_BILLING_TEMPLATE_MANAGE)?;
         let (id, version) = path.into_inner();
@@ -500,7 +500,7 @@ pub(crate) async fn restore_invoice_template_version(
             .get(&id)
             .map(|entry| entry.value().clone())
             .ok_or_else(|| UnifiedError::not_found("Invoice template not found"))?;
-        require_record_in_company_scope(&current.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&current.company_id, &_scope)?;
         let row = state
             .template_versions
             .iter()
@@ -550,7 +550,7 @@ pub(crate) async fn set_default_invoice_template(
 ) -> HttpResponse {
     let result: UnifiedResult<InvoiceTemplate> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_BILLING_TEMPLATE_MANAGE)?;
         let id = path.into_inner();
@@ -559,7 +559,7 @@ pub(crate) async fn set_default_invoice_template(
             .get(&id)
             .map(|entry| entry.value().clone())
             .ok_or_else(|| UnifiedError::not_found("Invoice template not found"))?;
-        require_record_in_company_scope(&template.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&template.company_id, &_scope)?;
         let company_id = body
             .get("company_id")
             .and_then(|value| value.as_str())

@@ -41,7 +41,7 @@ pub(crate) async fn register_for_event(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         let event = load_event(&state, &path.into_inner())?;
         require_record_in_company_scope(&event.company_id, &_scope)?;
@@ -359,7 +359,7 @@ pub(crate) async fn cancel_registration(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Registration> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         let registration = load_registration(&state, &path.into_inner())?;
         require_event_by_id_in_scope(&state, registration.event_id, &_scope)?;
@@ -392,7 +392,7 @@ pub(crate) async fn request_refund(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         let registration = load_registration(&state, &path.into_inner())?;
         require_event_by_id_in_scope(&state, registration.event_id, &_scope)?;
@@ -456,7 +456,7 @@ pub(crate) async fn check_in_registration(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         let raw_id = path.into_inner();
         let input = body.into_inner();

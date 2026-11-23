@@ -7,10 +7,11 @@ use crate::schema::*;
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use uuid::Uuid;
 
 // ---------------------------------------------------------------------------
-// Documents (migration 000065_documents).
+// Documents (migration 000065_documents; metadata columns 000124_documents_metadata).
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
@@ -33,6 +34,16 @@ pub struct Document {
     pub visibility: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    /// Display title; the application layer defaults it to the
+    /// uploaded file name (`name`) on upload.
+    pub title: String,
+    /// Alt text; the only image-specific metadata field.
+    pub alt_text: Option<String>,
+    pub caption: Option<String>,
+    pub description: Option<String>,
+    /// Caller-defined keys, merged by key at the application layer
+    /// (a JSON null removes a key); `notes` is the worked example.
+    pub custom_metadata: Value,
 }
 
 #[derive(Debug, Clone, Insertable, Deserialize)]
@@ -49,6 +60,11 @@ pub struct NewDocument {
     pub storage_key: String,
     pub scan_threat: Option<String>,
     pub visibility: String,
+    /// Display title; the caller supplies the uploaded file name
+    /// here (there is no useful database-side default for it).
+    /// The optional metadata columns keep their database defaults
+    /// (`NULL`, `'{}'::jsonb`) at insert time.
+    pub title: String,
 }
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
@@ -215,15 +231,20 @@ pub struct NewDocumentQuota {
 /// SHA-256 hash. Created when a chunked session completes (all parts
 /// received); the worker claims it atomically, hashes the stored
 /// object, and marks it `verified` (checksum stored on the document)
-/// or `failed` (mismatch). The runtime authority is the in-memory
-/// `FinalizeJob` in `src/modules/documents/`; this struct is the
-/// persistence target (see C11, task 271).
+/// or `failed` (mismatch). The runtime `FinalizeJob` in
+/// `src/modules/documents/` writes through to this table (see
+/// `finalize.rs`, C11 task 271); the in-memory map stays the
+/// runtime cache, the row is the restart-surviving record.
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = finalize_jobs)]
 pub struct FinalizeJob {
     pub id: Uuid,
     pub session_id: Uuid,
     pub document_id: Option<Uuid>,
+    /// C11 (migration 000126): tenant scope of the job, copied
+    /// from the upload session at creation. `None` for jobs
+    /// created before the column existed.
+    pub tenant_id: Option<Uuid>,
     pub status: String,
     pub attempts: i32,
     pub last_error: Option<String>,
@@ -238,4 +259,5 @@ pub struct NewFinalizeJob {
     pub id: Uuid,
     pub session_id: Uuid,
     pub document_id: Option<Uuid>,
+    pub tenant_id: Option<Uuid>,
 }

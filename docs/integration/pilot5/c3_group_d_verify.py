@@ -16,7 +16,9 @@ For each module, per routed handler (same routed-set rule as
     "every write must resolve a company" rule would 403 legitimate
     tenant writes whose tenant context / verified caller carries no
     company. The template's GET-vs-mutation kind split therefore
-    does not apply here.
+    does not apply here. This is task 315 carve-out 3 (tenant-gate-
+    only until C11 lands, 2026-11-23); the C.3 rename briefly
+    applied the strict gate here and was reverted.
   - delegation: sign `cancel_envelope` / `void_envelope` delegate to
     the shared `transition_terminal` helper, which gates first; the
     verifier checks the delegate's body for those two handlers.

@@ -1,6 +1,6 @@
 # C3 scope-rule unification — decision brief (task 320)
 
-Status: DRAFT — awaiting the user's pick. Do not implement until the user chooses.
+Status: ADOPTED 2026-11-23 — rule A as canonical. Implemented in the tree; see "Implementation (2026-11-23)" below and the guard map section "Tasks 315 + 320 outcomes".
 
 ## The two rules in the tree (both fail-closed; they differ only on global/legacy-row visibility)
 
@@ -50,3 +50,32 @@ Status: DRAFT — awaiting the user's pick. Do not implement until the user choo
 - Write-strictness harmonization (task 315) — 320 is the READ rule only.
 - Record-level `tenant_id` stamping for gate-only records (C11 / task 271).
 - `inbox.tenant_visible` (product decision, open since task 312).
+
+## Implementation (2026-11-23)
+
+- **Read helpers flipped to rule A:** 34 files — every
+  `in_company_scope` definition (all shapes: canonical
+  `Option<String>`, `Option<Uuid>` variants, `&str` records
+  with empty=global for okrs/bi) now returns true for a
+  NULL-company record under any resolved scope. Doc wording
+  updated; unit-test assertions flipped to positive (30 files).
+  Skipped: documents (whole directory — documents worker owns
+  it), software/mcp/web3/library (already rule A),
+  tax/timetracker/presets-uuid/portals-str (no global rows).
+- **Read leak fixed:** risk `handlers_risks.rs:413` was misusing
+  the write helper `require_company_match_for` as a read filter
+  and, via an `.is_none_or(...)` predicate, showed ALL risks to
+  an unresolved caller with no filter. Now uses
+  `CallerScope::from_company(scope).scoped_read_company(...)`
+  + `in_company_scope` as the list predicate.
+- **Write side untouched by 320** (that is task 315's job): the
+  strict writable checks and the `require_company_for_write`
+  gate are the write enforcement; rule A changes reads only.
+- **Docs:** `CallerScope` in `crates/unified-core/src/tenancy.rs`
+  carries an "Adopted rules (C3 tasks 315/320, 2026-11-23)"
+  section; `require_company_scope` is documented as the shared
+  write guard.
+- **Verifiers:** the pilot group verifiers were updated for the
+  new rules and re-run with the documented exclusions — 135
+  runs, all exit 0 (logs
+  `~/workspace/unified-check/c3-verify-20261123/`).

@@ -1,6 +1,6 @@
 # C3 task 315 — ControlPlaneGuard + write-strictness harmonization: decision brief
 
-Status: DRAFT — awaiting the user's pick. Do not implement until the user chooses.
+Status: ADOPTED 2026-11-23 — option (c) strict by default + named carve-outs, and platform decision (a) explicit audited platform scope. Implemented in the tree; see "Implementation (2026-11-23)" below and the guard map section "Tasks 315 + 320 outcomes".
 
 ## What 315 covers (three linked decisions)
 
@@ -74,3 +74,56 @@ visible instead of accidental.
 - Record-level `tenant_id` stamping (C11 / task 271).
 - `inbox.tenant_visible` (product decision, open since task 312).
 - Store `digital_caller` raw-header reads (task-317 follow-up).
+
+## Implementation (2026-11-23)
+
+- **C.1 match fix:** `require_company_match_for` family now
+  403s `(None, None)` ("A write requires a resolved company
+  scope"); same for `require_company_change` /
+  `require_company_change_uuid` (explicit clear by a resolved
+  caller kept).
+- **C.2 writable record checks:**
+  `require_record_writable_in_company_scope` (42 files +
+  delivery_notes' `require_note_writable_in_company_scope`),
+  403 on cross-company AND on global records; 151
+  direct mutation-handler call sites switched (the (a) pattern:
+  handler mutates the checked record itself or creates a record
+  stamped with the caller's company). (b)-pattern handlers
+  (load a parent for visibility, write a child) keep the parent
+  load on the read rule.
+- **C.3 strict gate:** `require_company_for_write(tenant, req)`
+  next to each module's `caller_company` def (56 modules); 977
+  call sites renamed in routed mutation handlers, except the
+  carve-out lists. The gate was briefly applied to the 20
+  carve-out-3 modules and then reverted module-wide.
+- **C.4 mutation-only helpers flipped:** `transition_course`,
+  `transition_event`, `change_exam_status`, `load_editable_sale`,
+  `set_digital_product_status`, `move_digital_payout`,
+  `require_instance_in_scope`, `require_task_risk_in_scope`,
+  `require_grade_in_scope`.
+- **C.5 control plane:** `ControlPlaneGuard`
+  (`crates/unified-core/src/tenancy.rs:340`) + manual mirror
+  `require_control_plane`; guarded: tenants (14), saas_domains
+  (7), licensing (29); saas_packages already adopted (8).
+  Pilot-2 residual fixed: storage_manager admin arms now use
+  `is_platform_admin` (capability AND no resolved tenant
+  context); `is_storage_admin` removed; 46 derivations
+  switched.
+- **Carve-out registry:** in the guard map ("Tasks 315 + 320
+  outcomes"): (1) self-service writes, (2) platform-scope
+  writes, (3) the 20 tenant-gate-only modules, (4) the
+  billing/delivery_notes/exams settings/scan/print lists,
+  (5) (b)-pattern parent loads, (6) pre-315 strict idioms.
+- **Verifiers:** all 11 pilot group verifiers updated (strict315
+  kind for billing / delivery_notes / exams; writable markers
+  elsewhere) and re-run with the documented exclusions — 135
+  runs, all exit 0 (logs
+  `~/workspace/unified-check/c3-verify-20261123/`).
+  `c3_guard.py` / `c3_repair_order.py` are now method-aware.
+- **Residuals:** documents module skipped (follow-up); shared
+  loaders left on the read rule (risk, exams); storage_manager
+  create paths need a ControlPlaneGuard-based platform arm (8
+  sites); 42 handler tests flagged by a static survey (fix list
+  in the guard map); the root bin was never `cargo check`ed
+  after the switches (OOM wall) — the coordinator must check it
+  before pushing.

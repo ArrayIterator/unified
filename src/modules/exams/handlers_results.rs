@@ -164,7 +164,7 @@ pub(crate) async fn publish_exam_results(
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_permission(&ctx, &caller.role, PERM_EXAMS_MANAGE)?;
         let exam = require_exam_by_id_in_scope(&state, path.as_str(), &_scope)?;
         let mut published = 0usize;
@@ -240,7 +240,7 @@ pub(crate) async fn request_result_certificate(
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_permission(&ctx, &caller.role, PERM_EXAMS_VIEW)?;
         let result = require_result_in_scope(&state, path.as_str(), &_scope)?;
         result_visible(&state, &ctx, &caller, &result)?;

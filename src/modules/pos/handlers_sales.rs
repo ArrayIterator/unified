@@ -90,7 +90,7 @@ pub(crate) async fn create_sale(
     let debug = ctx.is_debug();
     let result: UnifiedResult<PosSale> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_POS_SELL)?;
@@ -243,7 +243,7 @@ pub(crate) fn load_editable_sale(
     scope: &Option<String>,
 ) -> UnifiedResult<PosSale> {
     let sale = load_sale(state, id)?;
-    require_record_in_company_scope(&sale.company_id, scope)?;
+    require_record_writable_in_company_scope(&sale.company_id, scope)?;
     if !matches!(sale.status.as_str(), "draft" | "held") {
         return Err(UnifiedError::unprocessable(format!(
             "Sale {} cannot be edited (status: {})",
@@ -264,7 +264,7 @@ pub(crate) async fn update_sale(
     let debug = ctx.is_debug();
     let result: UnifiedResult<PosSale> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_POS_SELL)?;
@@ -326,7 +326,7 @@ pub(crate) async fn add_sale_item(
     let debug = ctx.is_debug();
     let result: UnifiedResult<PosSale> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_POS_SELL)?;
@@ -357,7 +357,7 @@ pub(crate) async fn update_sale_item(
     let debug = ctx.is_debug();
     let result: UnifiedResult<PosSale> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_POS_SELL)?;
@@ -430,7 +430,7 @@ pub(crate) async fn remove_sale_item(
     let debug = ctx.is_debug();
     let result: UnifiedResult<PosSale> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_POS_SELL)?;

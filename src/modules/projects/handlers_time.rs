@@ -87,7 +87,7 @@ pub(crate) async fn create_time_entry(
     let (viewer_id, viewer_role) = viewer_of(&req);
     let result: UnifiedResult<ProjectTimeEntry> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let project = state.get_project(path.as_str())?;
         require_project_access(
             &state,
@@ -212,7 +212,7 @@ pub(crate) async fn update_time_entry(
     let (viewer_id, viewer_role) = viewer_of(&req);
     let result: UnifiedResult<ProjectTimeEntry> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let (project_id, entry_id) = path.into_inner();
         let project = state.get_project(&project_id)?;
         require_project_access(
@@ -289,7 +289,7 @@ pub(crate) async fn delete_time_entry(
     let (viewer_id, viewer_role) = viewer_of(&req);
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let (project_id, entry_id) = path.into_inner();
         let project = state.get_project(&project_id)?;
         require_project_access(
@@ -342,7 +342,7 @@ pub(crate) async fn start_time_timer(
     let (viewer_id, viewer_role) = viewer_of(&req);
     let result: UnifiedResult<ProjectTimeEntry> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let project = state.get_project(path.as_str())?;
         require_project_access(
             &state,
@@ -423,7 +423,7 @@ pub(crate) async fn stop_time_timer(
     let (viewer_id, viewer_role) = viewer_of(&req);
     let result: UnifiedResult<ProjectTimeEntry> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let (project_id, entry_id) = path.into_inner();
         let project = state.get_project(&project_id)?;
         require_project_access(

@@ -196,7 +196,7 @@ pub(crate) async fn create_event(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Event> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_EVENTS_CREATE)?;
         let input = body.into_inner();
@@ -357,10 +357,10 @@ pub(crate) async fn update_event(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Event> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         let mut event = load_event(&state, &path.into_inner())?;
-        require_record_in_company_scope(&event.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&event.company_id, &_scope)?;
         can_manage_event(&ctx, &caller.role, &event, &caller.actor)?;
         if !matches!(event.status, EventStatus::Draft | EventStatus::Published) {
             return Err(UnifiedError::conflict(format!(
@@ -509,10 +509,10 @@ pub(crate) async fn delete_event(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         let event = load_event(&state, &path.into_inner())?;
-        require_record_in_company_scope(&event.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&event.company_id, &_scope)?;
         can_manage_event(&ctx, &caller.role, &event, &caller.actor)?;
         if !matches!(event.status, EventStatus::Draft | EventStatus::Cancelled) {
             return Err(UnifiedError::conflict(format!(
@@ -592,10 +592,10 @@ pub(crate) fn transition_event(
     // single choke point for publish / cancel / complete, so the
     // gate lives here once instead of in each wrapper.
     let _tenant = require_tenant(req)?;
-    let _scope = caller_company(&_tenant, req)?;
+    let _scope = require_company_for_write(&_tenant, req)?;
     let caller = caller(req)?;
     let mut event = load_event(state, raw_id)?;
-    require_record_in_company_scope(&event.company_id, &_scope)?;
+    require_record_writable_in_company_scope(&event.company_id, &_scope)?;
     can_manage_event(ctx, &caller.role, &event, &caller.actor)?;
     if !from.contains(&event.status) {
         return Err(UnifiedError::conflict(format!(
@@ -730,7 +730,7 @@ pub(crate) async fn cancel_occurrence(
     let debug = ctx.is_debug();
     let result: UnifiedResult<EventOccurrence> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         let (event_id, occurrence_id) = path.into_inner();
         let event = load_event(&state, &event_id)?;
@@ -771,7 +771,7 @@ pub(crate) async fn override_occurrence(
     let debug = ctx.is_debug();
     let result: UnifiedResult<EventOccurrence> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         let (event_id, occurrence_id) = path.into_inner();
         let event = load_event(&state, &event_id)?;

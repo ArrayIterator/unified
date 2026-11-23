@@ -1,6 +1,11 @@
 //! payments - providers.
 
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::{Arc, OnceLock};
+use unified_core::provider_registry::{
+    ProviderDefinition, leak_str, leak_str_slice, provider_registry,
+};
 use super::{events::*, card_validation::*, card_settings::*, limits::*, types::*, reference_ids::*, credentials::*, records::*, adapter::*, dispatch::*, stripe::*, paypal::*, xendit::*, midtrans::*, hyperpay::*, twocheckout::*, mpgs::*, generic_card::*, custom_provider::*, wallets::*, state::*, requests::*, handlers_catalog::*, handlers_intents::*, handlers_charges::*, handlers_methods::*, handlers_subscriptions::*, handlers_checkout::*, handlers_webhooks::*, handlers_split_bills::*, hooks::*, module::*};
 
 
@@ -81,71 +86,130 @@ impl PaymentProviderKind {
         ]
     }
 
-    /// Human-readable display name.
+    /// Human-readable display name, from the provider registry.
     pub fn display_name(&self) -> &'static str {
-        match self {
-            Self::Xendit => "Xendit",
-            Self::HyperPay => "HyperPay",
-            Self::TwoCheckout => "2Checkout",
-            Self::Card => "Credit / Debit Card",
-            Self::Mastercard => "Mastercard Gateway",
-            Self::GooglePay => "Google Pay",
-            Self::ApplePay => "Apple Pay",
-            Self::PayPal => "PayPal",
-            Self::Stripe => "Stripe",
-            Self::Midtrans => "Midtrans",
-            Self::Custom => "Custom Provider",
-            Self::BankTransfer => "Bank Transfer (Manual Verification)",
-        }
+        attrs(self).display_name
     }
 
-    /// Hosts this provider's API is allowed to talk to. A request to any
-    /// other host is refused before it is sent. Empty means the host is
-    /// validated by the adapter instead (per-region hosts, or a
-    /// user-supplied endpoint).
+    /// Hosts this provider's API is allowed to talk to, from the
+    /// provider registry. A request to any other host is refused
+    /// before it is sent. Empty means the host is validated by the
+    /// adapter instead (per-region hosts, or a user-supplied
+    /// endpoint).
     pub fn allowed_hosts(&self) -> &'static [&'static str] {
-        match self {
-            Self::Xendit => &["api.xendit.co"],
-            Self::HyperPay => &["eu-test.oppwa.com", "eu-prod.oppwa.com"],
-            Self::TwoCheckout => &["api.2checkout.com"],
-            Self::Card => &[],
-            // User-supplied processor endpoint; validated as an https
-            // URL with a host and no embedded credentials.
-            Self::Mastercard => &[],
-            // Merchant gateway host (`<gateway>.mastercard.com`),
-            // validated by `MastercardAdapter::validate_endpoint`.
-            Self::GooglePay | Self::ApplePay => &[],
-            // No direct API: the delegate connection's hosts apply.
-            Self::PayPal => &["api-m.paypal.com", "api-m.sandbox.paypal.com"],
-            Self::Stripe => &["api.stripe.com"],
-            Self::Midtrans => &["api.midtrans.com", "api.sandbox.midtrans.com"],
-            Self::Custom => &[],
-            // User-supplied API base URL; validated as an https URL
-            // with a host and no embedded credentials.
-            Self::BankTransfer => &[],
-            // No provider API exists: verification is manual.
-        }
+        attrs(self).allowed_hosts
     }
 
     /// Whether the API host is fixed (allow-listed) or user-supplied.
+    /// Exactly the providers with a non-empty host list.
     pub fn has_fixed_hosts(&self) -> bool {
-        matches!(
-            self,
-            Self::Xendit | Self::HyperPay | Self::TwoCheckout | Self::PayPal | Self::Stripe | Self::Midtrans
-        )
+        attrs(self).has_fixed_hosts
     }
 
     /// Whether the provider needs a delegate gateway connection to
     /// perform charges (wallet adapters only).
     pub fn needs_delegate(&self) -> bool {
-        matches!(self, Self::GooglePay | Self::ApplePay)
+        attrs(self).needs_delegate
     }
 
     /// Whether the provider needs a user-supplied endpoint on the
     /// connection.
     pub fn needs_endpoint(&self) -> bool {
-        matches!(self, Self::Card | Self::Mastercard | Self::Custom)
+        attrs(self).needs_endpoint
     }
+
+    /// The registry definition for this kind, if one is registered.
+    /// Every built-in kind has one; `None` only when the registry
+    /// was built without seeds (tests).
+    pub fn definition(&self) -> Option<Arc<ProviderDefinition>> {
+        provider_registry().get("payments", self.as_str())
+    }
+}
+
+/// The enabled provider catalog, built-ins plus any provider an admin
+/// registered, sorted by id. New providers appear here with no code
+/// change; the enum-based `all()` lists built-ins only.
+pub fn catalog() -> Vec<Arc<ProviderDefinition>> {
+    provider_registry().list_family_enabled("payments")
+}
+
+// ---------------------------------------------------------------------------
+// Registry-backed attributes (C12, task 269).
+// ---------------------------------------------------------------------------
+/// The `&'static` view of one provider's registry definition. The
+/// public methods above predate the registry and return `&'static`
+/// data, so the attributes are built once from registry data and the
+/// strings are leaked once (see `unified_core::provider_registry::
+/// leak_str`). New code reads the owned `ProviderDefinition`
+/// directly through `PaymentProviderKind::definition` / `catalog`
+/// instead of this cache.
+struct ProviderAttrs {
+    display_name: &'static str,
+    allowed_hosts: &'static [&'static str],
+    currencies: &'static [&'static str],
+    capabilities: PaymentCapabilities,
+    settings_fields: Vec<SettingField>,
+    needs_endpoint: bool,
+    needs_delegate: bool,
+    has_fixed_hosts: bool,
+}
+
+fn attrs_from_definition(def: &ProviderDefinition) -> ProviderAttrs {
+    let capabilities = PaymentCapabilities {
+        supports_authorize: def.capability("authorize"),
+        supports_capture: def.capability("capture"),
+        supports_charge: def.capability("charge"),
+        supports_refund: def.capability("refund"),
+        supports_void: def.capability("void"),
+        supports_subscriptions: def.capability("subscriptions"),
+        supports_payouts: def.capability("payouts"),
+        supports_3ds: def.capability("3ds"),
+        supports_webhooks: def.capability("webhooks"),
+        subscriptions_are_local_schedule: def.capability("subscriptions_are_local_schedule"),
+    };
+    let settings_fields = def
+        .credentials_shape
+        .iter()
+        .map(|shape| {
+            field(
+                leak_str(&shape.name),
+                leak_str(&shape.label),
+                leak_str(&shape.field_type),
+                shape.required,
+                shape.secret,
+                leak_str(&shape.applies_to),
+                leak_str(&shape.description),
+            )
+        })
+        .collect();
+    ProviderAttrs {
+        display_name: leak_str(&def.display_name),
+        allowed_hosts: leak_str_slice(&def.allowed_hosts),
+        currencies: leak_str_slice(&def.currencies),
+        capabilities,
+        settings_fields,
+        needs_endpoint: def.needs_endpoint,
+        needs_delegate: def.needs_delegate,
+        has_fixed_hosts: def.has_fixed_hosts(),
+    }
+}
+
+static ATTRS: OnceLock<HashMap<PaymentProviderKind, ProviderAttrs>> = OnceLock::new();
+
+fn attrs(kind: &PaymentProviderKind) -> &'static ProviderAttrs {
+    let map = ATTRS.get_or_init(|| {
+        let mut out = HashMap::new();
+        for def in provider_registry().list_family("payments") {
+            if let Some(parsed) = PaymentProviderKind::from_str(&def.id) {
+                out.insert(parsed, attrs_from_definition(&def));
+            }
+        }
+        out
+    });
+    // Every enum variant has a seed definition; the expect documents
+    // that invariant (a registry built without seeds breaks it).
+    map.get(kind)
+        .expect("every PaymentProviderKind has a registry definition")
 }
 
 
@@ -170,185 +234,24 @@ pub struct PaymentCapabilities {
 
 
 /// Capabilities per kind (single source of truth for the catalog, the
-/// read views, and the operation guards). The `subscriptions_are_local
-/// _schedule` flag marks providers where the subscription record lives
-/// in this module and each period is a tokenized charge, because the
-/// provider exposes no subscription object to this adapter.
+/// read views, and the operation guards). From the provider registry
+/// (C12, task 269); the `subscriptions_are_local_schedule` flag marks
+/// providers where the subscription record lives in this module and
+/// each period is a tokenized charge, because the provider exposes no
+/// subscription object to this adapter.
 pub fn capabilities_for(kind: PaymentProviderKind) -> PaymentCapabilities {
-    match kind {
-        PaymentProviderKind::Xendit => PaymentCapabilities {
-            supports_authorize: true,
-            supports_capture: true,
-            supports_charge: true,
-            supports_refund: true,
-            supports_void: false,
-            supports_subscriptions: true,
-            supports_payouts: true,
-            supports_3ds: true,
-            supports_webhooks: true,
-            subscriptions_are_local_schedule: true,
-        },
-        PaymentProviderKind::HyperPay => PaymentCapabilities {
-            supports_authorize: true,
-            supports_capture: true,
-            supports_charge: true,
-            supports_refund: true,
-            supports_void: true,
-            supports_subscriptions: true,
-            supports_payouts: false,
-            supports_3ds: true,
-            supports_webhooks: true,
-            subscriptions_are_local_schedule: true,
-        },
-        PaymentProviderKind::TwoCheckout => PaymentCapabilities {
-            supports_authorize: false,
-            supports_capture: false,
-            supports_charge: true,
-            supports_refund: true,
-            supports_void: false,
-            supports_subscriptions: true,
-            supports_payouts: false,
-            supports_3ds: true,
-            supports_webhooks: true,
-            subscriptions_are_local_schedule: true,
-        },
-        PaymentProviderKind::Card => PaymentCapabilities {
-            supports_authorize: true,
-            supports_capture: true,
-            supports_charge: true,
-            supports_refund: true,
-            supports_void: true,
-            supports_subscriptions: true,
-            supports_payouts: false,
-            supports_3ds: true,
-            supports_webhooks: true,
-            subscriptions_are_local_schedule: true,
-        },
-        PaymentProviderKind::Mastercard => PaymentCapabilities {
-            supports_authorize: true,
-            supports_capture: true,
-            supports_charge: true,
-            supports_refund: true,
-            supports_void: true,
-            supports_subscriptions: true,
-            supports_payouts: false,
-            supports_3ds: true,
-            supports_webhooks: true,
-            subscriptions_are_local_schedule: true,
-        },
-        PaymentProviderKind::GooglePay | PaymentProviderKind::ApplePay => PaymentCapabilities {
-            // The wallet forwards its token to the delegate gateway;
-            // the effective capabilities are the delegate's. The flags
-            // below are the wallet's own envelope: charge and refund
-            // through the delegate, no native authorize / payout /
-            // subscription object of its own.
-            supports_authorize: false,
-            supports_capture: false,
-            supports_charge: true,
-            supports_refund: true,
-            supports_void: false,
-            supports_subscriptions: false,
-            supports_payouts: false,
-            supports_3ds: false,
-            supports_webhooks: false,
-            subscriptions_are_local_schedule: false,
-        },
-        PaymentProviderKind::PayPal => PaymentCapabilities {
-            supports_authorize: true,
-            supports_capture: true,
-            supports_charge: true,
-            supports_refund: true,
-            supports_void: true,
-            supports_subscriptions: true,
-            supports_payouts: true,
-            supports_3ds: true,
-            supports_webhooks: true,
-            subscriptions_are_local_schedule: false,
-        },
-        PaymentProviderKind::Stripe => PaymentCapabilities {
-            supports_authorize: true,
-            supports_capture: true,
-            supports_charge: true,
-            supports_refund: true,
-            supports_void: true,
-            supports_subscriptions: true,
-            supports_payouts: true,
-            supports_3ds: true,
-            supports_webhooks: true,
-            subscriptions_are_local_schedule: false,
-        },
-        PaymentProviderKind::Midtrans => PaymentCapabilities {
-            supports_authorize: true,
-            supports_capture: true,
-            supports_charge: true,
-            supports_refund: true,
-            supports_void: false,
-            supports_subscriptions: true,
-            supports_payouts: false,
-            supports_3ds: true,
-            supports_webhooks: true,
-            subscriptions_are_local_schedule: false,
-        },
-        PaymentProviderKind::Custom => PaymentCapabilities {
-            supports_authorize: true,
-            supports_capture: true,
-            supports_charge: true,
-            supports_refund: true,
-            supports_void: true,
-            supports_subscriptions: true,
-            supports_payouts: true,
-            supports_3ds: false,
-            supports_webhooks: true,
-            subscriptions_are_local_schedule: false,
-        },
-        // Bank transfer: there is no provider API. A charge or an
-        // authorization only opens a pending manual verification
-        // (handled by the bank-transfer module); the administrator
-        // approval is the capture and emits `payment.captured`, so
-        // this adapter reports no provider-side capture. Refund and
-        // void are manual operations: the adapter records the request
-        // and the administrator moves the money and keeps the audit
-        // note. No subscriptions, payouts, 3-D Secure, or webhooks.
-        PaymentProviderKind::BankTransfer => PaymentCapabilities {
-            supports_authorize: true,
-            supports_capture: false,
-            supports_charge: true,
-            supports_refund: true,
-            supports_void: true,
-            supports_subscriptions: false,
-            supports_payouts: false,
-            supports_3ds: false,
-            supports_webhooks: false,
-            subscriptions_are_local_schedule: false,
-        },
-    }
+    attrs(&kind).capabilities
 }
 
 
-/// Currencies the adapter can charge in. These are the currencies the
-/// provider documents for the API surface used here; a charge in any
-/// other currency is rejected before any provider call. Wallet kinds
-/// use the delegate connection's list at charge time; the catalog
-/// shows the common wallet list.
+/// Currencies the adapter can charge in, from the provider
+/// registry (C12, task 269). These are the currencies the provider
+/// documents for the API surface used here; a charge in any other
+/// currency is rejected before any provider call. Wallet kinds use
+/// the delegate connection's list at charge time; the catalog shows
+/// the common wallet list.
 pub fn currencies_for(kind: PaymentProviderKind) -> &'static [&'static str] {
-    match kind {
-        PaymentProviderKind::Xendit => &["IDR", "PHP", "THB", "VND", "MYR", "SGD", "USD"],
-        PaymentProviderKind::HyperPay => &["AED", "SAR", "USD", "EUR", "GBP", "EGP", "JOD", "KWD", "QAR", "BHD", "OMR"],
-        PaymentProviderKind::TwoCheckout => &["USD", "EUR", "GBP", "AUD", "CAD", "JPY", "CHF", "SEK", "NOK", "DKK", "PLN", "CZK", "HUF", "BRL", "MXN", "INR", "ZAR", "ILS"],
-        PaymentProviderKind::Card => &["USD", "EUR", "GBP", "IDR", "SGD", "MYR", "PHP", "THB", "AED", "SAR", "AUD", "CAD", "JPY", "CHF"],
-        PaymentProviderKind::Mastercard => &["USD", "EUR", "GBP", "AUD", "CAD", "JPY", "SGD", "HKD", "NZD", "CHF", "SEK", "NOK", "DKK", "AED", "SAR", "INR", "IDR", "MYR", "PHP", "THB", "ZAR", "BRL", "MXN"],
-        PaymentProviderKind::GooglePay | PaymentProviderKind::ApplePay => {
-            &["USD", "EUR", "GBP", "AUD", "CAD", "JPY", "SGD", "CHF"]
-        }
-        PaymentProviderKind::PayPal => &["USD", "EUR", "GBP", "AUD", "CAD", "JPY", "SGD", "HKD", "NZD", "CHF", "SEK", "NOK", "DKK", "PLN", "CZK", "HUF", "ILS", "MXN", "BRL", "ZAR", "KRW", "TWD", "THB", "IDR", "MYR", "PHP", "INR"],
-        PaymentProviderKind::Stripe => &["USD", "EUR", "GBP", "AUD", "CAD", "JPY", "SGD", "HKD", "NZD", "CHF", "SEK", "NOK", "DKK", "PLN", "CZK", "HUF", "ILS", "MXN", "BRL", "INR", "IDR", "MYR", "PHP", "THB", "VND", "ZAR", "KRW", "TWD", "AED"],
-        PaymentProviderKind::Midtrans => &["IDR", "SGD"],
-        PaymentProviderKind::Custom => &["USD", "EUR", "GBP", "IDR", "SGD"],
-        // Bank accounts are configured per currency by the operator;
-        // the adapter accepts the common settlement currencies and
-        // the bank-transfer module enforces the account's currency.
-        PaymentProviderKind::BankTransfer => &["USD", "EUR", "GBP", "IDR", "SGD", "MYR", "PHP", "THB", "AUD", "CAD", "JPY", "CHF", "AED", "SAR"],
-    }
+    attrs(&kind).currencies
 }
 
 
@@ -389,71 +292,91 @@ pub(crate) fn field(
 }
 
 
-/// Settings-page field definitions per provider kind.
+/// Settings-page field definitions per provider kind, from the
+/// provider registry (C12, task 269).
 pub fn settings_fields_for(kind: PaymentProviderKind) -> Vec<SettingField> {
-    match kind {
-        PaymentProviderKind::Xendit => vec![
-            field("api_key", "Secret key", "password", true, true, "both", "Xendit secret key (xnd_development_... in sandbox, xnd_production_... in live). Used as the Basic-auth username."),
-            field("webhook_secret", "Callback token", "password", true, true, "both", "Xendit callback token (X-Callback-Token). Must match the token configured in the Xendit dashboard."),
-            field("public_key", "Public key", "text", false, false, "both", "Xendit public key, only needed when tokenizing cards client-side."),
-        ],
-        PaymentProviderKind::HyperPay => vec![
-            field("access_token", "Access token", "password", true, true, "both", "HyperPay access token (Bearer). Sandbox and live tokens differ; switch mode to use the matching one."),
-            field("merchant_id", "Entity ID", "text", true, false, "both", "HyperPay entityId (the channel / entity identifier for checkouts)."),
-            field("webhook_secret", "Webhook secret", "password", false, true, "both", "Shared secret for webhook verification when the operator configures HyperPay notifications with one. When empty, webhooks are verified by re-fetching the payment status from HyperPay."),
-        ],
-        PaymentProviderKind::TwoCheckout => vec![
-            field("merchant_id", "Merchant code", "text", true, false, "both", "2Checkout merchant code."),
-            field("secret_word", "Secret word", "password", true, true, "both", "2Checkout secret word, used to sign REST API requests (HMAC-SHA256)."),
-            field("api_key", "API key", "password", false, true, "both", "Optional 2Checkout API key when the account uses key authentication instead of the secret word."),
-        ],
-        PaymentProviderKind::Card => vec![
-            field("api_key", "Processor API key", "password", true, true, "both", "API key for the card processor behind the endpoint. Sent as a Bearer token unless the processor expects an X-Api-Key header."),
-            field("webhook_secret", "Webhook secret", "password", false, true, "both", "Shared secret for HMAC-SHA256 webhook verification (X-Signature header)."),
-            field("merchant_id", "Merchant ID", "text", false, false, "both", "Merchant identifier sent to the processor when it requires one."),
-        ],
-        PaymentProviderKind::Mastercard => vec![
-            field("merchant_id", "Merchant ID", "text", true, false, "both", "Mastercard gateway merchant id (used as the Basic-auth username, prefixed with merchant.)."),
-            field("secret_key", "API password", "password", true, true, "both", "Mastercard gateway API password (Basic-auth password)."),
-            field("webhook_secret", "Webhook secret", "password", false, true, "both", "Shared secret for HMAC-SHA256 webhook verification (X-Webhook-Signature header)."),
-        ],
-        PaymentProviderKind::GooglePay => vec![
-            field("merchant_id", "Google Pay merchant ID", "text", false, false, "both", "Google Pay merchant id, for reference on the connection. Charges run through the delegate gateway below."),
-            field("delegate_connection_id", "Delegate gateway connection", "connection", true, false, "both", "Id of the gateway connection (Stripe, Xendit, Mastercard, ...) that performs the charge for a Google Pay token."),
-        ],
-        PaymentProviderKind::ApplePay => vec![
-            field("merchant_id", "Apple Pay merchant ID", "text", false, false, "both", "Apple Pay merchant id, for reference on the connection. Charges run through the delegate gateway below."),
-            field("delegate_connection_id", "Delegate gateway connection", "connection", true, false, "both", "Id of the gateway connection (Stripe, Xendit, Mastercard, ...) that performs the charge for an Apple Pay token."),
-        ],
-        PaymentProviderKind::PayPal => vec![
-            field("client_id", "Client ID", "text", true, false, "both", "PayPal REST app client id."),
-            field("client_secret", "Client secret", "password", true, true, "both", "PayPal REST app client secret. Used only for the OAuth2 token exchange; never returned."),
-            field("webhook_id", "Webhook ID", "text", true, false, "both", "PayPal webhook id (from the PayPal dashboard), required to verify webhook signatures server-side."),
-        ],
-        PaymentProviderKind::Stripe => vec![
-            field("secret_key", "Secret key", "password", true, true, "both", "Stripe secret key (sk_test_... in sandbox, sk_live_... in live)."),
-            field("public_key", "Publishable key", "text", false, false, "both", "Stripe publishable key (pk_test_... / pk_live_...), only needed for client-side tokenization."),
-            field("webhook_secret", "Webhook secret", "password", true, true, "both", "Stripe webhook signing secret (whsec_...), used to verify the Stripe-Signature header."),
-        ],
-        PaymentProviderKind::Midtrans => vec![
-            field("server_key", "Server key", "password", true, true, "both", "Midtrans server key (SB-Mid-server-... in sandbox, Mid-server-... in live). Used for Basic auth and webhook signature verification."),
-            field("client_key", "Client key", "text", false, false, "both", "Midtrans client key, only needed for client-side tokenization (Snap / Core API)."),
-            field("merchant_id", "Merchant ID", "text", false, false, "both", "Midtrans merchant id, for reference on the connection."),
-        ],
-        PaymentProviderKind::Custom => vec![
-            field("api_key", "API key", "password", false, true, "both", "API key sent according to the custom auth type (Bearer, header, or query)."),
-            field("secret_key", "Secret / signing key", "password", false, true, "both", "Secret used for HMAC-SHA256 request signing and webhook verification when the auth type is hmac_sha256."),
-            field("username", "Username", "text", false, false, "both", "Username for Basic auth when the auth type is basic."),
-            field("password", "Password", "password", false, true, "both", "Password for Basic auth when the auth type is basic."),
-            field("webhook_secret", "Webhook secret", "password", false, true, "both", "Shared secret for HMAC-SHA256 webhook verification when the auth type is hmac_sha256."),
-        ],
-        // Bank transfer has no API credentials and no endpoint. These
-        // fields document the verification knobs; the live values are
-        // the bank-transfer module settings (GET / PUT
-        // /api/v1/bank-transfer/settings).
-        PaymentProviderKind::BankTransfer => vec![
-            field("amount_tolerance_minor", "Amount tolerance (minor units)", "text", false, false, "both", "Maximum minor-unit difference accepted between the transferred amount and the order total before the proof is flagged as a mismatch."),
-            field("proof_expiry_days", "Proof expiry (days)", "text", false, false, "both", "Days after which an unsubmitted proof request expires."),
-        ],
+    attrs(&kind).settings_fields.clone()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use unified_core::provider_registry::{FAMILY_PAYMENTS, ProviderDefinition};
+
+    #[test]
+    fn builtin_attributes_come_from_registry_data() {
+        // Values that used to live in five parallel match tables.
+        assert_eq!(PaymentProviderKind::Stripe.display_name(), "Stripe");
+        assert_eq!(
+            PaymentProviderKind::Midtrans.allowed_hosts(),
+            &["api.midtrans.com", "api.sandbox.midtrans.com"]
+        );
+        assert_eq!(
+            currencies_for(PaymentProviderKind::Midtrans),
+            &["IDR", "SGD"]
+        );
+        let stripe = capabilities_for(PaymentProviderKind::Stripe);
+        assert!(stripe.supports_payouts);
+        assert!(!stripe.subscriptions_are_local_schedule);
+        let xendit = capabilities_for(PaymentProviderKind::Xendit);
+        assert!(!xendit.supports_void);
+        assert!(xendit.subscriptions_are_local_schedule);
+        let wallet = capabilities_for(PaymentProviderKind::GooglePay);
+        assert!(wallet.supports_charge);
+        assert!(!wallet.supports_subscriptions);
+        assert!(PaymentProviderKind::GooglePay.needs_delegate());
+        assert!(PaymentProviderKind::Card.needs_endpoint());
+        assert!(!PaymentProviderKind::Stripe.needs_endpoint());
+        assert!(PaymentProviderKind::Stripe.has_fixed_hosts());
+        assert!(!PaymentProviderKind::BankTransfer.has_fixed_hosts());
+        let fields = settings_fields_for(PaymentProviderKind::Stripe);
+        let secret = fields
+            .iter()
+            .find(|field| field.name == "secret_key")
+            .unwrap();
+        assert!(secret.required && secret.secret);
+        // Base URLs come from the same definitions.
+        let stripe_def = PaymentProviderKind::Stripe.definition().unwrap();
+        assert_eq!(stripe_def.base_url.as_deref(), Some("https://api.stripe.com"));
+        let paypal_def = PaymentProviderKind::PayPal.definition().unwrap();
+        assert_eq!(
+            paypal_def.effective_base_url(true),
+            Some("https://api-m.sandbox.paypal.com")
+        );
+    }
+
+    #[test]
+    fn add_one_payment_provider_without_code_change() {
+        // Register a brand-new provider through the registry only, then
+        // prove the catalog, the definition lookup, and every attribute
+        // resolve from that data. No enum variant exists for it and no
+        // match arm was added; it runs through the generic adapter
+        // (`adapter_kind` "custom").
+        let mut def = ProviderDefinition::new("payments", "acme_pay", "Acme Pay", "custom");
+        def.allowed_hosts = vec!["api.acme.test".to_string()];
+        def.capabilities = serde_json::json!({"charge": true, "refund": true});
+        def.currencies = vec!["USD".to_string(), "IDR".to_string()];
+        def.credentials_shape = vec![unified_core::provider_registry::CredentialFieldDef {
+            name: "api_key".to_string(),
+            label: "API key".to_string(),
+            field_type: "password".to_string(),
+            required: true,
+            secret: true,
+            ..Default::default()
+        }];
+        provider_registry().register(def).unwrap();
+        assert!(catalog().iter().any(|entry| entry.id == "acme_pay"));
+        let found = provider_registry()
+            .get(FAMILY_PAYMENTS, "acme_pay")
+            .unwrap();
+        assert_eq!(found.display_name, "Acme Pay");
+        assert_eq!(found.adapter_kind, "custom");
+        assert!(found.capability("charge"));
+        assert!(found.capability("refund"));
+        assert!(!found.capability("payouts"));
+        assert!(found.host_allowed("api.acme.test"));
+        assert!(!found.host_allowed("api.evil.test"));
+        assert_eq!(found.currencies, vec!["USD", "IDR"]);
+        assert!(found.credential_field("api_key").unwrap().required);
     }
 }

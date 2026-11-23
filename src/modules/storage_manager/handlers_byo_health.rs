@@ -36,7 +36,7 @@ pub(crate) async fn health_byo_connection(
         Ok(found) => found,
         Err(error) => return err_response(error, debug),
     };
-    let is_admin = check_capability(&ctx, &found.role, PERM_MANAGE_BYO);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BYO);
     let connection = match load_byo_connection_for(&state, &id, &found.actor, is_admin) {
         Ok(connection) => connection,
         Err(error) => return err_response(error, debug),
@@ -74,7 +74,7 @@ pub(crate) async fn list_byo_health(
         Ok(found) => found,
         Err(error) => return err_response(error, debug),
     };
-    let is_admin = check_capability(&ctx, &found.role, PERM_MANAGE_BYO);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BYO);
     let params = params.into_inner();
     let mut items: Vec<ByoHealthCheck> = state
         .byo_health_checks
@@ -122,7 +122,7 @@ pub(crate) async fn list_byo_connection_health(
         Ok(found) => found,
         Err(error) => return err_response(error, debug),
     };
-    let is_admin = check_capability(&ctx, &found.role, PERM_MANAGE_BYO);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BYO);
     let connection = match load_byo_connection_for(&state, &id, &found.actor, is_admin) {
         Ok(connection) => connection,
         Err(error) => return err_response(error, debug),
@@ -164,7 +164,7 @@ pub(crate) async fn run_byo_health(
         Ok(found) => found,
         Err(error) => return err_response(error, debug),
     };
-    let is_admin = check_capability(&ctx, &found.role, PERM_MANAGE_BYO);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BYO);
     let input = body.into_inner();
     // Tenant scoping for the enqueue: a single-connection enqueue
     // is checked against the owner-or-admin loader BEFORE the

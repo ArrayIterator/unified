@@ -12,6 +12,11 @@ For each module, per routed handler (same routed-set rule as
   - kind: GET handlers resolve `caller_company` (read gate);
     POST/PUT/PATCH/DELETE handlers resolve `require_company`
     (writes require a resolved company)
+
+Task 315 (2026-11-23): `require_company` is the pre-315 strict
+write gate, equivalent to the newer `require_company_for_write`;
+these modules already used it, so the C.3 rename left them
+untouched and this rule is unchanged.
   - excluded: names passed on the command line after the module
 
 Usage: c3_group_a_verify.py <module> [excluded ...]

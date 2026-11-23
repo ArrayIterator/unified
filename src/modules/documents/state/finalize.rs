@@ -14,10 +14,25 @@
 //! (no part received within the idle window); a job waiting longer
 //! than the starvation guard runs anyway. Hashing is CPU-bound,
 //! so concurrent jobs are capped.
+//!
+//! C11 write-through (task 271): when a database pool is attached
+//! (see `attach_finalize_pool`, called once from
+//! `DocumentsModule::init`), every job mutation writes the
+//! `finalize_jobs` table first and the in-memory map second, the
+//! claim is arbitrated in the database (one winner across
+//! instances), and the worker re-syncs the map from the table on
+//! startup and on every tick, so jobs survive a restart. Without
+//! a pool the worker behaves exactly as before (in-memory only).
 
 use super::*;
+use diesel::prelude::*;
+use std::sync::OnceLock;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
+use unified_core::db::{
+    DbPool,
+    models::{FinalizeJob as DbFinalizeJob, NewFinalizeJob},
+};
 
 /// How often the worker wakes to claim work.
 const FINALIZE_TICK: Duration = Duration::from_secs(5);
@@ -33,6 +48,272 @@ const FINALIZE_STARVATION: chrono::Duration = chrono::Duration::hours(24);
 /// really empty (idle) and the worker may drain.
 const FINALIZE_IDLE_WINDOW: chrono::Duration = chrono::Duration::seconds(60);
 
+// ---------------------------------------------------------------------------
+// Database write-through (C11, task 271).
+//
+// The pool is attached once, from `DocumentsModule::init`, through
+// `attach_finalize_pool`:
+//
+// ```ignore
+// if let Some(pool) = ctx.db.read().expect("db lock poisoned").clone() {
+//     crate::modules::documents::state::finalize::attach_finalize_pool(pool);
+// }
+// ```
+//
+// Every helper below is a no-op when no pool is attached, so the
+// worker and its unit tests behave exactly as before on a
+// pool-less process. When the pool IS attached but the database
+// is unreachable, the helpers fail soft (the error is swallowed
+// at the call site) and the in-memory map stays authoritative
+// for that tick — the same degraded-mode contract the licensing
+// module uses (database reads fall back to the map when no pool
+// is attached). A job row is only ever inserted when its parent
+// rows exist (see `db_insert_job`): the `finalize_jobs` foreign
+// keys reference `document_upload_sessions` / `documents`, and
+// those rows are not persisted yet (the documents-metadata
+// worker owns session/document persistence), so a job for an
+// unpersisted session stays in-memory-only instead of failing
+// the insert on the foreign key.
+// ---------------------------------------------------------------------------
+
+/// Attached database pool for the finalize write-through.
+/// `None` (never attached) means in-memory-only operation.
+static FINALIZE_DB_POOL: OnceLock<DbPool> = OnceLock::new();
+
+/// Attach the database pool the finalize worker writes through
+/// to. Idempotent: the first attach wins, later calls are
+/// ignored, so a double `init` can never swap the pool under a
+/// running worker.
+pub(crate) fn attach_finalize_pool(pool: DbPool) {
+    let _ = FINALIZE_DB_POOL.set(pool);
+}
+
+/// The attached pool, when one was attached.
+fn finalize_pool() -> Option<DbPool> {
+    FINALIZE_DB_POOL.get().cloned()
+}
+
+/// Parse a runtime id (a UUID v4 string from `new_id()`) into
+/// the UUID the `finalize_jobs` table stores.
+fn parse_job_uuid(value: &str) -> Option<Uuid> {
+    Uuid::parse_str(value).ok()
+}
+
+/// Build the insert row for a runtime job. `None` when the job
+/// id or the session id is not a UUID (never in practice:
+/// `new_id()` is UUID v4). An unparseable document id degrades
+/// to `NULL`: the job is for a session whose document is only
+/// created at finalize time.
+fn job_insert_row(job: &FinalizeJob) -> Option<NewFinalizeJob> {
+    Some(NewFinalizeJob {
+        id: parse_job_uuid(&job.id)?,
+        session_id: parse_job_uuid(&job.session_id)?,
+        document_id: job.document_id.as_deref().and_then(parse_job_uuid),
+        tenant_id: job.tenant_id,
+    })
+}
+
+/// Convert a database row back into the runtime job shape.
+/// `attempts` is clamped at zero: the column check forbids
+/// negatives, but a defensive conversion never panics.
+fn db_job_to_runtime(row: DbFinalizeJob) -> FinalizeJob {
+    FinalizeJob {
+        id: row.id.to_string(),
+        session_id: row.session_id.to_string(),
+        document_id: row.document_id.map(|id| id.to_string()),
+        tenant_id: row.tenant_id,
+        status: row.status,
+        attempts: row.attempts.max(0) as u32,
+        last_error: row.last_error,
+        claimed_at: row.claimed_at,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+    }
+}
+
+/// True when the upload session row exists in the database.
+/// A finalize job may only reference a persisted session (the
+/// `session_id` foreign key), so the write-through checks this
+/// before inserting the job row.
+fn db_session_exists(pool: &DbPool, session_id: Uuid) -> UnifiedResult<bool> {
+    use unified_core::db::schema::document_upload_sessions::dsl as sess_dsl;
+    let mut conn = pool.get().map_err(|error| {
+        UnifiedError::internal(format!("Cannot get database connection: {error}"))
+    })?;
+    let found = sess_dsl::document_upload_sessions
+        .filter(sess_dsl::id.eq(session_id))
+        .select(sess_dsl::id)
+        .first::<Uuid>(&mut conn)
+        .optional()
+        .map_err(|error| UnifiedError::internal(format!("Cannot load upload session: {error}")))?;
+    Ok(found.is_some())
+}
+
+/// True when the document row exists in the database (same
+/// foreign-key guard as `db_session_exists`, for `document_id`).
+fn db_document_exists(pool: &DbPool, document_id: Uuid) -> UnifiedResult<bool> {
+    use unified_core::db::schema::documents::dsl as doc_dsl;
+    let mut conn = pool.get().map_err(|error| {
+        UnifiedError::internal(format!("Cannot get database connection: {error}"))
+    })?;
+    let found = doc_dsl::documents
+        .filter(doc_dsl::id.eq(document_id))
+        .select(doc_dsl::id)
+        .first::<Uuid>(&mut conn)
+        .optional()
+        .map_err(|error| UnifiedError::internal(format!("Cannot load document: {error}")))?;
+    Ok(found.is_some())
+}
+
+/// Insert a job row. Returns `false` (and inserts nothing) when
+/// the job cannot be represented as a row, or when its session
+/// (or document) row does not exist yet in the database — the
+/// caller keeps the job in-memory-only in both cases. The
+/// insert is idempotent on the job id, so a retried creation
+/// never duplicates the row.
+fn db_insert_job(pool: &DbPool, job: &FinalizeJob) -> UnifiedResult<bool> {
+    let Some(row) = job_insert_row(job) else {
+        return Ok(false);
+    };
+    if !db_session_exists(pool, row.session_id)? {
+        return Ok(false);
+    }
+    if let Some(document_id) = row.document_id {
+        if !db_document_exists(pool, document_id)? {
+            return Ok(false);
+        }
+    }
+    use unified_core::db::schema::finalize_jobs::dsl as fj;
+    let mut conn = pool.get().map_err(|error| {
+        UnifiedError::internal(format!("Cannot get database connection: {error}"))
+    })?;
+    diesel::insert_into(fj::finalize_jobs)
+        .values(&row)
+        .on_conflict(fj::id)
+        .do_nothing()
+        .execute(&mut conn)
+        .map_err(|error| UnifiedError::internal(format!("Cannot insert finalize job: {error}")))?;
+    Ok(true)
+}
+
+/// Try to claim one job row in the database: `pending` ->
+/// `finalizing`, one winner. Returns `Ok(Some(true))` when this
+/// instance won the claim, `Ok(Some(false))` when the row exists
+/// but is no longer `pending` (another instance claimed it
+/// first), and `Ok(None)` when the row does not exist (an
+/// in-memory-only job whose session was never persisted). A
+/// database error propagates: the caller keeps the in-memory
+/// claim instead of dropping work it already owns.
+fn db_try_claim_job(pool: &DbPool, job_id: Uuid) -> UnifiedResult<Option<bool>> {
+    use unified_core::db::schema::finalize_jobs::dsl as fj;
+    let mut conn = pool.get().map_err(|error| {
+        UnifiedError::internal(format!("Cannot get database connection: {error}"))
+    })?;
+    let affected = diesel::update(
+        fj::finalize_jobs
+            .filter(fj::id.eq(job_id))
+            .filter(fj::status.eq("pending")),
+    )
+    .set((
+        fj::status.eq("finalizing"),
+        fj::claimed_at.eq(now()),
+        fj::updated_at.eq(now()),
+    ))
+    .execute(&mut conn)
+    .map_err(|error| UnifiedError::internal(format!("Cannot claim finalize job: {error}")))?;
+    if affected == 1 {
+        return Ok(Some(true));
+    }
+    // Zero rows: either the row is already claimed/finished, or
+    // it was never written (in-memory-only job). Tell the two
+    // apart so the caller only rolls back a real loss.
+    let exists = fj::finalize_jobs
+        .filter(fj::id.eq(job_id))
+        .select(fj::id)
+        .first::<Uuid>(&mut conn)
+        .optional()
+        .map_err(|error| UnifiedError::internal(format!("Cannot load finalize job: {error}")))?
+        .is_some();
+    Ok(if exists { Some(false) } else { None })
+}
+
+/// Reap stale `finalizing` rows back to `pending` (attempts + 1,
+/// claim cleared). Returns the number of rows reaped.
+fn db_reap_stale_claims(pool: &DbPool, cutoff: DateTime<Utc>) -> UnifiedResult<usize> {
+    use unified_core::db::schema::finalize_jobs::dsl as fj;
+    let mut conn = pool.get().map_err(|error| {
+        UnifiedError::internal(format!("Cannot get database connection: {error}"))
+    })?;
+    let affected = diesel::update(
+        fj::finalize_jobs
+            .filter(fj::status.eq("finalizing"))
+            .filter(fj::claimed_at.lt(cutoff)),
+    )
+    .set((
+        fj::status.eq("pending"),
+        fj::attempts.eq(fj::attempts + 1),
+        fj::claimed_at.eq(None::<DateTime<Utc>>),
+        fj::updated_at.eq(now()),
+    ))
+    .execute(&mut conn)
+    .map_err(|error| UnifiedError::internal(format!("Cannot reap finalize claims: {error}")))?;
+    Ok(affected as usize)
+}
+
+/// Mark a job row terminal (`verified` or `failed`), clearing
+/// the claim and recording the failure reason when one is given.
+fn db_finish_job(
+    pool: &DbPool,
+    job_id: Uuid,
+    status: &str,
+    last_error: Option<&str>,
+) -> UnifiedResult<()> {
+    use unified_core::db::schema::finalize_jobs::dsl as fj;
+    let mut conn = pool.get().map_err(|error| {
+        UnifiedError::internal(format!("Cannot get database connection: {error}"))
+    })?;
+    diesel::update(fj::finalize_jobs.filter(fj::id.eq(job_id)))
+        .set((
+            fj::status.eq(status),
+            fj::last_error.eq(last_error),
+            fj::claimed_at.eq(None::<DateTime<Utc>>),
+            fj::updated_at.eq(now()),
+        ))
+        .execute(&mut conn)
+        .map_err(|error| UnifiedError::internal(format!("Cannot finish finalize job: {error}")))?;
+    Ok(())
+}
+
+/// Load the open (`pending` / `finalizing`) job rows.
+fn db_load_open_jobs(pool: &DbPool) -> UnifiedResult<Vec<DbFinalizeJob>> {
+    use unified_core::db::schema::finalize_jobs::dsl as fj;
+    let mut conn = pool.get().map_err(|error| {
+        UnifiedError::internal(format!("Cannot get database connection: {error}"))
+    })?;
+    fj::finalize_jobs
+        .filter(fj::status.eq_any(vec!["pending", "finalizing"]))
+        .select(DbFinalizeJob::as_select())
+        .load(&mut conn)
+        .map_err(|error| UnifiedError::internal(format!("Cannot load finalize jobs: {error}")))
+}
+
+/// Load job rows by id (any status). Empty input loads nothing:
+/// an empty `IN ()` is never sent to the database.
+fn db_load_finalize_jobs_by_id(pool: &DbPool, ids: &[Uuid]) -> UnifiedResult<Vec<DbFinalizeJob>> {
+    use unified_core::db::schema::finalize_jobs::dsl as fj;
+    if ids.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut conn = pool.get().map_err(|error| {
+        UnifiedError::internal(format!("Cannot get database connection: {error}"))
+    })?;
+    fj::finalize_jobs
+        .filter(fj::id.eq_any(ids))
+        .select(DbFinalizeJob::as_select())
+        .load(&mut conn)
+        .map_err(|error| UnifiedError::internal(format!("Cannot load finalize jobs: {error}")))
+}
+
 /// Guard that decrements the running-jobs counter when the job
 /// task ends (including on panic, through Drop).
 struct FinalizeRunningGuard<'a>(&'a AtomicUsize);
@@ -47,14 +328,16 @@ impl DocumentsState {
     /// Start the finalize worker (idempotent). Mirrors the
     /// scheduler's `start_ticker`: spawn on the tokio runtime
     /// when a handle exists, else a dedicated thread with its own
-    /// runtime. The first action is the startup re-scan, so jobs
-    /// orphaned by a restart are picked up immediately.
+    /// runtime. The first action is the database sync and the
+    /// startup re-scan, so jobs orphaned by a restart are picked
+    /// up immediately.
     pub(crate) fn start_finalize_worker(self: &Arc<Self>) {
         if self.finalize_worker_started.swap(true, Ordering::SeqCst) {
             return;
         }
         let state = Arc::clone(self);
         let task = async move {
+            state.db_sync_finalize_jobs();
             state.rescan_finalize_jobs();
             let mut interval = tokio::time::interval(FINALIZE_TICK);
             loop {
@@ -77,11 +360,89 @@ impl DocumentsState {
         }
     }
 
+    /// Synchronize the in-memory job map with the `finalize_jobs`
+    /// table (idempotent): open rows whose session is present in
+    /// the map are hydrated, rows another instance already
+    /// claimed are adopted (a `pending` map row becomes
+    /// `finalizing`, so this instance never re-claims work
+    /// another instance owns), and map rows whose database row
+    /// reached a terminal state (`verified` / `failed`) are
+    /// marked terminal here, so they are never re-claimed after
+    /// a restart. Rows whose session is not in the map stay in
+    /// the database: the job cannot run until its session is
+    /// hydrated (session persistence is the documents-metadata
+    /// worker's follow-up), and hydrating it would let the
+    /// worker fail it as "session not found". A map row this
+    /// instance already claimed (`finalizing`) is never
+    /// downgraded from a database row: the in-memory claim is
+    /// the live one, and the database claim that follows it is
+    /// the cross-instance arbiter. Returns the number of map
+    /// rows inserted or updated. No-op when no pool is attached
+    /// or the database is unreachable.
+    pub(crate) fn db_sync_finalize_jobs(&self) -> usize {
+        let Some(pool) = finalize_pool() else {
+            return 0;
+        };
+        let Ok(open_rows) = db_load_open_jobs(&pool) else {
+            return 0;
+        };
+        let mut changed = 0;
+        for row in open_rows {
+            let job = db_job_to_runtime(row);
+            match self.finalize_jobs.get_mut(&job.id) {
+                Some(mut entry) => {
+                    if entry.status == "pending" && job.status == "finalizing" {
+                        entry.status = job.status;
+                        entry.claimed_at = job.claimed_at;
+                        entry.attempts = job.attempts;
+                        entry.updated_at = job.updated_at;
+                        changed += 1;
+                    }
+                }
+                None => {
+                    if self.sessions.contains_key(&job.session_id) {
+                        self.finalize_jobs.insert(job.id.clone(), job);
+                        changed += 1;
+                    }
+                }
+            }
+        }
+        // Terminal rows: only rows this process already knows
+        // about are checked, so one query covers them.
+        let known_ids: Vec<Uuid> = self
+            .finalize_jobs
+            .iter()
+            .filter(|entry| matches!(entry.value().status.as_str(), "pending" | "finalizing"))
+            .filter_map(|entry| Uuid::parse_str(entry.key()).ok())
+            .collect();
+        if let Ok(rows) = db_load_finalize_jobs_by_id(&pool, &known_ids) {
+            for row in rows {
+                if !matches!(row.status.as_str(), "verified" | "failed") {
+                    continue;
+                }
+                if let Some(mut entry) = self.finalize_jobs.get_mut(&row.id.to_string()) {
+                    if matches!(entry.status.as_str(), "pending" | "finalizing") {
+                        entry.status = row.status.clone();
+                        entry.last_error = row.last_error.clone();
+                        entry.claimed_at = None;
+                        entry.updated_at = row.updated_at;
+                        changed += 1;
+                    }
+                }
+            }
+        }
+        changed
+    }
+
     /// Create a finalize job for a received session (called by
     /// complete_session right after the document row is created).
     /// Idempotent for the session: an existing `pending` /
     /// `finalizing` job for the session is returned instead of a
-    /// duplicate.
+    /// duplicate. The row is written to the database first when
+    /// a pool is attached (see `db_insert_job`); the map insert
+    /// still runs when the row cannot be persisted, so the
+    /// worker keeps working in-memory and the startup re-scan
+    /// re-enqueues the job.
     pub(crate) fn create_finalize_job(
         &self,
         session: &UploadSession,
@@ -110,6 +471,13 @@ impl DocumentsState {
             created_at: now(),
             updated_at: now(),
         };
+        if let Some(pool) = finalize_pool() {
+            // Best-effort write-through: when the row cannot be
+            // persisted (the session/document rows do not exist
+            // yet, or the database is unreachable) the job still
+            // runs in-memory; see `db_insert_job`.
+            let _ = db_insert_job(&pool, &job);
+        }
         self.finalize_jobs.insert(job.id.clone(), job.clone());
         job
     }
@@ -129,9 +497,13 @@ impl DocumentsState {
     /// `pending` / `finalizing` job exists for it. Returns the
     /// number of jobs created. Without this, a restart silently
     /// orphans received sessions (their checksum stays NULL
-    /// forever). Only the in-memory sessions are visible here —
-    /// full restart recovery of the DB rows needs the C11
-    /// write-through (task 271).
+    /// forever). The database sync in `db_sync_finalize_jobs`
+    /// runs before this (see `start_finalize_worker`), so jobs
+    /// whose rows survived the restart are hydrated first and
+    /// this scan only creates jobs for sessions with no row at
+    /// all; a restart still orphans sessions whose rows were
+    /// never persisted, until session persistence lands (the
+    /// documents-metadata worker's follow-up).
     pub(crate) fn rescan_finalize_jobs(&self) -> usize {
         let mut created = 0;
         for entry in self.sessions.iter() {
@@ -155,8 +527,14 @@ impl DocumentsState {
     /// Claim one pending job atomically: `pending` ->
     /// `finalizing` with `claimed_at` set, under the job entry's
     /// lock (one winner). The oldest pending job wins (FIFO).
-    /// Returns the claimed job, or `None` when nothing is
-    /// claimable.
+    /// When a pool is attached the database claim runs right
+    /// after the in-memory claim and arbitrates across
+    /// instances: when another instance already claimed the
+    /// row, this instance rolls its in-memory claim back to
+    /// `pending` and tries the next job instead of hashing the
+    /// same object twice. A job with no database row, or a
+    /// database error, keeps the in-memory claim. Returns the
+    /// claimed job, or `None` when nothing is claimable.
     pub(crate) fn claim_finalize_job(&self) -> Option<FinalizeJob> {
         let mut pending: Vec<FinalizeJob> = self
             .finalize_jobs
@@ -173,7 +551,26 @@ impl DocumentsState {
                 entry.status = "finalizing".to_string();
                 entry.claimed_at = Some(now());
                 entry.updated_at = now();
-                return Some(entry.clone());
+                let claimed = entry.clone();
+                drop(entry);
+                if let Some(pool) = finalize_pool() {
+                    if let Some(job_id) = parse_job_uuid(&job.id) {
+                        // A database error keeps the in-memory
+                        // claim (see `db_try_claim_job`); only a
+                        // lost claim rolls it back.
+                        if let Ok(Some(won)) = db_try_claim_job(&pool, job_id) {
+                            if !won {
+                                if let Some(mut entry) = self.finalize_jobs.get_mut(&job.id) {
+                                    entry.status = "pending".to_string();
+                                    entry.claimed_at = None;
+                                    entry.updated_at = now();
+                                }
+                                continue;
+                            }
+                        }
+                    }
+                }
+                return Some(claimed);
             }
         }
         None
@@ -181,9 +578,45 @@ impl DocumentsState {
 
     /// Reap stale `finalizing` claims back to `pending`
     /// (attempts + 1, claimed_at cleared). Returns the number
-    /// reaped.
+    /// reaped. When a pool is attached the database reap runs
+    /// first and its result is mirrored into the map, so one
+    /// stale claim is never counted twice (once by the database
+    /// reap, once by the in-memory pass below); the in-memory
+    /// pass then only reaps jobs with no database row.
     pub(crate) fn reap_stale_finalize_claims(&self) -> usize {
         let cutoff = now() - FINALIZE_STALE_CLAIM;
+        if let Some(pool) = finalize_pool() {
+            let stale_ids: Vec<Uuid> = self
+                .finalize_jobs
+                .iter()
+                .filter(|entry| {
+                    entry.value().status == "finalizing"
+                        && entry
+                            .value()
+                            .claimed_at
+                            .is_some_and(|claimed_at| claimed_at < cutoff)
+                })
+                .filter_map(|entry| Uuid::parse_str(entry.key()).ok())
+                .collect();
+            if !stale_ids.is_empty() {
+                let _ = db_reap_stale_claims(&pool, cutoff);
+                if let Ok(rows) = db_load_finalize_jobs_by_id(&pool, &stale_ids) {
+                    for row in rows {
+                        if row.status != "pending" {
+                            continue;
+                        }
+                        if let Some(mut entry) = self.finalize_jobs.get_mut(&row.id.to_string()) {
+                            if entry.status == "finalizing" {
+                                entry.status = "pending".to_string();
+                                entry.attempts = row.attempts.max(0) as u32;
+                                entry.claimed_at = None;
+                                entry.updated_at = row.updated_at;
+                            }
+                        }
+                    }
+                }
+            }
+        }
         let mut reaped = 0;
         for mut entry in self.finalize_jobs.iter_mut() {
             let job = entry.value_mut();
@@ -224,10 +657,11 @@ impl DocumentsState {
         })
     }
 
-    /// One worker tick: reap stale claims, then claim and run
-    /// jobs while the queue is idle (or a job is starving), up to
-    /// the concurrency bound.
+    /// One worker tick: sync the map from the database, reap
+    /// stale claims, then claim and run jobs while the queue is
+    /// idle (or a job is starving), up to the concurrency bound.
     async fn finalize_tick(self: &Arc<Self>) {
+        self.db_sync_finalize_jobs();
         self.reap_stale_finalize_claims();
         while self.finalize_running.load(Ordering::SeqCst) < FINALIZE_MAX_CONCURRENT {
             if !self.finalize_idle() && !self.has_starving_finalize_job() {
@@ -368,6 +802,11 @@ impl DocumentsState {
                     entry.claimed_at = None;
                     entry.updated_at = now();
                 }
+                if let Some(pool) = finalize_pool() {
+                    if let Some(job_id) = parse_job_uuid(&job.id) {
+                        let _ = db_finish_job(&pool, job_id, "verified", None);
+                    }
+                }
                 self.emit(
                     events::FINALIZE_VERIFIED,
                     json!({
@@ -411,6 +850,11 @@ impl DocumentsState {
                     entry.last_error = Some(error.to_string());
                     entry.claimed_at = None;
                     entry.updated_at = now();
+                }
+                if let Some(pool) = finalize_pool() {
+                    if let Some(job_id) = parse_job_uuid(&job.id) {
+                        let _ = db_finish_job(&pool, job_id, "failed", Some(&error.to_string()));
+                    }
                 }
                 self.emit(
                     events::FINALIZE_FAILED,
@@ -547,5 +991,85 @@ mod tests {
         let second = state.create_finalize_job(&session, Some("doc-1".to_string()));
         assert_eq!(first.id, second.id);
         assert_eq!(state.finalize_jobs.len(), 1);
+    }
+
+    #[test]
+    fn db_job_insert_row_maps_ids_and_tenant() {
+        let job = test_job("sess-1", now());
+        let row = job_insert_row(&job).expect("uuid ids map");
+        assert_eq!(row.id.to_string(), job.id);
+        assert_eq!(row.session_id.to_string(), job.session_id);
+        assert_eq!(row.document_id, None);
+        assert_eq!(
+            row.tenant_id,
+            Some(Uuid::parse_str("019a1234-5678-7abc-def0-123456789abc").unwrap())
+        );
+    }
+
+    #[test]
+    fn db_job_insert_row_rejects_non_uuid_ids() {
+        let mut job = test_job("sess-1", now());
+        job.id = "not-a-uuid".to_string();
+        assert!(job_insert_row(&job).is_none());
+        let mut job = test_job("sess-1", now());
+        job.session_id = "not-a-uuid".to_string();
+        assert!(job_insert_row(&job).is_none());
+    }
+
+    #[test]
+    fn db_job_round_trips_through_runtime() {
+        let job = test_job("sess-1", now());
+        let row = job_insert_row(&job).expect("uuid ids map");
+        let db_row = DbFinalizeJob {
+            id: row.id,
+            session_id: row.session_id,
+            document_id: row.document_id,
+            tenant_id: row.tenant_id,
+            status: "pending".to_string(),
+            attempts: 3,
+            last_error: Some("boom".to_string()),
+            claimed_at: None,
+            created_at: job.created_at,
+            updated_at: job.updated_at,
+        };
+        let back = db_job_to_runtime(db_row);
+        assert_eq!(back.id, job.id);
+        assert_eq!(back.session_id, job.session_id);
+        assert_eq!(back.tenant_id, job.tenant_id);
+        assert_eq!(back.attempts, 3);
+        assert_eq!(back.last_error.as_deref(), Some("boom"));
+        // A negative stored attempt count (forbidden by the
+        // column check, but never trusted blindly) clamps to 0.
+        let mut negative = test_job("sess-2", now());
+        negative.attempts = 0;
+        let row = job_insert_row(&negative).expect("uuid ids map");
+        let db_row = DbFinalizeJob {
+            id: row.id,
+            session_id: row.session_id,
+            document_id: None,
+            tenant_id: None,
+            status: "pending".to_string(),
+            attempts: -5,
+            last_error: None,
+            claimed_at: None,
+            created_at: negative.created_at,
+            updated_at: negative.updated_at,
+        };
+        assert_eq!(db_job_to_runtime(db_row).attempts, 0);
+    }
+
+    #[test]
+    fn db_sync_is_noop_without_pool() {
+        let state = DocumentsState::new();
+        let job = test_job("sess-1", now());
+        state.finalize_jobs.insert(job.id.clone(), job.clone());
+        assert_eq!(state.db_sync_finalize_jobs(), 0);
+        assert_eq!(state.finalize_jobs.len(), 1);
+        // Creating and claiming also stay purely in-memory
+        // without a pool: the worker keeps working.
+        let session = test_session("sess-1", "received");
+        let created = state.create_finalize_job(&session, None);
+        assert_eq!(created.session_id, "sess-1");
+        assert!(state.claim_finalize_job().is_some());
     }
 }

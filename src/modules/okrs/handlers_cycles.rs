@@ -108,7 +108,7 @@ pub(crate) async fn create_cycle(
     let debug = ctx.is_debug();
     let result: UnifiedResult<OkrCycle> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_OKRS_MANAGE)?;
         let name = require_text(&body.name, "name", MAX_NAME_LEN)?;
@@ -190,11 +190,11 @@ pub(crate) async fn activate_cycle(
     let debug = ctx.is_debug();
     let result: UnifiedResult<OkrCycle> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_OKRS_MANAGE)?;
         let mut cycle = load_cycle(&state, &path.into_inner())?;
-        require_record_in_company_scope(&cycle.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&cycle.company_id, &_scope)?;
         if cycle.status == CycleStatus::Closed {
             return Err(UnifiedError::conflict("A closed cycle cannot be activated"));
         }
@@ -233,11 +233,11 @@ pub(crate) async fn close_cycle(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_OKRS_MANAGE)?;
         let mut cycle = load_cycle(&state, &path.into_inner())?;
-        require_record_in_company_scope(&cycle.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&cycle.company_id, &_scope)?;
         if cycle.status == CycleStatus::Closed {
             return Err(UnifiedError::conflict("Cycle is already closed"));
         }

@@ -1,15 +1,32 @@
 //! payments - records.
 
-use unified_core::error::{UnifiedError, UnifiedResult};
+use super::{
+    adapter::*, card_settings::*, card_validation::*, credentials::*, custom_provider::*,
+    dispatch::*, events::*, generic_card::*, handlers_catalog::*, handlers_charges::*,
+    handlers_checkout::*, handlers_intents::*, handlers_methods::*, handlers_split_bills::*,
+    handlers_subscriptions::*, handlers_webhooks::*, hooks::*, hyperpay::*, limits::*, midtrans::*,
+    module::*, mpgs::*, paypal::*, providers::*, reference_ids::*, requests::*, state::*,
+    stripe::*, twocheckout::*, types::*, wallets::*, xendit::*,
+};
 use chrono::{DateTime, Utc};
 use dashmap::DashMap;
-use serde::{Serialize};
-use serde_json::{Value};
+use diesel::prelude::*;
+use serde::Serialize;
+use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::{Arc, OnceLock, RwLock};
 use std::time::Duration;
+use unified_core::db::{
+    DbPool,
+    models::{
+        GatewaySubscription as DbGatewaySubscription, PaymentConnection as DbPaymentConnection,
+        PaymentIntent as DbPaymentIntent, PaymentMethod as DbPaymentMethod,
+        PaymentTransaction as DbPaymentTransaction, SplitBill as DbSplitBill,
+        SplitPart as DbSplitPart,
+    },
+};
+use unified_core::error::{UnifiedError, UnifiedResult};
 use uuid::Uuid;
-use super::{events::*, card_validation::*, card_settings::*, limits::*, providers::*, types::*, reference_ids::*, credentials::*, adapter::*, dispatch::*, stripe::*, paypal::*, xendit::*, midtrans::*, hyperpay::*, twocheckout::*, mpgs::*, generic_card::*, custom_provider::*, wallets::*, state::*, requests::*, handlers_catalog::*, handlers_intents::*, handlers_charges::*, handlers_methods::*, handlers_subscriptions::*, handlers_checkout::*, handlers_webhooks::*, handlers_split_bills::*, hooks::*, module::*};
 
 
 
@@ -340,7 +357,277 @@ pub(crate) fn paypal_tokens_store() -> &'static DashMap<Uuid, (String, DateTime<
     PAYPAL_TOKENS.get_or_init(DashMap::new)
 }
 
+// ---------------------------------------------------------------------------
+// Database hydration (C11, task 271).
+// ---------------------------------------------------------------------------
 
+/// Hydrate the in-memory payment stores from the database:
+/// connections, intents, transactions, methods, gateway
+/// subscriptions, and split bills (with their parts) are loaded
+/// from the `payment_*` / `gateway_subscriptions` / `split_*`
+/// tables and replace the map contents, so a restart restores
+/// the money state instead of losing it. The idempotency index
+/// is rebuilt from the loaded transactions, so a repeated
+/// mutating call after a restart still returns the original
+/// transaction instead of charging twice. Rows that cannot be
+/// converted — an unknown provider kind / gateway mode, or
+/// credentials that do not parse — are skipped, never fatal:
+/// hydration must not fail startup on one bad row. The runtime
+/// records carry no `tenant_id` field yet, so the `tenant_id`
+/// columns added by migration 000126 are ignored here; stamping
+/// them is follow-up work (see
+/// `docs/integration/INTEGRATION_NOTES_C11.md`). Deliberately
+/// NOT hydrated: the webhook-event dedup map (time-bounded,
+/// rebuilt from live traffic), pending checkouts (in-flight
+/// only), and cached PayPal tokens (expiring credentials cache).
+/// Call once from `PaymentsModule::init` after the pool is
+/// attached. Returns the number of rows loaded.
+pub(crate) fn hydrate_from_db(pool: &DbPool) -> UnifiedResult<usize> {
+    use unified_core::db::schema::{
+        gateway_subscriptions::dsl as sub_dsl, payment_connections::dsl as conn_dsl,
+        payment_intents::dsl as int_dsl, payment_methods::dsl as meth_dsl,
+        payment_transactions::dsl as txn_dsl, split_bills::dsl as bill_dsl,
+        split_parts::dsl as part_dsl,
+    };
+    let mut conn = pool.get().map_err(|error| {
+        UnifiedError::internal(format!("Cannot get database connection: {error}"))
+    })?;
+    let db_connections = conn_dsl::payment_connections
+        .select(DbPaymentConnection::as_select())
+        .load::<DbPaymentConnection>(&mut conn)
+        .map_err(|error| {
+            UnifiedError::internal(format!("Cannot load payment connections: {error}"))
+        })?;
+    let db_intents = int_dsl::payment_intents
+        .select(DbPaymentIntent::as_select())
+        .load::<DbPaymentIntent>(&mut conn)
+        .map_err(|error| UnifiedError::internal(format!("Cannot load payment intents: {error}")))?;
+    let db_transactions = txn_dsl::payment_transactions
+        .select(DbPaymentTransaction::as_select())
+        .load::<DbPaymentTransaction>(&mut conn)
+        .map_err(|error| {
+            UnifiedError::internal(format!("Cannot load payment transactions: {error}"))
+        })?;
+    let db_methods = meth_dsl::payment_methods
+        .select(DbPaymentMethod::as_select())
+        .load::<DbPaymentMethod>(&mut conn)
+        .map_err(|error| UnifiedError::internal(format!("Cannot load payment methods: {error}")))?;
+    let db_subscriptions = sub_dsl::gateway_subscriptions
+        .select(DbGatewaySubscription::as_select())
+        .load::<DbGatewaySubscription>(&mut conn)
+        .map_err(|error| {
+            UnifiedError::internal(format!("Cannot load gateway subscriptions: {error}"))
+        })?;
+    let db_bills = bill_dsl::split_bills
+        .select(DbSplitBill::as_select())
+        .load::<DbSplitBill>(&mut conn)
+        .map_err(|error| UnifiedError::internal(format!("Cannot load split bills: {error}")))?;
+    let db_parts = part_dsl::split_parts
+        .select(DbSplitPart::as_select())
+        .load::<DbSplitPart>(&mut conn)
+        .map_err(|error| UnifiedError::internal(format!("Cannot load split parts: {error}")))?;
+
+    let mut loaded = 0;
+    connections_store().clear();
+    for row in &db_connections {
+        let Some(kind) = PaymentProviderKind::from_str(&row.kind) else {
+            continue;
+        };
+        let Some(mode) = GatewayMode::from_str(&row.mode) else {
+            continue;
+        };
+        let Ok(credentials) = serde_json::from_value::<PaymentCredentials>(row.credentials.clone())
+        else {
+            continue;
+        };
+        let custom_config = match &row.custom_config {
+            Some(value) => match serde_json::from_value::<CustomGatewayConfig>(value.clone()) {
+                Ok(config) => Some(config),
+                Err(_) => continue,
+            },
+            None => None,
+        };
+        connections_store().insert(
+            row.id,
+            PaymentConnection {
+                id: row.id,
+                name: row.name.clone(),
+                kind,
+                mode,
+                endpoint: row.endpoint.clone(),
+                credentials,
+                custom_config,
+                delegate_connection_id: row.delegate_connection_id,
+                enabled: row.enabled,
+                last_tested_at: row.last_tested_at,
+                last_status: row.last_status.clone(),
+                created_at: row.created_at,
+                updated_at: row.updated_at,
+            },
+        );
+        loaded += 1;
+    }
+    intents_store().clear();
+    for row in &db_intents {
+        intents_store().insert(
+            row.id,
+            PaymentIntent {
+                id: row.id,
+                connection_id: row.connection_id,
+                provider: row.provider.clone(),
+                customer_id: row.customer_id.clone(),
+                order_id: row.order_id.clone(),
+                invoice_id: row.invoice_id.clone(),
+                amount_minor: row.amount_minor,
+                currency: row.currency.clone(),
+                status: row.status.clone(),
+                capture_method: row.capture_method.clone(),
+                provider_transaction_id: row.provider_transaction_id.clone(),
+                fee_minor: row.fee_minor,
+                payment_method_token: None,
+                payment_method_id: None,
+                idempotency_key: row.idempotency_key.clone(),
+                created_at: row.created_at,
+                updated_at: row.updated_at,
+            },
+        );
+        loaded += 1;
+    }
+    transactions_store().clear();
+    idempotency_store().clear();
+    for row in &db_transactions {
+        transactions_store().insert(
+            row.id,
+            PaymentTransaction {
+                id: row.id,
+                intent_id: row.intent_id,
+                connection_id: row.connection_id,
+                provider: row.provider.clone(),
+                kind: row.kind.clone(),
+                customer_id: row.customer_id.clone(),
+                order_id: row.order_id.clone(),
+                invoice_id: row.invoice_id.clone(),
+                subscription_id: row.subscription_id,
+                amount_minor: row.amount_minor,
+                currency: row.currency.clone(),
+                fee_minor: row.fee_minor,
+                status: row.status.clone(),
+                provider_transaction_id: row.provider_transaction_id.clone(),
+                provider_refund_id: row.provider_refund_id.clone(),
+                original_transaction_id: None,
+                operator_id: None,
+                idempotency_key: row.idempotency_key.clone(),
+                created_at: row.created_at,
+            },
+        );
+        idempotency_store().insert((row.connection_id, row.idempotency_key.clone()), row.id);
+        loaded += 1;
+    }
+    methods_store().clear();
+    for row in &db_methods {
+        methods_store().insert(
+            row.id,
+            PaymentMethod {
+                id: row.id,
+                customer_id: row.customer_id.clone(),
+                connection_id: row.connection_id,
+                provider: row.provider.clone(),
+                provider_token: row.provider_token.clone(),
+                brand: row.brand.clone(),
+                last4: row.last4.clone(),
+                exp_month: row.exp_month.max(0) as u32,
+                exp_year: row.exp_year.max(0) as u32,
+                is_default: row.is_default,
+                created_at: row.created_at,
+            },
+        );
+        loaded += 1;
+    }
+    subscriptions_store().clear();
+    for row in &db_subscriptions {
+        subscriptions_store().insert(
+            row.id,
+            GatewaySubscription {
+                id: row.id,
+                connection_id: row.connection_id,
+                provider: row.provider.clone(),
+                customer_id: row.customer_id.clone(),
+                order_id: row.order_id.clone(),
+                plan_id: row.plan_id.clone(),
+                amount_minor: row.amount_minor,
+                currency: row.currency.clone(),
+                interval: row.interval.clone(),
+                interval_count: row.interval_count.max(0) as u32,
+                status: row.status.clone(),
+                provider_subscription_id: row.provider_subscription_id.clone(),
+                payment_method_id: row.payment_method_id,
+                current_period_end: row.current_period_end,
+                next_renewal_at: row.next_renewal_at,
+                cancelled_at: row.cancelled_at,
+                // Dunning state is not stored in the database
+                // yet: a hydrated subscription restarts dunning
+                // from zero. The renewal path, not the stored
+                // counters, decides the next charge.
+                dunning_max_retries: 0,
+                dunning_retry_interval_days: 0,
+                grace_period_days: 0,
+                consecutive_failures: 0,
+                dunning_exhausted: false,
+                grace_ends_at: None,
+                created_at: row.created_at,
+                updated_at: row.updated_at,
+            },
+        );
+        loaded += 1;
+    }
+    let mut parts_by_bill: std::collections::HashMap<Uuid, Vec<SplitPart>> =
+        std::collections::HashMap::new();
+    for part in &db_parts {
+        parts_by_bill
+            .entry(part.split_id)
+            .or_default()
+            .push(SplitPart {
+                id: part.id,
+                split_id: part.split_id,
+                index: part.index.max(0) as usize,
+                amount_minor: part.amount_minor,
+                currency: part.currency.clone(),
+                provider: part.provider.clone(),
+                connection_id: part.connection_id,
+                payer_id: part.payer_id.clone(),
+                due_date: part.due_date,
+                status: part.status.clone(),
+                paid_transaction_id: part.paid_transaction_id,
+                paid_at: part.paid_at,
+            });
+    }
+    for parts in parts_by_bill.values_mut() {
+        parts.sort_by_key(|part| part.index);
+    }
+    splits_store().clear();
+    for row in &db_bills {
+        let parts = parts_by_bill.remove(&row.id).unwrap_or_default();
+        splits_store().insert(
+            row.id,
+            SplitBill {
+                id: row.id,
+                order_id: row.order_id.clone(),
+                invoice_id: row.invoice_id.clone(),
+                customer_id: row.customer_id.clone(),
+                total_minor: row.total_minor,
+                currency: row.currency.clone(),
+                status: row.status.clone(),
+                parts,
+                paid_minor: row.paid_minor,
+                remaining_minor: row.remaining_minor,
+                created_at: row.created_at,
+                updated_at: row.updated_at,
+            },
+        );
+        loaded += 1;
+    }
+    Ok(loaded)
+}
 
 // ---------------------------------------------------------------------------
 // Provider registry: the plug-in point for adapters.

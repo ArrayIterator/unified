@@ -261,7 +261,7 @@ pub(crate) async fn update_product(
             .products
             .get_mut(path.as_str())
             .ok_or_else(|| UnifiedError::not_found("Product not found"))?;
-        require_record_in_company_scope(&product.company_id, &scope)?;
+        require_record_writable_in_company_scope(&product.company_id, &scope)?;
         require_company_match_for(&scope, &input.company_id)?;
         if let Some(name) = input.name {
             if name.trim().is_empty() {
@@ -405,7 +405,7 @@ pub(crate) async fn delete_product(
             .get(&id)
             .map(|entry| entry.value().clone())
             .ok_or_else(|| UnifiedError::not_found("Product not found"))?;
-        require_record_in_company_scope(&product.company_id, &scope)?;
+        require_record_writable_in_company_scope(&product.company_id, &scope)?;
         let has_tiers = state.tiers.iter().any(|entry| entry.value().product_id == id);
         if has_tiers {
             return Err(UnifiedError::conflict(
@@ -433,7 +433,7 @@ pub(crate) async fn publish_product(
             .products
             .get_mut(path.as_str())
             .ok_or_else(|| UnifiedError::not_found("Product not found"))?;
-        require_record_in_company_scope(&product.company_id, &scope)?;
+        require_record_writable_in_company_scope(&product.company_id, &scope)?;
         if product.status == "published" {
             return Err(UnifiedError::conflict("Product is already published"));
         }
@@ -463,7 +463,7 @@ pub(crate) async fn unpublish_product(
             .products
             .get_mut(path.as_str())
             .ok_or_else(|| UnifiedError::not_found("Product not found"))?;
-        require_record_in_company_scope(&product.company_id, &scope)?;
+        require_record_writable_in_company_scope(&product.company_id, &scope)?;
         if product.status == "draft" {
             return Err(UnifiedError::conflict("Product is already a draft"));
         }

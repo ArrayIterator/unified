@@ -85,7 +85,7 @@ pub(crate) async fn create_block(
     let debug = ctx.is_debug();
     let result: UnifiedResult<PropertyBlock> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PROPERTIES_CREATE)?;
         let (property_id, plan_id) = path.into_inner();
@@ -196,7 +196,7 @@ pub(crate) async fn update_block(
     let debug = ctx.is_debug();
     let result: UnifiedResult<PropertyBlock> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PROPERTIES_VIEW)?;
         let (property_id, plan_id, block_id) = path.into_inner();
@@ -304,7 +304,7 @@ pub(crate) async fn delete_block(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PROPERTIES_MANAGE)?;
         let (property_id, plan_id, block_id) = path.into_inner();
@@ -370,7 +370,7 @@ pub(crate) async fn reserve_block(
     let debug = ctx.is_debug();
     let result: UnifiedResult<PropertyBlock> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PROPERTIES_VIEW)?;
         let (property_id, plan_id, block_id) = path.into_inner();
@@ -437,7 +437,7 @@ pub(crate) async fn release_block(
     let debug = ctx.is_debug();
     let result: UnifiedResult<PropertyBlock> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PROPERTIES_VIEW)?;
         let (property_id, plan_id, block_id) = path.into_inner();
@@ -511,7 +511,7 @@ pub(crate) async fn purchase_block(
     let debug = ctx.is_debug();
     let result: UnifiedResult<BlockPurchase> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PROPERTIES_VIEW)?;
         let (property_id, plan_id, block_id) = path.into_inner();
@@ -607,7 +607,7 @@ pub(crate) async fn assign_block(
     let debug = ctx.is_debug();
     let result: UnifiedResult<PropertyBlock> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PROPERTIES_MANAGE)?;
         let (property_id, plan_id, block_id) = path.into_inner();
@@ -681,7 +681,7 @@ pub(crate) async fn block_block(
     let debug = ctx.is_debug();
     let result: UnifiedResult<PropertyBlock> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PROPERTIES_MANAGE)?;
         let (property_id, plan_id, block_id) = path.into_inner();
@@ -733,7 +733,7 @@ pub(crate) async fn unblock_block(
     let debug = ctx.is_debug();
     let result: UnifiedResult<PropertyBlock> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PROPERTIES_MANAGE)?;
         let (property_id, plan_id, block_id) = path.into_inner();
@@ -786,7 +786,7 @@ pub(crate) async fn correct_block_status(
     let debug = ctx.is_debug();
     let result: UnifiedResult<PropertyBlock> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PROPERTIES_MANAGE)?;
         let (property_id, plan_id, block_id) = path.into_inner();

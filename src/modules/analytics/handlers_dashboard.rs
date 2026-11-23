@@ -217,7 +217,7 @@ pub(crate) async fn record_sale(
 ) -> HttpResponse {
     let result: UnifiedResult<SaleRecord> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         analytics_authorize(&ctx, &req, PERM_ANALYTICS_MANAGE)?;
         let input = body.into_inner();
         // Tenant scope: a body company must match the caller's
@@ -631,7 +631,7 @@ pub(crate) async fn record_health(
 ) -> HttpResponse {
     let result: UnifiedResult<HealthSample> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         analytics_authorize(&ctx, &req, PERM_ANALYTICS_MANAGE)?;
         let input = body.into_inner();
         let node_id = input.node_id.trim().to_string();
@@ -757,50 +757,6 @@ pub(crate) async fn get_uptime_summary(
 #[cfg(test)]
 mod tests {
 
-    /// Build a request carrying the server-verified caller the auth
-    /// middleware would attach for this user and role. The old
-    /// self-asserted identity headers grant nothing,
-    /// so tests attach the verified caller to the request
-    /// extensions instead.
-    fn verified_request(user_id: &str, role: &str) -> actix_web::HttpRequest {
-        use actix_web::HttpMessage;
-        let req = actix_web::test::TestRequest::default().to_http_request();
-        // Tenant gate (C3 pilot 3): handlers resolve the tenant
-        // context first, so test requests carry one (no company).
-        req.extensions_mut()
-            .insert(unified_core::middleware::TenantContext {
-                tenant_id: uuid::Uuid::now_v7().to_string(),
-                company_id: String::new(),
-                site_id: String::new(),
-                kind: unified_core::middleware::TenantKind::Subdomain,
-                host: "tenant.example.test".to_string(),
-                scope: None,
-                product_id: None,
-                package_id: None,
-                product_subdomain_id: None,
-            });
-        req.extensions_mut().insert(
-            unified_core::auth::Caller::verified(test_user_uuid(user_id), Vec::new())
-                .with_roles(vec![role.to_string()]),
-        );
-        req
-    }
-
-    /// Build a request carrying a verified caller with no roles
-    /// resolved: the caller resolves, but holds the anonymous role.
-    /// This is the "no role" case in the new model (roles are
-    /// resolved server-side, never claimed in a header).
-    fn verified_request_without_roles(user_id: &str) -> actix_web::HttpRequest {
-        use actix_web::HttpMessage;
-        let req = actix_web::test::TestRequest::default().to_http_request();
-        req.extensions_mut()
-            .insert(unified_core::auth::Caller::verified(
-                test_user_uuid(user_id),
-                Vec::new(),
-            ));
-        req
-    }
-
     /// Deterministic test-user identity: distinct names map to
     /// distinct UUIDs (FNV-1a folded into the low bits), so
     /// ownership tests can still tell two users apart. A value
@@ -845,8 +801,34 @@ mod tests {
         ctx
     }
 
+    /// The company the handler tests act as (C3 task 315).
+    const TEST_COMPANY: &str = "company-a";
+
+    /// A request scoped to the test company (C3 task 315):
+    /// mutation handlers require a resolved company, so the
+    /// happy-path tests carry one on both the tenant context and
+    /// the verified caller.
     fn authed_request() -> HttpRequest {
-        verified_request("user-1", "admin")
+        use actix_web::HttpMessage;
+        let req = actix_web::test::TestRequest::default().to_http_request();
+        req.extensions_mut().insert(
+            unified_core::auth::Caller::verified(test_user_uuid("user-1"), Vec::new())
+                .with_company("company-a".to_string())
+                .with_roles(vec!["admin".to_string()]),
+        );
+        req.extensions_mut()
+            .insert(unified_core::middleware::TenantContext {
+                tenant_id: uuid::Uuid::now_v7().to_string(),
+                company_id: "company-a".to_string(),
+                site_id: String::new(),
+                kind: unified_core::middleware::TenantKind::Subdomain,
+                host: "tenant.example.test".to_string(),
+                scope: None,
+                product_id: None,
+                package_id: None,
+                product_subdomain_id: None,
+            });
+        req
     }
 
     fn ctx_data(ctx: AppContext) -> web::Data<Arc<AppContext>> {

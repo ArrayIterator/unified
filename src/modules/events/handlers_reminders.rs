@@ -68,7 +68,7 @@ pub(crate) async fn create_reminder(
     let debug = ctx.is_debug();
     let result: UnifiedResult<EventReminder> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         let event = load_event(&state, &path.into_inner())?;
         require_record_in_company_scope(&event.company_id, &_scope)?;
@@ -138,7 +138,7 @@ pub(crate) async fn delete_reminder(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         let (event_id, reminder_id) = path.into_inner();
         let event = load_event(&state, &event_id)?;
@@ -182,7 +182,7 @@ pub(crate) async fn send_reminder_now(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         let (event_id, reminder_id) = path.into_inner();
         let event = load_event(&state, &event_id)?;

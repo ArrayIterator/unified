@@ -119,20 +119,41 @@ pub(crate) fn caller_company(
     }
 }
 
+/// Resolve the caller's company for a WRITE (C3 task 315, strict by
+/// default): a write requires a resolved company scope, so an
+/// unresolved caller is refused with 403 instead of silently
+/// writing a global (unscoped) record. Mutation handlers call
+/// this instead of `caller_company`; read handlers keep
+/// `caller_company`, and the named carve-outs (self-service
+/// writes, settings with no company field, scan/test triggers,
+/// platform surfaces) keep it too.
+pub(crate) fn require_company_for_write(
+    tenant: &unified_core::tenancy::TenantContext,
+    req: &actix_web::HttpRequest,
+) -> UnifiedResult<Option<Uuid>> {
+    match caller_company(tenant, req)? {
+        Some(company) => Ok(Some(company)),
+        None => Err(UnifiedError::forbidden(
+            "A write requires a resolved company scope",
+        )),
+    }
+}
+
+
 /// True when a stored record belongs to the caller's company
 /// scope. With no caller scope (an unresolved caller) only
 /// global records match: unscoped records are visible, every
 /// company-owned record is denied (the shared
 /// `CallerScope::Unresolved` rule). With a scope, only records
-/// carrying exactly that company match; unscoped (legacy) records
-/// are hidden from scoped callers.
+/// carrying that company match, plus unscoped (global/legacy) records,
+/// which are shared content visible to any resolved scope (C3 task 320, rule A).
 pub(crate) fn in_company_scope(
     record_company_id: &Option<Uuid>,
     caller_company: &Option<Uuid>,
 ) -> bool {
     match caller_company {
         None => record_company_id.is_none(),
-        Some(company) => record_company_id.as_ref() == Some(company),
+        Some(company) => record_company_id.is_none() || record_company_id.as_ref() == Some(company),
     }
 }
 
@@ -152,6 +173,28 @@ pub(crate) fn require_record_in_company_scope(
         ))
     }
 }
+
+/// Fail closed (403) when a stored record is outside the caller's
+/// company scope FOR A WRITE (C3 task 315, strict by default).
+/// Unlike the read check above (rule A), a write requires an exact
+/// company match: a company caller may write only their own
+/// company's records — global (unscoped) records are platform-only
+/// — and an unresolved caller may write nothing. Mutation handlers
+/// call this right after loading the record they mutate; handlers
+/// that only read the record, or load a parent to scope a child
+/// write, keep the read check.
+pub(crate) fn require_record_writable_in_company_scope(
+    record_company_id: &Option<Uuid>,
+    caller_company: &Option<Uuid>,
+) -> UnifiedResult<()> {
+    match (record_company_id, caller_company) {
+        (Some(record), Some(caller)) if record == caller => Ok(()),
+        _ => Err(UnifiedError::forbidden(
+            "A write requires an exact company match: the record belongs to a different company or is a shared (global) record",
+        )),
+    }
+}
+
 
 /// Load an article and fail closed (403) when it is outside the
 /// caller scope. Versions and ticket links scope through their
@@ -939,13 +982,13 @@ mod tenant_guard_tests {
     }
 
     #[test]
-    fn in_company_scope_hides_unscoped_records_from_scoped_callers() {
+    fn in_company_scope_shows_global_records_to_scoped_callers() {
         let company = Uuid::new_v4();
         let other = Uuid::new_v4();
         let scope = Some(company);
         assert!(in_company_scope(&Some(company), &scope));
         assert!(!in_company_scope(&Some(other), &scope));
-        assert!(!in_company_scope(&None, &scope));
+        assert!(in_company_scope(&None, &scope));
         assert!(in_company_scope(&None, &None));
         assert!(!in_company_scope(&Some(other), &None));
     }

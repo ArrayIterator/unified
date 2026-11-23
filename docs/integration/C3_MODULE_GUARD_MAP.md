@@ -996,14 +996,242 @@ the user's product decision (known task-312 item).
 After this task the main table holds 149 module rows and **zero
 tenant-facing rows remain unguarded** (control-plane and
 infra-or-shared rows stay unguarded by design). The remaining
-C3 open items are the follow-ups, not unguarded modules: task
-315 (ControlPlaneGuard / platform-admin scope / write-strictness
-harmonization), task 317 (header trust — done in its own pass;
-the one production `.get("x-company-id")` left is the
-timetracker claim exception), task 320 (scope-rule
-unification), inbox `tenant_visible` (product decision above),
-and C11 (task 271, real record-level partitioning for the
-gate-only modules whose records carry no scope field).
+C3 open items are the follow-ups, not unguarded modules: tasks
+315 + 320 are DONE (see "Tasks 315 + 320 outcomes" below, with
+the residual follow-up list); task 317 (header trust — done in
+its own pass; the one production `.get("x-company-id")` left is
+the timetracker claim exception); inbox `tenant_visible`
+(product decision above); and C11 (task 271, real record-level
+partitioning for the gate-only modules whose records carry no
+scope field).
+
+## Tasks 315 + 320 outcomes (2026-11-23, tracker tasks 315, 320)
+
+Both decision briefs are ADOPTED (see
+`C3_TASK315_DECISION.md`, `C3_SCOPE_RULE_DECISION.md`) and
+implemented in the tree. This section is the implementation
+record and the carve-out registry.
+
+### Adopted rules
+
+- **Task 315 — strict by default.** A write requires a resolved
+  company scope plus a match, 403 otherwise. The old
+  mismatch-only idiom (a company-less caller could still write a
+  global row) is gone from every module except the named
+  carve-outs below.
+- **Task 320 — core rule A is canonical**
+  (`crates/unified-core/src/tenancy.rs:401-410`). `Company(c)`
+  reads its own rows PLUS global (NULL `company_id`) rows;
+  `Platform` reads/writes any; `Unresolved` reads global only
+  and writes nothing. Every per-module `in_company_scope` read
+  helper now treats a NULL-company record as visible to any
+  resolved scope (34 files flipped); the write side stays
+  strict.
+- **Platform-admin scope (decision (a)).** Platform writes only
+  through an explicit, audited platform scope — never silent,
+  never by default. `ControlPlaneGuard` (an actix `FromRequest`
+  extractor, `tenancy.rs:340`) guards the public-schema control
+  plane; `require_control_plane(req)` is the manual mirror
+  (same check, message, and `tenant_control_plane_blocked`
+  metadata) used where an extractor cannot be wired.
+
+### Shared helpers (new or re-purposed)
+
+- `require_company_for_write(tenant, req)` — the strict write
+  gate, added next to each module's `caller_company` def (56
+  modules; properties + knowledgebase return `Option<Uuid>`).
+  403 "A write requires a resolved company scope" when no
+  company resolves. 977 call sites renamed from `caller_company`
+  in routed mutation handlers.
+- `require_company_scope` (`tenancy.rs`) — the shared write
+  guard named in the `CallerScope` docs.
+- `require_record_writable_in_company_scope` — strict record
+  check, added next to each `require_record_in_company_scope`
+  def (42 files + delivery_notes'
+  `require_note_writable_in_company_scope`); 403 on a
+  cross-company record AND on a shared (global) record:
+  "A write requires an exact company match: the record belongs
+  to a different company or is a shared (global) record". 151
+  direct mutation-handler call sites switched to it.
+- `require_company_match_for` family — the `(None, None)` leak
+  is closed: an unresolved caller with no record company now
+  gets 403 "A write requires a resolved company scope" (was
+  `Ok(None)`). Same for `require_company_change` /
+  `require_company_change_uuid` (`(None, None) => Err(403)`;
+  `(None, Some(_))` explicit clear by a resolved caller kept).
+
+### Control plane (C.5) — guarded, 47 handler wirings
+
+- tenants: all 14 handlers (`require_control_plane` first).
+- saas_domains: 7 (`resolve_debug`, `get_settings`,
+  `update_settings`, `transition_allocation` admin-only branch,
+  `expire_product_subdomains`). Aliases, reservations, subdomains
+  list/get/create + transitions, and product_subdomains except
+  `expire` are company-scoped and NOT control-plane guarded.
+- licensing: 29 (12 view + 17 manage). 9 public handlers NOT
+  guarded (validate / activate / deactivate / git_access /
+  git_webhook / offline_verify / download_release /
+  download_release_file / public_verify).
+- saas_packages: no change — already adopted on all 8 admin
+  endpoints.
+- storage_manager owner-or-platform: `is_platform_admin` in
+  `helpers.rs:77` (capability AND no resolved tenant context);
+  `is_storage_admin` REMOVED (it treated the bare
+  `manage_buckets` capability as admin identity). 46
+  `is_admin` derivations switched (29 `PERM_MANAGE_BUCKETS`,
+  16 `PERM_MANAGE_BYO`, 1 `PERM_MANAGE_PLANS`).
+- `resolve_binding_endpoint` (storage_manager GET) used the
+  write helper with an optional `?company_id=` — switched to
+  the read rule (`scoped_read_company`).
+
+### Carve-out registry (task 315, explicit + named + tested)
+
+1. **Self-service writes (carve-out 1)** — keep
+   `caller_company`: admissions `submit_application` /
+   `withdraw_application`; privacy `grant_consent` /
+   `withdraw_consent`; notifications `mark_read` / `mark_unread` /
+   `mark_all_read` / `update_preferences`.
+2. **Platform-scope writes (carve-out 2)** — the control-plane
+   list above, plus storage_manager's platform surface (the
+   whole module keeps lenient `caller_company` + owner-or-platform
+   access rather than the strict gate, so platform admins with no
+   company can pass it).
+3. **Tenant-scoped writes with no company field (carve-out 3)** —
+   stay tenant-gate-only until C11 lands. 20 modules, reverted
+   module-wide after the C.3 rename briefly applied the strict
+   gate: admissions, community, contracts, curriculum,
+   departments, field_service, newsletter, notifications, plm,
+   privacy, recruitment, referral, rental, sign, storage,
+   supervision, bank_transfer, email_providers, mail, todos.
+   Zero `require_company_for_write` references remain in them.
+4. **Settings / scan / print carve-outs inside strict modules**
+   (keep `caller_company`): billing (12) — `update_settings`,
+   `update_reference_settings`, `update_fee_settings`,
+   `run_reminders`, `run_fee_reminders`,
+   `run_subscription_scan_endpoint`, `generate_fee_charges`,
+   `print_invoice`, `reprint_invoice_print_job`,
+   `email_invoice_pdf`, `remind_invoice`, `remind_fee_charge`;
+   delivery_notes (3) — `ai_capability`, `print_note`,
+   `update_settings`; exams (1) — `update_settings`.
+5. **(b)-pattern parent loads** — a handler that loads a parent
+   record for visibility and then writes a CHILD keeps the
+   parent load on the read rule; the child write is
+   tenant-gate-only (carve-out 3 until C11). Verified examples:
+   tickets `add_reply` / `add_comment`, elearning
+   `enroll_course`, exams `create_question`. The exhaustive
+   (a)-site list (handlers that DID switch) is the `SWITCH`
+   config in `/tmp/switch_writable.py`; every other
+   `require_record_in_company_scope` call site is a (b) site.
+6. **Pre-315 strict idioms (unchanged, equivalent to the new
+   gate)** — pilot-4 groups A+E and pilot-5 groups A (cards)
+   and E already used `require_company` /
+   `require_caller_company` on mutations; the C.3 rename left
+   them untouched and their verifiers are unchanged.
+7. **Excluded public surfaces (53 handlers, documented in the
+   pilot results docs)** — public reads, webhooks, signed-link
+   and token surfaces that stay ungated by design (e.g.
+   affiliates `track_click`, contracts signing links, newsletter
+   subscribe/confirm/track/provider_webhook, store public
+   storefront + `signed_download`, vcs webhooks). The verifiers
+   take them as `[excluded ...]` args; see the pilot results
+   docs for the per-module lists.
+
+### Mutation-only helpers flipped (C.4)
+
+`transition_course` (elearning), `transition_event` (events),
+`change_exam_status` (exams), `load_editable_sale` (pos),
+`set_digital_product_status` (store), `move_digital_payout`
+(store), `require_instance_in_scope` (risk),
+`require_task_risk_in_scope` (risk — now calls new
+`require_risk_writable_in_scope`), `require_grade_in_scope`
+(exams — now calls new `require_attempt_writable_in_scope` →
+new `require_exam_writable_by_id_in_scope`).
+
+### Residuals / follow-ups (NOT done here)
+
+- **documents module** — skipped entirely (owned by the
+  documents worker); its guard changes are a follow-up.
+- **Shared loaders left on the read rule** (bounded residual:
+  global rows only, cross-company still blocked) —
+  risk `require_plan_risk_in_scope` (4 refs), exams
+  `require_result_in_scope` (5), `require_rubric_in_scope` (6),
+  `require_attempt_in_scope` (17), `require_question_in_scope`
+  (9). Strict variants exist for grade/task; switching their
+  mutation callers is a small follow-up.
+- **storage_manager create paths** (8 handler sites:
+  `handlers_bindings.rs:127,339`, `handlers_buckets.rs:201`,
+  `handlers_byo_connections.rs:166`,
+  `handlers_plans.rs:396,743`, `handlers_quotas.rs:102`,
+  `handlers_status.rs:162`) still resolve the company with
+  `require_company_match_for`, so a platform admin (scope
+  None) creating a bucket/plan for a company is refused — needs
+  a ControlPlaneGuard-based platform arm in company resolution.
+- **Handler tests** — 42 tests across 10 modules call a
+  strict-gate mutation handler while asserting a non-401/403
+  status (bank_transfer 3, content 4, email_providers 1,
+  email_templates 5, knowledgebase 3, payments 1, projects 8,
+  properties 5, plus software/products numeric assertions).
+  Fixed so far: tasks, tickets (+ a NEW writable check on
+  `apply_canned_response`, which previously had NO record check
+  at all), analytics, auditors, software versions. products is
+  pre-existing broken (test `verified_request` inserts no
+  `TenantContext`, and the actor is a UUID string while the body
+  uses literal `"tester"`); it needs test-logic decisions, not a
+  blind fix. None of these tests were RUN (no `cargo test` on
+  this VM); the list comes from a static survey.
+- **Bin never compile-checked.** The root-bin crate was never
+  `cargo check`ed after the C.2/C.3 switches (OOM wall); the
+  coordinator MUST run `cargo check` on the bin before pushing.
+  Two switch artifacts were found by inspection, not by any
+  verifier: a mangled identifier in tickets `handlers.rs:949`
+  (fixed) and two broken `use` imports (storage, loyalty —
+  fixed). `rustfmt` parse-clean does not catch unknown
+  identifiers.
+- **Out of scope (unchanged):** inbox `tenant_visible`
+  (product decision, open since task 312); store
+  `digital_caller` raw-header reads (task-317 follow-up);
+  record-level `tenant_id` stamping (C11); registry tables
+  (C12). `risk_matrix` read-filter fix is in:
+  `handlers_risks.rs:413` (was misusing the write helper as a
+  read filter and leaking all risks to an unresolved caller
+  with no filter).
+
+### Verification (2026-11-23, post-315/320 rules)
+
+- All 11 pilot group verifiers updated for the new rules
+  (strict315 kind for billing / delivery_notes / exams;
+  writable markers elsewhere; docstring notes for the
+  carve-out-3 and pre-315-idiom modules) and re-run with the
+  documented exclusions: **135 runs, all exit 0** —
+  `c3_order.py` (all 67 modules, 0 violations), `c3_verify.py`
+  (67 modules), pilot3-A (4), pilot4 A–E (8+8+8+8+9), pilot5
+  A–E (4+4+6+4+4). Every module: missing == 0,
+  order_violations == 0, kind_mismatches == 0,
+  write_rule_violations == 0. Logs:
+  `~/workspace/unified-check/c3-verify-20261123/` (135 logs).
+  Key counts: billing guarded=69 (reads 31, writes 38,
+  scope-checked 54, gate-only 15); delivery_notes guarded=22
+  (scope-checked 19, gate-only 3); exams guarded=58 (reads 23,
+  writes 35); cards guarded=11; entitlements guarded=20.
+- `c3_guard.py` / `c3_repair_order.py` are now method-aware:
+  they insert `require_company_for_write` for
+  POST/PUT/PATCH/DELETE and `caller_company` for GET/unknown
+  (unknown-method handlers are reported for review).
+- `c3_verify.py` "missing" counts for files (7), kyc (48),
+  phone (62), studio (32), supervision (4), todos (2), sign
+  (2 after exclusions) are PRE-EXISTING and unchanged from the
+  pristine clone: those modules guard through a different
+  idiom (`resolve_tenant` / verify-only) or delegated helpers
+  that `c3_verify.py` does not understand; their group
+  verifiers (which do) report missing == 0. `c3_verify.py`
+  exits 0 unconditionally — it is informational; the group
+  verifiers are the gate.
+- `rustfmt --edition 2024 --check` parse-clean on every
+  changed `.rs` file (the tree has pre-existing fmt debt; no
+  reformatting). `cargo check` / `cargo test` were NOT run on
+  this VM (shared VM; coordinator runs lib-crate checks
+  centrally; bin uncheckable here — see residual above). No
+  live PostgreSQL; no endpoint live-tested.
 
 ### Verification (coordinator)
 

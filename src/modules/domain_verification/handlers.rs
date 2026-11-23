@@ -122,7 +122,7 @@ pub(crate) async fn issue_token(
         let _tenant = require_tenant(&req)?;
         let who = caller(&req)?;
         require_permission(&ctx, &who.role, PERMISSION_ISSUE)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         require_body_tenant_match(&_tenant, &body.tenant_id)?;
         let company_id = require_company_match_uuid(&_tenant, &req, &body.company_id)?;
         let domain = normalize_domain(&body.domain)?;
@@ -264,12 +264,12 @@ pub(crate) async fn revoke_token(
         let _tenant = require_tenant(&req)?;
         let who = caller(&req)?;
         require_permission(&ctx, &who.role, PERMISSION_MANAGE)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let id = id.into_inner();
         let mut entry = tokens_store()
             .get_mut(&id)
             .ok_or_else(|| UnifiedError::not_found("Verification token not found"))?;
-        require_record_in_company_scope(&entry.company_id, &scope)?;
+        require_record_writable_in_company_scope(&entry.company_id, &scope)?;
         if !token_is_revocable(&entry.status) {
             return Err(UnifiedError::conflict(format!(
                 "A {} token cannot be revoked; only a pending token can be revoked",
@@ -430,7 +430,7 @@ pub(crate) async fn verify_domain_alias(
     let result: UnifiedResult<VerifyOutcome> = (|| async {
         let who = caller(&req)?;
         require_permission(&ctx, &who.role, PERMISSION_VERIFY)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         require_body_tenant_match(&_tenant, &body.tenant_id)?;
         let domain = normalize_domain(&body.domain)?;
         let settings = current_settings();
@@ -440,7 +440,7 @@ pub(crate) async fn verify_domain_alias(
                     "No verification token issued for this domain; issue a token first",
                 )
             })?;
-        require_record_in_company_scope(&token.company_id, &scope)?;
+        require_record_writable_in_company_scope(&token.company_id, &scope)?;
         // Ownership guard: when both the caller and the token name a
         // tenant/company, they must agree — a tenant may not drive
         // verification for another tenant's alias.

@@ -71,7 +71,7 @@ pub(crate) async fn create_automation_rule(
 ) -> HttpResponse {
     let result: UnifiedResult<ProjectAutomationRule> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let input = body.into_inner();
         let (viewer_id, viewer_role) = viewer_of(&req);
         let project = state.get_project(path.as_str())?;
@@ -169,7 +169,7 @@ pub(crate) async fn update_automation_rule(
 ) -> HttpResponse {
     let result: UnifiedResult<ProjectAutomationRule> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let input = body.into_inner();
         let (viewer_id, viewer_role) = viewer_of(&req);
         let (project_id, rule_id) = path.into_inner();
@@ -253,7 +253,7 @@ pub(crate) async fn delete_automation_rule(
 ) -> HttpResponse {
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let (viewer_id, viewer_role) = viewer_of(&req);
         let (project_id, rule_id) = path.into_inner();
         let project = state.get_project(&project_id)?;
@@ -296,7 +296,7 @@ pub(crate) async fn run_automation_rule(
 ) -> HttpResponse {
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let (viewer_id, viewer_role) = viewer_of(&req);
         let (project_id, rule_id) = path.into_inner();
         let project = state.get_project(&project_id)?;
@@ -374,7 +374,7 @@ pub(crate) async fn convert_task_to_ticket(
 ) -> HttpResponse {
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let input = body.into_inner();
         let (viewer_id, viewer_role) = viewer_of(&req);
         let task = state.get_task(path.as_str())?;
@@ -423,7 +423,7 @@ pub(crate) async fn create_task_from_ticket(
 ) -> HttpResponse {
     let result: UnifiedResult<ProjectTask> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let input = body.into_inner();
         let (viewer_id, viewer_role) = viewer_of(&req);
         let project = state.get_project(&input.project_id)?;

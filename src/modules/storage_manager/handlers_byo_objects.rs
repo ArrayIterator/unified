@@ -60,7 +60,7 @@ pub(crate) async fn list_byo_objects(
         Ok(found) => found,
         Err(error) => return err_response(error, debug),
     };
-    let is_admin = check_capability(&ctx, &found.role, PERM_MANAGE_BYO);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BYO);
     let connection = match load_byo_connection_for(&state, &id, &found.actor, is_admin) {
         Ok(connection) => connection,
         Err(error) => return err_response(error, debug),
@@ -194,7 +194,7 @@ pub(crate) async fn upload_byo_object(
         Ok(found) => found,
         Err(error) => return err_response(error, debug),
     };
-    let is_admin = check_capability(&ctx, &found.role, PERM_MANAGE_BYO);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BYO);
     let connection = match load_byo_connection_for(&state, &id, &found.actor, is_admin) {
         Ok(connection) => connection,
         Err(error) => return err_response(error, debug),
@@ -321,7 +321,7 @@ pub(crate) async fn download_byo_object(
         Ok(found) => found,
         Err(error) => return err_response(error, debug),
     };
-    let is_admin = check_capability(&ctx, &found.role, PERM_MANAGE_BYO);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BYO);
     let connection = match load_byo_connection_for(&state, &id, &found.actor, is_admin) {
         Ok(connection) => connection,
         Err(error) => return err_response(error, debug),
@@ -411,7 +411,7 @@ pub(crate) async fn delete_byo_object(
         Ok(found) => found,
         Err(error) => return err_response(error, debug),
     };
-    let is_admin = check_capability(&ctx, &found.role, PERM_MANAGE_BYO);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BYO);
     let connection = match load_byo_connection_for(&state, &id, &found.actor, is_admin) {
         Ok(connection) => connection,
         Err(error) => return err_response(error, debug),

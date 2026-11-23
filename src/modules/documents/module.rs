@@ -98,6 +98,9 @@
 //     POST   /upload                        multipart multi-file upload
 //     GET    /picker                        shared media picker (public only)
 //     GET    /{id}                          one document
+//     PATCH  /{id}                          update metadata (title, alt
+//                                            text, caption, description,
+//                                            custom keys; emits search.index)
 //     DELETE /{id}                          delete document + all versions
 //     GET    /{id}/preview                  preview metadata (mime, size,
 //                                            image dimensions, checksum,
@@ -150,7 +153,10 @@
 //     `document.quota.exceeded` (upload rejected by quota),
 //     `document.finalize.verified` / `document.finalize.failed`
 //     (lazy-finalize outcome), `document.visibility.flipped`
-//     (a visibility flip, with the previous value and the actor).
+//     (a visibility flip, with the previous value and the actor),
+//     `search.index` (a document is created or its metadata
+//     changes, so the Search module's instant index carries the
+//     current title and description).
 // This module also LISTENS to the content module:
 //   - `content.published` / `content.unpublished`: attached media
 //     flips public on publish and back to private on unpublish
@@ -258,7 +264,7 @@ impl Module for DocumentsModule {
     }
 
     fn description(&self) -> &'static str {
-        "Documents: chunked uploads, per-module allowlists, virus-scan hook, versioning, signed downloads, and quotas."
+        "Documents: chunked uploads, per-module allowlists, virus-scan hook, versioning, signed downloads, quotas, and document metadata."
     }
 
     fn requires(&self) -> &[&'static str] {
@@ -302,6 +308,7 @@ impl Module for DocumentsModule {
             RouteInfo { method: "POST", path: "/api/v1/documents/upload", owner: "documents", description: "Multipart multi-file upload", auth: unified_core::auth::RouteAuth::Authenticated},
             RouteInfo { method: "GET", path: "/api/v1/documents/picker", owner: "documents", description: "Shared media picker (public only)", auth: unified_core::auth::RouteAuth::Authenticated},
             RouteInfo { method: "GET", path: "/api/v1/documents/{id}", owner: "documents", description: "Get document", auth: unified_core::auth::RouteAuth::Authenticated},
+            RouteInfo { method: "PATCH", path: "/api/v1/documents/{id}", owner: "documents", description: "Update document metadata", auth: unified_core::auth::RouteAuth::Authenticated},
             RouteInfo { method: "DELETE", path: "/api/v1/documents/{id}", owner: "documents", description: "Delete document", auth: unified_core::auth::RouteAuth::Authenticated},
             RouteInfo { method: "GET", path: "/api/v1/documents/{id}/preview", owner: "documents", description: "Preview metadata", auth: unified_core::auth::RouteAuth::Authenticated},
             RouteInfo { method: "POST", path: "/api/v1/documents/{id}/flip", owner: "documents", description: "Flip visibility public/private", auth: unified_core::auth::RouteAuth::Authenticated},
@@ -345,6 +352,7 @@ impl Module for DocumentsModule {
                 .route("", web::get().to(list_documents))
                 .route("/upload", web::post().to(upload_documents))
                 .route("/{id}", web::get().to(get_document))
+                .route("/{id}", web::patch().to(super::handlers::update_document_metadata))
                 .route("/{id}", web::delete().to(delete_document))
                 .route("/{id}/preview", web::get().to(preview_document))
                 .route("/{id}/flip", web::post().to(flip_document_visibility))

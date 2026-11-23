@@ -117,7 +117,7 @@ pub(crate) async fn create_risk(
     if let Err(error) = require_capability(&state, actor_role.as_deref(), "risk:create") {
         return json::error_response(&error, false);
     }
-    let scope = match caller_company(&_tenant, &req) {
+    let scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return json::error_response(&error, false),
     };
@@ -228,7 +228,7 @@ pub(crate) async fn update_risk(
     if let Err(error) = require_capability(&state, actor_role.as_deref(), "risk:edit") {
         return json::error_response(&error, false);
     }
-    let scope = match caller_company(&_tenant, &req) {
+    let scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return json::error_response(&error, false),
     };
@@ -273,7 +273,7 @@ pub(crate) async fn update_risk(
             .risks
             .get_mut(path.as_str())
             .ok_or_else(|| UnifiedError::not_found("Risk not found"))?;
-        require_record_in_company_scope(&risk.company_id, &scope)?;
+        require_record_writable_in_company_scope(&risk.company_id, &scope)?;
         let old_status = risk.status.clone();
         // Validate the transition before mutating anything: the
         // guard writes straight into the stored entry, so a
@@ -362,14 +362,14 @@ pub(crate) async fn delete_risk(
     if let Err(error) = require_capability(&state, actor_role.as_deref(), "risk:delete") {
         return json::error_response(&error, false);
     }
-    let scope = match caller_company(&_tenant, &req) {
+    let scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return json::error_response(&error, false),
     };
     let risk_id = path.as_str().to_string();
     let result: UnifiedResult<Value> = (|| {
         let risk = state.get_risk(&risk_id)?;
-        require_record_in_company_scope(&risk.company_id, &scope)?;
+        require_record_writable_in_company_scope(&risk.company_id, &scope)?;
         state
             .risks
             .remove(&risk_id)
@@ -428,16 +428,31 @@ pub(crate) async fn risk_matrix(
         Ok(scope) => scope,
         Err(error) => return json::error_response(&error, false),
     };
-    // The query filter names a company only when it equals the
-    // caller scope; a scoped caller without a filter sees only
-    // their own company's risks, an unresolved caller only
-    // global ones — never another company's risk ids.
-    let company_filter = match require_company_match_for(
-        &scope,
-        &params.filters.get("company_id").cloned(),
-    ) {
-        Ok(filter) => filter,
-        Err(error) => return json::error_response(&error, false),
+    // Read-side company filter (C3 task 320, rule A — the shared
+    // `CallerScope::scoped_read_company` rule, not the write helper:
+    // `require_company_match_for` is a write verify and refuses an
+    // unresolved caller with no body company). The query filter names
+    // a company only when it equals the caller scope; a scoped
+    // caller without a filter sees their own company's risks plus
+    // global ones, an unresolved caller only global ones — never
+    // another company's risk ids.
+    let company_filter = {
+        let requested = params
+            .filters
+            .get("company_id")
+            .cloned()
+            .unwrap_or_default();
+        let caller_scope = unified_core::tenancy::CallerScope::from_company(scope);
+        match caller_scope.scoped_read_company(&requested) {
+            Ok(resolved) => {
+                if resolved.is_empty() {
+                    None
+                } else {
+                    Some(resolved)
+                }
+            }
+            Err(error) => return json::error_response(&error, false),
+        }
     };
     let mut cells: Vec<Value> = Vec::new();
     for likelihood in 1..=5u8 {
@@ -450,9 +465,7 @@ pub(crate) async fn risk_matrix(
                     let risk = entry.value();
                     risk.likelihood == likelihood
                         && risk.impact == impact
-                        && company_filter
-                            .as_ref()
-                            .is_none_or(|company| risk.company_id.as_deref() == Some(company.as_str()))
+                        && in_company_scope(&risk.company_id, &company_filter)
                 })
                 .map(|entry| entry.key().clone())
                 .collect();

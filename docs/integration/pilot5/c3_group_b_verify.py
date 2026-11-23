@@ -13,19 +13,19 @@ For each module, per routed handler (same routed-set rule as
 Kind rules (adaptations, documented in group-b-results.md):
   - esg, forums: gate-only (group-C model). Records carry no
     `company_id` field, so no `caller_company` / scope check is
-    expected; guard + order only.
-  - exams: scoped, mismatch-only (pilot-3 elearning model). GET
+    expected; guard + order only. Under task 315 carve-out 3
+    their writes stay tenant-gate-only until C11 lands.
+  - exams: scoped, strict under task 315 (2026-11-23). GET
     handlers resolve `caller_company` (read gate); mutations
-    resolve `caller_company` AND apply the scope (a
-    `require_*_in_scope` load, `require_company_match`,
-    `in_company_scope` / `exam_in_scope` filter, or the shared
+    resolve the strict write gate `require_company_for_write`
+    AND apply the scope (a `require_*_in_scope` load,
+    `require_company_match`, `in_company_scope` / `exam_in_scope`
+    filter, the writable record checks, or the shared
     `change_exam_status` gate). `update_settings` is the one
     documented gate-only mutation (settings carry no company
     field); `get_settings` is a GET and passes the read rule.
-    The pilot-4 group-A strict rule (mutations must call bare
-    `require_company`) is NOT applied here: exams updates carry no
-    company field and an unresolved caller may still write a
-    global row, exactly like elearning.
+    The old mismatch-only rule is superseded: an unresolved
+    caller may no longer write a global row.
   - inbox: scope via `tenant_visible`. Every handler must apply
     it directly, through a `load_thread` / `load_canned_reply` /
     `assignments_for` scope-checked load, or by stamping the
@@ -55,14 +55,18 @@ IDENTITY_CALLS = (
 
 EXAMS_SCOPE_MARKERS = (
     "require_company_match",
+    "require_company_for_write",
     "require_bank_by_id_in_scope",
     "require_exam_by_id_in_scope",
     "require_question_in_scope",
     "require_attempt_in_scope",
+    "require_attempt_writable_in_scope",
+    "require_exam_writable_by_id_in_scope",
     "require_rubric_in_scope",
     "require_grade_in_scope",
     "require_result_in_scope",
     "require_record_in_company_scope",
+    "require_record_writable_in_company_scope",
     "in_company_scope",
     "exam_in_scope",
     "change_exam_status(",
@@ -148,16 +152,27 @@ def main():
                     writes += 1
             elif mod == "exams":
                 has_caller_company = "caller_company(&_tenant, &req)" in body
+                has_write_gate = "require_company_for_write(&_tenant, &req)" in body
                 has_scope = any(marker in body for marker in EXAMS_SCOPE_MARKERS)
                 if meth == "GET":
                     reads += 1
                     if not has_caller_company:
                         kind_bad.append(f"{f}:{name} (GET without caller_company)")
-                else:
+                    if has_write_gate:
+                        kind_bad.append(f"{f}:{name} (GET with require_company_for_write)")
+                elif name in EXAMS_GATE_ONLY:
                     writes += 1
                     if not has_caller_company:
-                        kind_bad.append(f"{f}:{name} ({meth} without caller_company)")
-                    elif not has_scope and name not in EXAMS_GATE_ONLY:
+                        kind_bad.append(f"{f}:{name} ({meth} carve-out without caller_company)")
+                    if has_write_gate:
+                        kind_bad.append(f"{f}:{name} ({meth} carve-out with require_company_for_write)")
+                else:
+                    writes += 1
+                    if not has_write_gate:
+                        kind_bad.append(f"{f}:{name} ({meth} without require_company_for_write)")
+                    if has_caller_company:
+                        kind_bad.append(f"{f}:{name} ({meth} with caller_company)")
+                    elif not has_scope:
                         kind_bad.append(f"{f}:{name} ({meth} without scope application)")
             elif mod == "inbox":
                 if meth == "GET":

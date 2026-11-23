@@ -611,6 +611,27 @@ pub(crate) fn record_failed_verification(
     );
 }
 
+/// Reject tenant-resolved requests from this control-plane
+/// handler (C3 task 315, decision (a)): platform writes go only
+/// through an explicit, audited platform scope. Mirrors
+/// `tenancy::ControlPlaneGuard` — a request that resolved to a
+/// tenant host is rejected outright (403); the guard's predicate
+/// (`ControlPlaneGuard::is_control_plane_request`) is the single
+/// source of truth, so this never drifts from the guard.
+pub(crate) fn require_control_plane(req: &HttpRequest) -> UnifiedResult<()> {
+    if unified_core::tenancy::ControlPlaneGuard::is_control_plane_request(req) {
+        Ok(())
+    } else {
+        Err(UnifiedError::forbidden(
+            "Tenant requests cannot access the control plane",
+        )
+        .with_metadata(
+            "kind",
+            serde_json::Value::String("tenant_control_plane_blocked".to_string()),
+        ))
+    }
+}
+
 #[cfg(test)]
 mod tests {
 

@@ -70,6 +70,10 @@ diesel::table! {
         connection_id -> Uuid,
         provider -> Varchar,
         customer_id -> Varchar,
+        // C11 (migration 000126): tenant stamp. NULL for rows
+        // written before stamping; the runtime records carry no
+        // tenant_id field yet, so the write-through stamps it.
+        tenant_id -> Nullable<Varchar>,
         order_id -> Nullable<Varchar>,
         invoice_id -> Nullable<Varchar>,
         amount_minor -> Int8,
@@ -92,6 +96,9 @@ diesel::table! {
         provider -> Varchar,
         kind -> Varchar,
         customer_id -> Varchar,
+        // C11 (migration 000126): tenant stamp, see
+        // `payment_intents.tenant_id`.
+        tenant_id -> Nullable<Varchar>,
         order_id -> Nullable<Varchar>,
         invoice_id -> Nullable<Varchar>,
         subscription_id -> Nullable<Uuid>,
@@ -119,6 +126,9 @@ diesel::table! {
         exp_month -> Int4,
         exp_year -> Int4,
         is_default -> Bool,
+        // C11 (migration 000126): tenant stamp, see
+        // `payment_intents.tenant_id`.
+        tenant_id -> Nullable<Varchar>,
         created_at -> Timestamptz,
         updated_at -> Timestamptz,
     }
@@ -130,6 +140,9 @@ diesel::table! {
         connection_id -> Uuid,
         provider -> Varchar,
         customer_id -> Varchar,
+        // C11 (migration 000126): tenant stamp, see
+        // `payment_intents.tenant_id`.
+        tenant_id -> Nullable<Varchar>,
         order_id -> Nullable<Varchar>,
         plan_id -> Nullable<Varchar>,
         amount_minor -> Int8,

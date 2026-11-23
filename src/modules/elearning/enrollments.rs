@@ -34,7 +34,7 @@ pub(crate) async fn enroll_course(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Enrollment> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_ELEARNING_VIEW)?;
         let course = load_course(&state, &path.into_inner())?;
@@ -217,7 +217,7 @@ pub(crate) async fn cancel_enrollment(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Enrollment> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_ELEARNING_VIEW)?;
         let mut row = load_enrollment(&state, &path.into_inner())?;
@@ -309,7 +309,7 @@ pub(crate) async fn complete_lesson(
     // answers 201.
     let result: UnifiedResult<(LessonProgress, bool)> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_ELEARNING_VIEW)?;
         let lesson = load_lesson(&state, &path.into_inner())?;

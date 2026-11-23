@@ -8,7 +8,7 @@ use actix_web::{web, HttpRequest, HttpResponse};
 use serde_json::{json, Value};
 use std::collections::{HashMap};
 use std::sync::{Arc};
-use super::helpers::{caller, caller_company, require_tenant, require_permission};
+use super::helpers::{caller, caller_company, require_company_for_write, require_tenant, require_permission};
 use super::types::{CreateTag, CreateTaxonomyNode, MoveTaxonomyNode, PERM_SOFTWARE_CREATE, PERM_SOFTWARE_MANAGE, PERM_SOFTWARE_READ, TAXONOMY_KINDS, Tag, TagCount, TaxonomyNode, UpdateTag, UpdateTaxonomyNode};
 use super::state::SoftwareState;
 use super::validation::{build_tree, is_descendant_of, matches_search, new_id, now, paginate, recompute_subtree, respond_created, slugify, taxonomy_path};
@@ -77,7 +77,7 @@ pub(crate) async fn create_taxonomy_node(
 ) -> HttpResponse {
     let result: UnifiedResult<TaxonomyNode> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_SOFTWARE_CREATE)?;
         let input = body.into_inner();
@@ -180,7 +180,7 @@ pub(crate) async fn update_taxonomy_node(
 ) -> HttpResponse {
     let result: UnifiedResult<TaxonomyNode> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_SOFTWARE_MANAGE)?;
         let input = body.into_inner();
@@ -251,7 +251,7 @@ pub(crate) async fn delete_taxonomy_node(
 ) -> HttpResponse {
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_SOFTWARE_MANAGE)?;
         let node = state
@@ -297,7 +297,7 @@ pub(crate) async fn move_taxonomy_node(
 ) -> HttpResponse {
     let result: UnifiedResult<TaxonomyNode> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_SOFTWARE_MANAGE)?;
         let input = body.into_inner();
@@ -490,7 +490,7 @@ pub(crate) async fn create_tag(
 ) -> HttpResponse {
     let result: UnifiedResult<Tag> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_SOFTWARE_CREATE)?;
         let input = body.into_inner();
@@ -566,7 +566,7 @@ pub(crate) async fn update_tag(
 ) -> HttpResponse {
     let result: UnifiedResult<Tag> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_SOFTWARE_MANAGE)?;
         let input = body.into_inner();
@@ -619,7 +619,7 @@ pub(crate) async fn delete_tag(
 ) -> HttpResponse {
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_SOFTWARE_MANAGE)?;
         let tag = state

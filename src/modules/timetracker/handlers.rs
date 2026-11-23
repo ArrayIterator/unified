@@ -114,7 +114,7 @@ pub(crate) async fn start_timer(
     let debug = ctx.is_debug();
     let result: UnifiedResult<TimeTrackerTimer> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_WRITE)?;
         let input = body.into_inner();
@@ -172,7 +172,7 @@ pub(crate) async fn stop_timer(
     let debug = ctx.is_debug();
     let result: UnifiedResult<TimeEntry> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_WRITE)?;
         let timer = load_timer(&state, &path.into_inner())?;
@@ -195,7 +195,7 @@ pub(crate) async fn pause_timer(
     let debug = ctx.is_debug();
     let result: UnifiedResult<TimeTrackerTimer> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_WRITE)?;
         let timer = load_timer(&state, &path.into_inner())?;
@@ -235,7 +235,7 @@ pub(crate) async fn resume_timer(
     let debug = ctx.is_debug();
     let result: UnifiedResult<TimeTrackerTimer> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_WRITE)?;
         let timer = load_timer(&state, &path.into_inner())?;
@@ -371,7 +371,7 @@ pub(crate) async fn create_entry(
     let debug = ctx.is_debug();
     let result: UnifiedResult<TimeEntry> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_WRITE)?;
         let input = body.into_inner();
@@ -439,7 +439,7 @@ pub(crate) async fn update_entry(
     let debug = ctx.is_debug();
     let result: UnifiedResult<TimeEntry> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_WRITE)?;
         let input = body.into_inner();
@@ -507,7 +507,7 @@ pub(crate) async fn delete_entry(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_WRITE)?;
         let input = body.into_inner();
@@ -552,7 +552,7 @@ pub(crate) async fn approve_entry(
     let debug = ctx.is_debug();
     let result: UnifiedResult<TimeEntry> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_APPROVE)?;
         let input = body.into_inner();
@@ -596,7 +596,7 @@ pub(crate) async fn reject_entry(
     let debug = ctx.is_debug();
     let result: UnifiedResult<TimeEntry> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_APPROVE)?;
         let input = body.into_inner();

@@ -160,7 +160,7 @@ pub(crate) async fn revoke_certificate(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Certificate> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_ELEARNING_MANAGE)?;
         let mut row = load_certificate(&state, &path.into_inner())?;
@@ -212,7 +212,7 @@ pub(crate) async fn anchor_certificate(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Certificate> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_ELEARNING_MANAGE)?;
         let mut row = load_certificate(&state, &path.into_inner())?;

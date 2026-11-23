@@ -21,7 +21,7 @@ pub(crate) async fn create_dm(
 ) -> HttpResponse {
     let result: UnifiedResult<Channel> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let actor = actor_id(&req)?;
         let other = require_text(&body.user_id, "user_id", 128)?;
         if other == actor {

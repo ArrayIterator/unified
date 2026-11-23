@@ -34,3 +34,13 @@ pub const FINALIZE_FAILED: &str = "document.finalize.failed";
 /// Emitted when a document's visibility flips. Payload:
 /// `{"document_id", "visibility", "previous", "actor"}`.
 pub const VISIBILITY_FLIPPED: &str = "document.visibility.flipped";
+/// Emitted to the Search module (owned by the search module) when
+/// a document is created or its metadata changes, so the instant
+/// search index carries the current title and description.
+/// Payload: `{"id", "kind": "documents.document", "title",
+/// "snippet", "url", "updated_at"}`. The Search module validates
+/// the kind against its own `SEARCH_KINDS` list; until
+/// `documents.document` is listed there, it answers the event
+/// with `{"indexed": false, ...}` and the document stays out of
+/// instant search (see `emit_search_index`).
+pub const SEARCH_INDEX: &str = "search.index";

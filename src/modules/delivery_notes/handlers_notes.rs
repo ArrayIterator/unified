@@ -15,7 +15,7 @@ use uuid::Uuid;
 use super::helpers::{
     caller, created, err, load_note, note_event, note_view, ok, optional_text, paginate,
     parse_date_filter, parse_uuid, require_address, require_label, require_notes, require_reason,
-    require_reference, require_text, caller_company, in_company_scope_uuid,
+    require_reference, require_text, caller_company, require_company_for_write, in_company_scope_uuid,
     require_company_change_uuid, require_company_match_uuid, require_note_in_company_scope,
     require_tenant,
 };
@@ -299,7 +299,7 @@ pub(crate) async fn create_note(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let tenant_id = _tenant.tenant_id.to_string();
         let caller = caller(&req)?;
         super::helpers::require_permission(&ctx, &caller.role, PERM_DELIVERY_NOTES_MANAGE)?;
@@ -371,7 +371,7 @@ pub(crate) async fn create_note_from_shipment(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let tenant_id = _tenant.tenant_id.to_string();
         let caller = caller(&req)?;
         super::helpers::require_permission(&ctx, &caller.role, PERM_DELIVERY_NOTES_MANAGE)?;
@@ -460,12 +460,12 @@ pub(crate) async fn update_note(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let tenant_id = _tenant.tenant_id.to_string();
         let caller = caller(&req)?;
         super::helpers::require_permission(&ctx, &caller.role, PERM_DELIVERY_NOTES_MANAGE)?;
         let mut note = load_note(&state, &tenant_id, &path.note_id)?;
-        require_note_in_company_scope(&note.company_id, &_scope)?;
+        require_note_writable_in_company_scope(&note.company_id, &_scope)?;
         if note.status != DeliveryNoteStatus::Draft {
             return Err(UnifiedError::conflict(format!(
                 "Only a draft delivery note can be updated (current status: {})",
@@ -549,12 +549,12 @@ pub(crate) async fn delete_note(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let tenant_id = _tenant.tenant_id.to_string();
         let caller = caller(&req)?;
         super::helpers::require_permission(&ctx, &caller.role, PERM_DELIVERY_NOTES_MANAGE)?;
         let note = load_note(&state, &tenant_id, &path.note_id)?;
-        require_note_in_company_scope(&note.company_id, &_scope)?;
+        require_note_writable_in_company_scope(&note.company_id, &_scope)?;
         if note.status != DeliveryNoteStatus::Draft {
             return Err(UnifiedError::conflict(format!(
                 "Only a draft delivery note can be deleted (current status: {})",
@@ -637,12 +637,12 @@ pub(crate) async fn issue_note(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let tenant_id = _tenant.tenant_id.to_string();
         let caller = caller(&req)?;
         super::helpers::require_permission(&ctx, &caller.role, PERM_DELIVERY_NOTES_MANAGE)?;
         let mut note = load_note(&state, &tenant_id, &path.note_id)?;
-        require_note_in_company_scope(&note.company_id, &_scope)?;
+        require_note_writable_in_company_scope(&note.company_id, &_scope)?;
         apply_transition(
             &state,
             &mut note,
@@ -674,12 +674,12 @@ pub(crate) async fn advance_note(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let tenant_id = _tenant.tenant_id.to_string();
         let caller = caller(&req)?;
         super::helpers::require_permission(&ctx, &caller.role, PERM_DELIVERY_NOTES_MANAGE)?;
         let mut note = load_note(&state, &tenant_id, &path.note_id)?;
-        require_note_in_company_scope(&note.company_id, &_scope)?;
+        require_note_writable_in_company_scope(&note.company_id, &_scope)?;
         let input = body.into_inner();
         let target = match &input.target {
             Some(raw) => DeliveryNoteStatus::from_str(raw.trim()).ok_or_else(|| {
@@ -729,12 +729,12 @@ pub(crate) async fn deliver_note(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let tenant_id = _tenant.tenant_id.to_string();
         let caller = caller(&req)?;
         super::helpers::require_permission(&ctx, &caller.role, PERM_DELIVERY_NOTES_MANAGE)?;
         let mut note = load_note(&state, &tenant_id, &path.note_id)?;
-        require_note_in_company_scope(&note.company_id, &_scope)?;
+        require_note_writable_in_company_scope(&note.company_id, &_scope)?;
         if note.status != DeliveryNoteStatus::InTransit {
             return Err(UnifiedError::conflict(format!(
                 "Only an in-transit delivery note can be delivered (current status: {})",
@@ -784,12 +784,12 @@ pub(crate) async fn return_note(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let tenant_id = _tenant.tenant_id.to_string();
         let caller = caller(&req)?;
         super::helpers::require_permission(&ctx, &caller.role, PERM_DELIVERY_NOTES_MANAGE)?;
         let mut note = load_note(&state, &tenant_id, &path.note_id)?;
-        require_note_in_company_scope(&note.company_id, &_scope)?;
+        require_note_writable_in_company_scope(&note.company_id, &_scope)?;
         if note.status != DeliveryNoteStatus::InTransit
             && note.status != DeliveryNoteStatus::Delivered
             && note.status != DeliveryNoteStatus::Returned
@@ -859,12 +859,12 @@ pub(crate) async fn cancel_note(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let tenant_id = _tenant.tenant_id.to_string();
         let caller = caller(&req)?;
         super::helpers::require_permission(&ctx, &caller.role, PERM_DELIVERY_NOTES_MANAGE)?;
         let mut note = load_note(&state, &tenant_id, &path.note_id)?;
-        require_note_in_company_scope(&note.company_id, &_scope)?;
+        require_note_writable_in_company_scope(&note.company_id, &_scope)?;
         let input = body.into_inner();
         let reason = match &input.reason {
             Some(text) => Some(require_reason(text)?),

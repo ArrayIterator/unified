@@ -106,6 +106,27 @@ pub(crate) fn caller_company(
     }
 }
 
+/// Resolve the caller's company for a WRITE (C3 task 315, strict by
+/// default): a write requires a resolved company scope, so an
+/// unresolved caller is refused with 403 instead of silently
+/// writing a global (unscoped) record. Mutation handlers call
+/// this instead of `caller_company`; read handlers keep
+/// `caller_company`, and the named carve-outs (self-service
+/// writes, settings with no company field, scan/test triggers,
+/// platform surfaces) keep it too.
+pub(crate) fn require_company_for_write(
+    tenant: &unified_core::tenancy::TenantContext,
+    req: &actix_web::HttpRequest,
+) -> UnifiedResult<Option<String>> {
+    match caller_company(tenant, req)? {
+        Some(company) => Ok(Some(company)),
+        None => Err(UnifiedError::forbidden(
+            "A write requires a resolved company scope",
+        )),
+    }
+}
+
+
 /// The caller company scope as a UUID, for records keyed by
 /// `company_id: Option<Uuid>`. A scope string that is not a UUID
 /// parses to nothing: it can never equal a stored company id.
@@ -120,8 +141,8 @@ fn scope_uuid(scope: &Option<String>) -> Option<Uuid> {
 /// global records match: unscoped records are visible, every
 /// company-owned record is denied (the shared
 /// `CallerScope::Unresolved` rule). With a scope, only records
-/// carrying exactly that company match; unscoped (legacy) records
-/// are hidden from scoped callers. A scope that is not a UUID
+/// carrying that company match, plus unscoped (global/legacy) records,
+/// which are shared content visible to any resolved scope (C3 task 320, rule A). A scope that is not a UUID
 /// matches nothing at all — not even global rows — because a
 /// caller carrying a company scope is not an unresolved caller.
 pub(crate) fn in_company_scope_uuid(
@@ -131,7 +152,7 @@ pub(crate) fn in_company_scope_uuid(
     match caller_company {
         None => record_company_id.is_none(),
         Some(_) => match scope_uuid(caller_company) {
-            Some(id) => record_company_id == &Some(id),
+            Some(id) => record_company_id.is_none() || record_company_id == &Some(id),
             None => false,
         },
     }
@@ -155,6 +176,31 @@ pub(crate) fn require_note_in_company_scope(
     }
 }
 
+/// Fail closed (404) when a stored delivery note is outside the
+/// caller's company scope FOR A WRITE (C3 task 315, strict by
+/// default). Like the read check above, the failure is a 404, not a
+/// 403, so a write outside the caller's scope never leaks whether
+/// such a note exists: a company caller may write only their own
+/// company's notes — global notes are platform-only — and an
+/// unresolved caller may write nothing.
+pub(crate) fn require_note_writable_in_company_scope(
+    record_company_id: &Option<Uuid>,
+    caller_company: &Option<String>,
+) -> UnifiedResult<()> {
+    match (record_company_id, caller_company) {
+        (Some(record), Some(caller)) => match Uuid::parse_str(caller) {
+            Ok(scope) if *record == scope => Ok(()),
+            _ => Err(UnifiedError::not_found(
+            "Delivery note not found",
+        )),
+        },
+        _ => Err(UnifiedError::not_found(
+            "Delivery note not found",
+        )),
+    }
+}
+
+
 /// Verify a request body's company id against the caller's
 /// company scope and return the company id to store. Fails closed
 /// (403) when the body names a company other than the caller's.
@@ -162,8 +208,8 @@ pub(crate) fn require_note_in_company_scope(
 /// so the record is never stored unscoped under a scoped caller.
 /// When no caller scope is known, a body company is refused: an
 /// unresolved caller may not claim a company (the shared
-/// `CallerScope::Unresolved` rule); omitting the company stores
-/// a global row. A caller scope that is not a UUID cannot be
+/// `CallerScope::Unresolved` rule); omitting the company is refused (C3 task 315):
+/// a write requires a resolved company scope. A caller scope that is not a UUID cannot be
 /// stored on a note, so omitting the company is refused for such
 /// callers as well.
 pub(crate) fn require_company_match_uuid(
@@ -197,7 +243,9 @@ pub(crate) fn require_company_match_uuid_for(
                 "The caller company scope is not a UUID, so it cannot be stored on a delivery note",
             )),
         },
-        (None, None) => Ok(None),
+        (None, None) => Err(UnifiedError::forbidden(
+            "A write requires a resolved company scope",
+        )),
     }
 }
 
@@ -222,7 +270,13 @@ pub(crate) fn require_company_change_uuid(
         (Some(_), None) => Err(UnifiedError::forbidden(
             "company_id does not match the caller's company scope",
         )),
-        (None, _) => Ok(None),
+        // An explicit clear stays a clear for a resolved caller
+        // (deliberate pilot semantic); an unresolved caller may
+        // not write at all (C3 task 315).
+        (None, Some(_)) => Ok(None),
+        (None, None) => Err(UnifiedError::forbidden(
+            "A write requires a resolved company scope",
+        )),
     }
 }
 
@@ -550,12 +604,12 @@ mod tests {
     }
 
     #[test]
-    fn in_company_scope_uuid_matches_only_the_same_company_uuid() {
+    fn in_company_scope_uuid_matches_own_company_and_global_rows() {
         let company = Uuid::now_v7();
         let scope = Some(company.to_string());
         assert!(in_company_scope_uuid(&Some(company), &scope));
         assert!(!in_company_scope_uuid(&Some(Uuid::now_v7()), &scope));
-        assert!(!in_company_scope_uuid(&None, &scope));
+        assert!(in_company_scope_uuid(&None, &scope));
         assert!(in_company_scope_uuid(&None, &None));
         assert!(!in_company_scope_uuid(&Some(company), &None));
         // A non-UUID scope matches nothing, not even global rows.
@@ -573,14 +627,10 @@ mod tests {
     }
 
     #[test]
-    fn require_company_match_uuid_for_refuses_body_company_from_unresolved_callers() {
+    fn require_company_match_uuid_for_refuses_writes_from_unresolved_callers() {
         let company = Uuid::now_v7();
         assert!(require_company_match_uuid_for(&None, &Some(company)).is_err());
-        assert!(
-            require_company_match_uuid_for(&None, &None)
-                .unwrap()
-                .is_none()
-        );
+        assert!(require_company_match_uuid_for(&None, &None).is_err());
         assert_eq!(
             require_company_match_uuid_for(&Some(company.to_string()), &Some(company)).unwrap(),
             Some(company)

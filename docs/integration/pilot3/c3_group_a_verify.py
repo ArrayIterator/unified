@@ -4,6 +4,12 @@ loyalty, affiliates.
 
 For each module, per routed handler (same routed-set rule as
 /tmp/c3_verify.py: names appearing in `.to(name)` in the module):
+
+Task 315/320 (2026-11-23): mutation handlers resolve the strict
+write gate `require_company_for_write` and record writes use the
+writable check `require_record_writable_in_company_scope*`; both
+count as scope markers. Reads use rule A: `in_company_scope` shows
+a global (NULL-company) row to any resolved scope.
   - guarded: body contains `require_tenant(&req)`
   - order: the guard precedes the first identity/capability call
     (`caller(&req)`, `require_permission(`, `check_capability(`)
@@ -38,6 +44,16 @@ SCOPE_MARKERS = (
     # body itself): pos sale-item handlers go through
     # load_editable_sale, which scope-checks the loaded sale.
     "load_editable_sale(",
+    # Task 315/320 (2026-11-23): the strict write gate and the
+    # writable record checks count as scope markers too.
+    "require_company_for_write",
+    "require_record_writable_in_company_scope",
+    "require_record_writable_in_company_scope_str",
+    "require_record_writable_in_company_scope_uuid",
+    "require_note_writable_in_company_scope",
+    "require_attempt_writable_in_scope",
+    "require_exam_writable_by_id_in_scope",
+    "require_risk_writable_in_scope",
 )
 
 IDENTITY_CALLS = ("caller(&req)", "require_permission(", "check_capability(")

@@ -15,7 +15,7 @@ use uuid::Uuid;
 use super::constants::{MAX_DESCRIPTION_LEN, MAX_NAME_LEN, PERM_WORKFLOWS_MANAGE, PERM_WORKFLOWS_VIEW};
 use super::engine::{render_config_value};
 use super::runs::{RunStart, begin_run, evaluate_conditions, finish_run_async, finish_run_sync, schedule_workflow, subscribe_workflow, unsubscribe_workflow};
-use super::state::{WorkflowsState, caller, caller_company, created, err, in_company_scope, load_run, load_workflow_in_scope, ok, paginate, require_company_match, require_permission, require_record_in_company_scope, require_text, require_tenant, steps_for_run};
+use super::state::{WorkflowsState, caller, caller_company, require_company_for_write, created, err, in_company_scope, load_run, load_workflow_in_scope, ok, paginate, require_company_match, require_permission, require_record_in_company_scope, require_text, require_tenant, steps_for_run};
 use super::types::{CreateWorkflowRequest, RetryRunRequest, RunStatus, RunWorkflowRequest, TestWorkflowRequest, TriggerKind, UpdateWorkflowRequest, Workflow, WorkflowRun};
 use super::validation::{generate_webhook_token, hashes_equal, token_hash, validate_actions, validate_allowed_hosts, validate_conditions, validate_no_self_trigger_event, validate_trigger};
 
@@ -105,7 +105,7 @@ pub(crate) async fn create_workflow(
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_WORKFLOWS_MANAGE)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let input = body.into_inner();
         let name = require_text(&input.name, "name", MAX_NAME_LEN)?;
         let description = match &input.description {
@@ -229,7 +229,7 @@ pub(crate) async fn update_workflow(
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_WORKFLOWS_MANAGE)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let mut workflow = load_workflow_in_scope(&state, &path.into_inner(), &scope)?;
         let input = body.into_inner();
         let state_arc = Arc::new(state.as_ref().clone());
@@ -354,7 +354,7 @@ pub(crate) async fn delete_workflow(
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_WORKFLOWS_MANAGE)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let workflow = load_workflow_in_scope(&state, &path.into_inner(), &scope)?;
         let state_arc = Arc::new(state.as_ref().clone());
         unsubscribe_workflow(&state_arc, workflow.id);
@@ -409,7 +409,7 @@ pub(crate) async fn enable_workflow(
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_WORKFLOWS_MANAGE)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let mut workflow = load_workflow_in_scope(&state, &path.into_inner(), &scope)?;
         workflow.is_active = true;
         workflow.updated_at = Utc::now();
@@ -445,7 +445,7 @@ pub(crate) async fn disable_workflow(
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_WORKFLOWS_MANAGE)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let mut workflow = load_workflow_in_scope(&state, &path.into_inner(), &scope)?;
         workflow.is_active = false;
         workflow.updated_at = Utc::now();
@@ -478,7 +478,7 @@ pub(crate) async fn duplicate_workflow(
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_WORKFLOWS_MANAGE)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let source = load_workflow_in_scope(&state, &path.into_inner(), &scope)?;
         let now = Utc::now();
         let mut copy = source.clone();
@@ -552,7 +552,7 @@ pub(crate) async fn run_workflow(
     if let Err(error) = require_permission(&ctx, &caller.role, PERM_WORKFLOWS_MANAGE) {
         return err(error, debug);
     }
-    let scope = match caller_company(&_tenant, &req) {
+    let scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return err(error, debug),
     };
@@ -617,7 +617,7 @@ pub(crate) async fn test_workflow(
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_WORKFLOWS_MANAGE)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let workflow = load_workflow_in_scope(&state, &path.into_inner(), &scope)?;
         let input = body.into_inner();
         let payload = if input.payload.is_null() {
@@ -785,7 +785,7 @@ pub(crate) async fn retry_workflow_run(
     if let Err(error) = require_permission(&ctx, &caller.role, PERM_WORKFLOWS_MANAGE) {
         return err(error, debug);
     }
-    let scope = match caller_company(&_tenant, &req) {
+    let scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return err(error, debug),
     };
@@ -998,5 +998,25 @@ pub(crate) async fn webhook_trigger(
                 ok(json!({ "run_id": finished.id.to_string(), "status": finished.status.as_str() }))
             }
         }
+    }
+}
+
+/// Resolve the caller's company for a WRITE (C3 task 315, strict by
+/// default): a write requires a resolved company scope, so an
+/// unresolved caller is refused with 403 instead of silently
+/// writing a global (unscoped) record. Mutation handlers call
+/// this instead of `caller_company`; read handlers keep
+/// `caller_company`, and the named carve-outs (self-service
+/// writes, settings with no company field, scan/test triggers,
+/// platform surfaces) keep it too.
+pub(crate) fn require_company_for_write(
+    tenant: &unified_core::tenancy::TenantContext,
+    req: &actix_web::HttpRequest,
+) -> UnifiedResult<Option<String>> {
+    match super::state::caller_company(tenant, req)? {
+        Some(company) => Ok(Some(company)),
+        None => Err(UnifiedError::forbidden(
+            "A write requires a resolved company scope",
+        )),
     }
 }

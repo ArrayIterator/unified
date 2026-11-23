@@ -24,7 +24,7 @@ pub(crate) async fn ai_draft_questions(
     let result: UnifiedResult<Value> = async {
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_permission(&ctx, &caller.role, PERM_EXAMS_MANAGE)?;
         let settings = state.settings();
         let input = body.into_inner();
@@ -145,7 +145,7 @@ pub(crate) async fn ai_analyse_results(
     let result: UnifiedResult<Value> = async {
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_permission(&ctx, &caller.role, PERM_EXAMS_VIEW)?;
         let is_manager = check_capability(&ctx, &caller.role, PERM_EXAMS_MANAGE);
         let is_grader = check_capability(&ctx, &caller.role, PERM_EXAMS_GRADE);

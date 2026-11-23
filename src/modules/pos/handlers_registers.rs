@@ -90,7 +90,7 @@ pub(crate) async fn create_register(
     let debug = ctx.is_debug();
     let result: UnifiedResult<PosRegister> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_POS_MANAGE)?;
@@ -169,7 +169,7 @@ pub(crate) async fn update_register(
     let debug = ctx.is_debug();
     let result: UnifiedResult<PosRegister> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_POS_MANAGE)?;
@@ -226,7 +226,7 @@ pub(crate) async fn delete_register(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_POS_MANAGE)?;
@@ -273,7 +273,7 @@ pub(crate) async fn assign_cashier(
     let debug = ctx.is_debug();
     let result: UnifiedResult<PosRegister> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_POS_MANAGE)?;
@@ -311,7 +311,7 @@ pub(crate) async fn unassign_cashier(
     let debug = ctx.is_debug();
     let result: UnifiedResult<PosRegister> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_POS_MANAGE)?;
@@ -408,7 +408,7 @@ pub(crate) async fn open_shift(
     let debug = ctx.is_debug();
     let result: UnifiedResult<PosShift> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_POS_SELL)?;
@@ -497,7 +497,7 @@ pub(crate) async fn close_shift(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_POS_SELL)?;

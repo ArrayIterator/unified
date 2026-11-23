@@ -1,22 +1,30 @@
 //! billing - state.
 
+use super::helpers::*;
+use super::reference::*;
+use super::school_fees_types::*;
+use super::templates::*;
+use super::types::*;
+use chrono::{DateTime, Duration, Utc};
+use dashmap::DashMap;
+use diesel::prelude::*;
+use serde_json::{Value, json};
+use std::sync::{
+    Arc, RwLock,
+    atomic::{AtomicU64, Ordering},
+};
+use unified_core::db::{
+    DbPool,
+    models::{
+        CreditNote as DbCreditNote, Invoice as DbInvoice, InvoiceItem as DbInvoiceItem,
+        InvoicePayment as DbInvoicePayment, InvoiceSequence as DbInvoiceSequence,
+    },
+    money::pg_numeric_to_minor,
+};
 use unified_core::error::{UnifiedError, UnifiedResult};
 use unified_core::hooks::HookBus;
 use unified_core::reference_id::ReferenceIdSettings;
-use chrono::{DateTime, Duration, Utc};
-use dashmap::DashMap;
-use serde_json::{json, Value};
-use std::sync::{
-    atomic::{AtomicU64, Ordering},
-    Arc,
-    RwLock,
-};
 use uuid::Uuid;
-use super::types::*;
-use super::reference::*;
-use super::helpers::*;
-use super::school_fees_types::*;
-use super::templates::*;
 
 pub struct BillingState {
     pub(crate) hooks: RwLock<Arc<HookBus>>,
@@ -155,6 +163,255 @@ impl BillingState {
 
     pub(crate) fn emit(&self, event: &str, data: Value) {
         self.bus().emit(event, data);
+    }
+
+    /// Hydrate the in-memory billing maps from the database (C11,
+    /// task 271): invoices (with their items), invoice payments,
+    /// and credit notes are loaded from the `invoices`,
+    /// `invoice_items`, `invoice_payments`, and `credit_notes`
+    /// tables and replace the map contents, so a restart restores
+    /// the money state instead of losing it. The invoice and
+    /// credit-note number sequences are reseeded from the
+    /// `invoice_sequences` table when its rows exist (falling
+    /// back to the largest loaded number), so numbers are never
+    /// reused after a restart. Rows that cannot be converted —
+    /// an amount that does not fit in minor units, a payment or
+    /// credit note whose invoice is missing — are skipped, never
+    /// fatal: hydration must not fail startup on one bad row.
+    /// The database has no `subscription_id` column on invoices
+    /// and no currency on payments / credit notes, so hydrated
+    /// invoices carry no subscription link and hydrated payments
+    /// / credit notes take the parent invoice's currency.
+    /// Call once from `BillingModule::init` after the pool is
+    /// attached (see `docs/integration/INTEGRATION_NOTES_C11.md`
+    /// for the exact call). Returns the number of rows loaded.
+    pub(crate) fn hydrate_from_db(&self, pool: &DbPool) -> UnifiedResult<usize> {
+        // The `invoices` table lives at
+        // `schema::invoices::invoices`: the file module
+        // `schema::invoices` shadows the table name (see the
+        // NOTE on the `Invoice` model).
+        use unified_core::db::schema::invoices::invoices::dsl as inv_dsl;
+        use unified_core::db::schema::{
+            credit_notes::dsl as cn_dsl, invoice_items::dsl as ii_dsl,
+            invoice_payments::dsl as ip_dsl, invoice_sequences::dsl as seq_dsl,
+        };
+        let mut conn = pool.get().map_err(|error| {
+            UnifiedError::internal(format!("Cannot get database connection: {error}"))
+        })?;
+        let db_invoices = inv_dsl::invoices
+            .select(DbInvoice::as_select())
+            .load::<DbInvoice>(&mut conn)
+            .map_err(|error| UnifiedError::internal(format!("Cannot load invoices: {error}")))?;
+        let db_items = ii_dsl::invoice_items
+            .select(DbInvoiceItem::as_select())
+            .load::<DbInvoiceItem>(&mut conn)
+            .map_err(|error| {
+                UnifiedError::internal(format!("Cannot load invoice items: {error}"))
+            })?;
+        let db_payments = ip_dsl::invoice_payments
+            .select(DbInvoicePayment::as_select())
+            .load::<DbInvoicePayment>(&mut conn)
+            .map_err(|error| {
+                UnifiedError::internal(format!("Cannot load invoice payments: {error}"))
+            })?;
+        let db_credit_notes = cn_dsl::credit_notes
+            .select(DbCreditNote::as_select())
+            .load::<DbCreditNote>(&mut conn)
+            .map_err(|error| {
+                UnifiedError::internal(format!("Cannot load credit notes: {error}"))
+            })?;
+        let db_sequences = seq_dsl::invoice_sequences
+            .select(DbInvoiceSequence::as_select())
+            .load::<DbInvoiceSequence>(&mut conn)
+            .map_err(|error| {
+                UnifiedError::internal(format!("Cannot load invoice sequences: {error}"))
+            })?;
+
+        let mut items_by_invoice: std::collections::HashMap<String, Vec<InvoiceItem>> =
+            std::collections::HashMap::new();
+        // Items need the invoice currency for the NUMERIC ->
+        // minor-unit conversion; invoices are converted first
+        // and their currencies remembered here.
+        let mut currency_by_invoice: std::collections::HashMap<Uuid, String> =
+            std::collections::HashMap::new();
+        let mut invoices: Vec<Invoice> = Vec::with_capacity(db_invoices.len());
+        for row in &db_invoices {
+            let currency = row.currency.clone();
+            let Some(subtotal) = pg_numeric_to_minor(&row.subtotal, &currency) else {
+                continue;
+            };
+            let Some(tax_total) = pg_numeric_to_minor(&row.tax_total, &currency) else {
+                continue;
+            };
+            let Some(total) = pg_numeric_to_minor(&row.total, &currency) else {
+                continue;
+            };
+            let Some(amount_paid) = pg_numeric_to_minor(&row.amount_paid, &currency) else {
+                continue;
+            };
+            let Some(credit_total) = pg_numeric_to_minor(&row.credit_total, &currency) else {
+                continue;
+            };
+            let Some(balance) = pg_numeric_to_minor(&row.balance, &currency) else {
+                continue;
+            };
+            currency_by_invoice.insert(row.id, currency.clone());
+            invoices.push(Invoice {
+                id: row.id.to_string(),
+                number: row.number.clone(),
+                reference: row.reference.clone(),
+                order_id: row.order_id.clone(),
+                subscription_id: None,
+                user_id: row.user_id.clone(),
+                company_id: row.company_id.map(|id| id.to_string()),
+                items: Vec::new(),
+                subtotal,
+                tax_total,
+                total,
+                currency,
+                status: row.status.clone(),
+                overdue: row.overdue,
+                tax_inclusive: row.tax_inclusive,
+                amount_paid,
+                credit_total,
+                balance,
+                issue_date: row.issue_date,
+                due_date: row.due_date,
+                payment_terms_days: row
+                    .payment_terms_days
+                    .filter(|days| *days >= 0)
+                    .map(|days| days as u32),
+                paid_at: row.paid_at,
+                notes: row.notes.clone(),
+                reminders_sent: row
+                    .reminders_sent
+                    .as_array()
+                    .map(|values| {
+                        values
+                            .iter()
+                            .filter_map(|value| value.as_i64().map(|n| n as i32))
+                            .collect()
+                    })
+                    .unwrap_or_default(),
+                created_at: row.created_at,
+                updated_at: row.updated_at,
+            });
+        }
+        for item in &db_items {
+            let Some(currency) = currency_by_invoice.get(&item.invoice_id) else {
+                continue;
+            };
+            let Some(unit_price) = pg_numeric_to_minor(&item.unit_price, currency) else {
+                continue;
+            };
+            let Some(line_total) = pg_numeric_to_minor(&item.line_total, currency) else {
+                continue;
+            };
+            let Some(tax_amount) = pg_numeric_to_minor(&item.tax_amount, currency) else {
+                continue;
+            };
+            items_by_invoice
+                .entry(item.invoice_id.to_string())
+                .or_default()
+                .push(InvoiceItem {
+                    name: item.name.clone(),
+                    quantity: item.quantity.max(0) as u32,
+                    unit_price,
+                    line_total,
+                    tax_rate: item.tax_rate,
+                    tax_amount,
+                });
+        }
+        let mut loaded = 0;
+        self.invoices.clear();
+        for mut invoice in invoices {
+            if let Some(items) = items_by_invoice.remove(&invoice.id) {
+                invoice.items = items;
+            }
+            self.invoices.insert(invoice.id.clone(), invoice);
+            loaded += 1;
+        }
+        self.payments.clear();
+        for row in &db_payments {
+            let Some(currency) = currency_by_invoice.get(&row.invoice_id) else {
+                continue;
+            };
+            let Some(amount) = pg_numeric_to_minor(&row.amount, currency) else {
+                continue;
+            };
+            self.payments.insert(
+                row.id.to_string(),
+                InvoicePayment {
+                    id: row.id.to_string(),
+                    invoice_id: row.invoice_id.to_string(),
+                    amount,
+                    method: row.method.clone(),
+                    reference: row.reference.clone(),
+                    recorded_at: row.recorded_at,
+                },
+            );
+            loaded += 1;
+        }
+        self.credit_notes.clear();
+        for row in &db_credit_notes {
+            let Some(currency) = currency_by_invoice.get(&row.invoice_id) else {
+                continue;
+            };
+            let Some(amount) = pg_numeric_to_minor(&row.amount, currency) else {
+                continue;
+            };
+            self.credit_notes.insert(
+                row.id.to_string(),
+                CreditNote {
+                    id: row.id.to_string(),
+                    invoice_id: row.invoice_id.to_string(),
+                    number: row.number.clone(),
+                    amount,
+                    reason: row.reason.clone(),
+                    created_at: row.created_at,
+                },
+            );
+            loaded += 1;
+        }
+        // Reseed the number sequences: the sequences table wins
+        // when it has rows; otherwise the largest loaded number
+        // (+ 1) is the floor, so a restart never reissues a
+        // number that already exists.
+        let mut next_invoice = 1u64;
+        let mut next_credit = 1u64;
+        for sequence in &db_sequences {
+            let value = sequence.next_value.max(1) as u64;
+            if sequence.name == "invoice" {
+                next_invoice = next_invoice.max(value);
+            } else if sequence.name == "credit_note" {
+                next_credit = next_credit.max(value);
+            }
+        }
+        for invoice in self.invoices.iter() {
+            if let Some(seq) = invoice
+                .value()
+                .number
+                .rsplit('-')
+                .next()
+                .and_then(|tail| tail.parse::<u64>().ok())
+            {
+                next_invoice = next_invoice.max(seq + 1);
+            }
+        }
+        for note in self.credit_notes.iter() {
+            if let Some(seq) = note
+                .value()
+                .number
+                .rsplit('-')
+                .next()
+                .and_then(|tail| tail.parse::<u64>().ok())
+            {
+                next_credit = next_credit.max(seq + 1);
+            }
+        }
+        self.invoice_seq.fetch_max(next_invoice, Ordering::SeqCst);
+        self.credit_seq.fetch_max(next_credit, Ordering::SeqCst);
+        Ok(loaded)
     }
 
     /// Build a draft invoice from an order payload (as emitted by the

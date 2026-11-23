@@ -25,6 +25,7 @@ use super::caller::caller_from;
 use super::caller::check_capability;
 use super::caller::domain_claimed;
 use super::caller::require_permission;
+use super::caller::require_control_plane;
 use super::events::CAP_MANAGE;
 use super::events::CAP_READ;
 use super::events::CAP_SELF_ASSIGN;
@@ -751,6 +752,7 @@ pub(crate) async fn expire_product_subdomains(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
+        require_control_plane(&req)?;
         let caller = caller_from(&req)?;
         require_permission(&ctx, &caller.role, CAP_MANAGE)?;
         let finalized = finalize_expired_graces(&ctx);

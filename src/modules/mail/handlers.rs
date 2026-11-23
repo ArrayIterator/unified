@@ -33,7 +33,7 @@ use super::types::MailLogEntry;
 use super::types::OutgoingMessage;
 use super::types::SmtpSettings;
 use super::types::SmtpSettingsInput;
-use super::{caller_company, require_tenant};
+use super::{caller_company, require_company_for_write, require_tenant};
 
 // ---------------------------------------------------------------------------
 // HTTP handlers
@@ -156,7 +156,7 @@ pub(crate) async fn send_mail(
     req: HttpRequest,
 ) -> HttpResponse {
     let _tenant = require_tenant(&req)?;
-    let _scope = caller_company(&_tenant, &req)?;
+    let _scope = require_company_for_write(&_tenant, &req)?;
     let state: Arc<MailState> = state.get_ref().clone();
     let debug = state.is_debug();
     let input = body.into_inner();

@@ -509,6 +509,28 @@ pub(crate) fn safe_download_name(name: &str) -> String {
         .collect()
 }
 
+/// Validate one `custom_metadata` key: `[a-z0-9_]{1,64}`.
+/// Keys are lowercase by construction (no uppercase, no dashes,
+/// no dots, no spaces), so a key can never smuggle a path segment
+/// or a nested object path into the stored JSONB object.
+pub(crate) fn valid_metadata_key(value: &str) -> UnifiedResult<String> {
+    if value.is_empty() || value.len() > super::types::MAX_METADATA_KEY_LEN {
+        return Err(UnifiedError::bad_request(format!(
+            "Metadata keys must be 1..={} characters",
+            super::types::MAX_METADATA_KEY_LEN
+        )));
+    }
+    if !value
+        .bytes()
+        .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_')
+    {
+        return Err(UnifiedError::bad_request(
+            "Metadata keys must match [a-z0-9_]{1,64}",
+        ));
+    }
+    Ok(value.to_string())
+}
+
 pub(crate) fn validate_extensions(raw: &[String]) -> UnifiedResult<Vec<String>> {
     let mut cleaned: Vec<String> = Vec::new();
     for value in raw {
@@ -852,6 +874,22 @@ mod tests {
         assert_eq!(valid_scope("module").unwrap(), "module");
         assert!(valid_scope("admin").is_err());
         assert!(valid_scope("").is_err());
+    }
+
+    #[test]
+    fn valid_metadata_key_rules() {
+        assert_eq!(valid_metadata_key("notes").unwrap(), "notes");
+        assert_eq!(valid_metadata_key("a").unwrap(), "a");
+        assert_eq!(valid_metadata_key("key_1").unwrap(), "key_1");
+        assert_eq!(valid_metadata_key(&"a".repeat(64)).unwrap(), "a".repeat(64));
+        // Empty, over-long, uppercase, dash, dot, space: rejected.
+        assert!(valid_metadata_key("").is_err());
+        assert!(valid_metadata_key(&"a".repeat(65)).is_err());
+        assert!(valid_metadata_key("Notes").is_err());
+        assert!(valid_metadata_key("my-key").is_err());
+        assert!(valid_metadata_key("my.key").is_err());
+        assert!(valid_metadata_key("my key").is_err());
+        assert!(valid_metadata_key("kéy").is_err());
     }
 
     #[test]

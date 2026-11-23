@@ -81,7 +81,7 @@ pub(crate) async fn create_commission_rule(
     let debug = ctx.is_debug();
     let result: UnifiedResult<CommissionRule> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_MARKETPLACE_MANAGE)?;
@@ -155,7 +155,7 @@ pub(crate) async fn update_commission_rule(
     let debug = ctx.is_debug();
     let result: UnifiedResult<CommissionRule> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_MARKETPLACE_MANAGE)?;
@@ -220,7 +220,7 @@ pub(crate) async fn delete_commission_rule(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_MARKETPLACE_MANAGE)?;
@@ -312,7 +312,7 @@ pub(crate) async fn submit_product(
     let debug = ctx.is_debug();
     let result: UnifiedResult<ProductApproval> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         let input = body.into_inner();
@@ -481,7 +481,7 @@ pub(crate) async fn approve_product(
     let debug = ctx.is_debug();
     let result: UnifiedResult<ProductApproval> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_MARKETPLACE_MANAGE)?;
@@ -509,7 +509,7 @@ pub(crate) async fn reject_product(
     let debug = ctx.is_debug();
     let result: UnifiedResult<ProductApproval> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_MARKETPLACE_MANAGE)?;
@@ -698,7 +698,7 @@ pub(crate) async fn request_payout(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Payout> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         let vendor = state
@@ -861,7 +861,7 @@ pub(crate) async fn approve_payout(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Payout> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_MARKETPLACE_MANAGE)?;
@@ -890,7 +890,7 @@ pub(crate) async fn reject_payout(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Payout> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_MARKETPLACE_MANAGE)?;
@@ -931,7 +931,7 @@ pub(crate) async fn mark_payout_paid(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Payout> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_MARKETPLACE_MANAGE)?;

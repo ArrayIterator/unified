@@ -120,6 +120,7 @@ pub(crate) async fn create_release(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| async {
+        require_control_plane(&req)?;
         require_caller_capability(&ctx, &req, "licensing:manage")?;
         let product_id = product_id.into_inner();
         let product = license_products_store()
@@ -291,6 +292,7 @@ pub(crate) async fn list_releases(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
+        require_control_plane(&req)?;
         require_caller_capability(&ctx, &req, "licensing:view")?;
         let product_id = product_id.into_inner();
         if !license_products_store().contains_key(&product_id) {

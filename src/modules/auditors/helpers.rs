@@ -119,14 +119,35 @@ pub(crate) fn caller_company(
     }
 }
 
+/// Resolve the caller's company for a WRITE (C3 task 315, strict by
+/// default): a write requires a resolved company scope, so an
+/// unresolved caller is refused with 403 instead of silently
+/// writing a global (unscoped) record. Mutation handlers call
+/// this instead of `caller_company`; read handlers keep
+/// `caller_company`, and the named carve-outs (self-service
+/// writes, settings with no company field, scan/test triggers,
+/// platform surfaces) keep it too.
+pub(crate) fn require_company_for_write(
+    tenant: &unified_core::tenancy::TenantContext,
+    req: &actix_web::HttpRequest,
+) -> UnifiedResult<Option<String>> {
+    match caller_company(tenant, req)? {
+        Some(company) => Ok(Some(company)),
+        None => Err(UnifiedError::forbidden(
+            "A write requires a resolved company scope",
+        )),
+    }
+}
+
+
 /// True when a stored record belongs to the caller's company
 /// scope. Auditor scope entries carry `company_id: Option<Uuid>`;
 /// the caller scope is the tenant/verifier company as a string.
 /// With no caller scope (an unresolved caller) only global records
 /// match: entries with no company are visible, every company-owned
 /// entry is denied (the shared `CallerScope::Unresolved` rule).
-/// With a scope, only entries carrying exactly that company match;
-/// global entries are hidden from scoped callers.
+/// With a scope, entries carrying exactly that company match, plus
+/// global entries, which are shared content visible to any resolved scope (C3 task 320, rule A).
 pub(crate) fn in_company_scope(
     record_company_id: &Option<Uuid>,
     caller_company: &Option<String>,
@@ -134,7 +155,9 @@ pub(crate) fn in_company_scope(
     match caller_company {
         None => record_company_id.is_none(),
         Some(company) => {
-            record_company_id.map(|id| id.to_string()).as_deref() == Some(company.as_str())
+            record_company_id.is_none()
+                || record_company_id.map(|id| id.to_string()).as_deref()
+                    == Some(company.as_str())
         }
     }
 }
@@ -155,6 +178,33 @@ pub(crate) fn require_record_in_company_scope(
         ))
     }
 }
+
+/// Fail closed (403) when a stored record is outside the caller's
+/// company scope FOR A WRITE (C3 task 315, strict by default).
+/// Unlike the read check above (rule A), a write requires an exact
+/// company match: a company caller may write only their own
+/// company's records — global (unscoped) records are platform-only
+/// — and an unresolved caller may write nothing. Mutation handlers
+/// call this right after loading the record they mutate; handlers
+/// that only read the record, or load a parent to scope a child
+/// write, keep the read check.
+pub(crate) fn require_record_writable_in_company_scope(
+    record_company_id: &Option<Uuid>,
+    caller_company: &Option<String>,
+) -> UnifiedResult<()> {
+    match (record_company_id, caller_company) {
+        (Some(record), Some(caller)) => match Uuid::parse_str(caller) {
+            Ok(scope) if *record == scope => Ok(()),
+            _ => Err(UnifiedError::forbidden(
+            "A write requires an exact company match: the record belongs to a different company or is a shared (global) record",
+        )),
+        },
+        _ => Err(UnifiedError::forbidden(
+            "A write requires an exact company match: the record belongs to a different company or is a shared (global) record",
+        )),
+    }
+}
+
 
 /// True when an auditor account is visible to the caller: at least
 /// one of its scope entries names a company in the caller's scope.
@@ -472,12 +522,12 @@ mod tests {
     }
 
     #[test]
-    fn in_company_scope_hides_global_entries_from_scoped_callers() {
+    fn in_company_scope_shows_global_entries_to_scoped_callers() {
         let company = Uuid::now_v7();
         let scope = Some(company.to_string());
         assert!(in_company_scope(&Some(company), &scope));
         assert!(!in_company_scope(&Some(Uuid::now_v7()), &scope));
-        assert!(!in_company_scope(&None, &scope));
+        assert!(in_company_scope(&None, &scope));
         assert!(in_company_scope(&None, &None));
         assert!(!in_company_scope(&Some(Uuid::now_v7()), &None));
     }

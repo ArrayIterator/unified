@@ -16,7 +16,7 @@ use uuid::Uuid;
 
 use super::helpers::{
     caller, created, err, load_item, load_note, note_event, ok, paginate, require_label,
-    require_notes, require_reference, require_text, require_unit, caller_company,
+    require_notes, require_reference, require_text, require_unit, caller_company, require_company_for_write,
     in_company_scope_uuid, require_company_match_uuid, require_note_in_company_scope,
     require_tenant,
 };
@@ -82,7 +82,7 @@ pub(crate) async fn add_item(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let tenant_id = _tenant.tenant_id.to_string();
         let caller = caller(&req)?;
         super::helpers::require_permission(&ctx, &caller.role, PERM_DELIVERY_NOTES_MANAGE)?;
@@ -174,7 +174,7 @@ pub(crate) async fn update_item(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let tenant_id = _tenant.tenant_id.to_string();
         let caller = caller(&req)?;
         super::helpers::require_permission(&ctx, &caller.role, PERM_DELIVERY_NOTES_MANAGE)?;
@@ -253,7 +253,7 @@ pub(crate) async fn delete_item(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let tenant_id = _tenant.tenant_id.to_string();
         let caller = caller(&req)?;
         super::helpers::require_permission(&ctx, &caller.role, PERM_DELIVERY_NOTES_MANAGE)?;

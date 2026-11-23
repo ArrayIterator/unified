@@ -114,7 +114,7 @@ pub(crate) async fn create_plan(
         let _tenant = require_tenant(&req)?;
         let found = caller(&req)?;
         require_permission(&ctx, &found.role, PERM_PLANNER_MANAGE)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let input = body.into_inner();
         let pool = state.pool(&input.pool_id)?;
         let name = require_name(&input.name)?;
@@ -195,10 +195,10 @@ pub(crate) async fn update_plan(
         let _tenant = require_tenant(&req)?;
         let found = caller(&req)?;
         require_permission(&ctx, &found.role, PERM_PLANNER_MANAGE)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let input = body.into_inner();
         let mut plan = state.plan(path.as_str())?;
-        require_record_in_company_scope(&plan.company_id, &scope)?;
+        require_record_writable_in_company_scope(&plan.company_id, &scope)?;
         if plan.status != "draft" {
             return Err(UnifiedError::conflict(format!(
                 "Only a draft plan can be updated; plan \"{}\" is {}",
@@ -260,9 +260,9 @@ pub(crate) async fn delete_plan(
         let _tenant = require_tenant(&req)?;
         let found = caller(&req)?;
         require_permission(&ctx, &found.role, PERM_PLANNER_MANAGE)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let plan = state.plan(path.as_str())?;
-        require_record_in_company_scope(&plan.company_id, &scope)?;
+        require_record_writable_in_company_scope(&plan.company_id, &scope)?;
         if !matches!(plan.status.as_str(), "draft" | "expired") {
             return Err(UnifiedError::conflict(format!(
                 "Only a draft or expired plan can be deleted; plan \"{}\" is {}",
@@ -287,9 +287,9 @@ pub(crate) async fn approve_plan(
         let _tenant = require_tenant(&req)?;
         let found = caller(&req)?;
         require_permission(&ctx, &found.role, PERM_PLANNER_MANAGE)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let mut plan = state.plan(path.as_str())?;
-        require_record_in_company_scope(&plan.company_id, &scope)?;
+        require_record_writable_in_company_scope(&plan.company_id, &scope)?;
         if plan.status != "draft" {
             return Err(UnifiedError::conflict(format!(
                 "Only a draft plan can be approved; plan \"{}\" is {}",
@@ -331,9 +331,9 @@ pub(crate) async fn activate_plan(
         let _tenant = require_tenant(&req)?;
         let found = caller(&req)?;
         require_permission(&ctx, &found.role, PERM_PLANNER_MANAGE)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let mut plan = state.plan(path.as_str())?;
-        require_record_in_company_scope(&plan.company_id, &scope)?;
+        require_record_writable_in_company_scope(&plan.company_id, &scope)?;
         if plan.status != "approved" {
             return Err(UnifiedError::conflict(format!(
                 "Only an approved plan can be activated; plan \"{}\" is {}",
@@ -374,9 +374,9 @@ pub(crate) async fn expire_plan(
         let _tenant = require_tenant(&req)?;
         let found = caller(&req)?;
         require_permission(&ctx, &found.role, PERM_PLANNER_MANAGE)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let mut plan = state.plan(path.as_str())?;
-        require_record_in_company_scope(&plan.company_id, &scope)?;
+        require_record_writable_in_company_scope(&plan.company_id, &scope)?;
         if plan.status == "expired" {
             return Err(UnifiedError::conflict(format!(
                 "Plan \"{}\" is already expired",

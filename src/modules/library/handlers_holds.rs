@@ -198,7 +198,7 @@ pub(crate) async fn cancel_hold(
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LIBRARY_VIEW)?;
         let mut hold = load_hold(&state, &path.into_inner())?;
-        super::auth::require_record_in_company_scope(&hold.company_id, &company)?;
+        super::auth::require_record_writable_in_company_scope(&hold.company_id, &company)?;
         if hold.user_id != caller.actor {
             require_circulate(&ctx, &caller.role)?;
         }
@@ -242,7 +242,7 @@ pub(crate) async fn fulfill_hold(
         let caller = caller(&req)?;
         require_circulate(&ctx, &caller.role)?;
         let mut hold = load_hold(&state, &path.into_inner())?;
-        super::auth::require_record_in_company_scope(&hold.company_id, &company)?;
+        super::auth::require_record_writable_in_company_scope(&hold.company_id, &company)?;
         if hold.status != HOLD_QUEUED {
             return Err(UnifiedError::conflict(format!(
                 "Only a queued hold can be marked ready (status: {})",
@@ -300,7 +300,7 @@ pub(crate) async fn expire_hold(
         let caller = caller(&req)?;
         require_circulate(&ctx, &caller.role)?;
         let mut hold = load_hold(&state, &path.into_inner())?;
-        super::auth::require_record_in_company_scope(&hold.company_id, &company)?;
+        super::auth::require_record_writable_in_company_scope(&hold.company_id, &company)?;
         if hold.status != HOLD_READY && hold.status != HOLD_QUEUED {
             return Err(UnifiedError::conflict(format!(
                 "Only a ready or queued hold can expire (status: {})",
@@ -420,7 +420,7 @@ pub(crate) async fn waive_fine(
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LIBRARY_MANAGE)?;
         let mut fine = load_fine(&state, &path.into_inner())?;
-        super::auth::require_record_in_company_scope(&fine.company_id, &company)?;
+        super::auth::require_record_writable_in_company_scope(&fine.company_id, &company)?;
         if fine.status != FINE_PENDING {
             return Err(UnifiedError::conflict(format!(
                 "Only a pending fine can be waived (status: {})",
@@ -610,7 +610,7 @@ pub(crate) async fn update_policy(
         require_permission(&ctx, &caller.role, PERM_LIBRARY_MANAGE)?;
         let input = body.into_inner();
         let mut policy = load_policy(&state, &path.into_inner())?;
-        super::auth::require_record_in_company_scope(&policy.company_id, &company)?;
+        super::auth::require_record_writable_in_company_scope(&policy.company_id, &company)?;
         let settings = state.settings();
         if let Some(name) = &input.name {
             policy.name = require_text(name, "name", MAX_TITLE_LEN)?;
@@ -696,7 +696,7 @@ pub(crate) async fn delete_policy(
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LIBRARY_MANAGE)?;
         let policy = load_policy(&state, &path.into_inner())?;
-        super::auth::require_record_in_company_scope(&policy.company_id, &company)?;
+        super::auth::require_record_writable_in_company_scope(&policy.company_id, &company)?;
         state.policies.remove(&policy.id);
         state.emit(
             "library.policy.deleted",

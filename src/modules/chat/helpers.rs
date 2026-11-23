@@ -76,6 +76,27 @@ pub(crate) fn caller_company(
     }
 }
 
+/// Resolve the caller's company for a WRITE (C3 task 315, strict by
+/// default): a write requires a resolved company scope, so an
+/// unresolved caller is refused with 403 instead of silently
+/// writing a global (unscoped) record. Mutation handlers call
+/// this instead of `caller_company`; read handlers keep
+/// `caller_company`, and the named carve-outs (self-service
+/// writes, settings with no company field, scan/test triggers,
+/// platform surfaces) keep it too.
+pub(crate) fn require_company_for_write(
+    tenant: &unified_core::tenancy::TenantContext,
+    req: &actix_web::HttpRequest,
+) -> UnifiedResult<Option<String>> {
+    match caller_company(tenant, req)? {
+        Some(company) => Ok(Some(company)),
+        None => Err(UnifiedError::forbidden(
+            "A write requires a resolved company scope",
+        )),
+    }
+}
+
+
 /// Verify a request body's `company_id` against the caller's
 /// company scope and return the company id to store. Fails closed
 /// (403) when the body names a company other than the caller's.
@@ -84,8 +105,8 @@ pub(crate) fn caller_company(
 /// When no caller scope is known (neither the tenant context nor
 /// the verified caller carries a company), a body company is refused:
 /// an unresolved caller may not claim a company (the shared
-/// `CallerScope::Unresolved` rule); omitting the company stores
-/// a global row.
+/// `CallerScope::Unresolved` rule); omitting the company is refused (C3 task 315):
+/// a write requires a resolved company scope.
 pub(crate) fn require_company_match(
     tenant: &unified_core::tenancy::TenantContext,
     req: &HttpRequest,
@@ -100,7 +121,10 @@ pub(crate) fn require_company_match(
         (Some(body), None) => Err(UnifiedError::forbidden(
             "company_id does not match the caller's company scope",
         )),
-        (None, caller) => Ok(caller),
+        (None, Some(caller)) => Ok(Some(caller)),
+        (None, None) => Err(UnifiedError::forbidden(
+            "A write requires a resolved company scope",
+        )),
     }
 }
 
@@ -109,15 +133,16 @@ pub(crate) fn require_company_match(
 /// global records match: unscoped records are visible, every
 /// company-owned record is denied (the shared
 /// `CallerScope::Unresolved` rule). With a scope, only records carrying
-/// exactly that company match: unscoped (legacy) records are
-/// hidden from scoped callers rather than leaked across companies.
+/// exactly that company match, plus unscoped (global/legacy) records
+/// (C3 task 320, rule A); an unresolved caller still sees global rows only.
 pub(crate) fn in_company_scope(
     record_company_id: &Option<String>,
     caller_company: &Option<String>,
 ) -> bool {
     match caller_company {
         None => record_company_id.is_none(),
-        Some(company) => record_company_id.as_deref() == Some(company.as_str()),
+        Some(company) => record_company_id.is_none()
+                || record_company_id.as_deref() == Some(company.as_str()),
     }
 }
 
@@ -137,6 +162,28 @@ pub(crate) fn require_record_in_company_scope(
         ))
     }
 }
+
+/// Fail closed (403) when a stored record is outside the caller's
+/// company scope FOR A WRITE (C3 task 315, strict by default).
+/// Unlike the read check above (rule A), a write requires an exact
+/// company match: a company caller may write only their own
+/// company's records — global (unscoped) records are platform-only
+/// — and an unresolved caller may write nothing. Mutation handlers
+/// call this right after loading the record they mutate; handlers
+/// that only read the record, or load a parent to scope a child
+/// write, keep the read check.
+pub(crate) fn require_record_writable_in_company_scope(
+    record_company_id: &Option<String>,
+    caller_company: &Option<String>,
+) -> UnifiedResult<()> {
+    match (record_company_id, caller_company) {
+        (Some(record), Some(caller)) if record == caller => Ok(()),
+        _ => Err(UnifiedError::forbidden(
+            "A write requires an exact company match: the record belongs to a different company or is a shared (global) record",
+        )),
+    }
+}
+
 
 
 pub(crate) fn parse_uuid(raw: &str, what: &str) -> UnifiedResult<Uuid> {

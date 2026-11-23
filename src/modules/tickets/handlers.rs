@@ -147,7 +147,7 @@ pub(crate) async fn create_ticket(
         Ok(tenant) => tenant,
         Err(error) => return json::error_response(&error, false),
     };
-    let _scope = match caller_company(&_tenant, &req) {
+    let _scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return json::error_response(&error, false),
     };
@@ -238,7 +238,7 @@ pub(crate) async fn update_ticket(
         Ok(tenant) => tenant,
         Err(error) => return json::error_response(&error, false),
     };
-    let _scope = match caller_company(&_tenant, &req) {
+    let _scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return json::error_response(&error, false),
     };
@@ -266,7 +266,7 @@ pub(crate) async fn update_ticket(
             .tickets
             .get_mut(path.as_str())
             .ok_or_else(|| UnifiedError::not_found("Ticket not found"))?;
-        require_record_in_company_scope(&ticket.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&ticket.company_id, &_scope)?;
         if let Some(title) = input.title {
             if title.trim().is_empty() {
                 return Err(UnifiedError::bad_request("Ticket title must not be empty"));
@@ -358,7 +358,7 @@ pub(crate) async fn delete_ticket(
         Ok(tenant) => tenant,
         Err(error) => return json::error_response(&error, false),
     };
-    let _scope = match caller_company(&_tenant, &req) {
+    let _scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return json::error_response(&error, false),
     };
@@ -393,7 +393,7 @@ pub(crate) async fn add_comment(
         Ok(tenant) => tenant,
         Err(error) => return json::error_response(&error, false),
     };
-    let _scope = match caller_company(&_tenant, &req) {
+    let _scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return json::error_response(&error, false),
     };
@@ -457,7 +457,7 @@ pub(crate) async fn add_reply(
         Ok(tenant) => tenant,
         Err(error) => return json::error_response(&error, false),
     };
-    let _scope = match caller_company(&_tenant, &req) {
+    let _scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return json::error_response(&error, false),
     };
@@ -606,7 +606,7 @@ pub(crate) async fn add_note(
         Ok(tenant) => tenant,
         Err(error) => return json::error_response(&error, false),
     };
-    let _scope = match caller_company(&_tenant, &req) {
+    let _scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return json::error_response(&error, false),
     };
@@ -697,7 +697,7 @@ pub(crate) async fn add_attachment(
         Ok(tenant) => tenant,
         Err(error) => return json::error_response(&error, false),
     };
-    let _scope = match caller_company(&_tenant, &req) {
+    let _scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return json::error_response(&error, false),
     };
@@ -758,7 +758,7 @@ pub(crate) async fn add_link(
         Ok(tenant) => tenant,
         Err(error) => return json::error_response(&error, false),
     };
-    let _scope = match caller_company(&_tenant, &req) {
+    let _scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return json::error_response(&error, false),
     };
@@ -828,7 +828,7 @@ pub(crate) async fn remove_link(
         Ok(tenant) => tenant,
         Err(error) => return json::error_response(&error, false),
     };
-    let _scope = match caller_company(&_tenant, &req) {
+    let _scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return json::error_response(&error, false),
     };
@@ -877,7 +877,7 @@ pub(crate) async fn merge_ticket(
         Ok(tenant) => tenant,
         Err(error) => return json::error_response(&error, false),
     };
-    let _scope = match caller_company(&_tenant, &req) {
+    let _scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return json::error_response(&error, false),
     };
@@ -917,7 +917,7 @@ pub(crate) async fn merge_ticket(
             .tickets
             .get_mut(&source_id)
             .ok_or_else(|| UnifiedError::not_found("Ticket not found"))?;
-        require_record_in_company_scope(&source.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&source.company_id, &_scope)?;
         if source.merged_into.is_some() {
             return Err(UnifiedError::conflict(
                 "Ticket was already merged into another ticket",
@@ -947,7 +947,7 @@ pub(crate) async fn merge_ticket(
             .tickets
             .get_mut(&into_ticket_id)
             .ok_or_else(|| UnifiedError::not_found("Target ticket not found"))?;
-        require_record_in_company_scope(&target.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&target.company_id, &_scope)?;
         target.comments.extend(source_comments);
         target.internal_notes.extend(source_notes);
         target.attachments.extend(source_attachments);
@@ -1003,7 +1003,7 @@ pub(crate) async fn escalate_ticket(
         Ok(tenant) => tenant,
         Err(error) => return json::error_response(&error, false),
     };
-    let _scope = match caller_company(&_tenant, &req) {
+    let _scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return json::error_response(&error, false),
     };
@@ -1030,7 +1030,7 @@ pub(crate) async fn escalate_ticket(
             .tickets
             .get_mut(path.as_str())
             .ok_or_else(|| UnifiedError::not_found("Ticket not found"))?;
-        require_record_in_company_scope(&ticket.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&ticket.company_id, &_scope)?;
         if ticket.status == "closed" {
             return Err(UnifiedError::unprocessable(
                 "A closed ticket cannot be escalated; reopen it first",
@@ -1107,7 +1107,7 @@ pub(crate) async fn assign_ticket(
         Ok(tenant) => tenant,
         Err(error) => return json::error_response(&error, false),
     };
-    let _scope = match caller_company(&_tenant, &req) {
+    let _scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return json::error_response(&error, false),
     };
@@ -1125,7 +1125,7 @@ pub(crate) async fn assign_ticket(
             .tickets
             .get_mut(path.as_str())
             .ok_or_else(|| UnifiedError::not_found("Ticket not found"))?;
-        require_record_in_company_scope(&ticket.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&ticket.company_id, &_scope)?;
         ticket.assigned_to = Some(agent_id.trim().to_string());
         if ticket.status == "open" {
             ticket.status = "in_progress".to_string();
@@ -1337,8 +1337,33 @@ mod tests {
         web::Data::new(state.clone())
     }
 
+    /// The company the mutation tests act as (C3 task 315).
+    const TEST_COMPANY: &str = "company-a";
+
+    /// A request scoped to the test company (C3 task 315): mutation
+    /// handlers require a resolved company, so the happy-path tests
+    /// carry one on both the tenant context and the verified caller.
     fn authed_request() -> HttpRequest {
-        verified_request("agent-1", "admin")
+        use actix_web::HttpMessage;
+        let req = actix_web::test::TestRequest::default().to_http_request();
+        req.extensions_mut().insert(
+            unified_core::auth::Caller::verified(test_user_uuid("agent-1"), Vec::new())
+                .with_company(TEST_COMPANY.to_string())
+                .with_roles(vec!["admin".to_string()]),
+        );
+        req.extensions_mut()
+            .insert(unified_core::middleware::TenantContext {
+                tenant_id: uuid::Uuid::now_v7().to_string(),
+                company_id: TEST_COMPANY.to_string(),
+                site_id: String::new(),
+                kind: unified_core::middleware::TenantKind::Subdomain,
+                host: "tenant.example.test".to_string(),
+                scope: None,
+                product_id: None,
+                package_id: None,
+                product_subdomain_id: None,
+            });
+        req
     }
 
     fn seed_ticket(state: &TicketsState, user_id: &str) -> Ticket {
@@ -1348,6 +1373,27 @@ mod tests {
                 body: "Something broke".to_string(),
                 user_id: user_id.to_string(),
                 company_id: None,
+                priority: Some("low".to_string()),
+                category: None,
+                product: None,
+                department_id: None,
+            })
+            .expect("seed ticket must be created")
+    }
+
+    /// Like `seed_ticket`, but the ticket belongs to the test
+    /// company (C3 task 315): the (a)-pattern handlers
+    /// (update/merge/escalate/assign) refuse global tickets, so
+    /// their tests seed scoped ones. The reply tests keep the
+    /// global seeder: a resolved company caller still reads a
+    /// global ticket under rule A.
+    fn seed_ticket_scoped(state: &TicketsState, user_id: &str) -> Ticket {
+        state
+            .create_ticket(CreateTicket {
+                title: "Help".to_string(),
+                body: "Something broke".to_string(),
+                user_id: user_id.to_string(),
+                company_id: Some(TEST_COMPANY.to_string()),
                 priority: Some("low".to_string()),
                 category: None,
                 product: None,
@@ -1420,7 +1466,7 @@ mod tests {
     #[tokio::test]
     async fn update_ticket_recomputes_sla_when_priority_changes() {
         let state = allowing_state();
-        let ticket = seed_ticket(&state, "user-1");
+        let ticket = seed_ticket_scoped(&state, "user-1");
         let original_resolution_due = ticket.sla_resolution_due_at;
         let response = update_ticket(
             state_data(&state),
@@ -1524,8 +1570,8 @@ mod tests {
     #[tokio::test]
     async fn merge_ticket_moves_internal_notes_and_rejects_closed_tickets() {
         let state = allowing_state();
-        let source = seed_ticket(&state, "user-1");
-        let target = seed_ticket(&state, "user-1");
+        let source = seed_ticket_scoped(&state, "user-1");
+        let target = seed_ticket_scoped(&state, "user-1");
         state
             .tickets
             .get_mut(&source.id)
@@ -1558,9 +1604,9 @@ mod tests {
         assert_eq!(merged_target.internal_notes[0].body, "Internal context");
 
         // Merging an already-closed source is rejected.
-        let closed_source = seed_ticket(&state, "user-1");
+        let closed_source = seed_ticket_scoped(&state, "user-1");
         set_status(&state, &closed_source.id, "closed");
-        let open_target = seed_ticket(&state, "user-1");
+        let open_target = seed_ticket_scoped(&state, "user-1");
         let response = merge_ticket(
             state_data(&state),
             authed_request(),
@@ -1573,7 +1619,7 @@ mod tests {
         assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
 
         // Merging into a closed target is rejected too.
-        let open_source = seed_ticket(&state, "user-1");
+        let open_source = seed_ticket_scoped(&state, "user-1");
         set_status(&state, &open_target.id, "closed");
         let response = merge_ticket(
             state_data(&state),

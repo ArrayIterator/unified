@@ -29,7 +29,7 @@ pub(crate) async fn complete_sale(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_POS_SELL)?;
@@ -300,7 +300,7 @@ pub(crate) async fn void_sale(
     let debug = ctx.is_debug();
     let result: UnifiedResult<PosSale> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_POS_SELL)?;
@@ -346,7 +346,7 @@ pub(crate) async fn refund_sale(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_POS_REFUND)?;
@@ -577,7 +577,7 @@ pub(crate) async fn hold_sale(
     let debug = ctx.is_debug();
     let result: UnifiedResult<PosSale> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_POS_SELL)?;
@@ -618,7 +618,7 @@ pub(crate) async fn resume_sale(
     let debug = ctx.is_debug();
     let result: UnifiedResult<PosSale> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_POS_SELL)?;

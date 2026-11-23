@@ -5,6 +5,7 @@
 
 use super::*;
 use crate::error::{UnifiedError, UnifiedResult};
+use crate::provider_registry::{ProviderDefinition, provider_registry, valid_provider_id};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use hmac::{Hmac, Mac};
@@ -17,7 +18,7 @@ use std::fmt;
 use std::net::IpAddr;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, OnceLock, RwLock};
 // ---------------------------------------------------------------------------
 // Storage kind.
 // ---------------------------------------------------------------------------
@@ -48,6 +49,20 @@ impl StorageKind {
     /// All supported kinds, for status responses and validation.
     pub fn all() -> &'static [StorageKind] {
         &[Self::Local, Self::S3, Self::GoogleDrive, Self::R2, Self::Sftp]
+    }
+
+    /// The registry definition for this kind, if one is registered
+    /// (C12, task 269). Every built-in kind has one; `None` only when
+    /// the registry was built without seeds (tests).
+    pub fn definition(&self) -> Option<Arc<ProviderDefinition>> {
+        provider_registry().get("storage", self.as_str())
+    }
+
+    /// Human-readable display name, from the provider registry.
+    pub fn display_name(&self) -> String {
+        self.definition()
+            .map(|def| def.display_name.clone())
+            .unwrap_or_else(|| self.as_str().to_string())
     }
 }
 
@@ -113,6 +128,14 @@ pub const SECRET_CONFIG_FIELDS: [&str; 6] = [
 pub struct StorageTargetConfig {
     pub name: String,
     pub kind: StorageKind,
+    /// Registry definition id (C12, task 269) that overrides `kind`
+    /// when set: the target is built by the factory registered for
+    /// that id instead of the built-in constructor for `kind`. This
+    /// is how a provider an admin registered through the provider
+    /// registry gets a storage target with no code change. The id
+    /// must match a registered definition and factory; unknown ids
+    /// fail at build time, never silently fall back to `kind`.
+    pub kind_id: Option<String>,
     /// Endpoint URL (S3 / R2). Ignored for local and Drive targets.
     pub endpoint: String,
     /// Region (S3 / R2). `auto` for R2.
@@ -169,6 +192,7 @@ impl Default for StorageTargetConfig {
         Self {
             name: String::new(),
             kind: StorageKind::Local,
+            kind_id: None,
             endpoint: String::new(),
             region: String::new(),
             bucket: String::new(),
@@ -199,6 +223,17 @@ impl StorageTargetConfig {
     /// values never appear in any error message.
     pub fn validate(&self) -> UnifiedResult<()> {
         validate_target_name(&self.name)?;
+        // A registry-defined target validates its own configuration
+        // in its factory; only the name and a well-formed id are
+        // checked here.
+        if let Some(kind_id) = self.kind_id.as_deref().filter(|id| !id.trim().is_empty()) {
+            if !valid_provider_id(kind_id) {
+                return Err(UnifiedError::bad_request(format!(
+                    "Invalid storage provider id '{kind_id}' (expected lowercase letters, digits, '-' or '_')"
+                )));
+            }
+            return Ok(());
+        }
         match self.kind {
             StorageKind::Local => Ok::<(), UnifiedError>(()),
             StorageKind::S3 => {
@@ -343,6 +378,17 @@ pub fn provider_from_config(
     allowed_hosts: &[String],
 ) -> UnifiedResult<Arc<dyn StorageProvider>> {
     target.validate()?;
+    // A registry-defined target is built by its factory. An unknown
+    // id is an honest error naming the id, never a silent fallback
+    // to the `kind` constructor.
+    if let Some(kind_id) = target.kind_id.as_deref().filter(|id| !id.trim().is_empty()) {
+        let factory = storage_kind_factory(kind_id).ok_or_else(|| {
+            UnifiedError::bad_request(format!(
+                "Unknown storage provider '{kind_id}': no factory is registered for this id"
+            ))
+        })?;
+        return factory(target, allowed_hosts);
+    }
     match target.kind {
         StorageKind::Local => {
             let base_dir = if target.base_dir.trim().is_empty() {
@@ -401,6 +447,52 @@ pub fn provider_from_config(
     }
 }
 
+// ---------------------------------------------------------------------------
+// Registry-defined kinds (C12, task 269).
+// ---------------------------------------------------------------------------
+
+/// A factory that builds a storage provider from a target
+/// configuration plus the configured extra allowed hosts.
+pub type StorageKindFactory = Arc<
+    dyn Fn(&StorageTargetConfig, &[String]) -> UnifiedResult<Arc<dyn StorageProvider>>
+        + Send
+        + Sync,
+>;
+
+static STORAGE_KIND_FACTORIES: OnceLock<RwLock<HashMap<String, StorageKindFactory>>> =
+    OnceLock::new();
+
+fn storage_kind_factories() -> &'static RwLock<HashMap<String, StorageKindFactory>> {
+    STORAGE_KIND_FACTORIES.get_or_init(|| RwLock::new(HashMap::new()))
+}
+
+/// Register (or replace) the factory for a registry definition id.
+/// This is how a provider added through the provider registry — no
+/// code change, no enum variant — gets a storage target: register
+/// its definition, then register its factory under the same id, once
+/// at startup or from an extension.
+pub fn register_storage_kind_factory(id: &str, factory: StorageKindFactory) -> UnifiedResult<()> {
+    if !valid_provider_id(id) {
+        return Err(UnifiedError::bad_request(format!(
+            "Invalid storage provider id '{id}' (expected lowercase letters, digits, '-' or '_')"
+        )));
+    }
+    storage_kind_factories()
+        .write()
+        .expect("storage kind factory registry lock poisoned")
+        .insert(id.to_string(), factory);
+    Ok(())
+}
+
+/// The factory registered for a registry definition id, if any.
+pub fn storage_kind_factory(id: &str) -> Option<StorageKindFactory> {
+    storage_kind_factories()
+        .read()
+        .expect("storage kind factory registry lock poisoned")
+        .get(id)
+        .cloned()
+}
+
 /// Build a registry from the storage configuration section, following
 /// the `build_cache` pattern: a target that fails validation is
 /// skipped with a warning, so one bad target never prevents startup.
@@ -417,4 +509,62 @@ pub fn build_storage_registry(config: &StorageSection) -> Arc<StorageRegistry> {
         }
     }
     registry
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn builtin_storage_kinds_come_from_registry_data() {
+        assert_eq!(StorageKind::S3.display_name(), "Amazon S3");
+        assert_eq!(StorageKind::Local.display_name(), "Local Filesystem");
+        assert_eq!(StorageKind::GoogleDrive.display_name(), "Google Drive");
+        let s3 = StorageKind::S3.definition().unwrap();
+        assert!(s3.capability("upload"));
+        assert!(!s3.capability("list"));
+        assert!(StorageKind::Local.definition().unwrap().capability("list"));
+        assert!(StorageKind::Sftp.definition().unwrap().capability("list"));
+        assert!(
+            !StorageKind::Sftp
+                .definition()
+                .unwrap()
+                .capability("signed_url")
+        );
+    }
+
+    #[test]
+    fn add_one_storage_provider_without_code_change() {
+        // Register a definition + a factory, then build a target that
+        // references it by kind_id only. The factory below builds a
+        // LocalProvider stand-in: the point is the dispatch, not a
+        // new wire protocol. No enum variant exists for the new id
+        // and no match arm was added.
+        let mut def = ProviderDefinition::new("storage", "acme_store", "Acme Store", "local");
+        def.capabilities = serde_json::json!({
+            "upload": true, "download": true, "delete": true,
+            "signed_url": false, "list": true, "test_connection": true
+        });
+        provider_registry().register(def).unwrap();
+        register_storage_kind_factory(
+            "acme_store",
+            Arc::new(|target, _allowed| {
+                Ok(Arc::new(LocalProvider::new(PathBuf::from(
+                    target.base_dir.clone(),
+                ))?))
+            }),
+        )
+        .unwrap();
+        let dir = std::env::temp_dir().join("unified-c12-acme-store");
+        let mut target = StorageTargetConfig::default();
+        target.name = "acme".to_string();
+        target.kind_id = Some("acme_store".to_string());
+        target.base_dir = dir.to_string_lossy().into_owned();
+        let provider = provider_from_config(&target, &[]).unwrap();
+        assert_eq!(provider.kind(), StorageKind::Local);
+        // An unknown id fails loudly, never falls back to `kind`.
+        target.kind_id = Some("no_such_store".to_string());
+        assert!(provider_from_config(&target, &[]).is_err());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }

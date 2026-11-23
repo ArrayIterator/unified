@@ -25,6 +25,7 @@ use super::caller::check_capability;
 use super::caller::conflict_error;
 use super::caller::domain_claimed;
 use super::caller::require_permission;
+use super::caller::require_control_plane;
 use super::events::CAP_MANAGE;
 use super::events::CAP_SELF_ASSIGN;
 use super::events::EVENT_SUBDOMAIN_APPROVED;

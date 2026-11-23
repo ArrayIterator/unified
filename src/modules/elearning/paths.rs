@@ -78,7 +78,7 @@ pub(crate) async fn create_path(
     let debug = ctx.is_debug();
     let result: UnifiedResult<LearningPath> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_teach(&ctx, &caller.role)?;
         let input = body.into_inner();
@@ -145,7 +145,7 @@ pub(crate) async fn update_path(
     let debug = ctx.is_debug();
     let result: UnifiedResult<LearningPath> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_teach(&ctx, &caller.role)?;
         let mut row = load_path(&state, &path.into_inner())?;
@@ -182,7 +182,7 @@ pub(crate) async fn delete_path(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_teach(&ctx, &caller.role)?;
         let row = load_path(&state, &path.into_inner())?;
@@ -210,7 +210,7 @@ pub(crate) async fn add_path_course(
     let debug = ctx.is_debug();
     let result: UnifiedResult<LearningPathCourse> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_teach(&ctx, &caller.role)?;
         let row = load_path(&state, &path.into_inner())?;
@@ -274,7 +274,7 @@ pub(crate) async fn remove_path_course(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_teach(&ctx, &caller.role)?;
         let (path_id, course_id) = path.into_inner();

@@ -38,7 +38,7 @@ pub(crate) async fn issue_signed_url(
         Ok(found) => found,
         Err(error) => return err_response(error, debug),
     };
-    let is_admin = is_storage_admin(&ctx, &found.role);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BUCKETS);
     let result: UnifiedResult<Value> = (|| async {
         let bucket = load_bucket(&state, &id)?;
         check_bucket_access(&bucket, _scope.as_deref(), is_admin)?;
@@ -137,7 +137,7 @@ pub(crate) async fn list_signed_urls(
     // Tenant scoping: a non-admin lists only signed URLs for
     // buckets they may access; an admin lists all. Records whose
     // bucket is gone are hidden from non-admins.
-    let is_admin = is_storage_admin(&ctx, &found.role);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BUCKETS);
     items.retain(|record| match state.buckets.get(&record.bucket_id) {
         Some(bucket) => bucket_company_visible(&bucket.value().company_id, &_scope, is_admin),
         None => is_admin,
@@ -177,7 +177,7 @@ pub(crate) async fn revoke_signed_url(
         Ok(found) => found,
         Err(error) => return err_response(error, debug),
     };
-    let is_admin = is_storage_admin(&ctx, &found.role);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BUCKETS);
     let result: UnifiedResult<SignedUrlView> = (|| {
         let record_id = parse_uuid(&id, "signed URL")?;
         // Take the view (and the fields the event needs) out of the

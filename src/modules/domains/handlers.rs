@@ -18,7 +18,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use super::service::{domain_exists_by_name, is_unique_violation, load_domain, persist_domain, valid_ssl_status, verify_domain_record};
-use super::state::{PERM_DOMAINS_MANAGE, PERM_DOMAINS_VIEW, caller, caller_company, db_pool, domains_store, in_company_scope, paginate, require_company_match_uuid, require_permission, require_record_in_company_scope, require_tenant};
+use super::state::{PERM_DOMAINS_MANAGE, PERM_DOMAINS_VIEW, caller, caller_company, require_company_for_write, db_pool, domains_store, in_company_scope, paginate, require_company_match_uuid, require_permission, require_record_in_company_scope, require_tenant};
 use super::types::{CreateDomainRequest, CreateSubdomainRequest, UpdateDomainRequest, VerifyRequest};
 
 // ---------------------------------------------------------------------------
@@ -223,13 +223,13 @@ pub(crate) async fn update_domain(
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_DOMAINS_MANAGE)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let id = id.into_inner();
         // Database first, store fallback: a domain present in the
         // database but not in the store (for example after a restart)
         // must not answer 404.
         let mut domain = load_domain(&ctx, id)?;
-        require_record_in_company_scope(&domain.company_id, &scope)?;
+        require_record_writable_in_company_scope(&domain.company_id, &scope)?;
         if let Some(name) = &body.name {
             let syntax = DnsVerifier::check_domain_syntax(name);
             if !syntax.valid {
@@ -277,13 +277,13 @@ pub(crate) async fn delete_domain(req: HttpRequest, ctx: web::Data<Arc<AppContex
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_DOMAINS_MANAGE)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let id = id.into_inner();
         // Existence is confirmed *before* any delete runs: deleting
         // the database row first and answering 404 afterwards would
         // destroy a row the caller was told does not exist.
         let domain = load_domain(&ctx, id)?;
-        require_record_in_company_scope(&domain.company_id, &scope)?;
+        require_record_writable_in_company_scope(&domain.company_id, &scope)?;
         if let Some(pool) = db_pool(&ctx) {
             use unified_core::db::schema::domains::dsl as dom_dsl;
             let mut conn = pool.get().map_err(|error| {
@@ -319,7 +319,7 @@ pub(crate) async fn verify_domain(
     if let Err(error) = require_permission(&ctx, &caller.role, PERM_DOMAINS_MANAGE) {
         return json::error_response(&error, debug);
     }
-    let scope = match caller_company(&_tenant, &req) {
+    let scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return json::error_response(&error, debug),
     };
@@ -330,7 +330,7 @@ pub(crate) async fn verify_domain(
     // report is published here as `domain.verify`).
     let result: UnifiedResult<Value> = (|| async {
         let domain = load_domain(&ctx, id)?;
-        require_record_in_company_scope(&domain.company_id, &scope)?;
+        require_record_writable_in_company_scope(&domain.company_id, &scope)?;
         verify_domain_record(&domain, selector.as_deref(), db_pool(&ctx), true).await
     })()
     .await;
@@ -349,10 +349,10 @@ pub(crate) async fn ssl_renew_handler(req: HttpRequest, ctx: web::Data<Arc<AppCo
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_DOMAINS_MANAGE)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let id = id.into_inner();
         let mut domain = load_domain(&ctx, id)?;
-        require_record_in_company_scope(&domain.company_id, &scope)?;
+        require_record_writable_in_company_scope(&domain.company_id, &scope)?;
         domain.ssl_status = "renewing".to_string();
         domain.updated_at = Utc::now();
         persist_domain(&ctx, &domain)?;
@@ -382,7 +382,7 @@ pub(crate) async fn create_subdomain(
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_DOMAINS_MANAGE)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let id = id.into_inner();
         let parent = load_domain(&ctx, id)?;
         require_record_in_company_scope(&parent.company_id, &scope)?;
@@ -447,5 +447,25 @@ pub(crate) async fn create_subdomain(
     match result {
         Ok(domain) => json::success_response(domain, 201),
         Err(error) => json::error_response(&error, debug),
+    }
+}
+
+/// Resolve the caller's company for a WRITE (C3 task 315, strict by
+/// default): a write requires a resolved company scope, so an
+/// unresolved caller is refused with 403 instead of silently
+/// writing a global (unscoped) record. Mutation handlers call
+/// this instead of `caller_company`; read handlers keep
+/// `caller_company`, and the named carve-outs (self-service
+/// writes, settings with no company field, scan/test triggers,
+/// platform surfaces) keep it too.
+pub(crate) fn require_company_for_write(
+    tenant: &unified_core::tenancy::TenantContext,
+    req: &actix_web::HttpRequest,
+) -> UnifiedResult<Option<String>> {
+    match super::state::caller_company(tenant, req)? {
+        Some(company) => Ok(Some(company)),
+        None => Err(UnifiedError::forbidden(
+            "A write requires a resolved company scope",
+        )),
     }
 }

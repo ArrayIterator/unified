@@ -278,7 +278,7 @@ pub(crate) async fn update_item(
         require_catalog(&ctx, &caller.role)?;
         let input = body.into_inner();
         let mut item = load_item(&state, &path.into_inner())?;
-        super::auth::require_record_in_company_scope(&item.company_id, &company)?;
+        super::auth::require_record_writable_in_company_scope(&item.company_id, &company)?;
         if item.status == ITEM_WITHDRAWN {
             return Err(UnifiedError::conflict(
                 "A withdrawn item cannot be updated; create a new edition instead",
@@ -466,7 +466,7 @@ pub(crate) async fn delete_item(
         let caller = caller(&req)?;
         require_catalog(&ctx, &caller.role)?;
         let item = load_item(&state, &path.into_inner())?;
-        super::auth::require_record_in_company_scope(&item.company_id, &company)?;
+        super::auth::require_record_writable_in_company_scope(&item.company_id, &company)?;
         let has_copies = state
             .copies
             .iter()
@@ -516,7 +516,7 @@ pub(crate) async fn withdraw_item(
         let caller = caller(&req)?;
         require_catalog(&ctx, &caller.role)?;
         let mut item = load_item(&state, &path.into_inner())?;
-        super::auth::require_record_in_company_scope(&item.company_id, &company)?;
+        super::auth::require_record_writable_in_company_scope(&item.company_id, &company)?;
         if item.status == ITEM_WITHDRAWN {
             return Err(UnifiedError::conflict("Item is already withdrawn"));
         }
@@ -707,7 +707,7 @@ pub(crate) async fn update_copy(
         require_catalog(&ctx, &caller.role)?;
         let input = body.into_inner();
         let mut copy = load_copy(&state, &path.into_inner())?;
-        super::auth::require_record_in_company_scope(&copy.company_id, &company)?;
+        super::auth::require_record_writable_in_company_scope(&copy.company_id, &company)?;
         let settings = state.settings();
         if let Some(barcode) = &input.barcode {
             let checked = require_text(barcode, "barcode", MAX_CODE_LEN)?;
@@ -794,7 +794,7 @@ pub(crate) async fn delete_copy(
         let caller = caller(&req)?;
         require_catalog(&ctx, &caller.role)?;
         let copy = load_copy(&state, &path.into_inner())?;
-        super::auth::require_record_in_company_scope(&copy.company_id, &company)?;
+        super::auth::require_record_writable_in_company_scope(&copy.company_id, &company)?;
         if copy.status == COPY_ON_LOAN {
             return Err(UnifiedError::conflict(
                 "A copy on loan cannot be deleted; return the loan first",
@@ -1111,7 +1111,7 @@ pub(crate) async fn update_category(
         require_catalog(&ctx, &caller.role)?;
         let input = body.into_inner();
         let mut category = load_category(&state, &path.into_inner())?;
-        super::auth::require_record_in_company_scope(&category.company_id, &company)?;
+        super::auth::require_record_writable_in_company_scope(&category.company_id, &company)?;
         if let Some(name) = &input.name {
             category.name = require_text(name, "name", MAX_TITLE_LEN)?;
         }
@@ -1178,7 +1178,7 @@ pub(crate) async fn delete_category(
         let caller = caller(&req)?;
         require_catalog(&ctx, &caller.role)?;
         let category = load_category(&state, &path.into_inner())?;
-        super::auth::require_record_in_company_scope(&category.company_id, &company)?;
+        super::auth::require_record_writable_in_company_scope(&category.company_id, &company)?;
         let has_children = state
             .categories
             .iter()

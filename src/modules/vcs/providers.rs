@@ -16,8 +16,10 @@ use semver::Version;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
+use std::collections::HashMap;
 use std::net::IpAddr;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, OnceLock, RwLock};
+use unified_core::provider_registry::{ProviderDefinition, leak_str, provider_registry};
 use std::time::{Duration, Instant};
 use uuid::Uuid;
 
@@ -67,51 +69,99 @@ impl Provider {
         }
     }
 
+    /// Human-readable display name, from the provider registry.
     pub fn display_name(&self) -> &'static str {
-        match self {
-            Self::GitHub => "GitHub",
-            Self::GitLab => "GitLab",
-            Self::Bitbucket => "Bitbucket",
-        }
+        attrs(self).display_name
     }
 
-    /// Default API base URL for the provider.
+    /// Default API base URL for the provider, from the provider
+    /// registry.
     pub fn default_api_base(&self) -> &'static str {
-        match self {
-            Self::GitHub => "https://api.github.com",
-            Self::GitLab => "https://gitlab.com/api/v4",
-            Self::Bitbucket => "https://api.bitbucket.org/2.0",
-        }
+        attrs(self).default_api_base
     }
 
     /// Header name carrying the credential for this provider.
     /// GitLab personal access tokens use `Private-Token`; GitHub and
-    /// Bitbucket use a Bearer token.
+    /// Bitbucket use a Bearer token. The scheme comes from the
+    /// provider registry.
     pub fn auth_header_name(&self) -> header::HeaderName {
-        match self {
-            Self::GitLab => header::HeaderName::from_static("private-token"),
-            _ => header::AUTHORIZATION,
+        if attrs(self).auth_scheme == "private-token" {
+            header::HeaderName::from_static("private-token")
+        } else {
+            header::AUTHORIZATION
         }
     }
 
     /// Header value for a credential. The token itself is never logged.
     pub fn auth_header_value(&self, token: &str) -> String {
-        match self {
-            Self::GitLab => token.to_string(),
-            _ => format!("Bearer {token}"),
+        if attrs(self).auth_scheme == "private-token" {
+            token.to_string()
+        } else {
+            format!("Bearer {token}")
         }
     }
 
-    /// Header carrying the webhook signature for this provider, if any.
+    /// Header carrying the webhook signature for this provider, if
+    /// any, from the provider registry.
     pub fn webhook_signature_header(&self) -> &'static str {
-        match self {
-            Self::GitHub => "x-hub-signature-256",
-            Self::GitLab => "x-gitlab-token",
-            // Bitbucket provides no signature scheme; the module checks
-            // the configured shared secret in this custom header.
-            Self::Bitbucket => "x-webhook-secret",
-        }
+        attrs(self).webhook_signature_header
     }
+
+    /// The registry definition for this provider, if one is
+    /// registered. Every built-in provider has one; `None` only when
+    /// the registry was built without seeds (tests).
+    pub fn definition(&self) -> Option<Arc<ProviderDefinition>> {
+        provider_registry().get("vcs", self.as_str())
+    }
+}
+
+/// The enabled provider catalog, built-ins plus any provider an admin
+/// registered, sorted by id. New providers appear here with no code
+/// change; the enum lists built-ins only.
+pub fn catalog() -> Vec<Arc<ProviderDefinition>> {
+    provider_registry().list_family_enabled("vcs")
+}
+
+// ---------------------------------------------------------------------------
+// Registry-backed attributes (C12, task 269).
+// ---------------------------------------------------------------------------
+/// The `&'static` view of one provider's registry definition; see the
+/// same bridge in the payments module. The release/tag path shapes
+/// stay protocol code (driven by `api_style` in a follow-up).
+struct VcsAttrs {
+    display_name: &'static str,
+    default_api_base: &'static str,
+    webhook_signature_header: &'static str,
+    auth_scheme: &'static str,
+}
+
+fn attrs_from_definition(def: &ProviderDefinition) -> VcsAttrs {
+    VcsAttrs {
+        display_name: leak_str(&def.display_name),
+        default_api_base: leak_str(def.base_url.as_deref().unwrap_or("")),
+        webhook_signature_header: leak_str(
+            def.webhook_signature_header.as_deref().unwrap_or("x-webhook-secret"),
+        ),
+        auth_scheme: leak_str(def.auth_scheme.as_deref().unwrap_or("bearer")),
+    }
+}
+
+static ATTRS: OnceLock<HashMap<Provider, VcsAttrs>> = OnceLock::new();
+
+fn attrs(provider: &Provider) -> &'static VcsAttrs {
+    let map = ATTRS.get_or_init(|| {
+        let mut out = HashMap::new();
+        for def in provider_registry().list_family("vcs") {
+            if let Ok(parsed) = Provider::parse(&def.id) {
+                out.insert(parsed, attrs_from_definition(&def));
+            }
+        }
+        out
+    });
+    // Every enum variant has a seed definition; the expect documents
+    // that invariant (a registry built without seeds breaks it).
+    map.get(provider)
+        .expect("every Provider has a registry definition")
 }
 
 /// Behaviour every provider must expose: where its API lives, how it
@@ -146,10 +196,7 @@ impl VcsProvider for Provider {
     }
 
     fn auth_scheme(&self) -> &'static str {
-        match self {
-            Self::GitLab => "private-token",
-            _ => "bearer",
-        }
+        attrs(self).auth_scheme
     }
 
     fn releases_path(&self, owner: &str, repo: &str) -> String {
@@ -508,5 +555,72 @@ mod tests {
         assert!(releases[0].published_at.is_some());
         assert_eq!(releases[1].tag, "not-a-version");
         assert_eq!(releases[1].version, None);
+    }
+
+    #[test]
+    fn builtin_attributes_come_from_registry_data() {
+        assert_eq!(Provider::GitHub.display_name(), "GitHub");
+        assert_eq!(Provider::GitLab.display_name(), "GitLab");
+        assert_eq!(
+            Provider::GitHub.default_api_base(),
+            "https://api.github.com"
+        );
+        assert_eq!(
+            Provider::GitLab.default_api_base(),
+            "https://gitlab.com/api/v4"
+        );
+        assert_eq!(
+            Provider::Bitbucket.default_api_base(),
+            "https://api.bitbucket.org/2.0"
+        );
+        assert_eq!(
+            Provider::GitHub.webhook_signature_header(),
+            "x-hub-signature-256"
+        );
+        assert_eq!(
+            Provider::GitLab.webhook_signature_header(),
+            "x-gitlab-token"
+        );
+        assert_eq!(Provider::GitLab.auth_scheme(), "private-token");
+        assert_eq!(Provider::GitHub.auth_scheme(), "bearer");
+        assert_eq!(Provider::GitLab.auth_header_value("tok"), "tok");
+        assert_eq!(Provider::GitHub.auth_header_value("tok"), "Bearer tok");
+    }
+
+    #[test]
+    fn add_one_vcs_provider_without_code_change() {
+        // Register a brand-new provider through the registry only, then
+        // prove the catalog and the definition lookup resolve its
+        // base URL, auth scheme, and webhook header from that data.
+        // No enum variant exists for it and no match arm was added.
+        // (Release/tag path shapes are still protocol code keyed by
+        // `api_style`; a generic path shape is follow-up work — see
+        // INTEGRATION_NOTES_C12.)
+        let mut def = unified_core::provider_registry::ProviderDefinition::new(
+            "vcs", "gitea", "Gitea", "generic",
+        );
+        def.base_url = Some("https://gitea.example.com/api/v1".to_string());
+        def.api_style = Some("generic".to_string());
+        def.auth_scheme = Some("bearer".to_string());
+        def.webhook_signature_header = Some("x-webhook-secret".to_string());
+        def.allowed_hosts = vec!["gitea.example.com".to_string()];
+        unified_core::provider_registry::provider_registry()
+            .register(def)
+            .unwrap();
+        assert!(catalog().iter().any(|entry| entry.id == "gitea"));
+        let found = unified_core::provider_registry::provider_registry()
+            .get("vcs", "gitea")
+            .unwrap();
+        assert_eq!(
+            found.base_url.as_deref(),
+            Some("https://gitea.example.com/api/v1")
+        );
+        assert_eq!(found.api_style.as_deref(), Some("generic"));
+        assert_eq!(found.auth_scheme.as_deref(), Some("bearer"));
+        assert_eq!(
+            found.webhook_signature_header.as_deref(),
+            Some("x-webhook-secret")
+        );
+        assert!(found.host_allowed("gitea.example.com"));
     }
 }

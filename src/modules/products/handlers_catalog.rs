@@ -14,7 +14,7 @@ use super::types::{AddBundleItem, BundleItem, CreatePriceTier, CreateProductOpti
 use super::state::ProductsState;
 use super::validation::{matches_search, new_id, now, paginate, respond_created, validate_billing_period, validate_bundle_discount_bps, validate_bundle_rule, validate_region, validate_tax_rate_bps};
 use super::helpers::{
-    caller, caller_company, require_permission, require_product_in_scope,
+    caller, caller_company, require_company_for_write, require_permission, require_product_in_scope,
     require_record_in_company_scope, require_tenant,
 };
 
@@ -130,7 +130,7 @@ pub(crate) async fn create_option(
 ) -> HttpResponse {
     let result: UnifiedResult<ProductOption> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRODUCTS_CREATE)?;
         let input = body.into_inner();
@@ -177,7 +177,7 @@ pub(crate) async fn delete_option(
 ) -> HttpResponse {
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRODUCTS_MANAGE)?;
         let option = state
@@ -306,7 +306,7 @@ pub(crate) async fn create_variant(
 ) -> HttpResponse {
     let result: UnifiedResult<ProductVariant> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRODUCTS_CREATE)?;
         let input = body.into_inner();
@@ -395,7 +395,7 @@ pub(crate) async fn update_variant(
 ) -> HttpResponse {
     let result: UnifiedResult<ProductVariant> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRODUCTS_MANAGE)?;
         let input = body.into_inner();
@@ -456,7 +456,7 @@ pub(crate) async fn delete_variant(
 ) -> HttpResponse {
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRODUCTS_MANAGE)?;
         let variant = state
@@ -536,7 +536,7 @@ pub(crate) async fn add_bundle_item(
 ) -> HttpResponse {
     let result: UnifiedResult<BundleItem> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRODUCTS_CREATE)?;
         let input = body.into_inner();
@@ -614,7 +614,7 @@ pub(crate) async fn delete_bundle_item(
 ) -> HttpResponse {
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRODUCTS_MANAGE)?;
         let item = state
@@ -642,7 +642,7 @@ pub(crate) async fn update_bundle_rule(
 ) -> HttpResponse {
     let result: UnifiedResult<ProductDetail> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRODUCTS_MANAGE)?;
         let input = body.into_inner();
@@ -745,7 +745,7 @@ pub(crate) async fn create_tier(
 ) -> HttpResponse {
     let result: UnifiedResult<PriceTier> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRODUCTS_CREATE)?;
         let input = body.into_inner();
@@ -860,7 +860,7 @@ pub(crate) async fn update_tier(
 ) -> HttpResponse {
     let result: UnifiedResult<PriceTier> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRODUCTS_MANAGE)?;
         let input = body.into_inner();
@@ -962,7 +962,7 @@ pub(crate) async fn delete_tier(
 ) -> HttpResponse {
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRODUCTS_MANAGE)?;
         let tier = state
@@ -1037,7 +1037,7 @@ pub(crate) async fn create_regional_price(
 ) -> HttpResponse {
     let result: UnifiedResult<RegionalPrice> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRODUCTS_CREATE)?;
         let input = body.into_inner();
@@ -1078,7 +1078,7 @@ pub(crate) async fn update_regional_price(
 ) -> HttpResponse {
     let result: UnifiedResult<RegionalPrice> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRODUCTS_MANAGE)?;
         let input = body.into_inner();
@@ -1124,7 +1124,7 @@ pub(crate) async fn delete_regional_price(
 ) -> HttpResponse {
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRODUCTS_MANAGE)?;
         let regional = state
@@ -1200,7 +1200,7 @@ pub(crate) async fn create_usage_price(
 ) -> HttpResponse {
     let result: UnifiedResult<UsagePrice> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRODUCTS_CREATE)?;
         let input = body.into_inner();
@@ -1244,7 +1244,7 @@ pub(crate) async fn update_usage_price(
 ) -> HttpResponse {
     let result: UnifiedResult<UsagePrice> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRODUCTS_MANAGE)?;
         let input = body.into_inner();
@@ -1298,7 +1298,7 @@ pub(crate) async fn delete_usage_price(
 ) -> HttpResponse {
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRODUCTS_MANAGE)?;
         let usage = state
@@ -1371,7 +1371,7 @@ pub(crate) async fn create_tax_rule(
 ) -> HttpResponse {
     let result: UnifiedResult<TaxRule> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRODUCTS_CREATE)?;
         let input = body.into_inner();
@@ -1413,7 +1413,7 @@ pub(crate) async fn update_tax_rule(
 ) -> HttpResponse {
     let result: UnifiedResult<TaxRule> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRODUCTS_MANAGE)?;
         let input = body.into_inner();
@@ -1461,7 +1461,7 @@ pub(crate) async fn delete_tax_rule(
 ) -> HttpResponse {
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRODUCTS_MANAGE)?;
         state

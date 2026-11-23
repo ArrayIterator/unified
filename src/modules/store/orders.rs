@@ -206,7 +206,7 @@ pub(crate) async fn update_order(
             // paid through `payment.captured` instead and never
             // pass through here.
             require_digital_permission(&state, &req, PERM_STORE_MANAGE)?;
-            require_record_in_company_scope(&current.company_id, &scope)?;
+            require_record_writable_in_company_scope(&current.company_id, &scope)?;
         } else {
             require_order_owner(&req, &current)?;
         }
@@ -296,7 +296,7 @@ pub(crate) async fn pay_order(
             .get_mut(path.as_str())
             .ok_or_else(|| UnifiedError::not_found("Order not found"))?;
         if provider == "manual" {
-            require_record_in_company_scope(&order.company_id, &scope)?;
+            require_record_writable_in_company_scope(&order.company_id, &scope)?;
         }
         if provider != "manual" {
             // A manager recording a manual payment acts on the

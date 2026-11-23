@@ -331,7 +331,7 @@ pub(crate) async fn complete_audit(
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LIBRARY_MANAGE)?;
         let mut audit = load_audit(&state, &path.into_inner())?;
-        super::auth::require_record_in_company_scope(&audit.company_id, &company)?;
+        super::auth::require_record_writable_in_company_scope(&audit.company_id, &company)?;
         if audit.status != AUDIT_OPEN {
             return Err(UnifiedError::conflict(format!(
                 "Only an open audit can be completed (status: {})",
@@ -517,7 +517,7 @@ pub(crate) async fn resolve_discrepancy(
                 "Discrepancy \"{discrepancy_id}\" does not belong to this audit"
             )));
         }
-        super::auth::require_record_in_company_scope(&discrepancy.company_id, &company)?;
+        super::auth::require_record_writable_in_company_scope(&discrepancy.company_id, &company)?;
         if discrepancy.status != DISCREPANCY_PENDING {
             return Err(UnifiedError::conflict(format!(
                 "Only a pending discrepancy can be resolved (status: {})",

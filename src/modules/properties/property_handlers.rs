@@ -103,7 +103,7 @@ pub(crate) async fn create_property(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Property> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PROPERTIES_CREATE)?;
         let input = body.into_inner();
@@ -242,11 +242,11 @@ pub(crate) async fn update_property(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Property> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PROPERTIES_VIEW)?;
         let mut property = load_property(&state, &path.into_inner())?;
-        require_record_in_company_scope(&property.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&property.company_id, &_scope)?;
         can_edit_property(&ctx, &caller.role, &property, &caller.actor)?;
         if matches!(property.status, PropertyStatus::Archived | PropertyStatus::SoldOut) {
             return Err(UnifiedError::conflict(format!(
@@ -354,11 +354,11 @@ pub(crate) async fn delete_property(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PROPERTIES_MANAGE)?;
         let property = load_property(&state, &path.into_inner())?;
-        require_record_in_company_scope(&property.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&property.company_id, &_scope)?;
         if !matches!(property.status, PropertyStatus::Draft | PropertyStatus::Archived) {
             return Err(UnifiedError::conflict(format!(
                 "Only a draft or archived property can be deleted (status is {})",
@@ -444,11 +444,11 @@ pub(crate) async fn publish_property(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Property> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PROPERTIES_VIEW)?;
         let mut property = load_property(&state, &path.into_inner())?;
-        require_record_in_company_scope(&property.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&property.company_id, &_scope)?;
         can_edit_property(&ctx, &caller.role, &property, &caller.actor)?;
         if property.status != PropertyStatus::Draft {
             return Err(UnifiedError::conflict(format!(
@@ -481,11 +481,11 @@ pub(crate) async fn archive_property(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Property> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PROPERTIES_VIEW)?;
         let mut property = load_property(&state, &path.into_inner())?;
-        require_record_in_company_scope(&property.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&property.company_id, &_scope)?;
         can_edit_property(&ctx, &caller.role, &property, &caller.actor)?;
         if property.status == PropertyStatus::Archived {
             return Err(UnifiedError::conflict("Property is already archived"));
@@ -515,11 +515,11 @@ pub(crate) async fn mark_property_sold_out(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Property> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PROPERTIES_VIEW)?;
         let mut property = load_property(&state, &path.into_inner())?;
-        require_record_in_company_scope(&property.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&property.company_id, &_scope)?;
         can_edit_property(&ctx, &caller.role, &property, &caller.actor)?;
         if property.status != PropertyStatus::Published {
             return Err(UnifiedError::conflict(format!(

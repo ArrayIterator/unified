@@ -25,7 +25,7 @@ use uuid::Uuid;
 use super::types::{HostingAccount, HostingState};
 use super::requests::{CreateAccountRequest, UpdateAccountRequest};
 use super::views::AccountRequirementReport;
-use super::helpers::{PERM_HOSTING_MANAGE, PERM_HOSTING_VIEW, allowed_transition, caller, caller_company, check_account_requirements, in_company_scope, paginate, require_company_match_uuid, require_company_match_uuid_update, require_permission, require_record_in_company_scope, require_tenant, validate_usage_against_plan};
+use super::helpers::{PERM_HOSTING_MANAGE, PERM_HOSTING_VIEW, allowed_transition, caller, caller_company, require_company_for_write, check_account_requirements, in_company_scope, paginate, require_company_match_uuid, require_company_match_uuid_update, require_permission, require_record_in_company_scope, require_tenant, validate_usage_against_plan};
 
 // ---------------------------------------------------------------------------
 // Account handlers.
@@ -206,14 +206,14 @@ pub(crate) async fn update_account(
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_HOSTING_MANAGE)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let id = id.into_inner();
         let mut account = state
             .accounts
             .get(&id)
             .map(|entry| entry.value().clone())
             .ok_or_else(|| UnifiedError::not_found("Hosting account not found"))?;
-        require_record_in_company_scope(&account.company_id, &scope)?;
+        require_record_writable_in_company_scope(&account.company_id, &scope)?;
         if account.status == "cancelled" {
             return Err(UnifiedError::conflict(
                 "Cancelled hosting accounts cannot be updated",
@@ -283,14 +283,14 @@ pub(crate) async fn delete_account(
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_HOSTING_MANAGE)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let id = id.into_inner();
         let account = state
             .accounts
             .get(&id)
             .map(|entry| entry.value().clone())
             .ok_or_else(|| UnifiedError::not_found("Hosting account not found"))?;
-        require_record_in_company_scope(&account.company_id, &scope)?;
+        require_record_writable_in_company_scope(&account.company_id, &scope)?;
         if account.status != "pending" && account.status != "cancelled" {
             return Err(UnifiedError::conflict(
                 "Only pending or cancelled hosting accounts can be deleted; suspend or cancel an active account first",
@@ -378,7 +378,7 @@ pub(crate) async fn activate_account(
         Ok(tenant) => tenant,
         Err(error) => return json::error_response(&error, debug),
     };
-    let scope = match caller_company(&tenant, &req) {
+    let scope = match require_company_for_write(&tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return json::error_response(&error, debug),
     };
@@ -401,7 +401,7 @@ pub(crate) async fn suspend_account(
         Ok(tenant) => tenant,
         Err(error) => return json::error_response(&error, debug),
     };
-    let scope = match caller_company(&tenant, &req) {
+    let scope = match require_company_for_write(&tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return json::error_response(&error, debug),
     };
@@ -427,7 +427,7 @@ pub(crate) async fn unsuspend_account(
         Ok(tenant) => tenant,
         Err(error) => return json::error_response(&error, debug),
     };
-    let scope = match caller_company(&tenant, &req) {
+    let scope = match require_company_for_write(&tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return json::error_response(&error, debug),
     };
@@ -450,7 +450,7 @@ pub(crate) async fn cancel_account(
         Ok(tenant) => tenant,
         Err(error) => return json::error_response(&error, debug),
     };
-    let scope = match caller_company(&tenant, &req) {
+    let scope = match require_company_for_write(&tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return json::error_response(&error, debug),
     };

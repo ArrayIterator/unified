@@ -2,7 +2,7 @@
 
 use super::types::{PERM_TASKS_MANAGE, PERM_TASKS_READ, TASK_DELETED};
 use super::validation::{
-    assign_event_for, caller, caller_company, in_company_scope, require_company_match,
+    assign_event_for, caller, caller_company, require_company_for_write, in_company_scope, require_company_match,
     require_company_match_for, require_company_match_uuid, require_company_match_uuid_for,
     require_permission, require_record_in_company_scope, require_tenant,
 };
@@ -198,7 +198,7 @@ pub(crate) async fn create_task(
         Ok(tenant) => tenant,
         Err(error) => return error_response(&error, debug),
     };
-    let _scope = match caller_company(&_tenant, &req) {
+    let _scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return error_response(&error, debug),
     };
@@ -322,7 +322,7 @@ pub(crate) async fn update_task(
         Ok(tenant) => tenant,
         Err(error) => return error_response(&error, debug),
     };
-    let _scope = match caller_company(&_tenant, &req) {
+    let _scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return error_response(&error, debug),
     };
@@ -339,7 +339,7 @@ pub(crate) async fn update_task(
         let mut record = store.get_mut(&task_id).ok_or_else(|| {
             UnifiedError::not_found(format!("Task {task_id} not found"))
         })?;
-        require_record_in_company_scope(&record.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&record.company_id, &_scope)?;
         if let Some(title) = &input.title {
             record.title = validate_title(title)?;
         }
@@ -400,7 +400,7 @@ pub(crate) async fn delete_task(
         Ok(tenant) => tenant,
         Err(error) => return error_response(&error, debug),
     };
-    let _scope = match caller_company(&_tenant, &req) {
+    let _scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return error_response(&error, debug),
     };
@@ -450,7 +450,7 @@ pub(crate) async fn change_task_status(
         Ok(tenant) => tenant,
         Err(error) => return error_response(&error, debug),
     };
-    let _scope = match caller_company(&_tenant, &req) {
+    let _scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return error_response(&error, debug),
     };
@@ -468,7 +468,7 @@ pub(crate) async fn change_task_status(
         let mut record = store.get_mut(&task_id).ok_or_else(|| {
             UnifiedError::not_found(format!("Task {task_id} not found"))
         })?;
-        require_record_in_company_scope(&record.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&record.company_id, &_scope)?;
         let from = record.status;
         if from == target {
             return Err(UnifiedError::unprocessable(format!(
@@ -539,7 +539,7 @@ pub(crate) async fn assign_task(
         Ok(tenant) => tenant,
         Err(error) => return error_response(&error, debug),
     };
-    let _scope = match caller_company(&_tenant, &req) {
+    let _scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return error_response(&error, debug),
     };
@@ -557,7 +557,7 @@ pub(crate) async fn assign_task(
         let mut record = store.get_mut(&task_id).ok_or_else(|| {
             UnifiedError::not_found(format!("Task {task_id} not found"))
         })?;
-        require_record_in_company_scope(&record.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&record.company_id, &_scope)?;
         let old_assignee = record.assignee_id;
         record.assignee_id = assignee_id;
         record.updated_at = Utc::now();
@@ -592,7 +592,7 @@ pub(crate) async fn log_time(
         Ok(tenant) => tenant,
         Err(error) => return error_response(&error, debug),
     };
-    let _scope = match caller_company(&_tenant, &req) {
+    let _scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return error_response(&error, debug),
     };
@@ -697,7 +697,7 @@ pub(crate) async fn add_comment(
         Ok(tenant) => tenant,
         Err(error) => return error_response(&error, debug),
     };
-    let _scope = match caller_company(&_tenant, &req) {
+    let _scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return error_response(&error, debug),
     };
@@ -778,7 +778,7 @@ pub(crate) async fn add_checklist_item(
         Ok(tenant) => tenant,
         Err(error) => return error_response(&error, debug),
     };
-    let _scope = match caller_company(&_tenant, &req) {
+    let _scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return error_response(&error, debug),
     };
@@ -837,7 +837,7 @@ pub(crate) async fn toggle_checklist_item(
         Ok(tenant) => tenant,
         Err(error) => return error_response(&error, debug),
     };
-    let _scope = match caller_company(&_tenant, &req) {
+    let _scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return error_response(&error, debug),
     };
@@ -885,7 +885,7 @@ pub(crate) async fn delete_checklist_item(
         Ok(tenant) => tenant,
         Err(error) => return error_response(&error, debug),
     };
-    let _scope = match caller_company(&_tenant, &req) {
+    let _scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return error_response(&error, debug),
     };
@@ -923,62 +923,6 @@ pub(crate) async fn delete_checklist_item(
 
 #[cfg(test)]
 mod tests {
-
-    /// Build a request carrying the server-verified caller the auth
-    /// middleware would attach for this user and role. The old
-    /// self-asserted identity headers grant nothing,
-    /// so tests attach the verified caller to the request
-    /// extensions instead.
-    fn verified_request(user_id: &str, role: &str) -> actix_web::HttpRequest {
-        use actix_web::HttpMessage;
-        let req = actix_web::test::TestRequest::default().to_http_request();
-        req.extensions_mut().insert(
-            unified_core::auth::Caller::verified(test_user_uuid(user_id), Vec::new())
-                .with_roles(vec![role.to_string()]),
-        );
-        req.extensions_mut()
-            .insert(unified_core::middleware::TenantContext {
-                tenant_id: uuid::Uuid::now_v7().to_string(),
-                company_id: String::new(),
-                site_id: String::new(),
-                kind: unified_core::middleware::TenantKind::Subdomain,
-                host: "tenant.example.test".to_string(),
-                scope: None,
-                product_id: None,
-                package_id: None,
-                product_subdomain_id: None,
-            },
-        );
-        req
-    }
-
-    /// Build a request carrying a verified caller with no roles
-    /// resolved: the caller resolves, but holds the anonymous role.
-    /// This is the "no role" case in the new model (roles are
-    /// resolved server-side, never claimed in a header).
-    fn verified_request_without_roles(user_id: &str) -> actix_web::HttpRequest {
-        use actix_web::HttpMessage;
-        let req = actix_web::test::TestRequest::default().to_http_request();
-        req.extensions_mut()
-            .insert(unified_core::auth::Caller::verified(
-                test_user_uuid(user_id),
-                Vec::new(),
-            ));
-        req.extensions_mut()
-            .insert(unified_core::middleware::TenantContext {
-                tenant_id: uuid::Uuid::now_v7().to_string(),
-                company_id: String::new(),
-                site_id: String::new(),
-                kind: unified_core::middleware::TenantKind::Subdomain,
-                host: "tenant.example.test".to_string(),
-                scope: None,
-                product_id: None,
-                package_id: None,
-                product_subdomain_id: None,
-            },
-        );
-        req
-    }
 
     /// Deterministic test-user identity: distinct names map to
     /// distinct UUIDs (FNV-1a folded into the low bits), so
@@ -1082,8 +1026,37 @@ mod tests {
         TestRequest::default().to_http_request()
     }
 
+    /// The company the handler tests act as (C3 task 315). It must
+    /// be a UUID: tasks store `company_id` as `Uuid`, and the
+    /// record check parses the caller's company string as one.
+    const TEST_COMPANY_ID: &str = "11111111-2222-4333-8444-555555555555";
+
+    /// A request scoped to the test company (C3 task 315): mutation
+    /// handlers require a resolved company, so the happy-path tests
+    /// carry one on both the tenant context and the verified caller.
+    /// The seeded tasks belong to the same company, so the writable
+    /// record check passes too.
     fn authed(role: &str) -> HttpRequest {
-        verified_request("user-1", role)
+        use actix_web::HttpMessage;
+        let req = actix_web::test::TestRequest::default().to_http_request();
+        req.extensions_mut().insert(
+            unified_core::auth::Caller::verified(test_user_uuid("user-1"), Vec::new())
+                .with_company(TEST_COMPANY_ID.to_string())
+                .with_roles(vec![role.to_string()]),
+        );
+        req.extensions_mut()
+            .insert(unified_core::middleware::TenantContext {
+                tenant_id: uuid::Uuid::now_v7().to_string(),
+                company_id: TEST_COMPANY_ID.to_string(),
+                site_id: String::new(),
+                kind: unified_core::middleware::TenantKind::Subdomain,
+                host: "tenant.example.test".to_string(),
+                scope: None,
+                product_id: None,
+                package_id: None,
+                product_subdomain_id: None,
+            });
+        req
     }
 
     fn seed_task(
@@ -1101,7 +1074,9 @@ mod tests {
             priority: TaskPriority::Medium,
             status,
             due_date: None,
-            company_id: None,
+            company_id: Some(
+                uuid::Uuid::parse_str(TEST_COMPANY_ID).expect("test company id must parse"),
+            ),
             project_name: None,
             tags: Vec::new(),
             comments: Vec::new(),

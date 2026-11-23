@@ -121,7 +121,7 @@ pub(crate) async fn create_form(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_FORMS_MANAGE)?;
         let input = body.into_inner();
@@ -274,11 +274,11 @@ pub(crate) async fn update_form(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_FORMS_MANAGE)?;
         let mut form = load_form(&state, &path.into_inner())?;
-        require_record_in_company_scope(&form.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&form.company_id, &_scope)?;
         let input = body.into_inner();
         if let Some(title) = &input.title {
             form.title = require_text(title, "title", MAX_TITLE_LEN)?;
@@ -378,11 +378,11 @@ pub(crate) async fn delete_form(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_FORMS_MANAGE)?;
         let form = load_form(&state, &path.into_inner())?;
-        require_record_in_company_scope(&form.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&form.company_id, &_scope)?;
         let id = form.id;
         state.forms.remove(&id);
         let stale_fields: Vec<Uuid> = state

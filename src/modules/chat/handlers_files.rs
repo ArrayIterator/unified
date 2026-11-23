@@ -22,7 +22,7 @@ pub(crate) async fn share_file(
 ) -> HttpResponse {
     let result: UnifiedResult<ChatFile> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let actor = actor_id(&req)?;
         let roles = caller_roles(&req);
         let channel = load_channel(&state, &path.into_inner())?;

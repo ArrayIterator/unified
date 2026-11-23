@@ -245,7 +245,7 @@ pub(crate) async fn create_appointment(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Appointment> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_APPOINTMENTS_CREATE)?;
         let input = body.into_inner();
@@ -352,12 +352,12 @@ pub(crate) async fn update_appointment(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Appointment> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_APPOINTMENTS_MANAGE)?;
         let input = body.into_inner();
         let mut appointment = load_appointment(&state, &path.into_inner())?;
-        require_record_in_company_scope(&appointment.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&appointment.company_id, &_scope)?;
         if matches!(
             appointment.status,
             AppointmentStatus::Cancelled | AppointmentStatus::Completed | AppointmentStatus::NoShow
@@ -400,11 +400,11 @@ pub(crate) async fn confirm_appointment(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Appointment> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_APPOINTMENTS_MANAGE)?;
         let mut appointment = load_appointment(&state, &path.into_inner())?;
-        require_record_in_company_scope(&appointment.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&appointment.company_id, &_scope)?;
         if appointment.status != AppointmentStatus::PendingConfirmation {
             return Err(UnifiedError::conflict(format!(
                 "Only a pending_confirmation appointment can be confirmed (current status: {})",
@@ -453,12 +453,12 @@ pub(crate) async fn reschedule_appointment(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Appointment> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_APPOINTMENTS_MANAGE)?;
         let input = body.into_inner();
         let mut appointment = load_appointment(&state, &path.into_inner())?;
-        require_record_in_company_scope(&appointment.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&appointment.company_id, &_scope)?;
         if !matches!(
             appointment.status,
             AppointmentStatus::PendingConfirmation | AppointmentStatus::Confirmed
@@ -558,12 +558,12 @@ pub(crate) async fn cancel_appointment(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Appointment> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_APPOINTMENTS_MANAGE)?;
         let input = body.into_inner();
         let mut appointment = load_appointment(&state, &path.into_inner())?;
-        require_record_in_company_scope(&appointment.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&appointment.company_id, &_scope)?;
         if !matches!(
             appointment.status,
             AppointmentStatus::PendingConfirmation | AppointmentStatus::Confirmed
@@ -631,11 +631,11 @@ pub(crate) async fn complete_appointment(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Appointment> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_APPOINTMENTS_MANAGE)?;
         let mut appointment = load_appointment(&state, &path.into_inner())?;
-        require_record_in_company_scope(&appointment.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&appointment.company_id, &_scope)?;
         if appointment.status != AppointmentStatus::Confirmed {
             return Err(UnifiedError::conflict(format!(
                 "Only a confirmed appointment can be completed (current status: {})",
@@ -716,11 +716,11 @@ pub(crate) async fn no_show_appointment(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Appointment> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_APPOINTMENTS_MANAGE)?;
         let mut appointment = load_appointment(&state, &path.into_inner())?;
-        require_record_in_company_scope(&appointment.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&appointment.company_id, &_scope)?;
         if appointment.status != AppointmentStatus::Confirmed {
             return Err(UnifiedError::conflict(format!(
                 "Only a confirmed appointment can be marked no-show (current status: {})",

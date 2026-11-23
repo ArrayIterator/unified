@@ -4,7 +4,12 @@ use unified_core::hooks::HookContext;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::collections::HashMap;
+use std::sync::{Arc, OnceLock};
 use std::time::Instant;
+use unified_core::provider_registry::{
+    ProviderDefinition, leak_str, leak_str_slice, provider_registry,
+};
 use uuid::Uuid;
 
 // ---------------------------------------------------------------------------
@@ -53,50 +58,103 @@ impl AiProviderKind {
         ]
     }
 
+    /// Human-readable display name, from the provider registry.
     pub fn display_name(&self) -> &'static str {
-        match self {
-            Self::Anthropic => "Anthropic (Claude)",
-            Self::OpenAi => "OpenAI (GPT)",
-            Self::OpenAiCompatible => "OpenAI-compatible endpoint",
-            Self::Local => "Local / bring-your-own endpoint",
-        }
+        attrs(self).display_name
     }
 
-    /// Fixed API base URL, when the provider has one. Compatible and
-    /// local providers have none: the admin supplies the base URL.
+    /// Fixed API base URL, when the provider has one, from the
+    /// provider registry. Compatible and local providers have none:
+    /// the admin supplies the base URL.
     pub fn default_base_url(&self) -> Option<&'static str> {
-        match self {
-            Self::Anthropic => Some("https://api.anthropic.com"),
-            Self::OpenAi => Some("https://api.openai.com/v1"),
-            Self::OpenAiCompatible | Self::Local => None,
-        }
+        attrs(self).default_base_url
     }
 
-    /// Default model when the admin does not pick one. Compatible and
-    /// local providers have none: the model is required there.
+    /// Default model when the admin does not pick one, from the
+    /// provider registry. Compatible and local providers have none:
+    /// the model is required there. The baked defaults that used to
+    /// live here (`claude-sonnet-4-20250514`, `gpt-4o-mini`) are data
+    /// now: `models` + `default_model` on the definition.
     pub fn default_model(&self) -> Option<&'static str> {
-        match self {
-            Self::Anthropic => Some("claude-sonnet-4-20250514"),
-            Self::OpenAi => Some("gpt-4o-mini"),
-            Self::OpenAiCompatible | Self::Local => None,
-        }
+        attrs(self).default_model
     }
 
-    /// Hosts this provider's API is allowed to talk to. A request to
-    /// any other host is refused before it is sent.
+    /// Hosts this provider's API is allowed to talk to, from the
+    /// provider registry. A request to any other host is refused
+    /// before it is sent.
     pub fn allowed_hosts(&self) -> &'static [&'static str] {
-        match self {
-            Self::Anthropic => &["api.anthropic.com"],
-            Self::OpenAi => &["api.openai.com"],
-            Self::OpenAiCompatible | Self::Local => &[],
-        }
+        attrs(self).allowed_hosts
     }
 
-    /// Whether the provider needs an API key. A local endpoint may
-    /// run without one.
+    /// Whether the provider needs an API key, from the provider
+    /// registry. A local endpoint may run without one.
     pub fn key_required(&self) -> bool {
-        !matches!(self, Self::Local)
+        attrs(self).key_required
     }
+
+    /// Known models for this provider, in preference order, from the
+    /// provider registry. Empty when the provider has no baked model
+    /// list (compatible / local: the admin supplies the model).
+    pub fn models(&self) -> Vec<String> {
+        self.definition()
+            .map(|def| def.models.clone())
+            .unwrap_or_default()
+    }
+
+    /// The registry definition for this kind, if one is registered.
+    /// Every built-in kind has one; `None` only when the registry
+    /// was built without seeds (tests).
+    pub fn definition(&self) -> Option<Arc<ProviderDefinition>> {
+        provider_registry().get("ai", self.as_str())
+    }
+}
+
+/// The enabled provider catalog, built-ins plus any provider an admin
+/// registered, sorted by id. New providers appear here with no code
+/// change; the enum-based `all()` lists built-ins only.
+pub fn catalog() -> Vec<Arc<ProviderDefinition>> {
+    provider_registry().list_family_enabled("ai")
+}
+
+// ---------------------------------------------------------------------------
+// Registry-backed attributes (C12, task 269).
+// ---------------------------------------------------------------------------
+/// The `&'static` view of one provider's registry definition; see the
+/// same bridge in the payments module.
+struct AiAttrs {
+    display_name: &'static str,
+    default_base_url: Option<&'static str>,
+    default_model: Option<&'static str>,
+    allowed_hosts: &'static [&'static str],
+    key_required: bool,
+}
+
+fn attrs_from_definition(def: &ProviderDefinition) -> AiAttrs {
+    AiAttrs {
+        display_name: leak_str(&def.display_name),
+        default_base_url: def.base_url.as_deref().map(leak_str),
+        default_model: def.default_model.as_deref().map(leak_str),
+        allowed_hosts: leak_str_slice(&def.allowed_hosts),
+        key_required: def.capability("key_required"),
+    }
+}
+
+static ATTRS: OnceLock<HashMap<AiProviderKind, AiAttrs>> = OnceLock::new();
+
+fn attrs(kind: &AiProviderKind) -> &'static AiAttrs {
+    let map = ATTRS.get_or_init(|| {
+        let mut out = HashMap::new();
+        for def in provider_registry().list_family("ai") {
+            if let Some(parsed) = AiProviderKind::from_str(&def.id) {
+                out.insert(parsed, attrs_from_definition(&def));
+            }
+        }
+        out
+    });
+    // Every enum variant has a seed definition; the expect documents
+    // that invariant (a registry built without seeds breaks it).
+    map.get(kind)
+        .expect("every AiProviderKind has a registry definition")
 }
 
 // ---------------------------------------------------------------------------
@@ -737,4 +795,77 @@ pub struct SharedContext {
     #[serde(default, skip_serializing_if = "serde_json::Map::is_empty")]
     pub extra: serde_json::Map<String, Value>,
     pub assembled_at: DateTime<Utc>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn builtin_attributes_come_from_registry_data() {
+        // The baked defaults that used to live in match arms here.
+        assert_eq!(
+            AiProviderKind::Anthropic.display_name(),
+            "Anthropic (Claude)"
+        );
+        assert_eq!(
+            AiProviderKind::Anthropic.default_base_url(),
+            Some("https://api.anthropic.com")
+        );
+        assert_eq!(
+            AiProviderKind::Anthropic.default_model(),
+            Some("claude-sonnet-4-20250514")
+        );
+        assert_eq!(
+            AiProviderKind::Anthropic.models(),
+            vec!["claude-sonnet-4-20250514"]
+        );
+        assert_eq!(AiProviderKind::OpenAi.default_model(), Some("gpt-4o-mini"));
+        assert_eq!(AiProviderKind::OpenAi.models(), vec!["gpt-4o-mini"]);
+        assert_eq!(AiProviderKind::OpenAiCompatible.default_base_url(), None);
+        assert_eq!(AiProviderKind::OpenAiCompatible.default_model(), None);
+        assert!(AiProviderKind::OpenAiCompatible.models().is_empty());
+        assert_eq!(AiProviderKind::Local.default_model(), None);
+        assert!(AiProviderKind::Local.key_required());
+        assert!(!AiProviderKind::Local.key_required());
+        assert!(AiProviderKind::Local.allowed_hosts().is_empty());
+        assert_eq!(
+            AiProviderKind::Anthropic.allowed_hosts(),
+            &["api.anthropic.com"]
+        );
+        assert_eq!(AiProviderKind::OpenAi.allowed_hosts(), &["api.openai.com"]);
+        assert!(AiProviderKind::Local.allowed_hosts().is_empty());
+    }
+
+    #[test]
+    fn add_one_ai_provider_without_code_change() {
+        // Register a brand-new provider through the registry only, then
+        // prove the catalog and the definition lookup resolve its base
+        // URL, model list, and default model from that data. No enum
+        // variant exists for it and no match arm was added. (Building
+        // an adapter for it needs the string-keyed factory in
+        // `providers.rs`; the connection model still keys on the enum
+        // — see INTEGRATION_NOTES_C12.)
+        let mut def = unified_core::provider_registry::ProviderDefinition::new(
+            "ai",
+            "acme_ai",
+            "Acme AI",
+            "openai_compatible",
+        );
+        def.base_url = Some("https://ai.acme.test/v1".to_string());
+        def.allowed_hosts = vec!["ai.acme.test".to_string()];
+        def.models = vec!["acme-1".to_string()];
+        def.default_model = Some("acme-1".to_string());
+        def.capabilities = serde_json::json!({"key_required": true, "chat": true});
+        provider_registry().register(def).unwrap();
+        assert!(catalog().iter().any(|entry| entry.id == "acme_ai"));
+        let found = provider_registry().get("ai", "acme_ai").unwrap();
+        assert_eq!(found.default_model.as_deref(), Some("acme-1"));
+        assert_eq!(found.models, vec!["acme-1"]);
+        assert_eq!(
+            found.effective_base_url(false),
+            Some("https://ai.acme.test/v1")
+        );
+        assert!(found.capability("key_required"));
+    }
 }

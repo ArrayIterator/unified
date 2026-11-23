@@ -73,7 +73,7 @@ pub(crate) async fn create_badge(
     let debug = ctx.is_debug();
     let result: UnifiedResult<GamificationBadge> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_GAMIFICATION_MANAGE)?;
         let input = body.into_inner();
@@ -154,7 +154,7 @@ pub(crate) async fn update_badge(
     let debug = ctx.is_debug();
     let result: UnifiedResult<GamificationBadge> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_GAMIFICATION_MANAGE)?;
         let mut badge = load_badge(&state, &path.into_inner())?;
@@ -208,7 +208,7 @@ pub(crate) async fn delete_badge(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_GAMIFICATION_MANAGE)?;
         let badge = load_badge(&state, &path.into_inner())?;

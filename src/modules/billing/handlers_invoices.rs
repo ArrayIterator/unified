@@ -75,7 +75,7 @@ pub(crate) async fn create_invoice(
 ) -> HttpResponse {
     let result: UnifiedResult<Invoice> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let input = body.into_inner();
         if input.user_id.trim().is_empty() {
             return Err(UnifiedError::bad_request("user_id must not be empty"));
@@ -201,7 +201,7 @@ pub(crate) async fn from_order(
 ) -> HttpResponse {
     let result: UnifiedResult<Invoice> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let input = body.into_inner();
         // Reuse an existing invoice for this order when one already exists
         // (for example the draft created automatically by the hook).
@@ -293,13 +293,13 @@ pub(crate) async fn update_invoice(
 ) -> HttpResponse {
     let result: UnifiedResult<Invoice> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let input = body.into_inner();
         let mut invoice = state
             .invoices
             .get_mut(path.as_str())
             .ok_or_else(|| UnifiedError::not_found("Invoice not found"))?;
-        require_record_in_company_scope(&invoice.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&invoice.company_id, &_scope)?;
         require_invoice_owner(&req, &invoice)?;
         if matches!(
             invoice.status.as_str(),
@@ -350,13 +350,13 @@ pub(crate) async fn delete_invoice(
 ) -> HttpResponse {
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let invoice = state
             .invoices
             .get(path.as_str())
             .map(|entry| entry.value().clone())
             .ok_or_else(|| UnifiedError::not_found("Invoice not found"))?;
-        require_record_in_company_scope(&invoice.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&invoice.company_id, &_scope)?;
         require_invoice_owner(&req, &invoice)?;
         if invoice.status != "draft" {
             return Err(UnifiedError::unprocessable(
@@ -397,7 +397,7 @@ pub(crate) async fn pay_invoice(
 ) -> HttpResponse {
     let result: UnifiedResult<Invoice> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let method = body
             .into_inner()
             .method
@@ -409,7 +409,7 @@ pub(crate) async fn pay_invoice(
             .invoices
             .get_mut(path.as_str())
             .ok_or_else(|| UnifiedError::not_found("Invoice not found"))?;
-        require_record_in_company_scope(&invoice.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&invoice.company_id, &_scope)?;
         require_invoice_owner(&req, &invoice)?;
         // A draft must be issued first: paying it in full here
         // would jump draft straight to paid and bypass the pricing
@@ -470,12 +470,12 @@ pub(crate) async fn void_invoice(
 ) -> HttpResponse {
     let result: UnifiedResult<Invoice> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let mut invoice = state
             .invoices
             .get_mut(path.as_str())
             .ok_or_else(|| UnifiedError::not_found("Invoice not found"))?;
-        require_record_in_company_scope(&invoice.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&invoice.company_id, &_scope)?;
         require_invoice_owner(&req, &invoice)?;
         // Voiding an invoice with recorded payments would leave
         // those payments on the books with no reversal: the
@@ -674,7 +674,7 @@ pub(crate) async fn record_payment(
 ) -> HttpResponse {
     let result: UnifiedResult<InvoicePayment> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let input = body.into_inner();
         if input.amount <= 0 {
             return Err(UnifiedError::bad_request(
@@ -807,7 +807,7 @@ pub(crate) async fn create_credit_note(
 ) -> HttpResponse {
     let result: UnifiedResult<CreditNote> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let input = body.into_inner();
         if input.amount <= 0 {
             return Err(UnifiedError::bad_request(

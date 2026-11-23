@@ -97,7 +97,7 @@ pub(crate) async fn list_buckets(
         .collect();
     // Tenant scoping: a non-admin lists only shared buckets and
     // buckets of their own company; an admin lists all.
-    let is_admin = is_storage_admin(&ctx, &found.role);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BUCKETS);
     items.retain(|bucket| bucket_company_visible(&bucket.company_id, &_scope, is_admin));
     if let Some(search) = &params.search {
         let needle = search.to_lowercase();
@@ -274,7 +274,7 @@ pub(crate) async fn get_bucket(
         Ok(found) => found,
         Err(error) => return err_response(error, debug),
     };
-    let is_admin = is_storage_admin(&ctx, &found.role);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BUCKETS);
     let result: UnifiedResult<BucketView> = (|| {
         let bucket = load_bucket(&state, &id)?;
         check_bucket_access(&bucket, _scope.as_deref(), is_admin)?;
@@ -304,7 +304,7 @@ pub(crate) async fn update_bucket(
         Ok(found) => found,
         Err(error) => return err_response(error, debug),
     };
-    let is_admin = is_storage_admin(&ctx, &found.role);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BUCKETS);
     let result: UnifiedResult<BucketView> = (|| {
         let input = body.into_inner();
         let mut bucket = load_bucket(&state, &id)?;
@@ -423,7 +423,7 @@ pub(crate) async fn delete_bucket(
         Ok(found) => found,
         Err(error) => return err_response(error, debug),
     };
-    let is_admin = is_storage_admin(&ctx, &found.role);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BUCKETS);
     let result: UnifiedResult<Value> = (|| {
         let bucket = load_bucket(&state, &id)?;
         check_bucket_access(&bucket, _scope.as_deref(), is_admin)?;
@@ -502,7 +502,7 @@ pub(crate) async fn test_bucket(
         Ok(found) => found,
         Err(error) => return err_response(error, debug),
     };
-    let is_admin = is_storage_admin(&ctx, &found.role);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BUCKETS);
     let result: UnifiedResult<Value> = (|| async {
         let bucket = load_bucket(&state, &id)?;
         check_bucket_access(&bucket, _scope.as_deref(), is_admin)?;

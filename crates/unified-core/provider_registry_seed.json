@@ -1,0 +1,736 @@
+{
+  "version": 1,
+  "comment": "C12 provider registry seed (task 269). Single source of truth for the built-in provider definitions: the Rust registry loads this file (include_str!), and migration 000127 seeds the provider_registry_definitions table from it (generated SQL, see docs/integration/INTEGRATION_NOTES_C12.md). Admin-added providers live in the table / config document, never in this file. Capabilities keys differ per family; see unified_core::provider_registry for the per-family reading rules.",
+  "providers": [
+    {
+      "family": "payments", "id": "xendit", "display_name": "Xendit",
+      "base_url": "https://api.xendit.co", "sandbox_base_url": null,
+      "allowed_hosts": ["api.xendit.co"],
+      "capabilities": {"authorize": true, "capture": true, "charge": true, "refund": true, "void": false, "subscriptions": true, "payouts": true, "3ds": true, "webhooks": true, "subscriptions_are_local_schedule": true},
+      "currencies": ["IDR", "PHP", "THB", "VND", "MYR", "SGD", "USD"],
+      "credentials_shape": [
+        {"name": "api_key", "label": "Secret key", "type": "password", "required": true, "secret": true, "applies_to": "both", "description": "Xendit secret key (xnd_development_... in sandbox, xnd_production_... in live). Used as the Basic-auth username."},
+        {"name": "webhook_secret", "label": "Callback token", "type": "password", "required": true, "secret": true, "applies_to": "both", "description": "Xendit callback token (X-Callback-Token). Must match the token configured in the Xendit dashboard."},
+        {"name": "public_key", "label": "Public key", "type": "text", "required": false, "secret": false, "applies_to": "both", "description": "Xendit public key, only needed when tokenizing cards client-side."}
+      ],
+      "adapter_kind": "xendit"
+    },
+    {
+      "family": "payments", "id": "hyperpay", "display_name": "HyperPay",
+      "base_url": "https://eu-prod.oppwa.com", "sandbox_base_url": "https://eu-test.oppwa.com",
+      "allowed_hosts": ["eu-test.oppwa.com", "eu-prod.oppwa.com"],
+      "capabilities": {"authorize": true, "capture": true, "charge": true, "refund": true, "void": true, "subscriptions": true, "payouts": false, "3ds": true, "webhooks": true, "subscriptions_are_local_schedule": true},
+      "currencies": ["AED", "SAR", "USD", "EUR", "GBP", "EGP", "JOD", "KWD", "QAR", "BHD", "OMR"],
+      "credentials_shape": [
+        {"name": "access_token", "label": "Access token", "type": "password", "required": true, "secret": true, "applies_to": "both", "description": "HyperPay access token (Bearer). Sandbox and live tokens differ; switch mode to use the matching one."},
+        {"name": "merchant_id", "label": "Entity ID", "type": "text", "required": true, "secret": false, "applies_to": "both", "description": "HyperPay entityId (the channel / entity identifier for checkouts)."},
+        {"name": "webhook_secret", "label": "Webhook secret", "type": "password", "required": false, "secret": true, "applies_to": "both", "description": "Shared secret for webhook verification when the operator configures HyperPay notifications with one. When empty, webhooks are verified by re-fetching the payment status from HyperPay."}
+      ],
+      "adapter_kind": "hyperpay"
+    },
+    {
+      "family": "payments", "id": "2checkout", "display_name": "2Checkout",
+      "base_url": "https://api.2checkout.com", "sandbox_base_url": null,
+      "allowed_hosts": ["api.2checkout.com"],
+      "capabilities": {"authorize": false, "capture": false, "charge": true, "refund": true, "void": false, "subscriptions": true, "payouts": false, "3ds": true, "webhooks": true, "subscriptions_are_local_schedule": true},
+      "currencies": ["USD", "EUR", "GBP", "AUD", "CAD", "JPY", "CHF", "SEK", "NOK", "DKK", "PLN", "CZK", "HUF", "BRL", "MXN", "INR", "ZAR", "ILS"],
+      "credentials_shape": [
+        {"name": "merchant_id", "label": "Merchant code", "type": "text", "required": true, "secret": false, "applies_to": "both", "description": "2Checkout merchant code."},
+        {"name": "secret_word", "label": "Secret word", "type": "password", "required": true, "secret": true, "applies_to": "both", "description": "2Checkout secret word, used to sign REST API requests (HMAC-SHA256)."},
+        {"name": "api_key", "label": "API key", "type": "password", "required": false, "secret": true, "applies_to": "both", "description": "Optional 2Checkout API key when the account uses key authentication instead of the secret word."}
+      ],
+      "adapter_kind": "twocheckout"
+    },
+    {
+      "family": "payments", "id": "card", "display_name": "Credit / Debit Card",
+      "base_url": null, "sandbox_base_url": null,
+      "allowed_hosts": [],
+      "capabilities": {"authorize": true, "capture": true, "charge": true, "refund": true, "void": true, "subscriptions": true, "payouts": false, "3ds": true, "webhooks": true, "subscriptions_are_local_schedule": true},
+      "currencies": ["USD", "EUR", "GBP", "IDR", "SGD", "MYR", "PHP", "THB", "AED", "SAR", "AUD", "CAD", "JPY", "CHF"],
+      "credentials_shape": [
+        {"name": "api_key", "label": "Processor API key", "type": "password", "required": true, "secret": true, "applies_to": "both", "description": "API key for the card processor behind the endpoint. Sent as a Bearer token unless the processor expects an X-Api-Key header."},
+        {"name": "webhook_secret", "label": "Webhook secret", "type": "password", "required": false, "secret": true, "applies_to": "both", "description": "Shared secret for HMAC-SHA256 webhook verification (X-Signature header)."},
+        {"name": "merchant_id", "label": "Merchant ID", "type": "text", "required": false, "secret": false, "applies_to": "both", "description": "Merchant identifier sent to the processor when it requires one."}
+      ],
+      "adapter_kind": "generic_card", "needs_endpoint": true,
+      "notes": "User-supplied processor endpoint; validated as an https URL with a host and no embedded credentials."
+    },
+    {
+      "family": "payments", "id": "mastercard", "display_name": "Mastercard Gateway",
+      "base_url": null, "sandbox_base_url": null,
+      "allowed_hosts": [],
+      "capabilities": {"authorize": true, "capture": true, "charge": true, "refund": true, "void": true, "subscriptions": true, "payouts": false, "3ds": true, "webhooks": true, "subscriptions_are_local_schedule": true},
+      "currencies": ["USD", "EUR", "GBP", "AUD", "CAD", "JPY", "SGD", "HKD", "NZD", "CHF", "SEK", "NOK", "DKK", "AED", "SAR", "INR", "IDR", "MYR", "PHP", "THB", "ZAR", "BRL", "MXN"],
+      "credentials_shape": [
+        {"name": "merchant_id", "label": "Merchant ID", "type": "text", "required": true, "secret": false, "applies_to": "both", "description": "Mastercard gateway merchant id (used as the Basic-auth username, prefixed with merchant.)."},
+        {"name": "secret_key", "label": "API password", "type": "password", "required": true, "secret": true, "applies_to": "both", "description": "Mastercard gateway API password (Basic-auth password)."},
+        {"name": "webhook_secret", "label": "Webhook secret", "type": "password", "required": false, "secret": true, "applies_to": "both", "description": "Shared secret for HMAC-SHA256 webhook verification (X-Webhook-Signature header)."}
+      ],
+      "adapter_kind": "mpgs", "needs_endpoint": true,
+      "notes": "Merchant gateway host (<gateway>.mastercard.com), validated by the Mastercard adapter."
+    },
+    {
+      "family": "payments", "id": "google_pay", "display_name": "Google Pay",
+      "base_url": null, "sandbox_base_url": null,
+      "allowed_hosts": [],
+      "capabilities": {"authorize": false, "capture": false, "charge": true, "refund": true, "void": false, "subscriptions": false, "payouts": false, "3ds": false, "webhooks": false, "subscriptions_are_local_schedule": false},
+      "currencies": ["USD", "EUR", "GBP", "AUD", "CAD", "JPY", "SGD", "CHF"],
+      "credentials_shape": [
+        {"name": "merchant_id", "label": "Google Pay merchant ID", "type": "text", "required": false, "secret": false, "applies_to": "both", "description": "Google Pay merchant id, for reference on the connection. Charges run through the delegate gateway below."},
+        {"name": "delegate_connection_id", "label": "Delegate gateway connection", "type": "connection", "required": true, "secret": false, "applies_to": "both", "description": "Id of the gateway connection (Stripe, Xendit, Mastercard, ...) that performs the charge for a Google Pay token."}
+      ],
+      "adapter_kind": "wallet", "needs_delegate": true,
+      "notes": "No direct API: the delegate connection's hosts and capabilities apply."
+    },
+    {
+      "family": "payments", "id": "apple_pay", "display_name": "Apple Pay",
+      "base_url": null, "sandbox_base_url": null,
+      "allowed_hosts": [],
+      "capabilities": {"authorize": false, "capture": false, "charge": true, "refund": true, "void": false, "subscriptions": false, "payouts": false, "3ds": false, "webhooks": false, "subscriptions_are_local_schedule": false},
+      "currencies": ["USD", "EUR", "GBP", "AUD", "CAD", "JPY", "SGD", "CHF"],
+      "credentials_shape": [
+        {"name": "merchant_id", "label": "Apple Pay merchant ID", "type": "text", "required": false, "secret": false, "applies_to": "both", "description": "Apple Pay merchant id, for reference on the connection. Charges run through the delegate gateway below."},
+        {"name": "delegate_connection_id", "label": "Delegate gateway connection", "type": "connection", "required": true, "secret": false, "applies_to": "both", "description": "Id of the gateway connection (Stripe, Xendit, Mastercard, ...) that performs the charge for an Apple Pay token."}
+      ],
+      "adapter_kind": "wallet", "needs_delegate": true,
+      "notes": "No direct API: the delegate connection's hosts and capabilities apply."
+    },
+    {
+      "family": "payments", "id": "paypal", "display_name": "PayPal",
+      "base_url": "https://api-m.paypal.com", "sandbox_base_url": "https://api-m.sandbox.paypal.com",
+      "allowed_hosts": ["api-m.paypal.com", "api-m.sandbox.paypal.com"],
+      "capabilities": {"authorize": true, "capture": true, "charge": true, "refund": true, "void": true, "subscriptions": true, "payouts": true, "3ds": true, "webhooks": true, "subscriptions_are_local_schedule": false},
+      "currencies": ["USD", "EUR", "GBP", "AUD", "CAD", "JPY", "SGD", "HKD", "NZD", "CHF", "SEK", "NOK", "DKK", "PLN", "CZK", "HUF", "ILS", "MXN", "BRL", "ZAR", "KRW", "TWD", "THB", "IDR", "MYR", "PHP", "INR"],
+      "credentials_shape": [
+        {"name": "client_id", "label": "Client ID", "type": "text", "required": true, "secret": false, "applies_to": "both", "description": "PayPal REST app client id."},
+        {"name": "client_secret", "label": "Client secret", "type": "password", "required": true, "secret": true, "applies_to": "both", "description": "PayPal REST app client secret. Used only for the OAuth2 token exchange; never returned."},
+        {"name": "webhook_id", "label": "Webhook ID", "type": "text", "required": true, "secret": false, "applies_to": "both", "description": "PayPal webhook id (from the PayPal dashboard), required to verify webhook signatures server-side."}
+      ],
+      "adapter_kind": "paypal"
+    },
+    {
+      "family": "payments", "id": "stripe", "display_name": "Stripe",
+      "base_url": "https://api.stripe.com", "sandbox_base_url": null,
+      "allowed_hosts": ["api.stripe.com"],
+      "capabilities": {"authorize": true, "capture": true, "charge": true, "refund": true, "void": true, "subscriptions": true, "payouts": true, "3ds": true, "webhooks": true, "subscriptions_are_local_schedule": false},
+      "currencies": ["USD", "EUR", "GBP", "AUD", "CAD", "JPY", "SGD", "HKD", "NZD", "CHF", "SEK", "NOK", "DKK", "PLN", "CZK", "HUF", "ILS", "MXN", "BRL", "INR", "IDR", "MYR", "PHP", "THB", "VND", "ZAR", "KRW", "TWD", "AED"],
+      "credentials_shape": [
+        {"name": "secret_key", "label": "Secret key", "type": "password", "required": true, "secret": true, "applies_to": "both", "description": "Stripe secret key (sk_test_... in sandbox, sk_live_... in live)."},
+        {"name": "public_key", "label": "Publishable key", "type": "text", "required": false, "secret": false, "applies_to": "both", "description": "Stripe publishable key (pk_test_... / pk_live_...), only needed for client-side tokenization."},
+        {"name": "webhook_secret", "label": "Webhook secret", "type": "password", "required": true, "secret": true, "applies_to": "both", "description": "Stripe webhook signing secret (whsec_...), used to verify the Stripe-Signature header."}
+      ],
+      "adapter_kind": "stripe"
+    },
+    {
+      "family": "payments", "id": "midtrans", "display_name": "Midtrans",
+      "base_url": "https://api.midtrans.com", "sandbox_base_url": "https://api.sandbox.midtrans.com",
+      "allowed_hosts": ["api.midtrans.com", "api.sandbox.midtrans.com"],
+      "capabilities": {"authorize": true, "capture": true, "charge": true, "refund": true, "void": false, "subscriptions": true, "payouts": false, "3ds": true, "webhooks": true, "subscriptions_are_local_schedule": false},
+      "currencies": ["IDR", "SGD"],
+      "credentials_shape": [
+        {"name": "server_key", "label": "Server key", "type": "password", "required": true, "secret": true, "applies_to": "both", "description": "Midtrans server key (SB-Mid-server-... in sandbox, Mid-server-... in live). Used for Basic auth and webhook signature verification."},
+        {"name": "client_key", "label": "Client key", "type": "text", "required": false, "secret": false, "applies_to": "both", "description": "Midtrans client key, only needed for client-side tokenization (Snap / Core API)."},
+        {"name": "merchant_id", "label": "Merchant ID", "type": "text", "required": false, "secret": false, "applies_to": "both", "description": "Midtrans merchant id, for reference on the connection."}
+      ],
+      "adapter_kind": "midtrans"
+    },
+    {
+      "family": "payments", "id": "custom", "display_name": "Custom Provider",
+      "base_url": null, "sandbox_base_url": null,
+      "allowed_hosts": [],
+      "capabilities": {"authorize": true, "capture": true, "charge": true, "refund": true, "void": true, "subscriptions": true, "payouts": true, "3ds": false, "webhooks": true, "subscriptions_are_local_schedule": false},
+      "currencies": ["USD", "EUR", "GBP", "IDR", "SGD"],
+      "credentials_shape": [
+        {"name": "api_key", "label": "API key", "type": "password", "required": false, "secret": true, "applies_to": "both", "description": "API key sent according to the custom auth type (Bearer, header, or query)."},
+        {"name": "secret_key", "label": "Secret / signing key", "type": "password", "required": false, "secret": true, "applies_to": "both", "description": "Secret used for HMAC-SHA256 request signing and webhook verification when the auth type is hmac_sha256."},
+        {"name": "username", "label": "Username", "type": "text", "required": false, "secret": false, "applies_to": "both", "description": "Username for Basic auth when the auth type is basic."},
+        {"name": "password", "label": "Password", "type": "password", "required": false, "secret": true, "applies_to": "both", "description": "Password for Basic auth when the auth type is basic."},
+        {"name": "webhook_secret", "label": "Webhook secret", "type": "password", "required": false, "secret": true, "applies_to": "both", "description": "Shared secret for HMAC-SHA256 webhook verification when the auth type is hmac_sha256."}
+      ],
+      "adapter_kind": "custom", "needs_endpoint": true,
+      "notes": "Config-driven generic adapter (CustomGatewayConfig). This is the adapter a newly registered provider uses when it has no native adapter code."
+    },
+    {
+      "family": "payments", "id": "bank_transfer", "display_name": "Bank Transfer (Manual Verification)",
+      "base_url": null, "sandbox_base_url": null,
+      "allowed_hosts": [],
+      "capabilities": {"authorize": true, "capture": false, "charge": true, "refund": true, "void": true, "subscriptions": false, "payouts": false, "3ds": false, "webhooks": false, "subscriptions_are_local_schedule": false},
+      "currencies": ["USD", "EUR", "GBP", "IDR", "SGD", "MYR", "PHP", "THB", "AUD", "CAD", "JPY", "CHF", "AED", "SAR"],
+      "credentials_shape": [
+        {"name": "amount_tolerance_minor", "label": "Amount tolerance (minor units)", "type": "text", "required": false, "secret": false, "applies_to": "both", "description": "Maximum minor-unit difference accepted between the transferred amount and the order total before the proof is flagged as a mismatch."},
+        {"name": "proof_expiry_days", "label": "Proof expiry (days)", "type": "text", "required": false, "secret": false, "applies_to": "both", "description": "Days after which an unsubmitted proof request expires."}
+      ],
+      "adapter_kind": "manual",
+      "notes": "No provider API exists: verification is manual. A charge only opens a pending manual verification; the administrator approval is the capture."
+    }
+,
+    {
+      "family": "email", "id": "mailchimp", "display_name": "Mailchimp Transactional (Mandrill)",
+      "base_url": "https://mandrillapp.com", "sandbox_base_url": null,
+      "allowed_hosts": ["mandrillapp.com"],
+      "capabilities": {"transactional": true, "bulk": true, "templates": true, "webhooks": true, "tracking": true, "sandbox": false},
+      "currencies": [],
+      "credentials_shape": [
+        {"name": "api_key", "label": "Mandrill API key", "type": "password", "required": true, "secret": true, "description": "API key from the Mandrill dashboard (Settings > API Keys)."},
+        {"name": "webhook_url", "label": "Public webhook URL", "type": "url", "required": false, "secret": false, "placeholder": "https://example.com/api/v1/newsletter/webhooks/mailchimp", "description": "Exact public URL of the webhook receiver; Mandrill signs webhooks with this URL."},
+        {"name": "sender_email", "label": "Default sender email", "type": "email", "required": false, "secret": false, "placeholder": "news@example.com", "description": "From address used when a send does not supply its own. Must be verified with the provider."},
+        {"name": "sender_name", "label": "Default sender name", "type": "text", "required": false, "secret": false, "placeholder": "Example News", "description": "Display name shown next to the sender email."},
+        {"name": "webhook_secret", "label": "Webhook secret / signing key", "type": "password", "required": false, "secret": true, "description": "Secret used to verify incoming webhooks from this provider (see the webhook notes for the kind)."},
+        {"name": "test_mode", "label": "Test mode (sandbox)", "type": "boolean", "required": false, "secret": false, "description": "When on, mail is accepted by the provider sandbox where one exists, otherwise recorded as a simulated delivery and never sent."}
+      ],
+      "adapter_kind": "mailchimp",
+      "notes": "Sending domains must be verified in Mandrill (Settings > Sending Domains); add SPF and DKIM records for the domain before sending bulk mail. Mandrill webhooks are verified with HMAC-SHA1 over the webhook URL plus the sorted POST parameters, using the webhook key. Set webhook_url to the exact public webhook URL."
+    },
+    {
+      "family": "email", "id": "brevo", "display_name": "Brevo (Sendinblue)",
+      "base_url": "https://api.brevo.com", "sandbox_base_url": null,
+      "allowed_hosts": ["api.brevo.com"],
+      "capabilities": {"transactional": true, "bulk": true, "templates": true, "webhooks": true, "tracking": true, "sandbox": false},
+      "currencies": [],
+      "credentials_shape": [
+        {"name": "api_key", "label": "Brevo API key", "type": "password", "required": true, "secret": true, "description": "API key from Brevo (Settings > SMTP & API > API Keys), version 3."},
+        {"name": "sender_email", "label": "Default sender email", "type": "email", "required": false, "secret": false, "placeholder": "news@example.com", "description": "From address used when a send does not supply its own. Must be verified with the provider."},
+        {"name": "sender_name", "label": "Default sender name", "type": "text", "required": false, "secret": false, "placeholder": "Example News", "description": "Display name shown next to the sender email."},
+        {"name": "webhook_secret", "label": "Webhook secret / signing key", "type": "password", "required": false, "secret": true, "description": "Secret used to verify incoming webhooks from this provider (see the webhook notes for the kind)."},
+        {"name": "test_mode", "label": "Test mode (sandbox)", "type": "boolean", "required": false, "secret": false, "description": "When on, mail is accepted by the provider sandbox where one exists, otherwise recorded as a simulated delivery and never sent."}
+      ],
+      "adapter_kind": "brevo",
+      "notes": "Verify the sender domain in Brevo (Senders & IP > Domains) and add the SPF and DKIM records Brevo shows; unverified senders are limited. Brevo sends no signature; set a webhook_secret on the connection and Brevo must send it back as the X-Webhook-Secret header (configure it in the Brevo webhook URL as a custom header)."
+    },
+    {
+      "family": "email", "id": "sendgrid", "display_name": "SendGrid",
+      "base_url": "https://api.sendgrid.com", "sandbox_base_url": null,
+      "allowed_hosts": ["api.sendgrid.com"],
+      "capabilities": {"transactional": true, "bulk": true, "templates": true, "webhooks": true, "tracking": true, "sandbox": true},
+      "currencies": [],
+      "credentials_shape": [
+        {"name": "api_key", "label": "SendGrid API key", "type": "password", "required": true, "secret": true, "description": "API key from SendGrid (Settings > API Keys) with Mail Send permission."},
+        {"name": "sender_email", "label": "Default sender email", "type": "email", "required": false, "secret": false, "placeholder": "news@example.com", "description": "From address used when a send does not supply its own. Must be verified with the provider."},
+        {"name": "sender_name", "label": "Default sender name", "type": "text", "required": false, "secret": false, "placeholder": "Example News", "description": "Display name shown next to the sender email."},
+        {"name": "webhook_secret", "label": "Webhook secret / signing key", "type": "password", "required": false, "secret": true, "description": "Secret used to verify incoming webhooks from this provider (see the webhook notes for the kind)."},
+        {"name": "test_mode", "label": "Test mode (sandbox)", "type": "boolean", "required": false, "secret": false, "description": "When on, mail is accepted by the provider sandbox where one exists, otherwise recorded as a simulated delivery and never sent."}
+      ],
+      "adapter_kind": "sendgrid",
+      "notes": "Authenticate the sender domain in SendGrid (Settings > Sender Authentication) with SPF and DKIM; single sender verification is enough for low volume. SendGrid Event Webhook signatures use ECDSA verification, which this module does not implement; set a webhook_secret on the connection and require it as the X-Webhook-Secret header instead."
+    },
+    {
+      "family": "email", "id": "mailgun", "display_name": "Mailgun",
+      "base_url": "https://api.mailgun.net", "sandbox_base_url": null,
+      "allowed_hosts": ["api.mailgun.net", "api.eu.mailgun.net"],
+      "capabilities": {"transactional": true, "bulk": true, "templates": true, "webhooks": true, "tracking": true, "sandbox": true},
+      "currencies": [],
+      "credentials_shape": [
+        {"name": "api_key", "label": "Mailgun API key", "type": "password", "required": true, "secret": true, "description": "Private API key from Mailgun (Settings > API Keys)."},
+        {"name": "domain", "label": "Mailgun domain", "type": "text", "required": true, "secret": false, "placeholder": "mg.example.com", "description": "Verified sending domain in Mailgun."},
+        {"name": "region", "label": "Region", "type": "select", "required": false, "secret": false, "placeholder": "us", "description": "us (api.mailgun.net) or eu (api.eu.mailgun.net)."},
+        {"name": "sender_email", "label": "Default sender email", "type": "email", "required": false, "secret": false, "placeholder": "news@example.com", "description": "From address used when a send does not supply its own. Must be verified with the provider."},
+        {"name": "sender_name", "label": "Default sender name", "type": "text", "required": false, "secret": false, "placeholder": "Example News", "description": "Display name shown next to the sender email."},
+        {"name": "webhook_secret", "label": "Webhook secret / signing key", "type": "password", "required": false, "secret": true, "description": "Secret used to verify incoming webhooks from this provider (see the webhook notes for the kind)."},
+        {"name": "test_mode", "label": "Test mode (sandbox)", "type": "boolean", "required": false, "secret": false, "description": "When on, mail is accepted by the provider sandbox where one exists, otherwise recorded as a simulated delivery and never sent."}
+      ],
+      "adapter_kind": "mailgun",
+      "notes": "Add and verify the domain in Mailgun (Sending > Domains) with the SPF and DKIM TXT records; sandbox domains only deliver to authorized recipients. Mailgun webhooks are verified with HMAC-SHA256 over timestamp + token, using the webhook signing key (webhook_secret)."
+    },
+    {
+      "family": "email", "id": "postmark", "display_name": "Postmark",
+      "base_url": "https://api.postmarkapp.com", "sandbox_base_url": null,
+      "allowed_hosts": ["api.postmarkapp.com"],
+      "capabilities": {"transactional": true, "bulk": false, "templates": true, "webhooks": true, "tracking": true, "sandbox": false},
+      "currencies": [],
+      "credentials_shape": [
+        {"name": "api_key", "label": "Postmark server token", "type": "password", "required": true, "secret": true, "description": "Server API token from Postmark (Servers > API Tokens)."},
+        {"name": "sender_email", "label": "Default sender email", "type": "email", "required": false, "secret": false, "placeholder": "news@example.com", "description": "From address used when a send does not supply its own. Must be verified with the provider."},
+        {"name": "sender_name", "label": "Default sender name", "type": "text", "required": false, "secret": false, "placeholder": "Example News", "description": "Display name shown next to the sender email."},
+        {"name": "webhook_secret", "label": "Webhook secret / signing key", "type": "password", "required": false, "secret": true, "description": "Secret used to verify incoming webhooks from this provider (see the webhook notes for the kind)."},
+        {"name": "test_mode", "label": "Test mode (sandbox)", "type": "boolean", "required": false, "secret": false, "description": "When on, mail is accepted by the provider sandbox where one exists, otherwise recorded as a simulated delivery and never sent."}
+      ],
+      "adapter_kind": "postmark",
+      "notes": "Verify the sender signature (Sender Signatures) or the whole domain with DKIM in Postmark; every From address must be verified. Postmark sends no signature; set a webhook_secret on the connection and require it as the X-Webhook-Secret header (Postmark supports basic auth on the webhook URL as an alternative)."
+    },
+    {
+      "family": "email", "id": "ses", "display_name": "Amazon SES",
+      "base_url": null, "sandbox_base_url": null,
+      "allowed_hosts": [],
+      "capabilities": {"transactional": true, "bulk": true, "templates": false, "webhooks": true, "tracking": true, "sandbox": false},
+      "currencies": [],
+      "credentials_shape": [
+        {"name": "access_key_id", "label": "AWS access key id", "type": "text", "required": true, "secret": false, "description": "IAM access key with ses:SendEmail permission."},
+        {"name": "secret_access_key", "label": "AWS secret access key", "type": "password", "required": true, "secret": true, "description": "IAM secret access key."},
+        {"name": "region", "label": "AWS region", "type": "text", "required": true, "secret": false, "placeholder": "us-east-1", "description": "SES region, for example us-east-1 or eu-west-1."},
+        {"name": "sender_email", "label": "Default sender email", "type": "email", "required": false, "secret": false, "placeholder": "news@example.com", "description": "From address used when a send does not supply its own. Must be verified with the provider."},
+        {"name": "sender_name", "label": "Default sender name", "type": "text", "required": false, "secret": false, "placeholder": "Example News", "description": "Display name shown next to the sender email."},
+        {"name": "webhook_secret", "label": "Webhook secret / signing key", "type": "password", "required": false, "secret": true, "description": "Secret used to verify incoming webhooks from this provider (see the webhook notes for the kind)."},
+        {"name": "test_mode", "label": "Test mode (sandbox)", "type": "boolean", "required": false, "secret": false, "description": "When on, mail is accepted by the provider sandbox where one exists, otherwise recorded as a simulated delivery and never sent."}
+      ],
+      "adapter_kind": "ses",
+      "notes": "Verify the sender identity (email address or domain) in SES; new accounts are in the SES sandbox and can only send to verified addresses until production access is granted. SES endpoints are per-region (email.<region>.amazonaws.com). SES delivers events through SNS, whose signatures need RSA certificate verification, which this module does not implement; set a webhook_secret on the connection and require it as the X-Webhook-Secret header instead."
+    },
+    {
+      "family": "email", "id": "resend", "display_name": "Resend",
+      "base_url": "https://api.resend.com", "sandbox_base_url": null,
+      "allowed_hosts": ["api.resend.com"],
+      "capabilities": {"transactional": true, "bulk": true, "templates": false, "webhooks": true, "tracking": true, "sandbox": false},
+      "currencies": [],
+      "credentials_shape": [
+        {"name": "api_key", "label": "Resend API key", "type": "password", "required": true, "secret": true, "description": "API key from Resend (API Keys)."},
+        {"name": "sender_email", "label": "Default sender email", "type": "email", "required": false, "secret": false, "placeholder": "news@example.com", "description": "From address used when a send does not supply its own. Must be verified with the provider."},
+        {"name": "sender_name", "label": "Default sender name", "type": "text", "required": false, "secret": false, "placeholder": "Example News", "description": "Display name shown next to the sender email."},
+        {"name": "webhook_secret", "label": "Webhook secret / signing key", "type": "password", "required": false, "secret": true, "description": "Secret used to verify incoming webhooks from this provider (see the webhook notes for the kind)."},
+        {"name": "test_mode", "label": "Test mode (sandbox)", "type": "boolean", "required": false, "secret": false, "description": "When on, mail is accepted by the provider sandbox where one exists, otherwise recorded as a simulated delivery and never sent."}
+      ],
+      "adapter_kind": "resend",
+      "notes": "Verify the sending domain in Resend (Domains) with SPF and DKIM; unverified accounts can only send to the account owner address. Resend webhooks are Svix-signed and verified with HMAC-SHA256 over the svix id, timestamp and body, using the webhook signing secret (webhook_secret)."
+    },
+    {
+      "family": "email", "id": "sparkpost", "display_name": "SparkPost",
+      "base_url": "https://api.sparkpost.com", "sandbox_base_url": null,
+      "allowed_hosts": ["api.sparkpost.com", "api.eu.sparkpost.com"],
+      "capabilities": {"transactional": true, "bulk": true, "templates": true, "webhooks": true, "tracking": true, "sandbox": false},
+      "currencies": [],
+      "credentials_shape": [
+        {"name": "api_key", "label": "SparkPost API key", "type": "password", "required": true, "secret": true, "description": "API key from SparkPost (Account > API Keys) with Transmissions: Read/Write."},
+        {"name": "region", "label": "Region", "type": "select", "required": false, "secret": false, "placeholder": "us", "description": "us (api.sparkpost.com) or eu (api.eu.sparkpost.com)."},
+        {"name": "sender_email", "label": "Default sender email", "type": "email", "required": false, "secret": false, "placeholder": "news@example.com", "description": "From address used when a send does not supply its own. Must be verified with the provider."},
+        {"name": "sender_name", "label": "Default sender name", "type": "text", "required": false, "secret": false, "placeholder": "Example News", "description": "Display name shown next to the sender email."},
+        {"name": "webhook_secret", "label": "Webhook secret / signing key", "type": "password", "required": false, "secret": true, "description": "Secret used to verify incoming webhooks from this provider (see the webhook notes for the kind)."},
+        {"name": "test_mode", "label": "Test mode (sandbox)", "type": "boolean", "required": false, "secret": false, "description": "When on, mail is accepted by the provider sandbox where one exists, otherwise recorded as a simulated delivery and never sent."}
+      ],
+      "adapter_kind": "sparkpost",
+      "notes": "Verify the sending domain in SparkPost (Account > Sending Domains) with SPF and DKIM records. SparkPost sends no signature; set a webhook_secret on the connection and require it as the X-Webhook-Secret header."
+    },
+    {
+      "family": "email", "id": "smtp", "display_name": "SMTP (via Mail Manager)",
+      "base_url": null, "sandbox_base_url": null,
+      "allowed_hosts": [],
+      "capabilities": {"transactional": true, "bulk": true, "templates": false, "webhooks": false, "tracking": false, "sandbox": false},
+      "currencies": [],
+      "credentials_shape": [
+        {"name": "sender_email", "label": "Sender email override", "type": "email", "required": false, "secret": false, "placeholder": "news@example.com", "description": "Optional From override for the Mail Manager SMTP settings; empty means the SMTP settings apply."},
+        {"name": "webhook_secret", "label": "Webhook secret / signing key", "type": "password", "required": false, "secret": true, "description": "Secret used to verify incoming webhooks from this provider (see the webhook notes for the kind)."},
+        {"name": "test_mode", "label": "Test mode (sandbox)", "type": "boolean", "required": false, "secret": false, "description": "When on, mail is accepted by the provider sandbox where one exists, otherwise recorded as a simulated delivery and never sent."}
+      ],
+      "adapter_kind": "smtp",
+      "notes": "Delivery uses the Mail Manager SMTP settings; the From domain should have SPF and DKIM records for the SMTP host. SMTP has no webhooks; bounce and complaint handling is not available for this provider."
+    }
+,
+    {
+      "family": "storage", "id": "local", "display_name": "Local Filesystem",
+      "base_url": null, "sandbox_base_url": null,
+      "allowed_hosts": [],
+      "capabilities": {"upload": true, "download": true, "delete": true, "signed_url": true, "list": true, "test_connection": true},
+      "currencies": [],
+      "credentials_shape": [
+        {"name": "base_dir", "label": "Base directory", "type": "text", "required": false, "secret": false, "placeholder": "data/storage", "description": "Base directory for stored files. Defaults to data/storage."}
+      ],
+      "adapter_kind": "local",
+      "notes": "Files under a configured base directory. Supports listing objects."
+    },
+    {
+      "family": "storage", "id": "s3", "display_name": "Amazon S3",
+      "base_url": null, "sandbox_base_url": null,
+      "allowed_hosts": [],
+      "capabilities": {"upload": true, "download": true, "delete": true, "signed_url": true, "list": false, "test_connection": true},
+      "currencies": [],
+      "credentials_shape": [
+        {"name": "endpoint", "label": "Endpoint URL", "type": "url", "required": false, "secret": false, "description": "S3 endpoint URL. Empty means the default AWS endpoint for the region."},
+        {"name": "region", "label": "Region", "type": "text", "required": true, "secret": false, "placeholder": "us-east-1", "description": "AWS region of the bucket."},
+        {"name": "bucket", "label": "Bucket", "type": "text", "required": true, "secret": false, "description": "S3 bucket name."},
+        {"name": "access_key", "label": "Access key", "type": "text", "required": true, "secret": false, "description": "AWS access key id."},
+        {"name": "secret_key", "label": "Secret key", "type": "password", "required": true, "secret": true, "description": "AWS secret access key."}
+      ],
+      "adapter_kind": "s3",
+      "notes": "AWS S3, SigV4-signed requests. The endpoint host must be allowlisted; listing objects is not supported by this provider."
+    },
+    {
+      "family": "storage", "id": "r2", "display_name": "Cloudflare R2",
+      "base_url": null, "sandbox_base_url": null,
+      "allowed_hosts": [],
+      "capabilities": {"upload": true, "download": true, "delete": true, "signed_url": true, "list": false, "test_connection": true},
+      "currencies": [],
+      "credentials_shape": [
+        {"name": "endpoint", "label": "Endpoint URL", "type": "url", "required": true, "secret": false, "description": "R2 endpoint URL (https://<account-id>.r2.cloudflarestorage.com)."},
+        {"name": "region", "label": "Region", "type": "text", "required": false, "secret": false, "placeholder": "auto", "description": "Region; auto for R2."},
+        {"name": "bucket", "label": "Bucket", "type": "text", "required": true, "secret": false, "description": "R2 bucket name."},
+        {"name": "access_key", "label": "Access key", "type": "text", "required": true, "secret": false, "description": "R2 access key id."},
+        {"name": "secret_key", "label": "Secret key", "type": "password", "required": true, "secret": true, "description": "R2 secret access key."}
+      ],
+      "adapter_kind": "r2",
+      "notes": "Cloudflare R2, S3-compatible; reuses the S3 signing code with a custom endpoint. The endpoint host must be allowlisted; listing objects is not supported by this provider."
+    },
+    {
+      "family": "storage", "id": "google_drive", "display_name": "Google Drive",
+      "base_url": "https://www.googleapis.com", "sandbox_base_url": null,
+      "allowed_hosts": ["www.googleapis.com", "oauth2.googleapis.com"],
+      "capabilities": {"upload": true, "download": true, "delete": true, "signed_url": true, "list": false, "test_connection": true},
+      "currencies": [],
+      "credentials_shape": [
+        {"name": "client_id", "label": "OAuth2 client id", "type": "text", "required": true, "secret": false, "description": "Google OAuth2 client id (drive.file scope)."},
+        {"name": "client_secret", "label": "OAuth2 client secret", "type": "password", "required": true, "secret": true, "description": "Google OAuth2 client secret."},
+        {"name": "refresh_token", "label": "Refresh token", "type": "password", "required": true, "secret": true, "description": "OAuth2 refresh token."},
+        {"name": "access_token", "label": "Access token", "type": "password", "required": false, "secret": true, "description": "OAuth2 access token (refreshed automatically when empty)."},
+        {"name": "token_url", "label": "Token endpoint", "type": "url", "required": false, "secret": false, "description": "OAuth2 token endpoint. Empty means the default Google endpoint."}
+      ],
+      "adapter_kind": "google_drive",
+      "notes": "Google Drive (drive.file scope) with an OAuth2 access token and a refresh-token flow. Upload returns the Drive file id as the storage key."
+    },
+    {
+      "family": "storage", "id": "sftp", "display_name": "SFTP",
+      "base_url": null, "sandbox_base_url": null,
+      "allowed_hosts": [],
+      "capabilities": {"upload": true, "download": true, "delete": true, "signed_url": false, "list": true, "test_connection": true},
+      "currencies": [],
+      "credentials_shape": [
+        {"name": "sftp_host", "label": "SFTP host", "type": "text", "required": true, "secret": false, "description": "SFTP host. Must be allowlisted."},
+        {"name": "sftp_port", "label": "SFTP port", "type": "text", "required": false, "secret": false, "placeholder": "22", "description": "SFTP port. Empty means the default SSH port 22."},
+        {"name": "sftp_username", "label": "Username", "type": "text", "required": true, "secret": false, "description": "SFTP username."},
+        {"name": "sftp_auth_kind", "label": "Auth kind", "type": "select", "required": true, "secret": false, "placeholder": "keyfile", "description": "keyfile or password."},
+        {"name": "sftp_keyfile", "label": "Private-key file path", "type": "text", "required": false, "secret": false, "description": "Private-key file path (keyfile auth only). Only the path is stored, never the key material."},
+        {"name": "sftp_password", "label": "Password", "type": "password", "required": false, "secret": true, "description": "SFTP password (password auth only)."},
+        {"name": "sftp_base_path", "label": "Remote base directory", "type": "text", "required": false, "secret": false, "description": "SFTP remote base directory. Empty means the remote home directory."}
+      ],
+      "adapter_kind": "sftp",
+      "notes": "SFTP remote filesystem. Supports listing objects; signed URLs are not supported."
+    },
+    {
+      "family": "vcs", "id": "github", "display_name": "GitHub",
+      "base_url": "https://api.github.com", "sandbox_base_url": null,
+      "api_style": "github", "auth_scheme": "bearer", "webhook_signature_header": "x-hub-signature-256",
+      "allowed_hosts": ["api.github.com"],
+      "capabilities": {"releases": true, "tags": true, "webhooks": true},
+      "currencies": [],
+      "credentials_shape": [
+        {"name": "token", "label": "Personal access token", "type": "password", "required": true, "secret": true, "description": "GitHub personal access token (Bearer)."},
+        {"name": "webhook_secret", "label": "Webhook secret", "type": "password", "required": false, "secret": true, "description": "Shared secret for webhook signature verification."},
+        {"name": "api_base_override", "label": "API base URL override", "type": "url", "required": false, "secret": false, "description": "Override for GitHub Enterprise Server API base URL."}
+      ],
+      "adapter_kind": "github"
+    },
+    {
+      "family": "vcs", "id": "gitlab", "display_name": "GitLab",
+      "base_url": "https://gitlab.com/api/v4", "sandbox_base_url": null,
+      "api_style": "gitlab", "auth_scheme": "private-token", "webhook_signature_header": "x-gitlab-token",
+      "allowed_hosts": ["gitlab.com"],
+      "capabilities": {"releases": true, "tags": true, "webhooks": true},
+      "currencies": [],
+      "credentials_shape": [
+        {"name": "token", "label": "Personal access token", "type": "password", "required": true, "secret": true, "description": "GitLab personal access token (Private-Token header)."},
+        {"name": "webhook_secret", "label": "Webhook secret", "type": "password", "required": false, "secret": true, "description": "Shared secret for webhook verification."},
+        {"name": "api_base_override", "label": "API base URL override", "type": "url", "required": false, "secret": false, "description": "Override for a self-hosted GitLab instance API base URL."},
+        {"name": "gitlab_hosts", "label": "Self-hosted GitLab hosts", "type": "text", "required": false, "secret": false, "description": "Additional self-hosted GitLab instance hosts (comma separated)."}
+      ],
+      "adapter_kind": "gitlab",
+      "notes": "Self-hosted instances use https://<host>/api/v4."
+    },
+    {
+      "family": "vcs", "id": "bitbucket", "display_name": "Bitbucket",
+      "base_url": "https://api.bitbucket.org/2.0", "sandbox_base_url": null,
+      "api_style": "bitbucket", "auth_scheme": "bearer", "webhook_signature_header": "x-webhook-secret",
+      "allowed_hosts": ["api.bitbucket.org"],
+      "capabilities": {"releases": true, "tags": true, "webhooks": true},
+      "currencies": [],
+      "credentials_shape": [
+        {"name": "token", "label": "Access token", "type": "password", "required": true, "secret": true, "description": "Bitbucket access token (Bearer)."},
+        {"name": "webhook_secret", "label": "Webhook secret", "type": "password", "required": false, "secret": true, "description": "Shared secret checked in the X-Webhook-Secret header; Bitbucket provides no signature scheme."},
+        {"name": "api_base_override", "label": "API base URL override", "type": "url", "required": false, "secret": false, "description": "Override for the Bitbucket API base URL."}
+      ],
+      "adapter_kind": "bitbucket",
+      "notes": "Bitbucket has no releases API; tags are the release list."
+    },
+    {
+      "family": "ai", "id": "anthropic", "display_name": "Anthropic (Claude)",
+      "base_url": "https://api.anthropic.com", "sandbox_base_url": null,
+      "allowed_hosts": ["api.anthropic.com"],
+      "capabilities": {"key_required": true, "chat": true},
+      "currencies": [],
+      "credentials_shape": [
+        {"name": "api_key", "label": "API key", "type": "password", "required": true, "secret": true, "description": "Anthropic API key."},
+        {"name": "model", "label": "Model", "type": "text", "required": false, "secret": false, "placeholder": "claude-sonnet-4-20250514", "description": "Model id. Empty means the provider default model."},
+        {"name": "rate_limit_per_minute", "label": "Calls per minute", "type": "text", "required": false, "secret": false, "description": "Calls allowed per minute for this key (rate limit bucket)."}
+      ],
+      "models": ["claude-sonnet-4-20250514"],
+      "default_model": "claude-sonnet-4-20250514",
+      "adapter_kind": "anthropic"
+    },
+    {
+      "family": "ai", "id": "openai", "display_name": "OpenAI (GPT)",
+      "base_url": "https://api.openai.com/v1", "sandbox_base_url": null,
+      "allowed_hosts": ["api.openai.com"],
+      "capabilities": {"key_required": true, "chat": true},
+      "currencies": [],
+      "credentials_shape": [
+        {"name": "api_key", "label": "API key", "type": "password", "required": true, "secret": true, "description": "OpenAI API key."},
+        {"name": "model", "label": "Model", "type": "text", "required": false, "secret": false, "placeholder": "gpt-4o-mini", "description": "Model id. Empty means the provider default model."},
+        {"name": "rate_limit_per_minute", "label": "Calls per minute", "type": "text", "required": false, "secret": false, "description": "Calls allowed per minute for this key (rate limit bucket)."}
+      ],
+      "models": ["gpt-4o-mini"],
+      "default_model": "gpt-4o-mini",
+      "adapter_kind": "openai_compatible"
+    },
+    {
+      "family": "ai", "id": "openai_compatible", "display_name": "OpenAI-compatible endpoint",
+      "base_url": null, "sandbox_base_url": null,
+      "allowed_hosts": [],
+      "capabilities": {"key_required": true, "chat": true},
+      "currencies": [],
+      "credentials_shape": [
+        {"name": "api_key", "label": "API key", "type": "password", "required": true, "secret": true, "description": "API key for the compatible endpoint."},
+        {"name": "base_url", "label": "Base URL", "type": "url", "required": true, "secret": false, "description": "Base URL of the OpenAI-compatible API endpoint."},
+        {"name": "model", "label": "Model", "type": "text", "required": true, "secret": false, "description": "Model id served by the endpoint (no default)."},
+        {"name": "rate_limit_per_minute", "label": "Calls per minute", "type": "text", "required": false, "secret": false, "description": "Calls allowed per minute for this key (rate limit bucket)."}
+      ],
+      "models": [],
+      "default_model": null,
+      "adapter_kind": "openai_compatible",
+      "notes": "No fixed base URL or default model: the admin supplies both."
+    },
+    {
+      "family": "ai", "id": "local", "display_name": "Local / bring-your-own endpoint",
+      "base_url": null, "sandbox_base_url": null,
+      "allowed_hosts": [],
+      "capabilities": {"key_required": false, "chat": true},
+      "currencies": [],
+      "credentials_shape": [
+        {"name": "api_key", "label": "API key", "type": "password", "required": false, "secret": true, "description": "API key for the local endpoint, when it requires one. A local endpoint may run without one."},
+        {"name": "base_url", "label": "Base URL", "type": "url", "required": true, "secret": false, "description": "Base URL of the local model endpoint."},
+        {"name": "model", "label": "Model", "type": "text", "required": true, "secret": false, "description": "Model id served by the endpoint (no default)."},
+        {"name": "rate_limit_per_minute", "label": "Calls per minute", "type": "text", "required": false, "secret": false, "description": "Calls allowed per minute for this key (rate limit bucket)."}
+      ],
+      "models": [],
+      "default_model": null,
+      "adapter_kind": "openai_compatible",
+      "notes": "No fixed base URL or default model: the admin supplies both. A local endpoint may run without an API key."
+    }
+,
+    {
+      "family": "cloud", "id": "hetzner", "display_name": "Hetzner Cloud",
+      "base_url": "https://api.hetzner.cloud", "sandbox_base_url": null,
+      "allowed_hosts": ["api.hetzner.cloud"],
+      "capabilities": {"create": true, "scale": true, "delete": true, "containers": false, "start_stop": false},
+      "currencies": [],
+      "credentials_shape": [
+        {"name": "api_token", "label": "API token", "type": "password", "required": true, "secret": true, "description": "Hetzner Cloud API token."},
+        {"name": "region", "label": "Location", "type": "text", "required": false, "secret": false, "description": "Hetzner location (for example fsn1, nbg1, hel1)."}
+      ],
+      "adapter_kind": "hetzner"
+    },
+    {
+      "family": "cloud", "id": "ovh", "display_name": "OVHcloud",
+      "base_url": "https://api.ovh.com", "sandbox_base_url": null,
+      "allowed_hosts": ["api.ovh.com", "eu.api.ovh.com"],
+      "capabilities": {"create": true, "scale": true, "delete": true, "containers": false, "start_stop": false},
+      "currencies": [],
+      "credentials_shape": [
+        {"name": "application_key", "label": "Application key", "type": "text", "required": true, "secret": false, "description": "OVH application key."},
+        {"name": "application_secret", "label": "Application secret", "type": "password", "required": true, "secret": true, "description": "OVH application secret."},
+        {"name": "consumer_key", "label": "Consumer key", "type": "text", "required": true, "secret": false, "description": "OVH consumer key."},
+        {"name": "project_id", "label": "Cloud project id", "type": "text", "required": true, "secret": false, "description": "OVH cloud project service name."},
+        {"name": "region", "label": "Region", "type": "text", "required": false, "secret": false, "description": "OVH region."}
+      ],
+      "adapter_kind": "ovh"
+    },
+    {
+      "family": "cloud", "id": "tencent", "display_name": "Tencent Cloud CVM",
+      "base_url": "https://cvm.tencentcloudapi.com", "sandbox_base_url": null,
+      "allowed_hosts": ["cvm.tencentcloudapi.com"],
+      "capabilities": {"create": false, "scale": false, "delete": false, "containers": false, "start_stop": false},
+      "currencies": [],
+      "credentials_shape": [
+        {"name": "access_key_id", "label": "Secret id", "type": "text", "required": true, "secret": false, "description": "Tencent Cloud secret id."},
+        {"name": "secret_access_key", "label": "Secret key", "type": "password", "required": true, "secret": true, "description": "Tencent Cloud secret key."},
+        {"name": "region", "label": "Region", "type": "text", "required": true, "secret": false, "description": "Tencent Cloud region."}
+      ],
+      "adapter_kind": "tencent",
+      "notes": "Read-only adapter: inventory only, no create / scale / delete."
+    },
+    {
+      "family": "cloud", "id": "huawei", "display_name": "Huawei Cloud ECS",
+      "base_url": null, "sandbox_base_url": null,
+      "allowed_hosts": [],
+      "capabilities": {"create": false, "scale": false, "delete": false, "containers": false, "start_stop": false},
+      "currencies": [],
+      "credentials_shape": [
+        {"name": "access_key_id", "label": "Access key", "type": "text", "required": false, "secret": false, "description": "Huawei Cloud access key (either access key + secret key, or username + password)."},
+        {"name": "secret_access_key", "label": "Secret key", "type": "password", "required": false, "secret": true, "description": "Huawei Cloud secret key."},
+        {"name": "username", "label": "IAM username", "type": "text", "required": false, "secret": false, "description": "Huawei IAM username (either username + password, or access key + secret key)."},
+        {"name": "password", "label": "IAM password", "type": "password", "required": false, "secret": true, "description": "Huawei IAM password."},
+        {"name": "region", "label": "Region", "type": "text", "required": true, "secret": false, "description": "Huawei Cloud region (lowercase letters, digits and hyphens only, for example cn-north-4)."},
+        {"name": "project_id", "label": "Project id", "type": "text", "required": false, "secret": false, "description": "Huawei Cloud project id (resolved from the IAM token when empty)."}
+      ],
+      "adapter_kind": "huawei",
+      "notes": "Endpoints are per-region (iam.<region>.myhuaweicloud.com, ecs.<region>.myhuaweicloud.com); validated by the Huawei adapter. Read-only adapter: inventory only."
+    },
+    {
+      "family": "cloud", "id": "aws", "display_name": "AWS EC2",
+      "base_url": null, "sandbox_base_url": null,
+      "allowed_hosts": [],
+      "capabilities": {"create": false, "scale": false, "delete": false, "containers": false, "start_stop": false},
+      "currencies": [],
+      "credentials_shape": [
+        {"name": "access_key_id", "label": "Access key id", "type": "text", "required": true, "secret": false, "description": "AWS access key id."},
+        {"name": "secret_access_key", "label": "Secret access key", "type": "password", "required": true, "secret": true, "description": "AWS secret access key."},
+        {"name": "region", "label": "Region", "type": "text", "required": true, "secret": false, "description": "AWS region."}
+      ],
+      "adapter_kind": "aws",
+      "notes": "EC2 endpoints are per-region (ec2.<region>.amazonaws.com); validated by the AWS adapter. Read-only adapter: inventory only."
+    },
+    {
+      "family": "cloud", "id": "google", "display_name": "Google Cloud Compute Engine",
+      "base_url": "https://compute.googleapis.com", "sandbox_base_url": null,
+      "allowed_hosts": ["compute.googleapis.com", "oauth2.googleapis.com"],
+      "capabilities": {"create": false, "scale": false, "delete": false, "containers": false, "start_stop": false},
+      "currencies": [],
+      "credentials_shape": [
+        {"name": "access_token", "label": "OAuth2 access token", "type": "password", "required": true, "secret": true, "description": "Google Cloud OAuth2 access token."},
+        {"name": "project_id", "label": "Project id", "type": "text", "required": true, "secret": false, "description": "Google Cloud project id."},
+        {"name": "region", "label": "Zone", "type": "text", "required": true, "secret": false, "placeholder": "us-central1-a", "description": "Google Cloud zone, for example us-central1-a."}
+      ],
+      "adapter_kind": "google",
+      "notes": "Read-only adapter: inventory only."
+    },
+    {
+      "family": "cloud", "id": "virtualizor", "display_name": "Virtualizor",
+      "base_url": null, "sandbox_base_url": null,
+      "allowed_hosts": [],
+      "capabilities": {"create": true, "scale": true, "delete": true, "containers": false, "start_stop": true},
+      "currencies": [],
+      "credentials_shape": [
+        {"name": "api_token", "label": "API key", "type": "password", "required": true, "secret": true, "description": "Virtualizor API key."},
+        {"name": "password", "label": "API password", "type": "password", "required": true, "secret": true, "description": "Virtualizor API password."},
+        {"name": "endpoint", "label": "Panel URL", "type": "url", "required": true, "secret": false, "description": "Virtualizor panel URL."}
+      ],
+      "adapter_kind": "virtualizor",
+      "notes": "User-supplied panel endpoint; validated as an http(s) URL with a host and no embedded credentials."
+    },
+    {
+      "family": "cloud", "id": "docker", "display_name": "Docker Engine",
+      "base_url": null, "sandbox_base_url": null,
+      "allowed_hosts": [],
+      "capabilities": {"create": false, "scale": false, "delete": true, "containers": true, "start_stop": true},
+      "currencies": [],
+      "credentials_shape": [
+        {"name": "endpoint", "label": "Docker API endpoint", "type": "url", "required": true, "secret": false, "description": "Docker Engine API endpoint URL."}
+      ],
+      "adapter_kind": "docker",
+      "notes": "User-supplied API endpoint; validated as an http(s) URL with a host and no embedded credentials. Lists containers, not virtual servers."
+    },
+    {
+      "family": "cloud", "id": "kubernetes", "display_name": "Kubernetes",
+      "base_url": null, "sandbox_base_url": null,
+      "allowed_hosts": [],
+      "capabilities": {"create": false, "scale": false, "delete": false, "containers": true, "start_stop": false},
+      "currencies": [],
+      "credentials_shape": [
+        {"name": "bearer_token", "label": "Bearer token", "type": "password", "required": true, "secret": true, "description": "Kubernetes service-account bearer token."},
+        {"name": "endpoint", "label": "API server URL", "type": "url", "required": true, "secret": false, "description": "Kubernetes API server URL."},
+        {"name": "project_id", "label": "Namespace filter", "type": "text", "required": false, "secret": false, "description": "Kubernetes namespace filter."}
+      ],
+      "adapter_kind": "kubernetes",
+      "notes": "User-supplied API endpoint; validated as an http(s) URL with a host and no embedded credentials. Lists pods / deployments, not virtual servers."
+    },
+    {
+      "family": "cloud", "id": "redshift", "display_name": "Amazon Redshift",
+      "base_url": null, "sandbox_base_url": null,
+      "allowed_hosts": [],
+      "capabilities": {"create": false, "scale": false, "delete": false, "containers": false, "start_stop": false},
+      "currencies": [],
+      "credentials_shape": [
+        {"name": "access_key_id", "label": "Access key id", "type": "text", "required": true, "secret": false, "description": "AWS access key id."},
+        {"name": "secret_access_key", "label": "Secret access key", "type": "password", "required": true, "secret": true, "description": "AWS secret access key."},
+        {"name": "region", "label": "Region", "type": "text", "required": true, "secret": false, "description": "AWS region."}
+      ],
+      "adapter_kind": "redshift",
+      "notes": "Redshift endpoints are per-region (redshift.<region>.amazonaws.com); validated by the Redshift adapter. Read-only adapter: inventory only."
+    },
+    {
+      "family": "cloud", "id": "digitalocean", "display_name": "DigitalOcean",
+      "base_url": "https://api.digitalocean.com", "sandbox_base_url": null,
+      "allowed_hosts": ["api.digitalocean.com"],
+      "capabilities": {"create": true, "scale": true, "delete": true, "containers": false, "start_stop": true},
+      "currencies": [],
+      "credentials_shape": [
+        {"name": "api_token", "label": "API token", "type": "password", "required": true, "secret": true, "description": "DigitalOcean API token."}
+      ],
+      "adapter_kind": "digitalocean"
+    },
+    {
+      "family": "cloud", "id": "linode", "display_name": "Linode",
+      "base_url": "https://api.linode.com", "sandbox_base_url": null,
+      "allowed_hosts": ["api.linode.com"],
+      "capabilities": {"create": true, "scale": true, "delete": true, "containers": false, "start_stop": true},
+      "currencies": [],
+      "credentials_shape": [
+        {"name": "api_token", "label": "API token", "type": "password", "required": true, "secret": true, "description": "Linode API token."}
+      ],
+      "adapter_kind": "linode"
+    },
+    {
+      "family": "cloud", "id": "openstack", "display_name": "OpenStack",
+      "base_url": null, "sandbox_base_url": null,
+      "allowed_hosts": [],
+      "capabilities": {"create": true, "scale": false, "delete": true, "containers": false, "start_stop": true},
+      "currencies": [],
+      "credentials_shape": [
+        {"name": "username", "label": "Username", "type": "text", "required": true, "secret": false, "description": "OpenStack username."},
+        {"name": "password", "label": "Password", "type": "password", "required": true, "secret": true, "description": "OpenStack password."},
+        {"name": "project_id", "label": "Project name", "type": "text", "required": true, "secret": false, "description": "Keystone project name."},
+        {"name": "endpoint", "label": "Keystone URL", "type": "url", "required": true, "secret": false, "description": "OpenStack Keystone endpoint URL."}
+      ],
+      "adapter_kind": "openstack",
+      "notes": "User-supplied API endpoint (Keystone); validated as an http(s) URL with a host and no embedded credentials."
+    },
+    {
+      "family": "cloud", "id": "proxmox", "display_name": "Proxmox VE",
+      "base_url": null, "sandbox_base_url": null,
+      "allowed_hosts": [],
+      "capabilities": {"create": false, "scale": false, "delete": true, "containers": false, "start_stop": true},
+      "currencies": [],
+      "credentials_shape": [
+        {"name": "username", "label": "Username", "type": "text", "required": true, "secret": false, "description": "Proxmox VE username."},
+        {"name": "password", "label": "Password", "type": "password", "required": true, "secret": true, "description": "Proxmox VE password."},
+        {"name": "endpoint", "label": "Proxmox VE URL", "type": "url", "required": true, "secret": false, "description": "Proxmox VE API URL."}
+      ],
+      "adapter_kind": "proxmox",
+      "notes": "User-supplied API endpoint; validated as an http(s) URL with a host and no embedded credentials."
+    },
+    {
+      "family": "cloud", "id": "kvm", "display_name": "KVM (via Proxmox VE)",
+      "base_url": null, "sandbox_base_url": null,
+      "allowed_hosts": [],
+      "capabilities": {"create": false, "scale": false, "delete": true, "containers": false, "start_stop": true},
+      "currencies": [],
+      "credentials_shape": [
+        {"name": "username", "label": "Username", "type": "text", "required": true, "secret": false, "description": "Proxmox VE username."},
+        {"name": "password", "label": "Password", "type": "password", "required": true, "secret": true, "description": "Proxmox VE password."},
+        {"name": "endpoint", "label": "Proxmox VE URL", "type": "url", "required": true, "secret": false, "description": "Proxmox VE API URL."}
+      ],
+      "adapter_kind": "kvm",
+      "notes": "KVM guests are managed through the Proxmox VE API. User-supplied API endpoint; validated as an http(s) URL with a host and no embedded credentials."
+    },
+    {
+      "family": "cloud", "id": "xen", "display_name": "XenServer / XCP-ng",
+      "base_url": null, "sandbox_base_url": null,
+      "allowed_hosts": [],
+      "capabilities": {"create": false, "scale": false, "delete": true, "containers": false, "start_stop": true},
+      "currencies": [],
+      "credentials_shape": [
+        {"name": "username", "label": "Username", "type": "text", "required": true, "secret": false, "description": "XenServer / XCP-ng username."},
+        {"name": "password", "label": "Password", "type": "password", "required": true, "secret": true, "description": "XenServer / XCP-ng password."},
+        {"name": "endpoint", "label": "XenAPI URL", "type": "url", "required": true, "secret": false, "description": "XenAPI endpoint URL."}
+      ],
+      "adapter_kind": "xen",
+      "notes": "User-supplied API endpoint (XenAPI); validated as an http(s) URL with a host and no embedded credentials."
+    },
+    {
+      "family": "cloud", "id": "custom", "display_name": "Custom Provider",
+      "base_url": null, "sandbox_base_url": null,
+      "allowed_hosts": [],
+      "capabilities": {"create": true, "scale": false, "delete": true, "containers": false, "start_stop": true},
+      "currencies": [],
+      "credentials_shape": [
+        {"name": "endpoint", "label": "API base URL", "type": "url", "required": true, "secret": false, "description": "Custom provider API base URL."}
+      ],
+      "adapter_kind": "custom",
+      "notes": "Config-driven generic adapter (CustomProviderConfig). A stored custom config can narrow the capability envelope. This is the adapter a newly registered provider uses when it has no native adapter code."
+    }
+  ]
+}

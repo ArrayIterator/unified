@@ -91,7 +91,7 @@ pub(crate) async fn create_binding(
         Ok(found) => found,
         Err(error) => return err_response(error, debug),
     };
-    let is_admin = is_storage_admin(&ctx, &found.role);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BUCKETS);
     let result: UnifiedResult<StorageBinding> = (|| {
         let input = body.into_inner();
         let module_id = valid_module_id(&input.module_id)?;
@@ -219,11 +219,11 @@ pub(crate) async fn update_binding(
         Ok(found) => found,
         Err(error) => return err_response(error, debug),
     };
-    let is_admin = is_storage_admin(&ctx, &found.role);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BUCKETS);
     let result: UnifiedResult<StorageBinding> = (|| {
         let input = body.into_inner();
         let mut binding = load_binding(&state, &id)?;
-        require_record_in_company_scope(&binding.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&binding.company_id, &_scope)?;
         if let Some(bucket_id) = input.bucket_id {
             let bucket = state
                 .buckets
@@ -289,7 +289,7 @@ pub(crate) async fn delete_binding(
     };
     let result: UnifiedResult<Value> = (|| {
         let binding = load_binding(&state, &id)?;
-        require_record_in_company_scope(&binding.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&binding.company_id, &_scope)?;
         state.bindings.remove(&binding.id);
         state.emit(
             events::BINDING_CHANGED,
@@ -331,15 +331,25 @@ pub(crate) async fn resolve_binding_endpoint(
             UnifiedError::bad_request("Query parameter \"module\" is required")
         })?;
         let module_id = valid_module_id(module_raw)?;
-        // Tenant scoping: the queried company is verified against
-        // the caller's scope — a scoped caller resolves for their
-        // own company (an omitted company adopts it); an unresolved
-        // caller may only resolve the global binding.
+        // Tenant scoping (read rule, C3 task 320): the queried
+        // company is verified against the caller's scope — a scoped
+        // caller resolves for their own company (an omitted company
+        // adopts it); an unresolved caller may only resolve the
+        // global binding. This is a GET, so the write helper
+        // `require_company_match_for` (C3 task 315) does not apply
+        // here: it would 403 an unresolved caller resolving the
+        // global binding.
         let body_company = params
             .get("company_id")
             .map(|raw| valid_scope_id(raw))
             .transpose()?;
-        let company_id = require_company_match_for(&_scope, &body_company)?;
+        let resolved = unified_core::tenancy::CallerScope::from_company(_scope)
+            .scoped_read_company(body_company.as_deref().unwrap_or(""))?;
+        let company_id = if resolved.is_empty() {
+            None
+        } else {
+            Some(resolved)
+        };
         match resolve_binding(&state, &module_id, company_id.as_deref()) {
             Some((bucket, prefix, source)) => Ok(json!({
                 "module_id": module_id,

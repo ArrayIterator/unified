@@ -123,7 +123,7 @@ pub(crate) async fn re_evaluate(
     if let Err(error) = require_capability(&state, Some(caller.role.as_str()), "advisor:manage") {
         return json::error_response(&error, false);
     }
-    let scope = match caller_company(&_tenant, &req) {
+    let scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return json::error_response(&error, false),
     };
@@ -240,7 +240,7 @@ pub(crate) async fn acknowledge_suggestion(
     if let Err(error) = require_capability(&state, Some(caller.role.as_str()), "advisor:manage") {
         return json::error_response(&error, false);
     }
-    let scope = match caller_company(&_tenant, &req) {
+    let scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return json::error_response(&error, false),
     };
@@ -249,7 +249,7 @@ pub(crate) async fn acknowledge_suggestion(
             .suggestions
             .get_mut(path.as_str())
             .ok_or_else(|| UnifiedError::not_found("Suggestion not found"))?;
-        require_record_in_company_scope(&suggestion.company_id, &scope)?;
+        require_record_writable_in_company_scope(&suggestion.company_id, &scope)?;
         if suggestion.status == "dismissed" {
             return Err(UnifiedError::conflict(
                 "A dismissed suggestion cannot be acknowledged; re-evaluation creates a fresh one when the rule still fires",
@@ -285,7 +285,7 @@ pub(crate) async fn dismiss_suggestion(
     if let Err(error) = require_capability(&state, Some(caller.role.as_str()), "advisor:manage") {
         return json::error_response(&error, false);
     }
-    let scope = match caller_company(&_tenant, &req) {
+    let scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return json::error_response(&error, false),
     };
@@ -294,7 +294,7 @@ pub(crate) async fn dismiss_suggestion(
             .suggestions
             .get_mut(path.as_str())
             .ok_or_else(|| UnifiedError::not_found("Suggestion not found"))?;
-        require_record_in_company_scope(&suggestion.company_id, &scope)?;
+        require_record_writable_in_company_scope(&suggestion.company_id, &scope)?;
         suggestion.status = "dismissed".to_string();
         suggestion.dismissed_by = Some(caller.actor.clone());
         suggestion.dismissed_at = Some(Utc::now());
@@ -326,7 +326,7 @@ pub(crate) async fn snooze_suggestion(
     if let Err(error) = require_capability(&state, Some(caller.role.as_str()), "advisor:manage") {
         return json::error_response(&error, false);
     }
-    let scope = match caller_company(&_tenant, &req) {
+    let scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return json::error_response(&error, false),
     };
@@ -350,7 +350,7 @@ pub(crate) async fn snooze_suggestion(
             .suggestions
             .get_mut(path.as_str())
             .ok_or_else(|| UnifiedError::not_found("Suggestion not found"))?;
-        require_record_in_company_scope(&suggestion.company_id, &scope)?;
+        require_record_writable_in_company_scope(&suggestion.company_id, &scope)?;
         if suggestion.status == "dismissed" {
             return Err(UnifiedError::conflict(
                 "A dismissed suggestion cannot be snoozed",

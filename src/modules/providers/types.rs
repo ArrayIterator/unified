@@ -2,8 +2,13 @@
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fmt;
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
+use unified_core::provider_registry::{
+    ProviderDefinition, leak_str, leak_str_slice, provider_registry,
+};
 use uuid::Uuid;
 
 // ---------------------------------------------------------------------------
@@ -169,76 +174,29 @@ impl ProviderKind {
         ]
     }
 
-    /// Human-readable display name.
+    /// Human-readable display name, from the provider registry.
     pub fn display_name(&self) -> &'static str {
-        match self {
-            Self::Hetzner => "Hetzner Cloud",
-            Self::Ovh => "OVHcloud",
-            Self::Tencent => "Tencent Cloud CVM",
-            Self::Huawei => "Huawei Cloud ECS",
-            Self::Aws => "AWS EC2",
-            Self::Google => "Google Cloud Compute Engine",
-            Self::Virtualizor => "Virtualizor",
-            Self::Docker => "Docker Engine",
-            Self::Kubernetes => "Kubernetes",
-            Self::Redshift => "Amazon Redshift",
-            Self::DigitalOcean => "DigitalOcean",
-            Self::Linode => "Linode",
-            Self::OpenStack => "OpenStack",
-            Self::Proxmox => "Proxmox VE",
-            Self::Kvm => "KVM (via Proxmox VE)",
-            Self::Xen => "XenServer / XCP-ng",
-            Self::Custom => "Custom Provider",
-        }
+        attrs(self).display_name
     }
 
-    /// Hosts this provider's API is allowed to talk to. A request to any
-    /// other host is refused before it is sent.
+    /// Hosts this provider's API is allowed to talk to, from the
+    /// provider registry. A request to any other host is refused
+    /// before it is sent.
     pub fn allowed_hosts(&self) -> &'static [&'static str] {
-        match self {
-            Self::Hetzner => &["api.hetzner.cloud"],
-            Self::Ovh => &["api.ovh.com", "eu.api.ovh.com"],
-            Self::Tencent => &["cvm.tencentcloudapi.com"],
-            Self::Huawei => &[],
-            // Huawei endpoints are per-region (`iam.<region>.myhuaweicloud.com`,
-            // `ecs.<region>.myhuaweicloud.com`); the host is validated by
-            // `HuaweiAdapter::validate_endpoint` instead.
-            Self::Aws => &[],
-            // AWS EC2 endpoints are per-region (`ec2.<region>.amazonaws.com`);
-            // validated by `AwsAdapter::validate_endpoint`.
-            Self::Google => &["compute.googleapis.com", "oauth2.googleapis.com"],
-            Self::Virtualizor | Self::Docker | Self::Kubernetes => &[],
-            // User-supplied panel / API endpoints; validated as http(s)
-            // URLs with a host and no embedded credentials.
-            Self::Redshift => &[],
-            // Redshift endpoints are per-region
-            // (`redshift.<region>.amazonaws.com`); validated by
-            // `RedshiftAdapter::validate_endpoint`.
-            Self::DigitalOcean => &["api.digitalocean.com"],
-            Self::Linode => &["api.linode.com"],
-            Self::OpenStack | Self::Proxmox | Self::Kvm | Self::Xen | Self::Custom => &[],
-            // User-supplied API endpoints (Keystone, Proxmox VE,
-            // XenAPI, or a custom API base URL); validated as http(s)
-            // URLs with a host and no embedded credentials.
-        }
+        attrs(self).allowed_hosts
     }
 
     /// Whether the API host is fixed (allow-listed) or user-supplied.
+    /// Exactly the providers with a non-empty host list.
     pub fn has_fixed_hosts(&self) -> bool {
-        !matches!(
-            self,
-            Self::Huawei
-                | Self::Aws
-                | Self::Virtualizor
-                | Self::Docker
-                | Self::Kubernetes
-                | Self::Redshift
-                | Self::OpenStack
-                | Self::Proxmox
-                | Self::Kvm
-                | Self::Xen
-                | Self::Custom
-        )
+        !self.allowed_hosts().is_empty()
+    }
+
+    /// The registry definition for this kind, if one is registered.
+    /// Every built-in kind has one; `None` only when the registry
+    /// was built without seeds (tests).
+    pub fn definition(&self) -> Option<Arc<ProviderDefinition>> {
+        provider_registry().get("cloud", self.as_str())
     }
 }
 
@@ -582,91 +540,66 @@ impl ProviderConnection {
     }
 }
 
-/// Capabilities per kind (single source of truth for the catalog, the
-/// read views, and the create/scale guards).
+/// Capabilities per kind, from the provider registry (C12, task
+/// 269) — the single source of truth for the catalog, the read
+/// views, and the create/scale guards. A missing definition reads
+/// as "supports nothing" (fail closed) instead of falling back to
+/// another provider.
 pub fn capabilities_for(kind: ProviderKind) -> ProviderCapabilities {
-    match kind {
-        ProviderKind::Hetzner => ProviderCapabilities {
-            supports_create: true,
-            supports_scale: true,
-            supports_delete: true,
-            supports_containers: false,
-            supports_start_stop: false,
-        },
-        ProviderKind::Ovh => ProviderCapabilities {
-            supports_create: true,
-            supports_scale: true,
-            supports_delete: true,
-            supports_containers: false,
-            supports_start_stop: false,
-        },
-        ProviderKind::Tencent | ProviderKind::Huawei | ProviderKind::Aws => {
-            ProviderCapabilities::read_only()
-        }
-        ProviderKind::Google => ProviderCapabilities::read_only(),
-        ProviderKind::Virtualizor => ProviderCapabilities {
-            supports_create: true,
-            supports_scale: true,
-            supports_delete: true,
-            supports_containers: false,
-            supports_start_stop: true,
-        },
-        ProviderKind::Docker => ProviderCapabilities {
-            supports_create: false,
-            supports_scale: false,
-            supports_delete: true,
-            supports_containers: true,
-            supports_start_stop: true,
-        },
-        ProviderKind::Kubernetes => ProviderCapabilities {
-            supports_create: false,
-            supports_scale: false,
-            supports_delete: false,
-            supports_containers: true,
-            supports_start_stop: false,
-        },
-        ProviderKind::Redshift => ProviderCapabilities::read_only(),
-        ProviderKind::DigitalOcean => ProviderCapabilities {
-            supports_create: true,
-            supports_scale: true,
-            supports_delete: true,
-            supports_containers: false,
-            supports_start_stop: true,
-        },
-        ProviderKind::Linode => ProviderCapabilities {
-            supports_create: true,
-            supports_scale: true,
-            supports_delete: true,
-            supports_containers: false,
-            supports_start_stop: true,
-        },
-        ProviderKind::OpenStack => ProviderCapabilities {
-            supports_create: true,
-            supports_scale: false,
-            supports_delete: true,
-            supports_containers: false,
-            supports_start_stop: true,
-        },
-        ProviderKind::Proxmox | ProviderKind::Kvm | ProviderKind::Xen => {
-            ProviderCapabilities {
-                supports_create: false,
-                supports_scale: false,
-                supports_delete: true,
-                supports_containers: false,
-                supports_start_stop: true,
+    let Some(def) = kind.definition() else {
+        return ProviderCapabilities::read_only();
+    };
+    ProviderCapabilities {
+        supports_create: def.capability("create"),
+        supports_scale: def.capability("scale"),
+        supports_delete: def.capability("delete"),
+        supports_containers: def.capability("containers"),
+        supports_start_stop: def.capability("start_stop"),
+    }
+}
+
+/// The enabled provider catalog, built-ins plus any provider an admin
+/// registered, sorted by id. New providers appear here with no code
+/// change; the enum-based `all()` lists built-ins only.
+pub fn catalog() -> Vec<Arc<ProviderDefinition>> {
+    provider_registry().list_family_enabled("cloud")
+}
+
+// ---------------------------------------------------------------------------
+// Registry-backed attributes (C12, task 269).
+// ---------------------------------------------------------------------------
+/// The `&'static` view of one provider's registry definition; see the
+/// same bridge in the payments module. Capabilities are an owned
+/// struct and read the definition directly, so only the display name
+/// and host list need the leak cache.
+struct CloudAttrs {
+    display_name: &'static str,
+    allowed_hosts: &'static [&'static str],
+}
+
+fn attrs_from_definition(def: &ProviderDefinition) -> CloudAttrs {
+    CloudAttrs {
+        display_name: leak_str(&def.display_name),
+        allowed_hosts: leak_str_slice(&def.allowed_hosts),
+    }
+}
+
+static ATTRS: OnceLock<HashMap<ProviderKind, CloudAttrs>> = OnceLock::new();
+
+fn attrs(kind: &ProviderKind) -> &'static CloudAttrs {
+    let map = ATTRS.get_or_init(|| {
+        let mut out = HashMap::new();
+        for def in provider_registry().list_family("cloud") {
+            if let Some(parsed) = ProviderKind::from_str(&def.id) {
+                out.insert(parsed, attrs_from_definition(&def));
             }
         }
-        // The generic adapter's maximum envelope. A stored custom
-        // config can narrow it; `ProviderConnection::view` reports
-        // the per-connection flags instead.
-        ProviderKind::Custom => ProviderCapabilities {
-            supports_create: true,
-            supports_scale: false,
-            supports_delete: true,
-            supports_containers: false,
-            supports_start_stop: true,
-        },
-    }
+        out
+    });
+    // Every enum variant has a seed definition; the expect documents
+    // that invariant (a registry built without seeds breaks it).
+    map.get(kind)
+        .expect("every ProviderKind has a registry definition")
 }
 
 // ---------------------------------------------------------------------------
@@ -952,6 +885,70 @@ mod tests {
         assert!(!shown.contains("hunter2"));
         assert!(shown.contains("[redacted]"));
         assert!(shown.contains("[unset]"));
+    }
+
+    #[test]
+    fn builtin_attributes_come_from_registry_data() {
+        assert_eq!(ProviderKind::Hetzner.display_name(), "Hetzner Cloud");
+        assert_eq!(ProviderKind::Aws.display_name(), "AWS EC2");
+        assert_eq!(ProviderKind::Kvm.display_name(), "KVM (via Proxmox VE)");
+        assert_eq!(
+            ProviderKind::Hetzner.allowed_hosts(),
+            &["api.hetzner.cloud"]
+        );
+        assert_eq!(
+            ProviderKind::Ovh.allowed_hosts(),
+            &["api.ovh.com", "eu.api.ovh.com"]
+        );
+        assert!(ProviderKind::Hetzner.has_fixed_hosts());
+        assert!(!ProviderKind::Aws.has_fixed_hosts());
+        assert!(!ProviderKind::Docker.has_fixed_hosts());
+        let docker = capabilities_for(ProviderKind::Docker);
+        assert!(!docker.supports_create);
+        assert!(docker.supports_delete);
+        assert!(docker.supports_containers);
+        assert!(docker.supports_start_stop);
+        let k8s = capabilities_for(ProviderKind::Kubernetes);
+        assert!(k8s.supports_containers);
+        assert!(!k8s.supports_delete);
+        let custom = capabilities_for(ProviderKind::Custom);
+        assert!(custom.supports_create);
+        assert!(!custom.supports_scale);
+        assert!(custom.supports_delete);
+    }
+
+    #[test]
+    fn add_one_cloud_provider_without_code_change() {
+        // Register a brand-new provider through the registry only, then
+        // prove the catalog and the definition lookup resolve its
+        // display name, hosts, and capabilities from that data. No enum
+        // variant exists for it and no match arm was added. (Building
+        // an adapter for it needs a generic-adapter factory keyed by
+        // the definition id — the Custom adapter is the vehicle, and
+        // wiring it by id is follow-up work; see
+        // INTEGRATION_NOTES_C12.)
+        let mut def = unified_core::provider_registry::ProviderDefinition::new(
+            "cloud",
+            "acme_cloud",
+            "Acme Cloud",
+            "custom",
+        );
+        def.base_url = Some("https://api.acme.test".to_string());
+        def.allowed_hosts = vec!["api.acme.test".to_string()];
+        def.capabilities = serde_json::json!({
+            "create": true, "scale": false, "delete": true,
+            "containers": false, "start_stop": true
+        });
+        provider_registry().register(def).unwrap();
+        assert!(catalog().iter().any(|entry| entry.id == "acme_cloud"));
+        let found = provider_registry().get("cloud", "acme_cloud").unwrap();
+        assert_eq!(found.display_name, "Acme Cloud");
+        assert_eq!(found.adapter_kind, "custom");
+        assert!(found.capability("create"));
+        assert!(!found.capability("scale"));
+        assert!(found.capability("delete"));
+        assert!(found.host_allowed("api.acme.test"));
+        assert!(!found.host_allowed("api.evil.test"));
     }
 
     #[test]

@@ -10,7 +10,7 @@ use semver::Version;
 use serde_json::{json, Value};
 use std::sync::{Arc};
 use super::helpers::{
-    caller, caller_company, in_company_scope, release_company, require_record_in_company_scope,
+    caller, caller_company, require_company_for_write, in_company_scope, release_company, require_record_in_company_scope,
     require_release_in_scope, require_software_in_scope, require_tenant, require_permission,
     require_version_in_scope, version_company,
 };
@@ -89,7 +89,7 @@ pub(crate) async fn create_version(
 ) -> HttpResponse {
     let result: UnifiedResult<SoftwareVersion> = (|| {
         let _tenant = require_tenant(&req)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_SOFTWARE_CREATE)?;
         let input = body.into_inner();
@@ -162,7 +162,7 @@ pub(crate) async fn update_version(
 ) -> HttpResponse {
     let result: UnifiedResult<SoftwareVersion> = (|| {
         let _tenant = require_tenant(&req)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_SOFTWARE_MANAGE)?;
         let input = body.into_inner();
@@ -170,7 +170,7 @@ pub(crate) async fn update_version(
             .versions
             .get_mut(path.as_str())
             .ok_or_else(|| UnifiedError::not_found("Version not found"))?;
-        require_record_in_company_scope(&version_company(&state, &version), &scope)?;
+        require_record_writable_in_company_scope(&version_company(&state, &version), &scope)?;
         if let Some(product) = input.product {
             if product.trim().is_empty() {
                 return Err(UnifiedError::bad_request("Product must not be empty"));
@@ -212,7 +212,7 @@ pub(crate) async fn delete_version(
 ) -> HttpResponse {
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_SOFTWARE_MANAGE)?;
         require_version_in_scope(&state, path.as_str(), &scope)?;
@@ -297,7 +297,7 @@ pub(crate) async fn create_release(
 ) -> HttpResponse {
     let result: UnifiedResult<Release> = (|| {
         let _tenant = require_tenant(&req)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_SOFTWARE_CREATE)?;
         let input = body.into_inner();
@@ -357,7 +357,7 @@ pub(crate) async fn delete_release(
 ) -> HttpResponse {
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_SOFTWARE_MANAGE)?;
         require_release_in_scope(&state, path.as_str(), &scope)?;
@@ -378,14 +378,14 @@ pub(crate) async fn publish_release(
 ) -> HttpResponse {
     let result: UnifiedResult<Release> = (|| {
         let _tenant = require_tenant(&req)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_SOFTWARE_MANAGE)?;
         let mut release = state
             .releases
             .get_mut(path.as_str())
             .ok_or_else(|| UnifiedError::not_found("Release not found"))?;
-        require_record_in_company_scope(&release_company(&state, &release), &scope)?;
+        require_record_writable_in_company_scope(&release_company(&state, &release), &scope)?;
         if release.status == "published" {
             return Err(UnifiedError::conflict("Release is already published"));
         }
@@ -450,14 +450,14 @@ pub(crate) async fn unpublish_release(
 ) -> HttpResponse {
     let result: UnifiedResult<Release> = (|| {
         let _tenant = require_tenant(&req)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_SOFTWARE_MANAGE)?;
         let mut release = state
             .releases
             .get_mut(path.as_str())
             .ok_or_else(|| UnifiedError::not_found("Release not found"))?;
-        require_record_in_company_scope(&release_company(&state, &release), &scope)?;
+        require_record_writable_in_company_scope(&release_company(&state, &release), &scope)?;
         if release.status != "published" {
             return Err(UnifiedError::conflict("Release is not published"));
         }
@@ -607,48 +607,6 @@ pub(crate) async fn download_release(
 #[cfg(test)]
 mod tests {
 
-    /// Build a request carrying the server-verified caller the auth
-    /// middleware would attach for this user and role. The old
-    /// self-asserted identity headers grant nothing,
-    /// so tests attach the verified caller to the request
-    /// extensions instead.
-    fn verified_request(user_id: &str, role: &str) -> actix_web::HttpRequest {
-        use actix_web::HttpMessage;
-        let req = actix_web::test::TestRequest::default().to_http_request();
-        req.extensions_mut().insert(
-            unified_core::auth::Caller::verified(test_user_uuid(user_id), Vec::new())
-                .with_roles(vec![role.to_string()]),
-        );
-        req.extensions_mut()
-            .insert(unified_core::middleware::TenantContext {
-                tenant_id: uuid::Uuid::now_v7().to_string(),
-                company_id: String::new(),
-                site_id: String::new(),
-                kind: unified_core::middleware::TenantKind::Subdomain,
-                host: "tenant.example.test".to_string(),
-                scope: None,
-                product_id: None,
-                package_id: None,
-                product_subdomain_id: None,
-            });
-        req
-    }
-
-    /// Build a request carrying a verified caller with no roles
-    /// resolved: the caller resolves, but holds the anonymous role.
-    /// This is the "no role" case in the new model (roles are
-    /// resolved server-side, never claimed in a header).
-    fn verified_request_without_roles(user_id: &str) -> actix_web::HttpRequest {
-        use actix_web::HttpMessage;
-        let req = actix_web::test::TestRequest::default().to_http_request();
-        req.extensions_mut()
-            .insert(unified_core::auth::Caller::verified(
-                test_user_uuid(user_id),
-                Vec::new(),
-            ));
-        req
-    }
-
     /// Deterministic test-user identity: distinct names map to
     /// distinct UUIDs (FNV-1a folded into the low bits), so
     /// ownership tests can still tell two users apart. A value
@@ -702,8 +660,34 @@ mod tests {
         web::Data::new(Arc::new(ctx))
     }
 
+    /// The company the handler tests act as (C3 task 315).
+    const TEST_COMPANY: &str = "company-a";
+
+    /// A request scoped to the test company (C3 task 315):
+    /// mutation handlers require a resolved company, so the
+    /// happy-path tests carry one on both the tenant context and
+    /// the verified caller.
     fn authed_request() -> HttpRequest {
-        verified_request("tester", "admin")
+        use actix_web::HttpMessage;
+        let req = actix_web::test::TestRequest::default().to_http_request();
+        req.extensions_mut().insert(
+            unified_core::auth::Caller::verified(test_user_uuid("tester"), Vec::new())
+                .with_company("company-a".to_string())
+                .with_roles(vec!["admin".to_string()]),
+        );
+        req.extensions_mut()
+            .insert(unified_core::middleware::TenantContext {
+                tenant_id: uuid::Uuid::now_v7().to_string(),
+                company_id: "company-a".to_string(),
+                site_id: String::new(),
+                kind: unified_core::middleware::TenantKind::Subdomain,
+                host: "tenant.example.test".to_string(),
+                scope: None,
+                product_id: None,
+                package_id: None,
+                product_subdomain_id: None,
+            });
+        req
     }
 
     fn create_input(product: &str, version: &str) -> CreateVersion {

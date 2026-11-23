@@ -34,7 +34,7 @@ pub(crate) async fn get_stats(
         Ok(found) => found,
         Err(error) => return err_response(error, debug),
     };
-    let is_admin = is_storage_admin(&ctx, &found.role);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BUCKETS);
     let bucket_filter = params.get("bucket_id").cloned();
     let company_filter = params.get("company_id").cloned();
     let user_filter = params.get("user_id").cloned();
@@ -214,7 +214,7 @@ pub(crate) async fn get_stats_top(
         .and_then(|raw| raw.parse().ok())
         .unwrap_or(10)
         .clamp(1, 100);
-    let is_admin = is_storage_admin(&ctx, &found.role);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BUCKETS);
     let mut totals: HashMap<String, (i64, i64)> = HashMap::new();
     for entry in state.objects.iter() {
         let object = entry.value();

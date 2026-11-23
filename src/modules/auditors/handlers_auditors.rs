@@ -36,7 +36,7 @@ pub(crate) async fn create_auditor(
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_AUDITORS_CREATE)?;
         reject_auditor_caller(&state, &caller.actor)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let settings = state.settings();
         if !settings.auditors_enabled {
             return Err(UnifiedError::forbidden(
@@ -296,7 +296,7 @@ pub(crate) async fn revoke_auditor(
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_AUDITORS_REVOKE)?;
         reject_auditor_caller(&state, &caller.actor)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let input = body.into_inner();
         let reason = match &input.reason {
             Some(value) => Some(require_text(value, "reason", MAX_REASON_LEN)?),
@@ -378,7 +378,7 @@ pub(crate) async fn extend_auditor(
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_AUDITORS_MANAGE)?;
         reject_auditor_caller(&state, &caller.actor)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let input = body.into_inner();
         if input.additional_hours < 1 {
             return Err(UnifiedError::bad_request("additional_hours must be at least 1"));
@@ -507,7 +507,7 @@ pub(crate) async fn revoke_auditor_session(
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_AUDITORS_REVOKE)?;
         reject_auditor_caller(&state, &caller.actor)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let (auditor_raw, session_raw) = path.into_inner();
         let auditor_id = parse_uuid(&auditor_raw, "auditor")?;
         let session_id = parse_uuid(&session_raw, "session")?;
@@ -741,49 +741,6 @@ pub(crate) async fn expire_sweep(
 #[cfg(test)]
 mod tests {
 
-    /// Build a request carrying the server-verified caller the auth
-    /// middleware would attach for this user and role. The old
-    /// self-asserted identity headers grant nothing,
-    /// so tests attach the verified caller to the request
-    /// extensions instead.
-    fn verified_request(user_id: &str, role: &str) -> actix_web::HttpRequest {
-        use actix_web::HttpMessage;
-        let req = actix_web::test::TestRequest::default().to_http_request();
-        req.extensions_mut().insert(
-            unified_core::auth::Caller::verified(test_user_uuid(user_id), Vec::new())
-                .with_roles(vec![role.to_string()]),
-        );
-
-        req.extensions_mut()
-            .insert(unified_core::middleware::TenantContext {
-                tenant_id: uuid::Uuid::now_v7().to_string(),
-                company_id: String::new(),
-                site_id: String::new(),
-                kind: unified_core::middleware::TenantKind::Subdomain,
-                host: "tenant.example.test".to_string(),
-                scope: None,
-                product_id: None,
-                package_id: None,
-                product_subdomain_id: None,
-            });
-        req
-    }
-
-    /// Build a request carrying a verified caller with no roles
-    /// resolved: the caller resolves, but holds the anonymous role.
-    /// This is the "no role" case in the new model (roles are
-    /// resolved server-side, never claimed in a header).
-    fn verified_request_without_roles(user_id: &str) -> actix_web::HttpRequest {
-        use actix_web::HttpMessage;
-        let req = actix_web::test::TestRequest::default().to_http_request();
-        req.extensions_mut()
-            .insert(unified_core::auth::Caller::verified(
-                test_user_uuid(user_id),
-                Vec::new(),
-            ));
-        req
-    }
-
     /// Deterministic test-user identity: distinct names map to
     /// distinct UUIDs (FNV-1a folded into the low bits), so
     /// ownership tests can still tell two users apart. A value
@@ -835,8 +792,34 @@ mod tests {
         (web::Data::new(Arc::new(ctx)), web::Data::new(state))
     }
 
+    /// The company the handler tests act as (C3 task 315).
+    const TEST_COMPANY_ID: &str = "22222222-3333-4444-8555-666666666666";
+
+    /// A request scoped to the test company (C3 task 315):
+    /// mutation handlers require a resolved company, so the
+    /// happy-path tests carry one on both the tenant context and
+    /// the verified caller.
     fn admin_request() -> HttpRequest {
-        verified_request("admin-1", "admin")
+        use actix_web::HttpMessage;
+        let req = actix_web::test::TestRequest::default().to_http_request();
+        req.extensions_mut().insert(
+            unified_core::auth::Caller::verified(test_user_uuid("admin-1"), Vec::new())
+                .with_company(TEST_COMPANY_ID.to_string())
+                .with_roles(vec!["admin".to_string()]),
+        );
+        req.extensions_mut()
+            .insert(unified_core::middleware::TenantContext {
+                tenant_id: uuid::Uuid::now_v7().to_string(),
+                company_id: TEST_COMPANY_ID.to_string(),
+                site_id: String::new(),
+                kind: unified_core::middleware::TenantKind::Subdomain,
+                host: "tenant.example.test".to_string(),
+                scope: None,
+                product_id: None,
+                package_id: None,
+                product_subdomain_id: None,
+            });
+        req
     }
 
     fn seed_account(
@@ -903,7 +886,9 @@ mod tests {
                 module: "billing".to_string(),
                 resource_kind: "invoice".to_string(),
                 resource_id: None,
-                company_id: None,
+                company_id: Some(
+                    uuid::Uuid::parse_str(TEST_COMPANY_ID).expect("test company id must parse"),
+                ),
                 allow_export: false,
             }],
         })

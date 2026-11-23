@@ -79,7 +79,7 @@ pub(crate) async fn create_appointment_reminder(
     let debug = ctx.is_debug();
     let result: UnifiedResult<AppointmentReminder> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_APPOINTMENTS_MANAGE)?;
         let appointment = load_appointment(&state, &path.into_inner())?;
@@ -145,7 +145,7 @@ pub(crate) async fn delete_appointment_reminder(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_APPOINTMENTS_MANAGE)?;
         let (appointment_id, reminder_id) = path.into_inner();
@@ -180,7 +180,7 @@ pub(crate) async fn send_appointment_reminder(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_APPOINTMENTS_MANAGE)?;
         let (appointment_id, reminder_id) = path.into_inner();
@@ -265,7 +265,7 @@ pub(crate) async fn create_reminder_rule(
     let debug = ctx.is_debug();
     let result: UnifiedResult<ReminderRule> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_APPOINTMENTS_MANAGE)?;
         let input = body.into_inner();
@@ -317,7 +317,7 @@ pub(crate) async fn delete_reminder_rule(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_APPOINTMENTS_MANAGE)?;
         let rule = load_rule(&state, &path.into_inner())?;

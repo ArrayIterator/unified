@@ -83,7 +83,7 @@ pub(crate) async fn link_wallet(
     let debug = ctx.is_debug();
     let result: UnifiedResult<WalletLink> = (|| {
         let _tenant = require_tenant(&req)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_WEB3_WRITE)?;
         let input = body.into_inner();
@@ -181,7 +181,7 @@ pub(crate) async fn unlink_wallet(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_WEB3_WRITE)?;
         let admin = is_admin(&ctx, &caller.role);
@@ -196,7 +196,7 @@ pub(crate) async fn unlink_wallet(
             ));
         }
         if !admin {
-            require_record_in_company_scope(&wallet.company_id, &scope)?;
+            require_record_writable_in_company_scope(&wallet.company_id, &scope)?;
         }
         state.wallets.remove(path.as_str());
         state.challenges.remove(path.as_str());
@@ -234,7 +234,7 @@ pub(crate) async fn challenge_wallet(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_WEB3_WRITE)?;
         let admin = is_admin(&ctx, &caller.role);
@@ -249,7 +249,7 @@ pub(crate) async fn challenge_wallet(
             ));
         }
         if !admin {
-            require_record_in_company_scope(&wallet.company_id, &scope)?;
+            require_record_writable_in_company_scope(&wallet.company_id, &scope)?;
         }
         let nonce_bytes: [u8; 32] = rand::random();
         let nonce: String = {
@@ -324,7 +324,7 @@ pub(crate) async fn verify_wallet(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| async {
         let _tenant = require_tenant(&req)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_WEB3_WRITE)?;
         let admin = is_admin(&ctx, &caller.role);
@@ -339,7 +339,7 @@ pub(crate) async fn verify_wallet(
             ));
         }
         if !admin {
-            require_record_in_company_scope(&wallet.company_id, &scope)?;
+            require_record_writable_in_company_scope(&wallet.company_id, &scope)?;
         }
         let challenge = state
             .challenges
@@ -473,7 +473,7 @@ pub(crate) async fn refresh_wallet_balances(
     let debug = ctx.is_debug();
     let result: UnifiedResult<BalanceSnapshot> = (|| async {
         let _tenant = require_tenant(&req)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_WEB3_WRITE)?;
         let admin = is_admin(&ctx, &caller.role);
@@ -488,7 +488,7 @@ pub(crate) async fn refresh_wallet_balances(
             ));
         }
         if !admin {
-            require_record_in_company_scope(&wallet.company_id, &scope)?;
+            require_record_writable_in_company_scope(&wallet.company_id, &scope)?;
         }
         let network = require_network(&state, &wallet.network_id)?;
         // The secret is only needed when the network has a stored

@@ -81,7 +81,7 @@ pub(crate) async fn create_canned(
 ) -> HttpResponse {
     let result: UnifiedResult<CannedResponse> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let actor = actor_id(&req)?;
         let body = body.into_inner();
         let now = Utc::now();
@@ -159,7 +159,7 @@ pub(crate) async fn update_canned(
 ) -> HttpResponse {
     let result: UnifiedResult<CannedResponse> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let actor = actor_id(&req)?;
         let body = body.into_inner();
         let mut canned = load_canned(&state, &path.into_inner())?;
@@ -208,7 +208,7 @@ pub(crate) async fn delete_canned(
 ) -> HttpResponse {
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let actor = actor_id(&req)?;
         let canned = load_canned(&state, &path.into_inner())?;
         if canned.created_by != actor {
@@ -243,7 +243,7 @@ pub(crate) async fn use_canned(
 ) -> HttpResponse {
     let result: UnifiedResult<CannedResponse> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let actor = actor_id(&req)?;
         let mut canned = load_canned(&state, &path.into_inner())?;
         canned.usage_count = canned.usage_count.saturating_add(1);

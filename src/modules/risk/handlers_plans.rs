@@ -83,7 +83,7 @@ pub(crate) async fn create_plan(
     if let Err(error) = require_capability(&state, actor_role.as_deref(), "risk:create") {
         return json::error_response(&error, false);
     }
-    let scope = match caller_company(&_tenant, &req) {
+    let scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return json::error_response(&error, false),
     };
@@ -163,7 +163,7 @@ pub(crate) async fn update_plan(
     if let Err(error) = require_capability(&state, actor_role.as_deref(), "risk:edit") {
         return json::error_response(&error, false);
     }
-    let scope = match caller_company(&_tenant, &req) {
+    let scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return json::error_response(&error, false),
     };
@@ -233,7 +233,7 @@ pub(crate) async fn delete_plan(
     if let Err(error) = require_capability(&state, actor_role.as_deref(), "risk:delete") {
         return json::error_response(&error, false);
     }
-    let scope = match caller_company(&_tenant, &req) {
+    let scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return json::error_response(&error, false),
     };
@@ -313,7 +313,7 @@ pub(crate) async fn create_task(
     if let Err(error) = require_capability(&state, actor_role.as_deref(), "risk:create") {
         return json::error_response(&error, false);
     }
-    let scope = match caller_company(&_tenant, &req) {
+    let scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return json::error_response(&error, false),
     };
@@ -373,7 +373,7 @@ pub(crate) async fn update_task(
     if let Err(error) = require_capability(&state, actor_role.as_deref(), "risk:edit") {
         return json::error_response(&error, false);
     }
-    let scope = match caller_company(&_tenant, &req) {
+    let scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return json::error_response(&error, false),
     };
@@ -450,7 +450,7 @@ pub(crate) async fn delete_task(
     if let Err(error) = require_capability(&state, actor_role.as_deref(), "risk:delete") {
         return json::error_response(&error, false);
     }
-    let scope = match caller_company(&_tenant, &req) {
+    let scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return json::error_response(&error, false),
     };
@@ -489,7 +489,7 @@ pub(crate) async fn review_check(
     if let Err(error) = require_capability(&state, actor_role.as_deref(), "risk:edit") {
         return json::error_response(&error, false);
     }
-    let scope = match caller_company(&_tenant, &req) {
+    let scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return json::error_response(&error, false),
     };

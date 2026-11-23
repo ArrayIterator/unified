@@ -2,7 +2,7 @@
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{Map, Value};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::OnceLock;
@@ -32,6 +32,31 @@ pub(crate) const DEFAULT_SIGNED_URL_SECS: u64 = 3_600;
 
 /// Maximum lifetime of a signed download URL (7 days).
 pub(crate) const MAX_SIGNED_URL_SECS: u64 = 604_800;
+
+// ---------------------------------------------------------------------------
+// Document metadata (migration 000124): length caps for the text
+// fields and the key rules for `custom_metadata`. The database
+// enforces the same caps with CHECK constraints; these are the
+// application-side errors, raised before any row is touched.
+// ---------------------------------------------------------------------------
+
+/// Maximum length of a document title (512 characters).
+pub(crate) const MAX_METADATA_TITLE_LEN: usize = 512;
+
+/// Maximum length of alt text (512 characters).
+pub(crate) const MAX_METADATA_ALT_TEXT_LEN: usize = 512;
+
+/// Maximum length of a caption (1024 characters).
+pub(crate) const MAX_METADATA_CAPTION_LEN: usize = 1024;
+
+/// Maximum length of a description (4096 characters).
+pub(crate) const MAX_METADATA_DESCRIPTION_LEN: usize = 4096;
+
+/// Maximum length of one `custom_metadata` key (64 characters).
+pub(crate) const MAX_METADATA_KEY_LEN: usize = 64;
+
+/// Maximum number of keys held in `custom_metadata` after a merge.
+pub(crate) const MAX_CUSTOM_METADATA_KEYS: usize = 100;
 
 // ---------------------------------------------------------------------------
 // Permissions (capability names checked through the `role.check` hook).
@@ -547,6 +572,29 @@ pub(crate) fn build_object_key(
 pub struct DocumentRecord {
     pub id: String,
     pub name: String,
+    /// Display title. Defaults to the uploaded file name (`name`)
+    /// on upload; the owner may rename it through
+    /// `PATCH /api/v1/documents/{id}`. Never empty at runtime —
+    /// the `#[serde(default)]` only keeps old serialized records
+    /// (written before migration 000124) parseable.
+    #[serde(default)]
+    pub title: String,
+    /// Alt text for the file. The only image-specific metadata
+    /// field; present on every file kind, used only for images.
+    #[serde(default)]
+    pub alt_text: Option<String>,
+    /// Short caption shown with the document.
+    #[serde(default)]
+    pub caption: Option<String>,
+    /// Longer free-text description of the document.
+    #[serde(default)]
+    pub description: Option<String>,
+    /// Caller-defined metadata, merged by key
+    /// (`PATCH /api/v1/documents/{id}`; a JSON null removes a
+    /// key). Keys match `[a-z0-9_]{1,64}`; `notes` is the worked
+    /// example (a user-written description per document).
+    #[serde(default)]
+    pub custom_metadata: Map<String, Value>,
     /// Owning module id (the module the file belongs to).
     pub module_id: String,
     /// Company the document belongs to; empty when unscoped.
@@ -835,6 +883,28 @@ pub struct UpdateAllowlistRequest {
     pub mime_types: Option<Vec<String>>,
     #[serde(default)]
     pub max_bytes: Option<u64>,
+}
+
+/// Body of `PATCH /api/v1/documents/{id}`. Every field is
+/// optional; absent fields are left alone. `title` must be
+/// non-empty when present (it always has a value — the file name
+/// default). The optional text fields clear on an empty string.
+/// `custom_metadata` merges by key into the stored object: a key
+/// whose value is JSON null is REMOVED, any other value sets or
+/// overwrites that key. A top-level JSON null for `custom_metadata`
+/// is the same as absent (no change).
+#[derive(Debug, Clone, Deserialize)]
+pub struct UpdateDocumentMetadataRequest {
+    #[serde(default)]
+    pub title: Option<String>,
+    #[serde(default)]
+    pub alt_text: Option<String>,
+    #[serde(default)]
+    pub caption: Option<String>,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub custom_metadata: Option<Map<String, Value>>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -1339,5 +1409,45 @@ mod tests {
             Some(test_tenant())
         );
         assert_eq!(StorageScope::System.tenant_id(), None);
+    }
+
+    #[test]
+    fn metadata_patch_body_shape() {
+        // Absent fields stay `None` (no change); a top-level null
+        // for `custom_metadata` is the same as absent.
+        let empty: UpdateDocumentMetadataRequest = serde_json::from_str("{}").unwrap();
+        assert_eq!(empty.title, None);
+        assert_eq!(empty.alt_text, None);
+        assert_eq!(empty.custom_metadata, None);
+        let nulled: UpdateDocumentMetadataRequest =
+            serde_json::from_str(r#"{"custom_metadata": null}"#).unwrap();
+        assert_eq!(nulled.custom_metadata, None);
+        // A null VALUE inside `custom_metadata` survives parsing:
+        // it is the remove-a-key signal, not a missing key.
+        let patch: UpdateDocumentMetadataRequest = serde_json::from_str(
+            r#"{"title": "Annual Report", "custom_metadata": {"notes": "Q4 final", "draft": null}}"#,
+        )
+        .unwrap();
+        assert_eq!(patch.title.as_deref(), Some("Annual Report"));
+        let custom = patch.custom_metadata.unwrap();
+        assert_eq!(
+            custom.get("notes").and_then(Value::as_str),
+            Some("Q4 final")
+        );
+        assert_eq!(custom.get("draft"), Some(&Value::Null));
+    }
+
+    #[test]
+    fn document_record_without_metadata_fields_still_parses() {
+        // Records serialized before migration 000124 carry no
+        // metadata fields; they must still parse (title falls back
+        // to the empty default, custom metadata to `{}`).
+        let record: DocumentRecord = serde_json::from_str(
+            r#"{"id":"doc-1","name":"report.pdf","module_id":"documents","company_id":"","owner_id":"user-1","scope":"owner","mime":"application/pdf","size":100,"checksum":null,"storage_key":"documents/2026/11/23/x.pdf","current_version":1,"version_count":1,"scan_status":"clean","scan_threat":null,"visibility":"private","created_at":"2026-11-23T10:30:00Z","updated_at":"2026-11-23T10:30:00Z"}"#,
+        )
+        .unwrap();
+        assert_eq!(record.title, "");
+        assert_eq!(record.alt_text, None);
+        assert!(record.custom_metadata.is_empty());
     }
 }

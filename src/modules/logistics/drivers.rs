@@ -94,7 +94,7 @@ pub(super) async fn create_driver(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Driver> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LOGISTICS_CREATE)?;
         let input = body.into_inner();
@@ -181,7 +181,7 @@ pub(super) async fn update_driver(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Driver> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LOGISTICS_MANAGE)?;
         let mut driver = load_driver(&state, &path)?;
@@ -251,7 +251,7 @@ pub(super) async fn delete_driver(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LOGISTICS_MANAGE)?;
         let driver = load_driver(&state, &path)?;

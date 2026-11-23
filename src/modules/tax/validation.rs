@@ -172,6 +172,28 @@ pub(crate) fn require_record_in_company_scope(
     }
 }
 
+/// Fail closed (403) when a stored record is outside the caller's
+/// company scope FOR A WRITE (C3 task 315, strict by default).
+/// Unlike the read check above (rule A), a write requires an exact
+/// company match: a company caller may write only their own
+/// company's records — global (unscoped) records are platform-only
+/// — and an unresolved caller may write nothing. Mutation handlers
+/// call this right after loading the record they mutate; handlers
+/// that only read the record, or load a parent to scope a child
+/// write, keep the read check.
+pub(crate) fn require_record_writable_in_company_scope(
+    record_company_id: Uuid,
+    caller_company: &Option<Uuid>,
+) -> UnifiedResult<()> {
+    match caller_company {
+        Some(caller) if *caller == record_company_id => Ok(()),
+        _ => Err(UnifiedError::forbidden(
+            "A write requires an exact company match: the record belongs to a different company or is a shared (global) record",
+        )),
+    }
+}
+
+
 /// The company the caller acts for: the tenant context's company
 /// first, then the verified caller's server-resolved company, then
 /// the `user.company_requested` hook answered by the users module

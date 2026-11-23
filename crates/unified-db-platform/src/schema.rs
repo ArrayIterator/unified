@@ -37,10 +37,13 @@ pub mod contracts_tables;
 #[path = "schema/documents.rs"]
 pub mod documents_tables;
 pub mod email;
+pub mod esg;
 #[path = "schema/events.rs"]
 pub mod events_tables;
 #[path = "schema/forms.rs"]
 pub mod forms_tables;
+#[path = "schema/forums.rs"]
+pub mod forums_tables;
 pub mod inbox;
 pub mod joins;
 pub mod meetings;
@@ -68,8 +71,10 @@ pub use community::*;
 pub use contracts_tables::*;
 pub use documents_tables::*;
 pub use email::*;
+pub use esg::*;
 pub use events_tables::*;
 pub use forms_tables::*;
+pub use forums_tables::*;
 pub use inbox::*;
 pub use meetings::*;
 pub use notifications_tables::*;

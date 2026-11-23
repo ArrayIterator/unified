@@ -119,8 +119,8 @@ pub(crate) fn caller_company(
 /// When the body omits the company, the caller's scope is adopted
 /// so the record is never stored unscoped under a scoped caller.
 /// A platform caller may store any body company (or none); an
-/// unresolved caller may not claim a company at all and stores a
-/// global row when the body omits one.
+/// unresolved caller may not claim a company at all and is refused
+/// when the body omits one (C3 task 315): a write requires a resolved company scope.
 pub(crate) fn require_company_match(
     tenant: &tenancy::TenantContext,
     req: &HttpRequest,
@@ -145,7 +145,9 @@ pub(crate) fn require_company_match_for(
         (CallerScope::Unresolved, Some(_)) => Err(UnifiedError::forbidden(
             "company_id does not match the caller's company scope",
         )),
-        (CallerScope::Unresolved, None) => Ok(None),
+        (CallerScope::Unresolved, None) => Err(UnifiedError::forbidden(
+            "A write requires a resolved company scope",
+        )),
     }
 }
 
@@ -177,6 +179,26 @@ pub(crate) fn require_record_in_company_scope(
         ))
     }
 }
+
+/// Fail closed (403) when a stored record is outside the caller's
+/// company scope FOR A WRITE (C3 task 315, strict by default).
+/// Unlike the read check above (rule A), a write requires an exact
+/// company match: a company caller may write only their own
+/// company's records — global (unscoped) records are platform-only
+/// — and an unresolved caller may write nothing. Mutation handlers
+/// call this right after loading the record they mutate; handlers
+/// that only read the record, or load a parent to scope a child
+/// write, keep the read check.
+pub(crate) fn require_record_writable_in_company_scope(
+    record_company_id: &Option<String>,
+    scope: &CallerScope,
+) -> UnifiedResult<()> {
+    // The shared write guard (C3 task 315): platform may write
+    // any scope, a company caller only its own company (global
+    // is platform-only), an unresolved caller nothing.
+    scope.require_company_scope(record_company_id.as_deref().unwrap_or(""))
+}
+
 
 /// Ask the roles module whether `role` holds `permission` through
 /// the `role.check` hook. Fails closed: no answer means not allowed

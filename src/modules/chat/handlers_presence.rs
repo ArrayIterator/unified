@@ -18,7 +18,7 @@ pub(crate) async fn set_presence(
 ) -> HttpResponse {
     let result: UnifiedResult<PresenceEntry> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let actor = actor_id(&req)?;
         let entry = PresenceEntry {
             user_id: actor.clone(),

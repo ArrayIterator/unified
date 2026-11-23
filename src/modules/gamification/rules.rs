@@ -96,7 +96,7 @@ pub(crate) async fn create_rule(
     let debug = ctx.is_debug();
     let result: UnifiedResult<GamificationRule> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_GAMIFICATION_MANAGE)?;
         let input = body.into_inner();
@@ -185,11 +185,11 @@ pub(crate) async fn update_rule(
     let debug = ctx.is_debug();
     let result: UnifiedResult<GamificationRule> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_GAMIFICATION_MANAGE)?;
         let mut rule = load_rule(&state, &path.into_inner())?;
-        require_record_in_company_scope(&rule.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&rule.company_id, &_scope)?;
         let input = body.into_inner();
         if let Some(name) = &input.name {
             rule.name = require_text(name, "name", MAX_NAME_LEN)?;
@@ -248,11 +248,11 @@ pub(crate) async fn delete_rule(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_GAMIFICATION_MANAGE)?;
         let rule = load_rule(&state, &path.into_inner())?;
-        require_record_in_company_scope(&rule.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&rule.company_id, &_scope)?;
         let id = rule.id;
         state.rules.remove(&id);
         state.emit(

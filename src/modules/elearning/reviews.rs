@@ -106,7 +106,7 @@ pub(crate) async fn create_course_review(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Review> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_ELEARNING_VIEW)?;
         let course = load_course(&state, &path.into_inner())?;
@@ -194,7 +194,7 @@ pub(crate) async fn update_review(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Review> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_ELEARNING_VIEW)?;
         let mut row = load_review(&state, &path.into_inner())?;
@@ -241,7 +241,7 @@ pub(crate) async fn delete_review(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_ELEARNING_VIEW)?;
         let row = load_review(&state, &path.into_inner())?;

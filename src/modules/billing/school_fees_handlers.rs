@@ -197,7 +197,7 @@ pub(crate) async fn create_fee_type(
 ) -> HttpResponse {
     let result: UnifiedResult<SchoolFeeType> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = fee_caller(&req)?;
         fee_require_manage(&ctx, &caller)?;
         let input = body.into_inner();
@@ -292,7 +292,7 @@ pub(crate) async fn update_fee_type(
 ) -> HttpResponse {
     let result: UnifiedResult<SchoolFeeType> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = fee_caller(&req)?;
         fee_require_manage(&ctx, &caller)?;
         let input = body.into_inner();
@@ -373,7 +373,7 @@ pub(crate) async fn delete_fee_type(
 ) -> HttpResponse {
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = fee_caller(&req)?;
         fee_require_manage(&ctx, &caller)?;
         if !state.fee_types.contains_key(path.as_str()) {
@@ -500,7 +500,7 @@ pub(crate) async fn create_fee_schedule(
 ) -> HttpResponse {
     let result: UnifiedResult<StudentFeeSchedule> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = fee_caller(&req)?;
         fee_require_manage(&ctx, &caller)?;
         let input = body.into_inner();
@@ -653,7 +653,7 @@ pub(crate) async fn update_fee_schedule(
 ) -> HttpResponse {
     let result: UnifiedResult<StudentFeeSchedule> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = fee_caller(&req)?;
         fee_require_manage(&ctx, &caller)?;
         let input = body.into_inner();
@@ -932,7 +932,7 @@ pub(crate) async fn pay_fee_charge(
 ) -> HttpResponse {
     let result: UnifiedResult<FeeCharge> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = fee_caller(&req)?;
         fee_require_view(&ctx, &caller)?;
         let input = body.into_inner();
@@ -964,7 +964,7 @@ pub(crate) async fn pay_fee_charge(
             .get(path.as_str())
             .map(|entry| entry.value().clone())
             .ok_or_else(|| UnifiedError::not_found("Fee charge not found"))?;
-        require_record_in_company_scope(&charge.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&charge.company_id, &_scope)?;
         // Managers may pay any charge; anyone else may only pay a
         // charge they can view (their own, or their child's).
         if !fee_is_manager(&ctx, &caller) {
@@ -1006,7 +1006,7 @@ pub(crate) async fn void_fee_charge(
 ) -> HttpResponse {
     let result: UnifiedResult<FeeCharge> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = fee_caller(&req)?;
         fee_require_manage(&ctx, &caller)?;
         let charge = state
@@ -1014,7 +1014,7 @@ pub(crate) async fn void_fee_charge(
             .get(path.as_str())
             .map(|entry| entry.value().clone())
             .ok_or_else(|| UnifiedError::not_found("Fee charge not found"))?;
-        require_record_in_company_scope(&charge.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&charge.company_id, &_scope)?;
         if charge.status == "paid" {
             return Err(UnifiedError::unprocessable(
                 "A paid fee charge cannot be voided",

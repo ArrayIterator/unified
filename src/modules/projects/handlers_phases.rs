@@ -98,7 +98,7 @@ pub(crate) async fn create_project_phase(
     let (viewer_id, viewer_role) = viewer_of(&req);
     let result: UnifiedResult<ProjectPhase> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let project = s4_resolve_project_for_write(
             &state,
             path.as_str(),
@@ -206,7 +206,7 @@ pub(crate) async fn update_project_phase(
     let (project_id, phase_id) = path.into_inner();
     let result: UnifiedResult<ProjectPhase> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let project = s4_resolve_project_for_write(
             &state,
             &project_id,
@@ -291,7 +291,7 @@ pub(crate) async fn delete_project_phase(
     let (project_id, phase_id) = path.into_inner();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let project = s4_resolve_project_for_write(
             &state,
             &project_id,
@@ -339,7 +339,7 @@ pub(crate) async fn decide_phase_gate(
     let (project_id, phase_id) = path.into_inner();
     let result: UnifiedResult<ProjectPhase> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let project = s4_resolve_project_for_write(
             &state,
             &project_id,
@@ -418,7 +418,7 @@ pub(crate) async fn complete_project_phase(
     let (project_id, phase_id) = path.into_inner();
     let result: UnifiedResult<ProjectPhase> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let project = s4_resolve_project_for_write(
             &state,
             &project_id,

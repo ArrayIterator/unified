@@ -54,6 +54,7 @@ pub(crate) async fn list_tenants(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
+        require_control_plane(&req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_TENANTS_VIEW)?;
         let params = query.into_inner();
@@ -125,6 +126,7 @@ pub(crate) async fn create_tenant(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
+        require_control_plane(&req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_TENANTS_PROVISION)?;
         let settings = state.settings();
@@ -233,6 +235,7 @@ pub(crate) async fn get_settings(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
+        require_control_plane(&req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_TENANTS_VIEW)?;
         Ok(json!(state.settings()))
@@ -255,6 +258,7 @@ pub(crate) async fn update_settings(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
+        require_control_plane(&req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_TENANTS_MANAGE)?;
         let settings = body.into_inner().validated()?;
@@ -297,6 +301,7 @@ pub(crate) async fn get_tenant_handler(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
+        require_control_plane(&req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_TENANTS_VIEW)?;
         let tenant = get_tenant(&state, &path.into_inner())?;
@@ -321,6 +326,7 @@ pub(crate) async fn get_tenant_context(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
+        require_control_plane(&req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_TENANTS_VIEW)?;
         let tenant = get_tenant(&state, &path.into_inner())?;
@@ -358,6 +364,7 @@ pub(crate) async fn get_provision_status(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
+        require_control_plane(&req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_TENANTS_VIEW)?;
         let tenant = get_tenant(&state, &path.into_inner())?;
@@ -392,6 +399,7 @@ pub(crate) async fn list_provision_steps(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
+        require_control_plane(&req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_TENANTS_VIEW)?;
         let tenant = get_tenant(&state, &path.into_inner())?;
@@ -417,6 +425,7 @@ pub(crate) async fn retry_provisioning(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
+        require_control_plane(&req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_TENANTS_PROVISION)?;
         let mut tenant = get_tenant(&state, &path.into_inner())?;
@@ -473,6 +482,7 @@ pub(crate) async fn suspend_tenant(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
+        require_control_plane(&req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_TENANTS_SUSPEND)?;
         let mut tenant = get_tenant(&state, &path.into_inner())?;
@@ -526,6 +536,7 @@ pub(crate) async fn resume_tenant(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
+        require_control_plane(&req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_TENANTS_MANAGE)?;
         let mut tenant = get_tenant(&state, &path.into_inner())?;
@@ -574,6 +585,7 @@ pub(crate) async fn list_tenant_modules(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
+        require_control_plane(&req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_TENANTS_VIEW)?;
         let tenant = get_tenant(&state, &path.into_inner())?;
@@ -600,6 +612,7 @@ pub(crate) async fn grant_tenant_modules(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
+        require_control_plane(&req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_TENANTS_MANAGE)?;
         let tenant = get_tenant(&state, &path.into_inner())?;
@@ -644,6 +657,7 @@ pub(crate) async fn revoke_tenant_module(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
+        require_control_plane(&req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_TENANTS_MANAGE)?;
         let (raw_id, module_id) = path.into_inner();

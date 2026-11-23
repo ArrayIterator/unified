@@ -73,7 +73,7 @@ pub(crate) async fn apply_vendor(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Vendor> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         let is_admin = check_capability(&ctx, &caller.role, PERM_MARKETPLACE_MANAGE);
@@ -184,7 +184,7 @@ pub(crate) async fn update_vendor(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Vendor> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_MARKETPLACE_MANAGE)?;
@@ -296,7 +296,7 @@ pub(crate) async fn approve_vendor(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Vendor> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_MARKETPLACE_MANAGE)?;
@@ -325,7 +325,7 @@ pub(crate) async fn reject_vendor(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Vendor> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_MARKETPLACE_MANAGE)?;
@@ -359,7 +359,7 @@ pub(crate) async fn suspend_vendor(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Vendor> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_MARKETPLACE_MANAGE)?;
@@ -388,7 +388,7 @@ pub(crate) async fn reactivate_vendor(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Vendor> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_MARKETPLACE_MANAGE)?;

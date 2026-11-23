@@ -22,10 +22,10 @@ pub(crate) async fn rate_support_session(
 ) -> HttpResponse {
     let result: UnifiedResult<ChatRating> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let actor = actor_id(&req)?;
         let session = load_session(&state, &path.into_inner())?;
-        require_record_in_company_scope(&session.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&session.company_id, &_scope)?;
         rating_actor_allowed(&session, &actor)?;
         if session.status != SupportSessionStatus::Closed {
             return Err(UnifiedError::conflict(

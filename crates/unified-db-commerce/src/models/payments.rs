@@ -123,6 +123,9 @@ pub struct PaymentIntent {
     pub connection_id: Uuid,
     pub provider: String,
     pub customer_id: String,
+    /// C11 (migration 000126): tenant stamp. `None` for rows
+    /// written before stamping.
+    pub tenant_id: Option<String>,
     pub order_id: Option<String>,
     pub invoice_id: Option<String>,
     pub amount_minor: i64,
@@ -143,6 +146,7 @@ pub struct NewPaymentIntent {
     pub connection_id: Uuid,
     pub provider: String,
     pub customer_id: String,
+    pub tenant_id: Option<String>,
     pub order_id: Option<String>,
     pub invoice_id: Option<String>,
     pub amount_minor: i64,
@@ -163,6 +167,8 @@ pub struct PaymentTransaction {
     pub provider: String,
     pub kind: String,
     pub customer_id: String,
+    /// C11 (migration 000126): tenant stamp, see `PaymentIntent`.
+    pub tenant_id: Option<String>,
     pub order_id: Option<String>,
     pub invoice_id: Option<String>,
     pub subscription_id: Option<Uuid>,
@@ -186,6 +192,7 @@ pub struct NewPaymentTransaction {
     pub provider: String,
     pub kind: String,
     pub customer_id: String,
+    pub tenant_id: Option<String>,
     pub order_id: Option<String>,
     pub invoice_id: Option<String>,
     pub subscription_id: Option<Uuid>,
@@ -212,6 +219,8 @@ pub struct PaymentMethod {
     pub exp_month: i32,
     pub exp_year: i32,
     pub is_default: bool,
+    /// C11 (migration 000126): tenant stamp, see `PaymentIntent`.
+    pub tenant_id: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -228,6 +237,7 @@ pub struct NewPaymentMethod {
     pub last4: String,
     pub exp_month: i32,
     pub exp_year: i32,
+    pub tenant_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
@@ -237,6 +247,8 @@ pub struct GatewaySubscription {
     pub connection_id: Uuid,
     pub provider: String,
     pub customer_id: String,
+    /// C11 (migration 000126): tenant stamp, see `PaymentIntent`.
+    pub tenant_id: Option<String>,
     pub order_id: Option<String>,
     pub plan_id: Option<String>,
     pub amount_minor: i64,
@@ -260,6 +272,7 @@ pub struct NewGatewaySubscription {
     pub connection_id: Uuid,
     pub provider: String,
     pub customer_id: String,
+    pub tenant_id: Option<String>,
     pub order_id: Option<String>,
     pub plan_id: Option<String>,
     pub amount_minor: i64,

@@ -8,7 +8,7 @@ use actix_web::{web, HttpRequest, HttpResponse};
 use serde_json::{json, Value};
 use std::sync::{Arc};
 use super::helpers::{
-    caller, caller_company, check_capability, in_company_scope, require_company_match,
+    caller, caller_company, require_company_for_write, check_capability, in_company_scope, require_company_match,
     require_company_match_for, require_permission, require_product_in_scope,
     require_record_in_company_scope, require_tenant,
 };
@@ -100,7 +100,7 @@ pub(crate) async fn create_product(
 ) -> HttpResponse {
     let result: UnifiedResult<ProductDetail> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRODUCTS_CREATE)?;
         let input = body.into_inner();
@@ -278,7 +278,7 @@ pub(crate) async fn update_product(
 ) -> HttpResponse {
     let result: UnifiedResult<ProductDetail> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRODUCTS_MANAGE)?;
         let input = body.into_inner();
@@ -331,7 +331,7 @@ pub(crate) async fn update_product(
             .get(path.as_str())
             .map(|entry| entry.value().clone())
             .ok_or_else(|| UnifiedError::not_found("Product not found"))?;
-        require_record_in_company_scope(&existing.vendor_company_id, &_scope)?;
+        require_record_writable_in_company_scope(&existing.vendor_company_id, &_scope)?;
         // A newly-named vendor must match the caller scope; omitting
         // it keeps the stored vendor (the returned value is
         // discarded — only the check matters here).
@@ -570,7 +570,7 @@ pub(crate) async fn delete_product(
 ) -> HttpResponse {
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRODUCTS_MANAGE)?;
         let id = path.as_str().to_string();
@@ -667,7 +667,7 @@ pub(crate) async fn transition_product(
 ) -> HttpResponse {
     let result: UnifiedResult<ProductDetail> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRODUCTS_MANAGE)?;
         let target = body.into_inner().to;
@@ -681,7 +681,7 @@ pub(crate) async fn transition_product(
             .products
             .get_mut(path.as_str())
             .ok_or_else(|| UnifiedError::not_found("Product not found"))?;
-        require_record_in_company_scope(&product.vendor_company_id, &_scope)?;
+        require_record_writable_in_company_scope(&product.vendor_company_id, &_scope)?;
         validate_status_transition(&product.status, &target)?;
         let from = product.status.clone();
         product.status = target.clone();
@@ -720,14 +720,14 @@ pub(crate) async fn list_product(
 ) -> HttpResponse {
     let result: UnifiedResult<ProductDetail> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRODUCTS_MANAGE)?;
         let mut product = state
             .products
             .get_mut(path.as_str())
             .ok_or_else(|| UnifiedError::not_found("Product not found"))?;
-        require_record_in_company_scope(&product.vendor_company_id, &_scope)?;
+        require_record_writable_in_company_scope(&product.vendor_company_id, &_scope)?;
         if product.status != "active" {
             return Err(UnifiedError::unprocessable(
                 "Only active products can be listed in the store",
@@ -757,14 +757,14 @@ pub(crate) async fn delist_product(
 ) -> HttpResponse {
     let result: UnifiedResult<ProductDetail> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRODUCTS_MANAGE)?;
         let mut product = state
             .products
             .get_mut(path.as_str())
             .ok_or_else(|| UnifiedError::not_found("Product not found"))?;
-        require_record_in_company_scope(&product.vendor_company_id, &_scope)?;
+        require_record_writable_in_company_scope(&product.vendor_company_id, &_scope)?;
         if !product.listed {
             return Err(UnifiedError::conflict("Product is not listed"));
         }
@@ -914,7 +914,7 @@ pub(crate) async fn create_support_ticket(
 ) -> HttpResponse {
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRODUCTS_CREATE)?;
         let input = body.into_inner();

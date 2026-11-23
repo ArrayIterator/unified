@@ -64,7 +64,7 @@ pub(crate) async fn create_field(
     let debug = ctx.is_debug();
     let result: UnifiedResult<FormField> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_FORMS_MANAGE)?;
         let form = load_form(&state, &path.into_inner())?;
@@ -143,7 +143,7 @@ pub(crate) async fn update_field(
     let debug = ctx.is_debug();
     let result: UnifiedResult<FormField> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_FORMS_MANAGE)?;
         let (form_id, field_id) = path.into_inner();
@@ -269,7 +269,7 @@ pub(crate) async fn delete_field(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_FORMS_MANAGE)?;
         let (form_id, field_id) = path.into_inner();
@@ -304,7 +304,7 @@ pub(crate) async fn reorder_fields(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Vec<FormField>> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_FORMS_MANAGE)?;
         let form = load_form(&state, &path.into_inner())?;

@@ -72,7 +72,7 @@ pub(crate) async fn create_season(
     let debug = ctx.is_debug();
     let result: UnifiedResult<GamificationSeason> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_GAMIFICATION_MANAGE)?;
         let input = body.into_inner();
@@ -187,11 +187,11 @@ pub(crate) async fn update_season(
     let debug = ctx.is_debug();
     let result: UnifiedResult<GamificationSeason> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_GAMIFICATION_MANAGE)?;
         let mut season = load_season(&state, &path.into_inner())?;
-        require_record_in_company_scope(&season.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&season.company_id, &_scope)?;
         if season.status == "ended" {
             return Err(UnifiedError::conflict("An ended season cannot be updated"));
         }
@@ -234,11 +234,11 @@ pub(crate) async fn start_season(
     let debug = ctx.is_debug();
     let result: UnifiedResult<GamificationSeason> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_GAMIFICATION_MANAGE)?;
         let mut season = load_season(&state, &path.into_inner())?;
-        require_record_in_company_scope(&season.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&season.company_id, &_scope)?;
         if season.status != "upcoming" {
             return Err(UnifiedError::conflict(format!(
                 "Only an upcoming season can be started (status is \"{}\")",
@@ -301,11 +301,11 @@ pub(crate) async fn end_season(
     let debug = ctx.is_debug();
     let result: UnifiedResult<GamificationSeason> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_GAMIFICATION_MANAGE)?;
         let mut season = load_season(&state, &path.into_inner())?;
-        require_record_in_company_scope(&season.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&season.company_id, &_scope)?;
         if season.status != "active" {
             return Err(UnifiedError::conflict(format!(
                 "Only an active season can be ended (status is \"{}\")",

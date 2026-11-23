@@ -75,7 +75,7 @@ pub(crate) async fn create_canned_response(
         Ok(tenant) => tenant,
         Err(error) => return json::error_response(&error, false),
     };
-    let _scope = match caller_company(&_tenant, &req) {
+    let _scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return json::error_response(&error, false),
     };
@@ -154,7 +154,7 @@ pub(crate) async fn update_canned_response(
         Ok(tenant) => tenant,
         Err(error) => return json::error_response(&error, false),
     };
-    let _scope = match caller_company(&_tenant, &req) {
+    let _scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return json::error_response(&error, false),
     };
@@ -206,7 +206,7 @@ pub(crate) async fn delete_canned_response(
         Ok(tenant) => tenant,
         Err(error) => return json::error_response(&error, false),
     };
-    let _scope = match caller_company(&_tenant, &req) {
+    let _scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return json::error_response(&error, false),
     };
@@ -236,7 +236,7 @@ pub(crate) async fn apply_canned_response(
         Ok(tenant) => tenant,
         Err(error) => return json::error_response(&error, false),
     };
-    let _scope = match caller_company(&_tenant, &req) {
+    let _scope = match require_company_for_write(&_tenant, &req) {
         Ok(scope) => scope,
         Err(error) => return json::error_response(&error, false),
     };
@@ -256,6 +256,10 @@ pub(crate) async fn apply_canned_response(
             .tickets
             .get_mut(path.as_str())
             .ok_or_else(|| UnifiedError::not_found("Ticket not found"))?;
+        // C3 task 315: a canned reply mutates the ticket (comment
+        // plus status), so the ticket must belong to the caller's
+        // company; a shared (global) ticket is platform-only.
+        require_record_writable_in_company_scope(&ticket.company_id, &_scope)?;
         // A canned reply is an agent reply: it cannot continue a
         // resolved or closed ticket.
         if ticket.status == "resolved" || ticket.status == "closed" {
@@ -304,62 +308,6 @@ pub(crate) async fn apply_canned_response(
 #[cfg(test)]
 mod tests {
 
-    /// Build a request carrying the server-verified caller the auth
-    /// middleware would attach for this user and role. The old
-    /// self-asserted identity headers grant nothing,
-    /// so tests attach the verified caller to the request
-    /// extensions instead.
-    fn verified_request(user_id: &str, role: &str) -> actix_web::HttpRequest {
-        use actix_web::HttpMessage;
-        let req = actix_web::test::TestRequest::default().to_http_request();
-        req.extensions_mut().insert(
-            unified_core::auth::Caller::verified(test_user_uuid(user_id), Vec::new())
-                .with_roles(vec![role.to_string()]),
-        );
-        req.extensions_mut()
-            .insert(unified_core::middleware::TenantContext {
-                tenant_id: uuid::Uuid::now_v7().to_string(),
-                company_id: String::new(),
-                site_id: String::new(),
-                kind: unified_core::middleware::TenantKind::Subdomain,
-                host: "tenant.example.test".to_string(),
-                scope: None,
-                product_id: None,
-                package_id: None,
-                product_subdomain_id: None,
-            },
-        );
-        req
-    }
-
-    /// Build a request carrying a verified caller with no roles
-    /// resolved: the caller resolves, but holds the anonymous role.
-    /// This is the "no role" case in the new model (roles are
-    /// resolved server-side, never claimed in a header).
-    fn verified_request_without_roles(user_id: &str) -> actix_web::HttpRequest {
-        use actix_web::HttpMessage;
-        let req = actix_web::test::TestRequest::default().to_http_request();
-        req.extensions_mut()
-            .insert(unified_core::auth::Caller::verified(
-                test_user_uuid(user_id),
-                Vec::new(),
-            ));
-        req.extensions_mut()
-            .insert(unified_core::middleware::TenantContext {
-                tenant_id: uuid::Uuid::now_v7().to_string(),
-                company_id: String::new(),
-                site_id: String::new(),
-                kind: unified_core::middleware::TenantKind::Subdomain,
-                host: "tenant.example.test".to_string(),
-                scope: None,
-                product_id: None,
-                package_id: None,
-                product_subdomain_id: None,
-            },
-        );
-        req
-    }
-
     /// Deterministic test-user identity: distinct names map to
     /// distinct UUIDs (FNV-1a folded into the low bits), so
     /// ownership tests can still tell two users apart. A value
@@ -380,6 +328,35 @@ mod tests {
     use actix_web::http::StatusCode;
     use actix_web::test::TestRequest;
 
+    /// The company the canned-reply test acts as (C3 task 315).
+    const TEST_COMPANY: &str = "company-a";
+
+    /// A request scoped to the test company (C3 task 315):
+    /// `apply_canned_response` requires a resolved company, and
+    /// the seeded ticket belongs to the same company.
+    fn scoped_request(user_id: &str, role: &str) -> actix_web::HttpRequest {
+        use actix_web::HttpMessage;
+        let req = actix_web::test::TestRequest::default().to_http_request();
+        req.extensions_mut().insert(
+            unified_core::auth::Caller::verified(test_user_uuid(user_id), Vec::new())
+                .with_company(TEST_COMPANY.to_string())
+                .with_roles(vec![role.to_string()]),
+        );
+        req.extensions_mut()
+            .insert(unified_core::middleware::TenantContext {
+                tenant_id: uuid::Uuid::now_v7().to_string(),
+                company_id: TEST_COMPANY.to_string(),
+                site_id: String::new(),
+                kind: unified_core::middleware::TenantKind::Subdomain,
+                host: "tenant.example.test".to_string(),
+                scope: None,
+                product_id: None,
+                package_id: None,
+                product_subdomain_id: None,
+            });
+        req
+    }
+
     fn allowing_state() -> Arc<TicketsState> {
         let state = Arc::new(TicketsState::new());
         let handler: HookHandler = Arc::new(|ctx: &mut HookContext| {
@@ -397,7 +374,7 @@ mod tests {
                 title: "Help".to_string(),
                 body: "Something broke".to_string(),
                 user_id: "user-1".to_string(),
-                company_id: None,
+                company_id: Some(TEST_COMPANY.to_string()),
                 priority: Some("low".to_string()),
                 category: None,
                 product: None,
@@ -416,7 +393,7 @@ mod tests {
         state
             .canned_responses
             .insert(canned.id.clone(), canned.clone());
-        let request = || verified_request("agent-1", "admin");
+        let request = || scoped_request("agent-1", "admin");
 
         // A waiting ticket moves to in progress on the canned reply.
         state

@@ -89,7 +89,7 @@ pub(crate) async fn create_service(
     let debug = ctx.is_debug();
     let result: UnifiedResult<AppointmentService> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_APPOINTMENTS_MANAGE)?;
         let input = body.into_inner();
@@ -183,13 +183,13 @@ pub(crate) async fn update_service(
     let debug = ctx.is_debug();
     let result: UnifiedResult<AppointmentService> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_APPOINTMENTS_MANAGE)?;
         let input = body.into_inner();
         let settings = state.settings_snapshot();
         let mut service = load_service(&state, &path.into_inner())?;
-        require_record_in_company_scope(&service.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&service.company_id, &_scope)?;
         if let Some(name) = &input.name {
             service.name = require_text(name, "name", MAX_NAME_LEN)?;
         }
@@ -277,11 +277,11 @@ pub(crate) async fn delete_service(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_APPOINTMENTS_MANAGE)?;
         let service = load_service(&state, &path.into_inner())?;
-        require_record_in_company_scope(&service.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&service.company_id, &_scope)?;
         let blocking = state.appointments.iter().any(|entry| {
             let appointment = entry.value();
             appointment.service_id == service.id && is_blocking(appointment.status)

@@ -67,7 +67,7 @@ pub(crate) async fn create_table(
     let debug = ctx.is_debug();
     let result: UnifiedResult<PricingTable> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRICING_MANAGE)?;
@@ -165,7 +165,7 @@ pub(crate) async fn update_table(
     let debug = ctx.is_debug();
     let result: UnifiedResult<PricingTable> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRICING_MANAGE)?;
@@ -260,7 +260,7 @@ pub(crate) async fn delete_table(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRICING_MANAGE)?;
@@ -301,7 +301,7 @@ pub(crate) async fn publish_table(
     let debug = ctx.is_debug();
     let result: UnifiedResult<PricingTable> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRICING_MANAGE)?;
@@ -334,7 +334,7 @@ pub(crate) async fn unpublish_table(
     let debug = ctx.is_debug();
     let result: UnifiedResult<PricingTable> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRICING_MANAGE)?;
@@ -467,7 +467,7 @@ pub(crate) async fn create_tier(
     let debug = ctx.is_debug();
     let result: UnifiedResult<PricingTier> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRICING_MANAGE)?;
@@ -565,7 +565,7 @@ pub(crate) async fn update_tier(
     let debug = ctx.is_debug();
     let result: UnifiedResult<PricingTier> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRICING_MANAGE)?;
@@ -657,7 +657,7 @@ pub(crate) async fn delete_tier(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRICING_MANAGE)?;
@@ -737,7 +737,7 @@ pub(crate) async fn create_feature(
     let debug = ctx.is_debug();
     let result: UnifiedResult<TierFeature> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRICING_MANAGE)?;
@@ -810,7 +810,7 @@ pub(crate) async fn update_feature(
     let debug = ctx.is_debug();
     let result: UnifiedResult<TierFeature> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRICING_MANAGE)?;
@@ -856,7 +856,7 @@ pub(crate) async fn delete_feature(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRICING_MANAGE)?;

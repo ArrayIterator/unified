@@ -226,7 +226,7 @@ pub(crate) async fn award_points(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_GAMIFICATION_MANAGE)?;
         let input = body.into_inner();
@@ -289,7 +289,7 @@ pub(crate) async fn adjust_points(
     let debug = ctx.is_debug();
     let result: UnifiedResult<PointsLedgerEntry> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_GAMIFICATION_MANAGE)?;
         let input = body.into_inner();

@@ -76,7 +76,7 @@ pub(crate) async fn create_reward(
     let debug = ctx.is_debug();
     let result: UnifiedResult<GamificationReward> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_GAMIFICATION_MANAGE)?;
         let input = body.into_inner();
@@ -144,7 +144,7 @@ pub(crate) async fn update_reward(
     let debug = ctx.is_debug();
     let result: UnifiedResult<GamificationReward> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_GAMIFICATION_MANAGE)?;
         let mut reward = load_reward(&state, &path.into_inner())?;
@@ -185,7 +185,7 @@ pub(crate) async fn delete_reward(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_GAMIFICATION_MANAGE)?;
         let reward = load_reward(&state, &path.into_inner())?;
@@ -230,7 +230,7 @@ pub(crate) async fn request_reward(
     let debug = ctx.is_debug();
     let result: UnifiedResult<GamificationRewardRequest> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_GAMIFICATION_VIEW)?;
         let reward = load_reward(&state, &path.into_inner())?;
@@ -415,11 +415,11 @@ pub(crate) async fn approve_reward_request(
     let debug = ctx.is_debug();
     let result: UnifiedResult<GamificationRewardRequest> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_GAMIFICATION_MANAGE)?;
         let mut request = load_reward_request(&state, &path.into_inner())?;
-        require_record_in_company_scope(&request.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&request.company_id, &_scope)?;
         if request.status != "requested" {
             return Err(UnifiedError::conflict(format!(
                 "Only a requested reward can be approved (status is \"{}\")",
@@ -492,11 +492,11 @@ pub(crate) async fn reject_reward_request(
     let debug = ctx.is_debug();
     let result: UnifiedResult<GamificationRewardRequest> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_GAMIFICATION_MANAGE)?;
         let mut request = load_reward_request(&state, &path.into_inner())?;
-        require_record_in_company_scope(&request.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&request.company_id, &_scope)?;
         if request.status != "requested" {
             return Err(UnifiedError::conflict(format!(
                 "Only a requested reward can be rejected (status is \"{}\")",
@@ -538,11 +538,11 @@ pub(crate) async fn fulfill_reward_request(
     let debug = ctx.is_debug();
     let result: UnifiedResult<GamificationRewardRequest> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_GAMIFICATION_MANAGE)?;
         let mut request = load_reward_request(&state, &path.into_inner())?;
-        require_record_in_company_scope(&request.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&request.company_id, &_scope)?;
         if request.status != "approved" {
             return Err(UnifiedError::conflict(format!(
                 "Only an approved reward can be fulfilled (status is \"{}\")",

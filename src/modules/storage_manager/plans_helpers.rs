@@ -65,10 +65,11 @@ pub(crate) fn active_assignment_for_buyer(
         .max_by(|a, b| a.assigned_at.cmp(&b.assigned_at))
 }
 
-/// Resolve the company for `get_my_plan`. Admins may ask about any
-/// buyer via `?company_id=`; a non-admin's company comes ONLY from
-/// the verified caller scope — the query parameter is ignored for
-/// them, so a non-admin cannot read another company's plan,
+/// Resolve the company for `get_my_plan`. Platform admins (see
+/// `is_platform_admin`, C3 task 315 decision (a)) may ask about
+/// any buyer via `?company_id=`; a non-admin's company comes ONLY
+/// from the verified caller scope — the query parameter is ignored
+/// for them, so a non-admin cannot read another company's plan,
 /// assignment status or live usage.
 pub(crate) fn resolve_my_plan_company(
     is_admin: bool,

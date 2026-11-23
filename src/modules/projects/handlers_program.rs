@@ -87,7 +87,7 @@ pub(crate) async fn create_program_increment(
     let (viewer_id, viewer_role) = viewer_of(&req);
     let result: UnifiedResult<ProjectProgramIncrement> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let project = s4_resolve_project_for_write(
             &state,
             path.as_str(),
@@ -181,7 +181,7 @@ pub(crate) async fn update_program_increment(
     let (project_id, pi_id) = path.into_inner();
     let result: UnifiedResult<ProjectProgramIncrement> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let project = s4_resolve_project_for_write(
             &state,
             &project_id,
@@ -246,7 +246,7 @@ pub(crate) async fn delete_program_increment(
     let (project_id, pi_id) = path.into_inner();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let project = s4_resolve_project_for_write(
             &state,
             &project_id,
@@ -285,7 +285,7 @@ pub(crate) async fn plan_program_increment(
     let (project_id, pi_id) = path.into_inner();
     let result: UnifiedResult<ProjectProgramIncrement> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let project = s4_resolve_project_for_write(
             &state,
             &project_id,
@@ -399,7 +399,7 @@ pub(crate) async fn create_business_case(
     let (viewer_id, viewer_role) = viewer_of(&req);
     let result: UnifiedResult<ProjectBusinessCase> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let project = s4_resolve_project_for_write(
             &state,
             path.as_str(),
@@ -488,7 +488,7 @@ pub(crate) async fn update_business_case(
     let (project_id, case_id) = path.into_inner();
     let result: UnifiedResult<ProjectBusinessCase> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let project = s4_resolve_project_for_write(
             &state,
             &project_id,
@@ -557,7 +557,7 @@ pub(crate) async fn delete_business_case(
     let (project_id, case_id) = path.into_inner();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let project = s4_resolve_project_for_write(
             &state,
             &project_id,
@@ -596,7 +596,7 @@ pub(crate) async fn save_exception_report(
     let (project_id, case_id) = path.into_inner();
     let result: UnifiedResult<ProjectBusinessCase> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let project = s4_resolve_project_for_write(
             &state,
             &project_id,

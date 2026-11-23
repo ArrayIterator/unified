@@ -104,7 +104,7 @@ pub(super) async fn create_route(
     let debug = ctx.is_debug();
     let result: UnifiedResult<DeliveryRoute> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LOGISTICS_CREATE)?;
         let input = body.into_inner();
@@ -204,11 +204,11 @@ pub(super) async fn update_route(
     let debug = ctx.is_debug();
     let result: UnifiedResult<DeliveryRoute> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LOGISTICS_MANAGE)?;
         let mut route = load_route(&state, &path)?;
-        require_record_in_company_scope(&route.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&route.company_id, &_scope)?;
         if route.status == "completed" || route.status == "cancelled" {
             return Err(UnifiedError::conflict(format!(
                 "A {} route cannot be edited",
@@ -295,11 +295,11 @@ pub(super) async fn delete_route(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LOGISTICS_MANAGE)?;
         let route = load_route(&state, &path)?;
-        require_record_in_company_scope(&route.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&route.company_id, &_scope)?;
         if route.status == "active" {
             return Err(UnifiedError::conflict(
                 "An active route cannot be deleted; complete or cancel it first",
@@ -341,11 +341,11 @@ pub(super) async fn assign_route(
     let debug = ctx.is_debug();
     let result: UnifiedResult<DeliveryRoute> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LOGISTICS_MANAGE)?;
         let mut route = load_route(&state, &path)?;
-        require_record_in_company_scope(&route.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&route.company_id, &_scope)?;
         if route.status == "completed" || route.status == "cancelled" {
             return Err(UnifiedError::conflict(format!(
                 "A {} route cannot be assigned",
@@ -439,7 +439,7 @@ pub(super) async fn create_route_stop(
     let debug = ctx.is_debug();
     let result: UnifiedResult<RouteStop> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LOGISTICS_MANAGE)?;
         let route = load_route(&state, &path)?;
@@ -521,7 +521,7 @@ pub(super) async fn update_route_stop(
     let debug = ctx.is_debug();
     let result: UnifiedResult<RouteStop> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LOGISTICS_MANAGE)?;
         let (route_raw, stop_raw) = path.into_inner();
@@ -601,7 +601,7 @@ pub(super) async fn delete_route_stop(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LOGISTICS_MANAGE)?;
         let (route_raw, stop_raw) = path.into_inner();
@@ -698,11 +698,11 @@ pub(super) async fn reorder_route(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LOGISTICS_MANAGE)?;
         let route = load_route(&state, &path)?;
-        require_record_in_company_scope(&route.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&route.company_id, &_scope)?;
         if route.status == "completed" || route.status == "cancelled" {
             return Err(UnifiedError::conflict(format!(
                 "A {} route cannot be reordered",

@@ -21,7 +21,7 @@ pub(crate) async fn create_channel(
 ) -> HttpResponse {
     let result: UnifiedResult<Channel> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let actor = actor_id(&req)?;
         let kind = body.kind.unwrap_or_default();
         if kind == ChannelKind::Dm {
@@ -170,10 +170,10 @@ pub(crate) async fn update_channel(
 ) -> HttpResponse {
     let result: UnifiedResult<Channel> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let actor = actor_id(&req)?;
         let mut channel = load_channel(&state, &path.into_inner())?;
-        require_record_in_company_scope(&channel.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&channel.company_id, &_scope)?;
         if channel.owner_id != actor {
             return Err(UnifiedError::forbidden(
                 "Only the channel owner can update the channel",
@@ -221,10 +221,10 @@ pub(crate) async fn delete_channel(
 ) -> HttpResponse {
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let actor = actor_id(&req)?;
         let channel = load_channel(&state, &path.into_inner())?;
-        require_record_in_company_scope(&channel.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&channel.company_id, &_scope)?;
         if channel.owner_id != actor {
             return Err(UnifiedError::forbidden(
                 "Only the channel owner can delete the channel",
@@ -254,7 +254,7 @@ pub(crate) async fn add_member(
 ) -> HttpResponse {
     let result: UnifiedResult<Channel> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let actor = actor_id(&req)?;
         let mut channel = load_channel(&state, &path.into_inner())?;
         require_record_in_company_scope(&channel.company_id, &_scope)?;
@@ -293,7 +293,7 @@ pub(crate) async fn remove_member(
 ) -> HttpResponse {
     let result: UnifiedResult<Channel> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let actor = actor_id(&req)?;
         let (raw_id, user_id) = path.into_inner();
         let mut channel = load_channel(&state, &raw_id)?;

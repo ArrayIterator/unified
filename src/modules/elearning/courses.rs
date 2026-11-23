@@ -113,7 +113,7 @@ pub(crate) async fn create_course(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Course> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_teach(&ctx, &caller.role)?;
         let input = body.into_inner();
@@ -212,10 +212,10 @@ pub(crate) async fn update_course(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Course> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         let mut course = load_course(&state, &path.into_inner())?;
-        require_record_in_company_scope(&course.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&course.company_id, &_scope)?;
         require_course_write(&ctx, &caller, &course)?;
         let input = body.into_inner();
         let settings = state.settings();
@@ -295,10 +295,10 @@ pub(crate) async fn delete_course(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         let course = load_course(&state, &path.into_inner())?;
-        require_record_in_company_scope(&course.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&course.company_id, &_scope)?;
         require_course_write(&ctx, &caller, &course)?;
         if state.enrollments.iter().any(|entry| {
             entry.value().course_id == course.id
@@ -382,10 +382,10 @@ pub(crate) async fn transition_course(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Course> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         let mut course = load_course(&state, &path.into_inner())?;
-        require_record_in_company_scope(&course.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&course.company_id, &_scope)?;
         require_course_write(&ctx, &caller, &course)?;
         if !valid_course_transition(&course.status, target) {
             return Err(UnifiedError::unprocessable(format!(

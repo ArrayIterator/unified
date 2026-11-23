@@ -135,7 +135,7 @@ pub(crate) async fn create_project_task(
 ) -> HttpResponse {
     let result: UnifiedResult<ProjectTask> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let input = body.into_inner();
         let (viewer_id, viewer_role) = viewer_of(&req);
         let project = state.get_project(path.as_str())?;
@@ -343,7 +343,7 @@ pub(crate) async fn update_project_task(
 ) -> HttpResponse {
     let result: UnifiedResult<ProjectTask> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let input = body.into_inner();
         let (viewer_id, viewer_role) = viewer_of(&req);
         let task_id = path.into_inner();
@@ -549,7 +549,7 @@ pub(crate) async fn delete_project_task(
 ) -> HttpResponse {
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let (viewer_id, viewer_role) = viewer_of(&req);
         let task_id = path.into_inner();
         let task = state.get_task(&task_id)?;
@@ -595,7 +595,7 @@ pub(crate) async fn move_project_task(
 ) -> HttpResponse {
     let result: UnifiedResult<ProjectTask> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let input = body.into_inner();
         let (viewer_id, viewer_role) = viewer_of(&req);
         let task_id = path.into_inner();
@@ -733,7 +733,7 @@ pub(crate) async fn assign_project_task(
 ) -> HttpResponse {
     let result: UnifiedResult<ProjectTask> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let input = body.into_inner();
         let (viewer_id, viewer_role) = viewer_of(&req);
         let task_id = path.into_inner();
@@ -800,7 +800,7 @@ pub(crate) async fn complete_project_task(
 ) -> HttpResponse {
     let result: UnifiedResult<ProjectTask> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let (viewer_id, viewer_role) = viewer_of(&req);
         let task_id = path.into_inner();
         let existing = state.get_task(&task_id)?;
@@ -862,7 +862,7 @@ pub(crate) async fn reopen_project_task(
 ) -> HttpResponse {
     let result: UnifiedResult<ProjectTask> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let (viewer_id, viewer_role) = viewer_of(&req);
         let task_id = path.into_inner();
         let existing = state.get_task(&task_id)?;

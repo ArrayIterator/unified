@@ -66,7 +66,7 @@ pub(crate) async fn create_lesson_quiz(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Quiz> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         let lesson = load_lesson(&state, &path.into_inner())?;
         let course = load_course(&state, &lesson.course_id.to_string())?;
@@ -144,7 +144,7 @@ pub(crate) async fn update_lesson_quiz(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Quiz> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         let lesson = load_lesson(&state, &path.into_inner())?;
         let course = load_course(&state, &lesson.course_id.to_string())?;
@@ -316,7 +316,7 @@ pub(crate) async fn create_quiz_question(
     let debug = ctx.is_debug();
     let result: UnifiedResult<QuizQuestion> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         let lesson = load_lesson(&state, &path.into_inner())?;
         let course = load_course(&state, &lesson.course_id.to_string())?;
@@ -387,7 +387,7 @@ pub(crate) async fn update_question(
     let debug = ctx.is_debug();
     let result: UnifiedResult<QuizQuestion> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         let mut row = load_question(&state, &path.into_inner())?;
         let quiz = state
@@ -438,7 +438,7 @@ pub(crate) async fn delete_question(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         let row = load_question(&state, &path.into_inner())?;
         let quiz = state
@@ -481,7 +481,7 @@ pub(crate) async fn submit_quiz_attempt(
     let debug = ctx.is_debug();
     let result: UnifiedResult<QuizAttemptView> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_ELEARNING_VIEW)?;
         let lesson = load_lesson(&state, &path.into_inner())?;

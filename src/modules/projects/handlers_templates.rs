@@ -81,7 +81,7 @@ pub(crate) async fn create_project_template(
     let (_viewer_id, viewer_role) = viewer_of(&req);
     let result: UnifiedResult<ProjectTemplate> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_capability(&state, viewer_role.as_deref(), "projects:manage")?;
         let input = body.into_inner();
         let name = input.name.trim().to_string();
@@ -159,7 +159,7 @@ pub(crate) async fn update_project_template(
     let (_viewer_id, viewer_role) = viewer_of(&req);
     let result: UnifiedResult<ProjectTemplate> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_capability(&state, viewer_role.as_deref(), "projects:manage")?;
         let input = body.into_inner();
         if let Some(methodology) = input.methodology.as_ref() {
@@ -221,7 +221,7 @@ pub(crate) async fn delete_project_template(
     let (_viewer_id, viewer_role) = viewer_of(&req);
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_capability(&state, viewer_role.as_deref(), "projects:manage")?;
         let template = state
             .templates
@@ -251,7 +251,7 @@ pub(crate) async fn apply_project_template(
     let (viewer_id, viewer_role) = viewer_of(&req);
     let result: UnifiedResult<Project> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_capability(&state, viewer_role.as_deref(), "projects:manage")?;
         let input = body.into_inner();
         let project = state.get_project(&project_id)?;

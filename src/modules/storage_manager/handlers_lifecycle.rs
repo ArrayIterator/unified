@@ -47,7 +47,7 @@ pub(crate) async fn list_lifecycle(
     // Tenant scoping: a non-admin lists only rules for buckets
     // they may access; an admin lists all. Rules for deleted
     // buckets are hidden from non-admins.
-    let is_admin = is_storage_admin(&ctx, &found.role);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BUCKETS);
     items.retain(|rule| match state.buckets.get(&rule.bucket_id) {
         Some(bucket) => bucket_company_visible(&bucket.value().company_id, &_scope, is_admin),
         None => is_admin,
@@ -104,7 +104,7 @@ pub(crate) async fn create_lifecycle(
         Ok(found) => found,
         Err(error) => return err_response(error, debug),
     };
-    let is_admin = is_storage_admin(&ctx, &found.role);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BUCKETS);
     let result: UnifiedResult<LifecycleRule> = (|| {
         let input = body.into_inner();
         let bucket = state
@@ -175,7 +175,7 @@ pub(crate) async fn get_lifecycle(
         Ok(found) => found,
         Err(error) => return err_response(error, debug),
     };
-    let is_admin = is_storage_admin(&ctx, &found.role);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BUCKETS);
     let result: UnifiedResult<LifecycleRule> = (|| {
         let rule = load_rule(&state, &id)?;
         let bucket = load_bucket(&state, &rule.bucket_id.to_string())?;
@@ -206,7 +206,7 @@ pub(crate) async fn update_lifecycle(
         Ok(found) => found,
         Err(error) => return err_response(error, debug),
     };
-    let is_admin = is_storage_admin(&ctx, &found.role);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BUCKETS);
     let result: UnifiedResult<LifecycleRule> = (|| {
         let input = body.into_inner();
         let mut rule = load_rule(&state, &id)?;
@@ -263,7 +263,7 @@ pub(crate) async fn delete_lifecycle(
         Ok(found) => found,
         Err(error) => return err_response(error, debug),
     };
-    let is_admin = is_storage_admin(&ctx, &found.role);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BUCKETS);
     let result: UnifiedResult<Value> = (|| {
         let rule = load_rule(&state, &id)?;
         let bucket = load_bucket(&state, &rule.bucket_id.to_string())?;
@@ -483,7 +483,7 @@ pub(crate) async fn run_lifecycle(
     // enqueue a run for a rule on a bucket they may not access, and
     // an unscoped all-rules run is refused for non-admins (the
     // scheduled run could not be scoped later).
-    let is_admin = is_storage_admin(&ctx, &found.role);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BUCKETS);
     if input.enqueue.unwrap_or(false) {
         match (input.rule_id, input.bucket_id) {
             (Some(rule_id), _) => {

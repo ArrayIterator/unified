@@ -31,7 +31,7 @@ pub(crate) async fn link_ticket(
 ) -> HttpResponse {
     let result: UnifiedResult<TicketLink> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_KNOWLEDGEBASE_MANAGE)?;
         let id = parse_uuid(&path.into_inner(), "article")?;
@@ -108,7 +108,7 @@ pub(crate) async fn unlink_ticket(
 ) -> HttpResponse {
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_KNOWLEDGEBASE_MANAGE)?;
         let (raw_id, ticket_id) = path.into_inner();

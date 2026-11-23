@@ -75,6 +75,7 @@ pub(crate) async fn list_distributions(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
+        require_control_plane(&req)?;
         require_caller_capability(&ctx, &req, "licensing:view")?;
         let mut items: Vec<LicenseDistributionView> = license_distributions_store()
             .iter()
@@ -106,6 +107,7 @@ pub(crate) async fn create_distribution(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<LicenseDistributionView> = (|| {
+        require_control_plane(&req)?;
         require_caller_capability(&ctx, &req, "licensing:manage")?;
         let product = validate_product_slug(&body.product)?;
         let Some(settings) = product_settings_for(&product) else {
@@ -171,6 +173,7 @@ pub(crate) async fn get_distribution(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<LicenseDistributionView> = (|| {
+        require_control_plane(&req)?;
         require_caller_capability(&ctx, &req, "licensing:view")?;
         license_distributions_store()
             .get(&id.into_inner())
@@ -188,6 +191,7 @@ pub(crate) async fn update_distribution(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<LicenseDistributionView> = (|| {
+        require_control_plane(&req)?;
         require_caller_capability(&ctx, &req, "licensing:manage")?;
         let id = id.into_inner();
         let mut record = license_distributions_store()
@@ -237,6 +241,7 @@ pub(crate) async fn delete_distribution(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
+        require_control_plane(&req)?;
         require_caller_capability(&ctx, &req, "licensing:manage")?;
         let id = id.into_inner();
         if license_distributions_store().remove(&id).is_none() {

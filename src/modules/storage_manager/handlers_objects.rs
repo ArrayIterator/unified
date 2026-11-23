@@ -38,7 +38,7 @@ pub(crate) async fn list_objects(
         Ok(found) => found,
         Err(error) => return err_response(error, debug),
     };
-    let is_admin = is_storage_admin(&ctx, &found.role);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BUCKETS);
     let bucket = match load_bucket(&state, &id) {
         Ok(bucket) => bucket,
         Err(error) => return err_response(error, debug),
@@ -174,7 +174,7 @@ pub(crate) async fn upload_object(
         Ok(found) => found,
         Err(error) => return err_response(error, debug),
     };
-    let is_admin = is_storage_admin(&ctx, &found.role);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BUCKETS);
     let result: UnifiedResult<Value> = (|| async {
         let bucket = load_bucket(&state, &id)?;
         // Tenant scoping: a non-admin uploads only into a bucket
@@ -376,7 +376,7 @@ pub(crate) async fn download_object(
         Ok(found) => found,
         Err(error) => return err_response(error, debug),
     };
-    let is_admin = is_storage_admin(&ctx, &found.role);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BUCKETS);
     let bucket = match load_bucket(&state, &id) {
         Ok(bucket) => bucket,
         Err(error) => return err_response(error, debug),
@@ -490,7 +490,7 @@ pub(crate) async fn delete_object(
         Ok(found) => found,
         Err(error) => return err_response(error, debug),
     };
-    let is_admin = is_storage_admin(&ctx, &found.role);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BUCKETS);
     let result: UnifiedResult<Value> = (|| async {
         let bucket = load_bucket(&state, &id)?;
         check_bucket_access(&bucket, _scope.as_deref(), is_admin)?;
@@ -558,7 +558,7 @@ pub(crate) async fn verify_object(
         Ok(found) => found,
         Err(error) => return err_response(error, debug),
     };
-    let is_admin = is_storage_admin(&ctx, &found.role);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BUCKETS);
     let result: UnifiedResult<Value> = (|| async {
         let bucket = load_bucket(&state, &id)?;
         check_bucket_access(&bucket, _scope.as_deref(), is_admin)?;
@@ -704,7 +704,7 @@ pub(crate) async fn cleanup_orphans(
         Ok(found) => found,
         Err(error) => return err_response(error, debug),
     };
-    let is_admin = is_storage_admin(&ctx, &found.role);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BUCKETS);
     let result: UnifiedResult<Value> = (|| async {
         let bucket = load_bucket(&state, &id)?;
         check_bucket_access(&bucket, _scope.as_deref(), is_admin)?;
@@ -808,7 +808,7 @@ pub(crate) async fn move_object(
         Ok(found) => found,
         Err(error) => return err_response(error, debug),
     };
-    let is_admin = is_storage_admin(&ctx, &found.role);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BUCKETS);
     let result: UnifiedResult<Value> = (|| async {
         let bucket = load_bucket(&state, &id)?;
         check_bucket_access(&bucket, _scope.as_deref(), is_admin)?;

@@ -8,7 +8,7 @@ use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use serde_json::{json, Value};
 use std::sync::{Arc};
 use super::helpers::{
-    caller, caller_company, require_file_in_scope, require_release_in_scope, require_tenant,
+    caller, caller_company, require_company_for_write, require_file_in_scope, require_release_in_scope, require_tenant,
     require_permission,
 };
 use super::types::{CreateReleaseFile, PERM_SOFTWARE_CREATE, PERM_SOFTWARE_MANAGE, PERM_SOFTWARE_READ, ReleaseFile, UpdateReleaseFile, VerifyFile};
@@ -29,7 +29,7 @@ pub(crate) async fn create_release_file(
 ) -> HttpResponse {
     let result: UnifiedResult<ReleaseFile> = (|| {
         let _tenant = require_tenant(&req)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_SOFTWARE_CREATE)?;
         let input = body.into_inner();
@@ -118,7 +118,7 @@ pub(crate) async fn update_release_file(
     let (release_id, file_id) = path.into_inner();
     let result: UnifiedResult<ReleaseFile> = (|| {
         let _tenant = require_tenant(&req)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_SOFTWARE_MANAGE)?;
         require_file_in_scope(&state, &release_id, &file_id, &scope)?;
@@ -171,7 +171,7 @@ pub(crate) async fn delete_release_file(
     let (release_id, file_id) = path.into_inner();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_SOFTWARE_MANAGE)?;
         require_file_in_scope(&state, &release_id, &file_id, &scope)?;
@@ -191,7 +191,7 @@ pub(crate) async fn verify_release_file(
     let (release_id, file_id) = path.into_inner();
     let result: UnifiedResult<ReleaseFile> = (|| {
         let _tenant = require_tenant(&req)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_SOFTWARE_MANAGE)?;
         require_file_in_scope(&state, &release_id, &file_id, &scope)?;

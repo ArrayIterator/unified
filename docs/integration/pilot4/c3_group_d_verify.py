@@ -7,6 +7,13 @@ the module):
   - guarded: body contains `require_tenant(&req)` AND
     `caller_company(&_tenant, &req)` (gate-only idiom: gate first, then
     verified-caller company resolution for the mismatch 403)
+
+Task 315 (2026-11-23): these modules' records carry no company
+field, so under carve-out 3 their writes stay tenant-gate-only
+(the strict `require_company_for_write` gate does not apply here).
+The self-service writes (admissions submit/withdraw, privacy
+consent grant/withdraw, own notifications) are carve-out 1 and
+also keep `caller_company`.
   - order: the guard precedes the first identity/capability call
   - excluded: names passed on the command line after the module
 

@@ -15,7 +15,9 @@ For each module, per routed handler (names appearing in `.to(name)`):
   - guarded: body contains `require_tenant(&req)`
   - order: the guard precedes the first identity/capability call
   - scope-checked: body mentions a scope marker; otherwise gate-only
-    (all group-B modules are gate-only: records carry no company field)
+    (all group-B modules are gate-only: records carry no company field,
+    so under task 315 carve-out 3 their writes stay tenant-gate-only
+    until C11 lands; the strict write gate does not apply here)
   - excluded: names passed on the command line after the module
 
 Usage: c3_group_b_verify.py <module> [excluded ...]
@@ -31,6 +33,16 @@ SCOPE_MARKERS = (
     "in_company_scope",
     "require_record_in_company_scope",
     "require_company_match",
+    # Task 315/320 (2026-11-23): the strict write gate and the
+    # writable record checks count as scope markers too.
+    "require_company_for_write",
+    "require_record_writable_in_company_scope",
+    "require_record_writable_in_company_scope_str",
+    "require_record_writable_in_company_scope_uuid",
+    "require_note_writable_in_company_scope",
+    "require_attempt_writable_in_scope",
+    "require_exam_writable_by_id_in_scope",
+    "require_risk_writable_in_scope",
 )
 
 IDENTITY_CALLS = (

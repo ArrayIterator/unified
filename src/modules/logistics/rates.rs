@@ -90,7 +90,7 @@ pub(super) async fn create_rate_table(
     let debug = ctx.is_debug();
     let result: UnifiedResult<RateTable> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LOGISTICS_CREATE)?;
         let input = body.into_inner();
@@ -174,11 +174,11 @@ pub(super) async fn update_rate_table(
     let debug = ctx.is_debug();
     let result: UnifiedResult<RateTable> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LOGISTICS_MANAGE)?;
         let mut table = load_rate_table(&state, &path)?;
-        require_record_in_company_scope(&table.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&table.company_id, &_scope)?;
         let input = body.into_inner();
         if let Some(name) = &input.name {
             table.name = require_text(name, "name", MAX_NAME_LEN)?;
@@ -249,11 +249,11 @@ pub(super) async fn delete_rate_table(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LOGISTICS_MANAGE)?;
         let table = load_rate_table(&state, &path)?;
-        require_record_in_company_scope(&table.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&table.company_id, &_scope)?;
         state.rate_tables.remove(&table.id);
         state.emit(
             "logistics.rate_table.deleted",

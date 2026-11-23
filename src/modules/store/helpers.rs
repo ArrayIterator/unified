@@ -245,25 +245,27 @@ pub(crate) fn require_company_match_for(
         (Some(body), None) => Err(UnifiedError::forbidden(
             "company_id does not match the caller's company scope",
         )),
-        (None, caller) => Ok(caller.clone()),
+        (None, Some(caller)) => Ok(Some(caller.clone())),
+        (None, None) => Err(UnifiedError::forbidden(
+            "A write requires a resolved company scope",
+        )),
     }
 }
 
 /// True when a record carrying `record_company_id` is visible to a
-/// caller acting in `caller_company`: with a caller scope, only
-/// records carrying exactly that company match -- unscoped
-/// (legacy/global) records are HIDDEN from scoped callers; an
-/// unresolved caller sees global records only. This is the pilot-3
-/// strict idiom, deliberately fail-closed for legacy unscoped rows:
-/// if product wants scoped callers to see global rows, that is a
-/// conscious one-line change here, not an accident of this pilot.
+/// caller acting in `caller_company`: with a caller scope, records carrying that company match, plus unscoped
+/// (global/legacy) records, which are shared content visible to any
+/// resolved scope (C3 task 320, rule A — the pilot-3 strict idiom
+/// is superseded by the adopted canonical rule); an unresolved
+/// caller sees global records only.
 pub(crate) fn in_company_scope(
     record_company_id: &Option<String>,
     caller_company: &Option<String>,
 ) -> bool {
     match caller_company {
         None => record_company_id.is_none(),
-        Some(company) => record_company_id.as_deref() == Some(company.as_str()),
+        Some(company) => record_company_id.is_none()
+                || record_company_id.as_deref() == Some(company.as_str()),
     }
 }
 
@@ -281,6 +283,28 @@ pub(crate) fn require_record_in_company_scope(
         ))
     }
 }
+
+/// Fail closed (403) when a stored record is outside the caller's
+/// company scope FOR A WRITE (C3 task 315, strict by default).
+/// Unlike the read check above (rule A), a write requires an exact
+/// company match: a company caller may write only their own
+/// company's records — global (unscoped) records are platform-only
+/// — and an unresolved caller may write nothing. Mutation handlers
+/// call this right after loading the record they mutate; handlers
+/// that only read the record, or load a parent to scope a child
+/// write, keep the read check.
+pub(crate) fn require_record_writable_in_company_scope(
+    record_company_id: &Option<String>,
+    caller_company: &Option<String>,
+) -> UnifiedResult<()> {
+    match (record_company_id, caller_company) {
+        (Some(record), Some(caller)) if record == caller => Ok(()),
+        _ => Err(UnifiedError::forbidden(
+            "A write requires an exact company match: the record belongs to a different company or is a shared (global) record",
+        )),
+    }
+}
+
 
 /// Load a product and refuse it when it belongs to another company.
 /// Used by the seller-side handlers whose records are scoped
@@ -714,7 +738,7 @@ mod tests {
         let scope = Some("company-1".to_string());
         assert!(in_company_scope(&Some("company-1".to_string()), &scope));
         assert!(!in_company_scope(&Some("company-2".to_string()), &scope));
-        assert!(!in_company_scope(&None, &scope));
+        assert!(in_company_scope(&None, &scope));
         assert!(in_company_scope(&None, &None));
         assert!(!in_company_scope(&Some("company-1".to_string()), &None));
     }

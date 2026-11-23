@@ -568,7 +568,7 @@ pub(crate) fn move_digital_payout(
         .digital_payouts
         .get_mut(payout_id)
         .ok_or_else(|| UnifiedError::not_found("Payout request not found"))?;
-    require_record_in_company_scope(&payout.payee_company_id, scope)?;
+    require_record_writable_in_company_scope(&payout.payee_company_id, scope)?;
     if !allowed_from.contains(&payout.status.as_str()) {
         return Err(UnifiedError::unprocessable(format!(
             "A {} payout request cannot move to {}",

@@ -37,7 +37,7 @@ pub(crate) async fn list_byo_connections(
         Ok(found) => found,
         Err(error) => return err_response(error, debug),
     };
-    let is_admin = check_capability(&ctx, &found.role, PERM_MANAGE_BYO);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BYO);
     let params = params.into_inner();
     let mut items: Vec<ByoConnectionView> = state
         .byo_connections
@@ -274,7 +274,7 @@ pub(crate) async fn get_byo_connection(
         Ok(found) => found,
         Err(error) => return err_response(error, debug),
     };
-    let is_admin = check_capability(&ctx, &found.role, PERM_MANAGE_BYO);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BYO);
     json::respond(
         load_byo_connection_for(&state, &id, &found.actor, is_admin)
             .map(|connection| ByoConnectionView::from(&connection)),
@@ -303,7 +303,7 @@ pub(crate) async fn update_byo_connection(
         Ok(found) => found,
         Err(error) => return err_response(error, debug),
     };
-    let is_admin = check_capability(&ctx, &found.role, PERM_MANAGE_BYO);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BYO);
     let result: UnifiedResult<ByoConnectionView> = (|| {
         let input = body.into_inner();
         let mut connection = load_byo_connection_for(&state, &id, &found.actor, is_admin)?;
@@ -474,7 +474,7 @@ pub(crate) async fn delete_byo_connection(
         Ok(found) => found,
         Err(error) => return err_response(error, debug),
     };
-    let is_admin = check_capability(&ctx, &found.role, PERM_MANAGE_BYO);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BYO);
     let result: UnifiedResult<Value> = (|| {
         let connection = load_byo_connection_for(&state, &id, &found.actor, is_admin)?;
         state.byo_connections.remove(&connection.id);
@@ -516,7 +516,7 @@ pub(crate) async fn validate_byo_connection(
         Ok(found) => found,
         Err(error) => return err_response(error, debug),
     };
-    let is_admin = check_capability(&ctx, &found.role, PERM_MANAGE_BYO);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BYO);
     let connection = match load_byo_connection_for(&state, &id, &found.actor, is_admin) {
         Ok(connection) => connection,
         Err(error) => return err_response(error, debug),
@@ -567,7 +567,7 @@ pub(crate) async fn activate_byo_connection(
         Ok(found) => found,
         Err(error) => return err_response(error, debug),
     };
-    let is_admin = check_capability(&ctx, &found.role, PERM_MANAGE_BYO);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BYO);
     let result: UnifiedResult<ByoConnectionView> = (|| {
         let mut connection = load_byo_connection_for(&state, &id, &found.actor, is_admin)?;
         if connection.status == "active" {
@@ -696,7 +696,7 @@ pub(crate) async fn suspend_byo_connection(
         Ok(found) => found,
         Err(error) => return err_response(error, debug),
     };
-    let is_admin = check_capability(&ctx, &found.role, PERM_MANAGE_BYO);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BYO);
     let result: UnifiedResult<ByoConnectionView> = (|| {
         let input = body.into_inner();
         let mut connection = load_byo_connection_for(&state, &id, &found.actor, is_admin)?;
@@ -742,7 +742,7 @@ pub(crate) async fn revoke_byo_connection(
         Ok(found) => found,
         Err(error) => return err_response(error, debug),
     };
-    let is_admin = check_capability(&ctx, &found.role, PERM_MANAGE_BYO);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BYO);
     let result: UnifiedResult<ByoConnectionView> = (|| {
         let input = body.into_inner();
         let mut connection = load_byo_connection_for(&state, &id, &found.actor, is_admin)?;

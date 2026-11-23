@@ -174,7 +174,7 @@ pub(crate) async fn import_project(
     let (viewer_id, viewer_role) = viewer_of(&req);
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let project = state.get_project(path.as_str())?;
         require_project_access(
             &state,

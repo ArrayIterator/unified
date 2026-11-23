@@ -116,7 +116,7 @@ pub(super) async fn create_shipment(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LOGISTICS_CREATE)?;
         let input = body.into_inner();
@@ -298,11 +298,11 @@ pub(super) async fn update_shipment(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Shipment> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LOGISTICS_MANAGE)?;
         let mut shipment = load_shipment(&state, &path)?;
-        require_record_in_company_scope(&shipment.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&shipment.company_id, &_scope)?;
         if shipment.status != ShipmentStatus::Created {
             return Err(UnifiedError::conflict(format!(
                 "Only a shipment in \"created\" status can be edited; this shipment is \"{}\"",
@@ -404,11 +404,11 @@ pub(super) async fn delete_shipment(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LOGISTICS_MANAGE)?;
         let shipment = load_shipment(&state, &path)?;
-        require_record_in_company_scope(&shipment.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&shipment.company_id, &_scope)?;
         if shipment.status != ShipmentStatus::Created {
             return Err(UnifiedError::conflict(format!(
                 "Only a shipment in \"created\" status can be deleted; this shipment is \"{}\". Cancel it instead.",
@@ -603,10 +603,10 @@ pub(super) async fn transition_shipment(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Shipment> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         let mut shipment = load_shipment(&state, &path)?;
-        require_record_in_company_scope(&shipment.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&shipment.company_id, &_scope)?;
         can_operate_shipment(&ctx, &state, &caller, &shipment)?;
         let input = body.into_inner();
         let to = ShipmentStatus::parse(&input.to_status).ok_or_else(|| {
@@ -684,11 +684,11 @@ pub(super) async fn link_order(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LOGISTICS_MANAGE)?;
         let mut shipment = load_shipment(&state, &path)?;
-        require_record_in_company_scope(&shipment.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&shipment.company_id, &_scope)?;
         if shipment.status.is_terminal() {
             return Err(UnifiedError::conflict(format!(
                 "Cannot link an order to a shipment in terminal status \"{}\"",
@@ -750,11 +750,11 @@ pub(super) async fn schedule_shipment(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Shipment> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LOGISTICS_MANAGE)?;
         let mut shipment = load_shipment(&state, &path)?;
-        require_record_in_company_scope(&shipment.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&shipment.company_id, &_scope)?;
         if shipment.status.is_terminal() {
             return Err(UnifiedError::conflict(format!(
                 "Cannot schedule a shipment in terminal status \"{}\"",
@@ -798,11 +798,11 @@ pub(super) async fn reschedule_shipment(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Shipment> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LOGISTICS_MANAGE)?;
         let mut shipment = load_shipment(&state, &path)?;
-        require_record_in_company_scope(&shipment.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&shipment.company_id, &_scope)?;
         if shipment.status.is_terminal() {
             return Err(UnifiedError::conflict(format!(
                 "Cannot reschedule a shipment in terminal status \"{}\"",
@@ -864,7 +864,7 @@ pub(super) async fn create_proof(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         let mut shipment = load_shipment(&state, &path)?;
         require_record_in_company_scope(&shipment.company_id, &_scope)?;
@@ -1004,7 +1004,7 @@ pub(super) async fn create_exception(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         let mut shipment = load_shipment(&state, &path)?;
         require_record_in_company_scope(&shipment.company_id, &_scope)?;
@@ -1162,7 +1162,7 @@ pub(super) async fn resolve_exception(
     let debug = ctx.is_debug();
     let result: UnifiedResult<DeliveryException> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LOGISTICS_MANAGE)?;
         let mut exception = load_exception(&state, &path)?;
@@ -1250,7 +1250,7 @@ pub(super) async fn return_exception(
     let debug = ctx.is_debug();
     let result: UnifiedResult<DeliveryException> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LOGISTICS_MANAGE)?;
         let mut exception = load_exception(&state, &path)?;

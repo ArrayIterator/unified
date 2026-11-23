@@ -285,7 +285,6 @@ pub(crate) fn find_subscriber(list_id: &str, email: &str) -> Option<Subscriber> 
             subscriber.list_id == list_id && subscriber.email.to_lowercase() == needle
         })
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;

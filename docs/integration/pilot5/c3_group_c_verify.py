@@ -44,6 +44,12 @@ Order: the guard precedes the first identity/capability/ownership
 call. Scope-checked: body mentions a scope marker for the module
 (see MODULES below); otherwise gate-only.
 
+Task 315/320 (2026-11-23): these shapes are unchanged -- kyc/phone
+records carry `tenant_id` (not `company_id`), payments guards by
+ownership, library uses the `CallerScope` idiom (its
+`require_company_match_for` was fixed to refuse unresolved writes
+in C.1), and files/studio are verify-only.
+
 Usage: c3_group_c_verify.py <module> [excluded ...]
 Exit code 0 only when missing == 0 and order violations == 0 for
 the guard modules (kyc, payments, phone). Verify-only modules

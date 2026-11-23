@@ -72,7 +72,7 @@ pub(crate) async fn create_network(
     let debug = ctx.is_debug();
     let result: UnifiedResult<ChainNetwork> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_WEB3_ADMIN)?;
         let input = body.into_inner();
@@ -225,7 +225,7 @@ pub(crate) async fn update_network(
     let debug = ctx.is_debug();
     let result: UnifiedResult<ChainNetwork> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_WEB3_ADMIN)?;
         let input = body.into_inner();
@@ -377,7 +377,7 @@ pub(crate) async fn delete_network(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_WEB3_ADMIN)?;
         let network = require_network(&state, path.as_str())?;

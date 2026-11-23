@@ -42,6 +42,7 @@ pub(crate) async fn list_licenses(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
+        require_control_plane(&req)?;
         require_caller_capability(&ctx, &req, "licensing:view")?;
         let mut items: Vec<License> = match db_pool(&ctx) {
             Some(pool) => db_load_licenses(&pool)?,
@@ -101,6 +102,7 @@ pub(crate) async fn create_license(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<License> = (|| {
+        require_control_plane(&req)?;
         require_caller_capability(&ctx, &req, "licensing:manage")?;
         if body.product.trim().is_empty() {
             return Err(UnifiedError::bad_request("product is required"));
@@ -137,6 +139,7 @@ pub(crate) async fn get_license(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<License> = (|| {
+        require_control_plane(&req)?;
         require_caller_capability(&ctx, &req, "licensing:view")?;
         let id = id.into_inner();
         if let Some(pool) = db_pool(&ctx) {
@@ -172,6 +175,7 @@ pub(crate) async fn update_license(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<License> = (|| {
+        require_control_plane(&req)?;
         require_caller_capability(&ctx, &req, "licensing:manage")?;
         let id = id.into_inner();
         // Database first: the in-memory store may not hold a license
@@ -252,6 +256,7 @@ pub(crate) async fn delete_license(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
+        require_control_plane(&req)?;
         require_caller_capability(&ctx, &req, "licensing:manage")?;
         let id = id.into_inner();
         // A license that only exists in the database still counts
@@ -442,6 +447,7 @@ pub(crate) async fn expiry_check_handler(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
+        require_control_plane(&req)?;
         require_caller_capability(&ctx, &req, "licensing:manage")?;
         check_license_expiry(&ctx)
     })();
@@ -455,6 +461,7 @@ pub(crate) async fn suspend_handler(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<License> = (|| {
+        require_control_plane(&req)?;
         require_caller_capability(&ctx, &req, "licensing:manage")?;
         let id = id.into_inner();
         // Database first: the in-memory store may not hold a license
@@ -491,6 +498,7 @@ pub(crate) async fn revoke_handler(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<License> = (|| {
+        require_control_plane(&req)?;
         require_caller_capability(&ctx, &req, "licensing:manage")?;
         let id = id.into_inner();
         // Database first: the in-memory store may not hold a license
@@ -527,6 +535,7 @@ pub(crate) async fn list_activations(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
+        require_control_plane(&req)?;
         require_caller_capability(&ctx, &req, "licensing:view")?;
         let id = id.into_inner();
         let exists = match db_pool(&ctx) {

@@ -20,7 +20,7 @@ use super::execution::{drill_run_archive, execute_run, fail_alert, inspect_archi
 use super::restore::{FileRestoreOutcome, notify_scheduler, restore_config_blocking, restore_database_blocking, restore_files_blocking, rollback_files_blocking, validate_common, validate_job_fields};
 use super::state::{BackupExecutor, BackupState, matches_search, new_id, now, paginate};
 use super::types::{BackupJob, BackupRun, BackupStatus, BackupSummary, CreateBackupJob, DrillView, MaintenancePruneView, MaintenanceVerifyView, RestoreRequest, RestoreView, SchedulingOutcome, UpdateBackupJob, VerifyView};
-use super::validation::{Caller, caller, caller_company, job_visible, require_permission, require_tenant, run_visible, valid_schedule, valid_storage_name, visible_job, visible_run};
+use super::validation::{Caller, caller, caller_company, require_company_for_write, job_visible, require_permission, require_tenant, run_visible, valid_schedule, valid_storage_name, visible_job, visible_run};
 
 // ---------------------------------------------------------------------------
 // Handlers.
@@ -161,7 +161,7 @@ pub(crate) async fn create_job(
     let debug = ctx.is_debug();
     let result: UnifiedResult<BackupJob> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_BACKUP_MANAGE)?;
         let input = body.into_inner();
@@ -267,7 +267,7 @@ pub(crate) async fn update_job(
     let debug = ctx.is_debug();
     let result: UnifiedResult<BackupJob> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_BACKUP_MANAGE)?;
         let input = body.into_inner();
@@ -361,7 +361,7 @@ pub(crate) async fn delete_job(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| async {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_BACKUP_MANAGE)?;
         let job_id = path.into_inner();
@@ -419,7 +419,7 @@ pub(crate) async fn run_job_now(
     let debug = ctx.is_debug();
     let result: UnifiedResult<BackupRun> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_BACKUP_MANAGE)?;
         let executor = BackupExecutor::from_context(&ctx, state.get_ref().clone())?;
@@ -577,7 +577,7 @@ pub(crate) async fn verify_run(
     let debug = ctx.is_debug();
     let result: UnifiedResult<VerifyView> = (|| async {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_BACKUP_MANAGE)?;
         let executor = BackupExecutor::from_context(&ctx, state.get_ref().clone())?;
@@ -612,7 +612,7 @@ pub(crate) async fn verify_job(
     let debug = ctx.is_debug();
     let result: UnifiedResult<VerifyView> = (|| async {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_BACKUP_MANAGE)?;
         let executor = BackupExecutor::from_context(&ctx, state.get_ref().clone())?;
@@ -665,7 +665,7 @@ pub(crate) async fn drill_job(
     let debug = ctx.is_debug();
     let result: UnifiedResult<DrillView> = (|| async {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_BACKUP_MANAGE)?;
         let executor = BackupExecutor::from_context(&ctx, state.get_ref().clone())?;
@@ -689,7 +689,7 @@ pub(crate) async fn drill_run(
     let debug = ctx.is_debug();
     let result: UnifiedResult<DrillView> = (|| async {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_BACKUP_MANAGE)?;
         let executor = BackupExecutor::from_context(&ctx, state.get_ref().clone())?;
@@ -746,7 +746,7 @@ pub(crate) async fn maintenance_verify(
     let debug = ctx.is_debug();
     let result: UnifiedResult<MaintenanceVerifyView> = (|| async {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_BACKUP_MANAGE)?;
         let executor = BackupExecutor::from_context(&ctx, state.get_ref().clone())?;
@@ -765,7 +765,7 @@ pub(crate) async fn maintenance_prune(
     let debug = ctx.is_debug();
     let result: UnifiedResult<MaintenancePruneView> = (|| async {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_BACKUP_MANAGE)?;
         let executor = BackupExecutor::from_context(&ctx, state.get_ref().clone())?;
@@ -1142,7 +1142,7 @@ pub(crate) async fn restore_job(
     let debug = ctx.is_debug();
     let result: UnifiedResult<RestoreView> = (|| async {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_BACKUP_MANAGE)?;
         let job_id = path.into_inner();
@@ -1165,7 +1165,7 @@ pub(crate) async fn restore_run(
     let debug = ctx.is_debug();
     let result: UnifiedResult<RestoreView> = (|| async {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_BACKUP_MANAGE)?;
         let request = body.into_inner();
@@ -1190,7 +1190,7 @@ pub(crate) async fn delete_run(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| async {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_BACKUP_MANAGE)?;
         let run_id = path.into_inner();

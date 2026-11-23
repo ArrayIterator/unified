@@ -397,6 +397,26 @@ impl FromRequest for ControlPlaneGuard {
 /// company, then the `user.company_requested` hook answer. A
 /// body/query `company_id` is NEVER a source — it is verified
 /// against the scope instead.
+///
+/// # Adopted rules (C3 tasks 315/320, 2026-11-23)
+///
+/// - Read rule (320, canonical rule A): `Company(c)` reads its own
+///   rows PLUS global rows (`company_id` NULL); `Platform` reads
+///   any; `Unresolved` reads global only. The per-module
+///   `in_company_scope` read helpers implement this rule.
+/// - Write rule (315, strict by default): writes require a resolved
+///   company and a match, 403 otherwise. `require_company_scope`
+///   below is the shared write guard: `Platform` may write any
+///   scope; `Company(c)` writes its own company only — the global
+///   scope is platform-only; `Unresolved` writes nothing. Named
+///   carve-outs only, listed in the C3 guard map
+///   (`docs/integration/C3_MODULE_GUARD_MAP.md`): (1) self-service
+///   writes (applicant submit/withdraw, consent grant/withdraw,
+///   own notifications); (2) platform-scope writes through an
+///   explicit, audited platform scope (`ControlPlaneGuard` +
+///   `CallerScope::decide` — never silent, never by default);
+///   (3) genuinely tenant-scoped writes where the record carries
+///   no company field yet — tenant-gate-only until C11 lands.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CallerScope {
     /// The caller acts for one company: reads that company's rows
@@ -479,7 +499,8 @@ impl CallerScope {
         }
     }
 
-    /// Write scope: a caller may only write rows of the target
+    /// Write scope (C3 task 315, strict by default — the shared
+    /// write guard): a caller may only write rows of the target
     /// company. Platform may write any scope, including the global
     /// (empty) scope. A company caller may write only their own
     /// company — the global scope is platform-only, because writing

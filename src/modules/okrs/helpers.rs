@@ -93,6 +93,27 @@ pub(crate) fn caller_company(
     }
 }
 
+/// Resolve the caller's company for a WRITE (C3 task 315, strict by
+/// default): a write requires a resolved company scope, so an
+/// unresolved caller is refused with 403 instead of silently
+/// writing a global (unscoped) record. Mutation handlers call
+/// this instead of `caller_company`; read handlers keep
+/// `caller_company`, and the named carve-outs (self-service
+/// writes, settings with no company field, scan/test triggers,
+/// platform surfaces) keep it too.
+pub(crate) fn require_company_for_write(
+    tenant: &unified_core::tenancy::TenantContext,
+    req: &actix_web::HttpRequest,
+) -> UnifiedResult<Option<String>> {
+    match caller_company(tenant, req)? {
+        Some(company) => Ok(Some(company)),
+        None => Err(UnifiedError::forbidden(
+            "A write requires a resolved company scope",
+        )),
+    }
+}
+
+
 /// Verify a create body's required `company_id` against the
 /// caller's company scope and return the company id to store.
 /// Fails closed (403) when the body names a company other than
@@ -126,7 +147,7 @@ pub(crate) fn require_company_match_str(
 pub(crate) fn in_company_scope(record_company_id: &str, caller_company: &Option<String>) -> bool {
     match caller_company {
         None => record_company_id.is_empty(),
-        Some(company) => record_company_id == company.as_str(),
+        Some(company) => record_company_id.is_empty() || record_company_id == company.as_str(),
     }
 }
 
@@ -146,6 +167,32 @@ pub(crate) fn require_record_in_company_scope(
         ))
     }
 }
+
+/// Fail closed (403) when a stored record is outside the caller's
+/// company scope FOR A WRITE (C3 task 315, strict by default).
+/// Unlike the read check above (rule A), a write requires an exact
+/// company match: a company caller may write only their own
+/// company's records — global (unscoped) records are platform-only
+/// — and an unresolved caller may write nothing. Mutation handlers
+/// call this right after loading the record they mutate; handlers
+/// that only read the record, or load a parent to scope a child
+/// write, keep the read check.
+pub(crate) fn require_record_writable_in_company_scope(
+    record_company_id: &str,
+    caller_company: &Option<String>,
+) -> UnifiedResult<()> {
+    match caller_company {
+        Some(caller)
+            if !record_company_id.is_empty() && record_company_id == caller.as_str() =>
+        {
+            Ok(())
+        }
+        _ => Err(UnifiedError::forbidden(
+            "A write requires an exact company match: the record belongs to a different company or is a shared (global) record",
+        )),
+    }
+}
+
 
 /// Ask the roles module whether `role` holds `permission` through
 /// the `role.check` hook. Fails closed: no answer means not allowed

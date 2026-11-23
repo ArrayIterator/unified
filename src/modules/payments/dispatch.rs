@@ -62,41 +62,13 @@ impl ProviderAdapter {
         })
     }
 
-    /// Base URL for the provider in the connection's mode.
+    /// Base URL for the provider in the connection's mode, from the
+    /// provider registry (`base_url`, or `sandbox_base_url` in
+    /// sandbox mode when the provider has one). Endpoint kinds
+    /// (Mastercard / Card / Custom) use the connection endpoint;
+    /// wallets and bank transfer have no direct API base URL.
     pub(crate) fn base(&self) -> UnifiedResult<String> {
-        let base = match self.kind {
-            PaymentProviderKind::Stripe => "https://api.stripe.com".to_string(),
-            PaymentProviderKind::PayPal => {
-                if self.mode == GatewayMode::Sandbox {
-                    "https://api-m.sandbox.paypal.com".to_string()
-                } else {
-                    "https://api-m.paypal.com".to_string()
-                }
-            }
-            PaymentProviderKind::Xendit => "https://api.xendit.co".to_string(),
-            PaymentProviderKind::Midtrans => {
-                if self.mode == GatewayMode::Sandbox {
-                    "https://api.sandbox.midtrans.com".to_string()
-                } else {
-                    "https://api.midtrans.com".to_string()
-                }
-            }
-            PaymentProviderKind::HyperPay => {
-                if self.mode == GatewayMode::Sandbox {
-                    "https://eu-test.oppwa.com".to_string()
-                } else {
-                    "https://eu-prod.oppwa.com".to_string()
-                }
-            }
-            PaymentProviderKind::TwoCheckout => "https://api.2checkout.com".to_string(),
-            PaymentProviderKind::Mastercard
-            | PaymentProviderKind::Card
-            | PaymentProviderKind::Custom => self.endpoint.clone().ok_or_else(|| {
-                UnifiedError::bad_request(format!(
-                    "Provider \"{}\" needs an endpoint on the connection",
-                    self.kind.as_str()
-                ))
-            })?,
+        match self.kind {
             PaymentProviderKind::GooglePay | PaymentProviderKind::ApplePay => {
                 return Err(UnifiedError::bad_request(
                     "Wallet providers have no direct API base URL; charges run through the delegate connection",
@@ -107,7 +79,31 @@ impl ProviderAdapter {
                     "Bank transfer has no API base URL; payments are recorded manually",
                 ));
             }
-        };
+            PaymentProviderKind::Mastercard
+            | PaymentProviderKind::Card
+            | PaymentProviderKind::Custom => {
+                return self.endpoint.clone().ok_or_else(|| {
+                    UnifiedError::bad_request(format!(
+                        "Provider \"{}\" needs an endpoint on the connection",
+                        self.kind.as_str()
+                    ))
+                })?;
+            }
+            _ => {}
+        }
+        let base = self
+            .kind
+            .definition()
+            .and_then(|def| {
+                def.effective_base_url(self.mode == GatewayMode::Sandbox)
+                    .map(str::to_string)
+            })
+            .ok_or_else(|| {
+                UnifiedError::internal(format!(
+                    "Provider \"{}\" has no API base URL in the provider registry",
+                    self.kind.as_str()
+                ))
+            })?;
         Ok(base.trim_end_matches('/').to_string())
     }
 

@@ -1,5 +1,10 @@
 //! Documents state (split from state.rs; moved verbatim).
 
+use super::super::types::{
+    MAX_CUSTOM_METADATA_KEYS, MAX_METADATA_ALT_TEXT_LEN, MAX_METADATA_CAPTION_LEN,
+    MAX_METADATA_DESCRIPTION_LEN, MAX_METADATA_TITLE_LEN, UpdateDocumentMetadataRequest,
+};
+use super::super::validation::valid_metadata_key;
 use super::*;
 
 impl DocumentsState {
@@ -94,6 +99,17 @@ impl DocumentsState {
                 let document = DocumentRecord {
                     id: target_id.clone(),
                     name: name.clone(),
+                    // A new document's title defaults to the
+                    // uploaded file name; the owner renames it
+                    // through `PATCH /api/v1/documents/{id}`.
+                    // A re-upload never touches the title: the
+                    // branch above leaves the stored title alone,
+                    // so an explicit rename survives a new version.
+                    title: name.clone(),
+                    alt_text: None,
+                    caption: None,
+                    description: None,
+                    custom_metadata: serde_json::Map::new(),
                     module_id: module_id.clone(),
                     company_id: company_id.clone(),
                     owner_id: owner_id.clone(),
@@ -126,6 +142,10 @@ impl DocumentsState {
                 serde_json::to_value(&record).unwrap_or(Value::Null),
             );
         }
+        // Instant search: the Search module indexes the document
+        // from this event (title + description), on create and on
+        // re-upload alike.
+        self.emit_search_index(&record);
         self.add_local_usage(&owner_id, &company_id, size);
         Ok(record)
     }
@@ -509,4 +529,169 @@ impl DocumentsState {
         );
         Ok(document)
     }
+
+    /// Publish one document to the Search module's index
+    /// (`search.index`): the display title plus the description
+    /// (falling back to the caption, then the alt text) as the
+    /// snippet, and the document API URL. The Search module
+    /// re-indexes the same id instead of duplicating it, so this
+    /// is safe to call on every create and metadata update.
+    pub(crate) fn emit_search_index(&self, document: &DocumentRecord) {
+        let snippet = document
+            .description
+            .clone()
+            .or(document.caption.clone())
+            .or(document.alt_text.clone())
+            .unwrap_or_default();
+        self.emit(
+            events::SEARCH_INDEX,
+            json!({
+                "id": document.id,
+                "kind": "documents.document",
+                "title": document.title,
+                "snippet": snippet,
+                "url": format!("/api/v1/documents/{}", document.id),
+                "updated_at": document.updated_at.to_rfc3339(),
+            }),
+        );
+    }
+
+    /// Apply a metadata PATCH to one document: validate + merge
+    /// under the per-document lock (so two concurrent PATCHes
+    /// cannot interleave their read-modify-write), then publish
+    /// the updated record to the Search module. A patch that
+    /// changes nothing returns the record untouched (no
+    /// `updated_at` bump, no re-index).
+    pub(crate) fn update_document_metadata(
+        &self,
+        id: &str,
+        patch: UpdateDocumentMetadataRequest,
+    ) -> UnifiedResult<DocumentRecord> {
+        let lock = self.document_lock(id);
+        let _guard = lock.lock().expect("document lock poisoned");
+        let mut document = self.load_document(id)?;
+        if !apply_metadata_patch(&mut document, &patch)? {
+            return Ok(document);
+        }
+        self.documents.insert(document.id.clone(), document.clone());
+        drop(_guard);
+        self.emit_search_index(&document);
+        Ok(document)
+    }
+}
+
+/// Merge a metadata PATCH into a loaded document record.
+/// Validation runs BEFORE any field is assigned, so a rejected
+/// patch leaves the record untouched. Returns true when any field
+/// actually changed (an empty patch, or a patch that restates the
+/// current values, is a no-op and does not bump `updated_at`).
+/// `title` must be non-empty when present; an empty string clears
+/// an optional text field back to `None` (same convention as the
+/// settings `spool_dir` override). `custom_metadata` merges by
+/// key: a JSON null removes the key, any other value sets it.
+pub(crate) fn apply_metadata_patch(
+    document: &mut DocumentRecord,
+    patch: &UpdateDocumentMetadataRequest,
+) -> UnifiedResult<bool> {
+    // Validate everything first: the record is only assigned
+    // below, once the whole patch is known-good.
+    let title = match &patch.title {
+        Some(value) => Some(require_text(value, "title", MAX_METADATA_TITLE_LEN)?),
+        None => None,
+    };
+    let alt_text = match &patch.alt_text {
+        Some(value) => Some(optional_metadata_text(
+            value,
+            "alt_text",
+            MAX_METADATA_ALT_TEXT_LEN,
+        )?),
+        None => None,
+    };
+    let caption = match &patch.caption {
+        Some(value) => Some(optional_metadata_text(
+            value,
+            "caption",
+            MAX_METADATA_CAPTION_LEN,
+        )?),
+        None => None,
+    };
+    let description = match &patch.description {
+        Some(value) => Some(optional_metadata_text(
+            value,
+            "description",
+            MAX_METADATA_DESCRIPTION_LEN,
+        )?),
+        None => None,
+    };
+    let custom_metadata = match &patch.custom_metadata {
+        Some(incoming) => {
+            let mut merged = document.custom_metadata.clone();
+            for (key, value) in incoming {
+                let key = valid_metadata_key(key)?;
+                if value.is_null() {
+                    merged.remove(&key);
+                } else {
+                    merged.insert(key, value.clone());
+                }
+            }
+            if merged.len() > MAX_CUSTOM_METADATA_KEYS {
+                return Err(UnifiedError::bad_request(format!(
+                    "custom_metadata must hold at most {MAX_CUSTOM_METADATA_KEYS} keys"
+                )));
+            }
+            Some(merged)
+        }
+        None => None,
+    };
+    let mut changed = false;
+    if let Some(value) = title {
+        if document.title != value {
+            document.title = value;
+            changed = true;
+        }
+    }
+    if let Some(value) = alt_text {
+        if document.alt_text != value {
+            document.alt_text = value;
+            changed = true;
+        }
+    }
+    if let Some(value) = caption {
+        if document.caption != value {
+            document.caption = value;
+            changed = true;
+        }
+    }
+    if let Some(value) = description {
+        if document.description != value {
+            document.description = value;
+            changed = true;
+        }
+    }
+    if let Some(merged) = custom_metadata {
+        if document.custom_metadata != merged {
+            document.custom_metadata = merged;
+            changed = true;
+        }
+    }
+    if changed {
+        document.updated_at = now();
+    }
+    Ok(changed)
+}
+
+/// Validate one optional metadata text field: trims; an empty
+/// string clears the field (`None`); otherwise the value must fit
+/// `max` characters.
+fn optional_metadata_text(value: &str, field: &str, max: usize) -> UnifiedResult<Option<String>> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return Ok(None);
+    }
+    if trimmed.len() > max {
+        return Err(UnifiedError::bad_request(format!(
+            "{field} must be at most {max} characters"
+        )));
+    }
+    Ok(Some(trimmed.to_string()))
 }

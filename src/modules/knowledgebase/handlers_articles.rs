@@ -30,7 +30,7 @@ pub(crate) async fn create_article(
 ) -> HttpResponse {
     let result: UnifiedResult<Article> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_KNOWLEDGEBASE_MANAGE)?;
         let title = require_text(&body.title, "title", MAX_TITLE_LEN)?;
@@ -200,7 +200,7 @@ pub(crate) async fn update_article(
 ) -> HttpResponse {
     let result: UnifiedResult<Article> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_KNOWLEDGEBASE_MANAGE)?;
         let id = parse_uuid(&path.into_inner(), "article")?;
@@ -209,7 +209,7 @@ pub(crate) async fn update_article(
             .get(&id)
             .map(|entry| entry.value().clone())
             .ok_or_else(|| UnifiedError::not_found(format!("Article not found: {id}")))?;
-        require_record_in_company_scope(&article.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&article.company_id, &_scope)?;
         if let Some(title) = &body.title {
             article.title = require_text(title, "title", MAX_TITLE_LEN)?;
         }
@@ -273,7 +273,7 @@ pub(crate) async fn delete_article(
 ) -> HttpResponse {
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_KNOWLEDGEBASE_MANAGE)?;
         let id = parse_uuid(&path.into_inner(), "article")?;

@@ -72,7 +72,7 @@ pub(crate) async fn create_bank(
     let result: UnifiedResult<QuestionBank> = (|| {
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_permission(&ctx, &caller.role, PERM_EXAMS_MANAGE)?;
         let settings = state.settings();
         let title = require_text(&body.title, "title", MAX_TITLE_LEN)?;
@@ -135,7 +135,7 @@ pub(crate) async fn update_bank(
     let result: UnifiedResult<QuestionBank> = (|| {
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_permission(&ctx, &caller.role, PERM_EXAMS_MANAGE)?;
         let settings = state.settings();
         let mut bank = require_bank_by_id_in_scope(&state, path.as_str(), &_scope)?;
@@ -171,7 +171,7 @@ pub(crate) async fn delete_bank(
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_permission(&ctx, &caller.role, PERM_EXAMS_MANAGE)?;
         let bank = require_bank_by_id_in_scope(&state, path.as_str(), &_scope)?;
         if state

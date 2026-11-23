@@ -102,7 +102,7 @@ pub(crate) async fn create_course_module(
     let debug = ctx.is_debug();
     let result: UnifiedResult<CourseModule> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         let course = load_course(&state, &path.into_inner())?;
         require_record_in_company_scope(&course.company_id, &_scope)?;
@@ -183,7 +183,7 @@ pub(crate) async fn update_module(
     let debug = ctx.is_debug();
     let result: UnifiedResult<CourseModule> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         let mut row = load_module(&state, &path.into_inner())?;
         let course = load_course(&state, &row.course_id.to_string())?;
@@ -228,7 +228,7 @@ pub(crate) async fn delete_module(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         let row = load_module(&state, &path.into_inner())?;
         let course = load_course(&state, &row.course_id.to_string())?;
@@ -310,7 +310,7 @@ pub(crate) async fn create_lesson(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Lesson> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         let row = load_module(&state, &path.into_inner())?;
         let course = load_course(&state, &row.course_id.to_string())?;
@@ -414,7 +414,7 @@ pub(crate) async fn update_lesson(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Lesson> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         let mut lesson = load_lesson(&state, &path.into_inner())?;
         let course = load_course(&state, &lesson.course_id.to_string())?;
@@ -490,7 +490,7 @@ pub(crate) async fn delete_lesson(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         let lesson = load_lesson(&state, &path.into_inner())?;
         let course = load_course(&state, &lesson.course_id.to_string())?;

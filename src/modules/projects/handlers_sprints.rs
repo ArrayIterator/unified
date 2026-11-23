@@ -91,7 +91,7 @@ pub(crate) async fn create_project_sprint(
     let (viewer_id, viewer_role) = viewer_of(&req);
     let result: UnifiedResult<ProjectSprint> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let project = s4_resolve_project_for_write(
             &state,
             path.as_str(),
@@ -181,7 +181,7 @@ pub(crate) async fn update_project_sprint(
     let (project_id, sprint_id) = path.into_inner();
     let result: UnifiedResult<ProjectSprint> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let project = s4_resolve_project_for_write(
             &state,
             &project_id,
@@ -250,7 +250,7 @@ pub(crate) async fn delete_project_sprint(
     let (project_id, sprint_id) = path.into_inner();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let project = s4_resolve_project_for_write(
             &state,
             &project_id,
@@ -299,7 +299,7 @@ pub(crate) async fn start_project_sprint(
     let (project_id, sprint_id) = path.into_inner();
     let result: UnifiedResult<ProjectSprint> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let project = s4_resolve_project_for_write(
             &state,
             &project_id,
@@ -368,7 +368,7 @@ pub(crate) async fn close_project_sprint(
     let (project_id, sprint_id) = path.into_inner();
     let result: UnifiedResult<ProjectSprint> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let project = s4_resolve_project_for_write(
             &state,
             &project_id,
@@ -456,7 +456,7 @@ pub(crate) async fn add_sprint_standup(
     let (project_id, sprint_id) = path.into_inner();
     let result: UnifiedResult<ProjectSprint> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let project = s4_resolve_project_for_write(
             &state,
             &project_id,
@@ -521,7 +521,7 @@ pub(crate) async fn save_sprint_review(
     let (project_id, sprint_id) = path.into_inner();
     let result: UnifiedResult<ProjectSprint> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let project = s4_resolve_project_for_write(
             &state,
             &project_id,
@@ -568,7 +568,7 @@ pub(crate) async fn save_sprint_retrospective(
     let (project_id, sprint_id) = path.into_inner();
     let result: UnifiedResult<ProjectSprint> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let project = s4_resolve_project_for_write(
             &state,
             &project_id,

@@ -31,7 +31,7 @@ pub(crate) async fn create_anchor(
     let debug = ctx.is_debug();
     let result: UnifiedResult<AnchorRecord> = (|| {
         let _tenant = require_tenant(&req)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_WEB3_WRITE)?;
         let input = body.into_inner();
@@ -189,7 +189,7 @@ pub(crate) async fn submit_anchor(
     let debug = ctx.is_debug();
     let result: UnifiedResult<AnchorRecord> = (|| async {
         let _tenant = require_tenant(&req)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_WEB3_WRITE)?;
         let admin = is_admin(&ctx, &caller.role);
@@ -204,7 +204,7 @@ pub(crate) async fn submit_anchor(
             ));
         }
         if !admin {
-            require_record_in_company_scope(&anchor.company_id, &scope)?;
+            require_record_writable_in_company_scope(&anchor.company_id, &scope)?;
         }
         if anchor.status != "pending" && anchor.status != "failed" {
             return Err(UnifiedError::conflict(format!(
@@ -296,7 +296,7 @@ pub(crate) async fn refresh_anchor(
     let debug = ctx.is_debug();
     let result: UnifiedResult<AnchorRecord> = (|| async {
         let _tenant = require_tenant(&req)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_WEB3_WRITE)?;
         let admin = is_admin(&ctx, &caller.role);
@@ -311,7 +311,7 @@ pub(crate) async fn refresh_anchor(
             ));
         }
         if !admin {
-            require_record_in_company_scope(&anchor.company_id, &scope)?;
+            require_record_writable_in_company_scope(&anchor.company_id, &scope)?;
         }
         let tx_hash = anchor.tx_hash.clone().ok_or_else(|| {
             UnifiedError::unprocessable("Anchor has no transaction hash yet; submit it first")
@@ -379,7 +379,7 @@ pub(crate) async fn verify_anchor(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| async {
         let _tenant = require_tenant(&req)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_WEB3_READ)?;
         let admin = is_admin(&ctx, &caller.role);

@@ -99,7 +99,7 @@ pub(crate) async fn create_rubric(
     let result: UnifiedResult<Rubric> = (|| {
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_permission(&ctx, &caller.role, PERM_EXAMS_MANAGE)?;
         let exam = require_exam_by_id_in_scope(&state, path.as_str(), &_scope)?;
         let title = require_text(&body.title, "title", MAX_TITLE_LEN)?;
@@ -161,7 +161,7 @@ pub(crate) async fn update_rubric(
     let result: UnifiedResult<Rubric> = (|| {
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_permission(&ctx, &caller.role, PERM_EXAMS_MANAGE)?;
         let mut rubric = require_rubric_in_scope(&state, path.as_str(), &_scope)?;
         if state.grades.iter().any(|entry| {
@@ -204,7 +204,7 @@ pub(crate) async fn delete_rubric(
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_permission(&ctx, &caller.role, PERM_EXAMS_MANAGE)?;
         let rubric = require_rubric_in_scope(&state, path.as_str(), &_scope)?;
         if state
@@ -348,7 +348,7 @@ pub(crate) async fn grade_attempt(
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_permission(&ctx, &caller.role, PERM_EXAMS_GRADE)?;
         let input = body.into_inner();
         let grader = input.grader_id.clone().unwrap_or_else(|| caller.actor.clone());
@@ -481,7 +481,7 @@ pub(crate) async fn regrade_attempt(
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_permission(&ctx, &caller.role, PERM_EXAMS_MANAGE)?;
         let attempt = require_attempt_in_scope(&state, path.as_str(), &_scope)?;
         if attempt.status != ATTEMPT_GRADED {
@@ -552,7 +552,7 @@ pub(crate) async fn override_attempt_score(
     let result: UnifiedResult<ExamResult> = (|| {
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_permission(&ctx, &caller.role, PERM_EXAMS_MANAGE)?;
         let reason = require_text(&body.reason, "reason", MAX_COMMENT_LEN)?;
         let attempt = require_attempt_in_scope(&state, path.as_str(), &_scope)?;
@@ -629,7 +629,7 @@ pub(crate) async fn dispute_grade(
     let result: UnifiedResult<ExamGrade> = (|| {
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_permission(&ctx, &caller.role, PERM_EXAMS_GRADE)?;
         let reason = require_text(&body.reason, "reason", MAX_COMMENT_LEN)?;
         let mut grade = require_grade_in_scope(&state, path.as_str(), &_scope)?;
@@ -664,7 +664,7 @@ pub(crate) async fn second_grade(
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_permission(&ctx, &caller.role, PERM_EXAMS_GRADE)?;
         let mut grade = require_grade_in_scope(&state, path.as_str(), &_scope)?;
         if grade.status != GRADE_DISPUTED && grade.status != GRADE_SECOND_GRADING {

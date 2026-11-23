@@ -2,6 +2,7 @@
 
 use unified_core::error::{UnifiedError, UnifiedResult};
 use unified_core::hooks::{HookBus};
+use unified_core::provider_registry::valid_provider_id;
 use async_trait::async_trait;
 use reqwest::header::{HeaderMap};
 use serde_json::{Value};
@@ -21,6 +22,13 @@ pub type EmailProviderFactory = Arc<
 
 pub struct EmailProviderRegistry {
     pub(crate) factories: RwLock<HashMap<EmailProviderKind, EmailProviderFactory>>,
+    /// Factories keyed by registry definition id (C12, task 269):
+    /// the extension point for a provider an admin registered
+    /// through the provider registry, which has no enum variant.
+    /// The factory receives the connection and decides how to build
+    /// its adapter; the connection's `kind` is the carrier kind the
+    /// admin stored it under.
+    pub(crate) factories_by_id: RwLock<HashMap<String, EmailProviderFactory>>,
 }
 
 
@@ -28,6 +36,7 @@ impl EmailProviderRegistry {
     pub(crate) fn new() -> Self {
         Self {
             factories: RwLock::new(HashMap::new()),
+            factories_by_id: RwLock::new(HashMap::new()),
         }
     }
 
@@ -39,6 +48,28 @@ impl EmailProviderRegistry {
             .write()
             .expect("email provider registry lock poisoned")
             .insert(kind, factory);
+    }
+
+    /// Register (or replace) the factory for a registry definition id
+    /// (C12, task 269). This is how a provider added through the
+    /// provider registry — no code change, no enum variant — gets an
+    /// adapter: register its definition, then register its factory
+    /// under the same id, once at startup or from an extension.
+    pub fn register_factory_by_id(
+        &self,
+        id: &str,
+        factory: EmailProviderFactory,
+    ) -> UnifiedResult<()> {
+        if !valid_provider_id(id) {
+            return Err(UnifiedError::bad_request(format!(
+                "Invalid email provider id \"{id}\" (expected lowercase letters, digits, '-' or '_')"
+            )));
+        }
+        self.factories_by_id
+            .write()
+            .expect("email provider registry lock poisoned")
+            .insert(id.to_string(), factory);
+        Ok(())
     }
 
     pub fn build(&self, connection: &EmailConnection) -> UnifiedResult<Arc<dyn EmailProvider>> {
@@ -55,6 +86,27 @@ impl EmailProviderRegistry {
         factory(connection)
     }
 
+    /// Build an adapter through a registry definition id (C12, task
+    /// 269). The id must have a factory registered with
+    /// `register_factory_by_id`; otherwise this is an honest error
+    /// naming the id, never a silent fallback to another provider.
+    pub fn build_by_id(
+        &self,
+        id: &str,
+        connection: &EmailConnection,
+    ) -> UnifiedResult<Arc<dyn EmailProvider>> {
+        let factories = self
+            .factories_by_id
+            .read()
+            .expect("email provider registry lock poisoned");
+        let factory = factories.get(id).ok_or_else(|| {
+            UnifiedError::internal(format!(
+                "No email provider adapter registered for id \"{id}\""
+            ))
+        })?;
+        factory(connection)
+    }
+
     pub fn registered_kinds(&self) -> Vec<EmailProviderKind> {
         let factories = self
             .factories
@@ -63,6 +115,25 @@ impl EmailProviderRegistry {
         let mut kinds: Vec<EmailProviderKind> = factories.keys().copied().collect();
         kinds.sort_by_key(|kind| kind.as_str());
         kinds
+    }
+
+    /// Every registered provider id: the built-in kinds plus any
+    /// definition ids with a factory, sorted. New providers appear
+    /// here with no code change.
+    pub fn registered_ids(&self) -> Vec<String> {
+        let mut ids: Vec<String> = self
+            .registered_kinds()
+            .iter()
+            .map(|kind| kind.as_str().to_string())
+            .collect();
+        let by_id = self
+            .factories_by_id
+            .read()
+            .expect("email provider registry lock poisoned");
+        ids.extend(by_id.keys().cloned());
+        ids.sort();
+        ids.dedup();
+        ids
     }
 }
 
@@ -260,4 +331,64 @@ pub(crate) fn require_api_key(connection: &EmailConnection) -> UnifiedResult<Str
                 connection.name
             ))
         })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::Utc;
+    use uuid::Uuid;
+
+    fn test_connection() -> EmailConnection {
+        EmailConnection {
+            id: Uuid::new_v4(),
+            name: "Test".to_string(),
+            kind: EmailProviderKind::Smtp,
+            domain: None,
+            region: None,
+            sender_email: None,
+            sender_name: None,
+            webhook_url: None,
+            credentials: EmailCredentials::default(),
+            test_mode: false,
+            enabled: true,
+            last_tested_at: None,
+            last_status: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        }
+    }
+
+    #[test]
+    fn build_by_id_dispatches_to_a_registered_definition_factory() {
+        // A provider added through the provider registry only: no enum
+        // variant, no code change. The factory is invoked by id, an
+        // unknown id is an honest error naming the id, and a bad id is
+        // rejected at registration time.
+        let registry = EmailProviderRegistry::new();
+        let connection = test_connection();
+        registry
+            .register_factory_by_id(
+                "acme_mail",
+                Arc::new(|_| {
+                    Err(UnifiedError::internal("factory invoked for acme_mail"))
+                }),
+            )
+            .unwrap();
+        assert!(registry
+            .registered_ids()
+            .contains(&"acme_mail".to_string()));
+        let err = registry.build_by_id("acme_mail", &connection).unwrap_err();
+        assert!(err.to_string().contains("factory invoked for acme_mail"));
+        let missing = registry.build_by_id("no_such", &connection).unwrap_err();
+        assert!(missing.to_string().contains("no_such"));
+        assert!(
+            registry
+                .register_factory_by_id(
+                    "Bad Id",
+                    Arc::new(|_| Err(UnifiedError::internal("unreachable")))
+                )
+                .is_err()
+        );
+    }
 }

@@ -98,7 +98,7 @@ pub(crate) async fn create_question(
     let result: UnifiedResult<Question> = (|| {
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_permission(&ctx, &caller.role, PERM_EXAMS_MANAGE)?;
         let settings = state.settings();
         let bank = require_bank_by_id_in_scope(&state, path.as_str(), &_scope)?;
@@ -200,7 +200,7 @@ pub(crate) async fn update_question(
     let result: UnifiedResult<Question> = (|| {
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_permission(&ctx, &caller.role, PERM_EXAMS_MANAGE)?;
         let settings = state.settings();
         let input = body.into_inner();
@@ -318,7 +318,7 @@ pub(crate) async fn delete_question(
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_permission(&ctx, &caller.role, PERM_EXAMS_MANAGE)?;
         let question = require_question_in_scope(&state, path.as_str(), &_scope)?;
         if question_has_attempts(&state, &question.id) {
@@ -381,7 +381,7 @@ pub(crate) async fn import_questions(
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_permission(&ctx, &caller.role, PERM_EXAMS_MANAGE)?;
         let settings = state.settings();
         let bank = require_bank_by_id_in_scope(&state, path.as_str(), &_scope)?;

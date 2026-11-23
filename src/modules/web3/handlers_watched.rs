@@ -78,7 +78,7 @@ pub(crate) async fn create_watched_address(
     let debug = ctx.is_debug();
     let result: UnifiedResult<WatchedAddress> = (|| {
         let _tenant = require_tenant(&req)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_WEB3_WRITE)?;
         let input = body.into_inner();
@@ -132,7 +132,7 @@ pub(crate) async fn delete_watched_address(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_WEB3_WRITE)?;
         let admin = is_admin(&ctx, &caller.role);
@@ -147,7 +147,7 @@ pub(crate) async fn delete_watched_address(
             ));
         }
         if !admin {
-            require_record_in_company_scope(&record.company_id, &scope)?;
+            require_record_writable_in_company_scope(&record.company_id, &scope)?;
         }
         state.watched.remove(path.as_str());
         Ok(json!({ "deleted": true, "id": record.id }))
@@ -164,7 +164,7 @@ pub(crate) async fn poll_watched_address(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| async {
         let _tenant = require_tenant(&req)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_WEB3_WRITE)?;
         let admin = is_admin(&ctx, &caller.role);
@@ -179,7 +179,7 @@ pub(crate) async fn poll_watched_address(
             ));
         }
         if !admin {
-            require_record_in_company_scope(&record.company_id, &scope)?;
+            require_record_writable_in_company_scope(&record.company_id, &scope)?;
         }
         poll_one_address(&state, &poll_secret(&ctx), &record).await
     })()

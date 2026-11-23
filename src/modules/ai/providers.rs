@@ -2,6 +2,7 @@
 
 use unified_core::error::{UnifiedError, UnifiedResult};
 use unified_core::json;
+use unified_core::provider_registry::valid_provider_id;
 use async_trait::async_trait;
 use reqwest::StatusCode;
 use reqwest::header::RETRY_AFTER;
@@ -81,12 +82,19 @@ pub type AiProviderFactory = Arc<
 
 pub struct AiProviderRegistry {
     pub(crate) factories: RwLock<HashMap<AiProviderKind, AiProviderFactory>>,
+    /// Factories keyed by registry definition id (C12, task 269):
+    /// the extension point for a provider an admin registered
+    /// through the provider registry, which has no enum variant.
+    /// The factory receives the connection plus its decrypted key
+    /// and decides how to build its adapter.
+    pub(crate) factories_by_id: RwLock<HashMap<String, AiProviderFactory>>,
 }
 
 impl AiProviderRegistry {
     pub(crate) fn new() -> Self {
         Self {
             factories: RwLock::new(HashMap::new()),
+            factories_by_id: RwLock::new(HashMap::new()),
         }
     }
 
@@ -98,6 +106,28 @@ impl AiProviderRegistry {
             .write()
             .expect("ai provider registry lock poisoned")
             .insert(kind, factory);
+    }
+
+    /// Register (or replace) the factory for a registry definition id
+    /// (C12, task 269). This is how a provider added through the
+    /// provider registry — no code change, no enum variant — gets an
+    /// adapter: register its definition, then register its factory
+    /// under the same id, once at startup or from an extension.
+    pub fn register_factory_by_id(
+        &self,
+        id: &str,
+        factory: AiProviderFactory,
+    ) -> UnifiedResult<()> {
+        if !valid_provider_id(id) {
+            return Err(UnifiedError::bad_request(format!(
+                "Invalid AI provider id "{id}" (expected lowercase letters, digits, '-' or '_')"
+            )));
+        }
+        self.factories_by_id
+            .write()
+            .expect("ai provider registry lock poisoned")
+            .insert(id.to_string(), factory);
+        Ok(())
     }
 
     pub fn build(
@@ -116,6 +146,47 @@ impl AiProviderRegistry {
             ))
         })?;
         factory(connection, api_key)
+    }
+
+    /// Build an adapter through a registry definition id (C12, task
+    /// 269). The id must have a factory registered with
+    /// `register_factory_by_id`; otherwise this is an honest error
+    /// naming the id, never a silent fallback to another provider.
+    pub fn build_by_id(
+        &self,
+        id: &str,
+        connection: &AiProviderConnection,
+        api_key: Option<String>,
+    ) -> UnifiedResult<Arc<dyn AiProviderAdapter>> {
+        let factories = self
+            .factories_by_id
+            .read()
+            .expect("ai provider registry lock poisoned");
+        let factory = factories.get(id).ok_or_else(|| {
+            UnifiedError::internal(format!(
+                "No AI provider adapter registered for id "{id}""
+            ))
+        })?;
+        factory(connection, api_key)
+    }
+
+    /// Every registered provider id: the built-in kinds plus any
+    /// definition ids with a factory, sorted. New providers appear
+    /// here with no code change.
+    pub fn registered_ids(&self) -> Vec<String> {
+        let mut ids: Vec<String> = self
+            .registered_kinds()
+            .iter()
+            .map(|kind| kind.as_str().to_string())
+            .collect();
+        let by_id = self
+            .factories_by_id
+            .read()
+            .expect("ai provider registry lock poisoned");
+        ids.extend(by_id.keys().cloned());
+        ids.sort();
+        ids.dedup();
+        ids
     }
 
     pub fn registered_kinds(&self) -> Vec<AiProviderKind> {
@@ -534,6 +605,55 @@ mod tests {
         assert!(
             validate_base_url_with_options("http://8.8.8.8/v1", AiProviderKind::Local, http_only)
                 .is_ok()
+        );
+    }
+
+    #[test]
+    fn build_by_id_dispatches_to_a_registered_definition_factory() {
+        // A provider added through the provider registry only: no enum
+        // variant, no code change. The factory is invoked by id, an
+        // unknown id is an honest error naming the id, and a bad id is
+        // rejected at registration time.
+        use chrono::Utc;
+
+        let registry = AiProviderRegistry::new();
+        let connection = AiProviderConnection {
+            id: Uuid::new_v4(),
+            name: "Test".to_string(),
+            kind: AiProviderKind::Local,
+            base_url: "https://127.0.0.1:11434/v1".to_string(),
+            model: "test".to_string(),
+            api_key_encrypted: None,
+            key_fingerprint: None,
+            enabled: true,
+            rate_limit_per_minute: 60,
+            allow_private_host: false,
+            allow_http: false,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        };
+        registry
+            .register_factory_by_id(
+                "acme_ai",
+                Arc::new(|_, _| Err(UnifiedError::internal("factory invoked for acme_ai"))),
+            )
+            .unwrap();
+        assert!(registry.registered_ids().contains(&"acme_ai".to_string()));
+        let err = registry
+            .build_by_id("acme_ai", &connection, None)
+            .unwrap_err();
+        assert!(err.to_string().contains("factory invoked for acme_ai"));
+        let missing = registry
+            .build_by_id("no_such", &connection, None)
+            .unwrap_err();
+        assert!(missing.to_string().contains("no_such"));
+        assert!(
+            registry
+                .register_factory_by_id(
+                    "Bad Id",
+                    Arc::new(|_, _| Err(UnifiedError::internal("unreachable")))
+                )
+                .is_err()
         );
     }
 }

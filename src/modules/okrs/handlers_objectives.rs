@@ -132,7 +132,7 @@ pub(crate) async fn create_objective(
     let debug = ctx.is_debug();
     let result: UnifiedResult<ObjectiveView> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_OKRS_MANAGE)?;
         let cycle = load_cycle(&state, &body.cycle_id)?;
@@ -248,11 +248,11 @@ pub(crate) async fn update_objective(
     let debug = ctx.is_debug();
     let result: UnifiedResult<ObjectiveView> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_OKRS_MANAGE)?;
         let mut objective = load_objective(&state, &path.into_inner())?;
-        require_record_in_company_scope(&objective.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&objective.company_id, &_scope)?;
         let cycle = load_cycle(&state, &objective.cycle_id.to_string())?;
         if cycle.status == CycleStatus::Closed {
             return Err(UnifiedError::conflict(
@@ -331,11 +331,11 @@ pub(crate) async fn delete_objective(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_OKRS_MANAGE)?;
         let objective = load_objective(&state, &path.into_inner())?;
-        require_record_in_company_scope(&objective.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&objective.company_id, &_scope)?;
         // Children lose their parent instead of being deleted: the
         // alignment tree keeps the rest of the objectives intact.
         for mut child in state

@@ -136,7 +136,7 @@ pub(crate) async fn set_default(
         Ok(found) => found,
         Err(error) => return err_response(error, debug),
     };
-    let is_admin = is_storage_admin(&ctx, &found.role);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_BUCKETS);
     let result: UnifiedResult<Value> = (|| {
         let input = body.into_inner();
         let bucket = state

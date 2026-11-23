@@ -64,7 +64,7 @@ pub(crate) async fn start_attempt(
     let result: UnifiedResult<AttemptView> = (|| {
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_permission(&ctx, &caller.role, PERM_EXAMS_TAKE)?;
         let exam = require_exam_by_id_in_scope(&state, path.as_str(), &_scope)?;
         // Pay-before-attempt: a paid exam needs an active paid
@@ -323,7 +323,7 @@ pub(crate) async fn heartbeat_attempt(
     let result: UnifiedResult<AttemptView> = (|| {
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_permission(&ctx, &caller.role, PERM_EXAMS_TAKE)?;
         // The server decides expiry: an attempt past its deadline is
         // expired here, whatever the client clock says.
@@ -433,7 +433,7 @@ pub(crate) async fn autosave_attempt(
     let result: UnifiedResult<AttemptView> = (|| {
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_permission(&ctx, &caller.role, PERM_EXAMS_TAKE)?;
         expire_if_due(&state, path.as_str());
         let mut attempt = require_attempt_in_scope(&state, path.as_str(), &_scope)?;
@@ -475,7 +475,7 @@ pub(crate) async fn submit_attempt(
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_permission(&ctx, &caller.role, PERM_EXAMS_TAKE)?;
         expire_if_due(&state, path.as_str());
         let mut attempt = require_attempt_in_scope(&state, path.as_str(), &_scope)?;
@@ -537,7 +537,7 @@ pub(crate) async fn expire_attempt(
     let result: UnifiedResult<AttemptView> = (|| {
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_permission(&ctx, &caller.role, PERM_EXAMS_MANAGE)?;
         let attempt = require_attempt_in_scope(&state, path.as_str(), &_scope)?;
         if attempt.status != ATTEMPT_IN_PROGRESS {
@@ -581,7 +581,7 @@ pub(crate) async fn record_proctor_signal(
     let result: UnifiedResult<ProctorSignal> = (|| {
         let _tenant = require_tenant(&req)?;
         let caller = caller(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_permission(&ctx, &caller.role, PERM_EXAMS_TAKE)?;
         let settings = state.settings();
         let attempt = require_attempt_in_scope(&state, path.as_str(), &_scope)?;

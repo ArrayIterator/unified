@@ -30,7 +30,7 @@ pub(crate) async fn create_category(
 ) -> HttpResponse {
     let result: UnifiedResult<Category> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_KNOWLEDGEBASE_MANAGE)?;
         let name = require_text(&body.name, "name", MAX_NAME_LEN)?;
@@ -170,7 +170,7 @@ pub(crate) async fn update_category(
 ) -> HttpResponse {
     let result: UnifiedResult<Category> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_KNOWLEDGEBASE_MANAGE)?;
         let id = parse_uuid(&path.into_inner(), "category")?;
@@ -234,7 +234,7 @@ pub(crate) async fn delete_category(
 ) -> HttpResponse {
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_KNOWLEDGEBASE_MANAGE)?;
         let id = parse_uuid(&path.into_inner(), "category")?;

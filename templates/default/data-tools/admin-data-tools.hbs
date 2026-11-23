@@ -1,0 +1,66 @@
+{{!--
+  Data Tools admin page (content template for the dashboards admin
+  layout). Wiring is follow-up work for the dashboards owner: add
+  "data-tools" to the section allowlist + capability map +
+  content-template match in `src/modules/dashboards/handlers_admin.rs`
+  and "data-tools" to `section_flags` in
+  `src/modules/dashboards/service.rs` (see
+  `docs/integration/INTEGRATION_NOTES_DATA_TOOLS.md`).
+  Until then the same page is served live by the module itself at
+  `GET /api/v1/data-tools/admin`.
+
+  Context: `section_data` carries the hook-provided entry for this
+  section (rules + recent runs, answered by the Data Tools module);
+  the buttons below call the JSON endpoints directly.
+--}}
+<section class="admin-data-tools" data-section="data-tools">
+  <h1>Data Tools</h1>
+  <p class="page-intro">Orphaned-data resolver, expired-data purging, and cleanup rules. A scan is always a dry run: it counts, it never deletes.</p>
+
+  {{#if section_data}}
+  <h2>Cleanup rules</h2>
+  <table class="admin-table">
+    <thead>
+      <tr><th>Target</th><th>Description</th><th>Retention (days)</th><th>Enabled</th><th>Dry run by default</th></tr>
+    </thead>
+    <tbody>
+      {{#each section_data.rules}}
+      <tr>
+        <td>{{target}}</td>
+        <td>{{description}}</td>
+        <td>{{retention_days}}</td>
+        <td>{{#if enabled}}Yes{{else}}No{{/if}}</td>
+        <td>{{#if dry_run_default}}Yes{{else}}No{{/if}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+
+  <h2>Scan &amp; run</h2>
+  <p>
+    <button type="button" data-action="data-tools-scan">Scan now (dry run)</button>
+    <button type="button" data-action="data-tools-run">Run cleanup</button>
+  </p>
+  <p class="scan-result" data-role="data-tools-result" role="status"></p>
+
+  <h2>Run history</h2>
+  <table class="admin-table">
+    <thead>
+      <tr><th>Started</th><th>Finished</th><th>Dry run</th><th>Status</th><th>Triggered by</th></tr>
+    </thead>
+    <tbody>
+      {{#each section_data.runs}}
+      <tr>
+        <td>{{started_at}}</td>
+        <td>{{finished_at}}</td>
+        <td>{{#if dry_run}}Yes{{else}}No{{/if}}</td>
+        <td>{{status}}</td>
+        <td>{{triggered_by}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+  {{else}}
+  <p class="page-intro">Data Tools is not connected: no section data was provided for this page.</p>
+  {{/if}}
+</section>

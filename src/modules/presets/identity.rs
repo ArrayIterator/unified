@@ -168,8 +168,8 @@ pub(super) fn caller_company(
 /// so the record is never stored unscoped under a scoped caller.
 /// When no caller scope is known, a body company is refused: an
 /// unresolved caller may not claim a company (the shared
-/// `CallerScope::Unresolved` rule); omitting the company stores
-/// a global row. A caller scope that is not a UUID is refused the
+/// `CallerScope::Unresolved` rule); omitting the company is refused (C3 task 315):
+/// a write requires a resolved company scope. A caller scope that is not a UUID is refused the
 /// same way (fail closed: application / wizard company ids are UUIDs).
 pub(super) fn require_company_match_uuid(
     tenant: &unified_core::tenancy::TenantContext,
@@ -195,7 +195,9 @@ pub(super) fn require_company_match_uuid(
             })?;
             Ok(Some(id))
         }
-        (None, None) => Ok(None),
+        (None, None) => Err(UnifiedError::forbidden(
+            "A write requires a resolved company scope",
+        )),
     }
 }
 
@@ -250,6 +252,33 @@ pub(super) fn require_record_in_company_scope_uuid(
         ))
     }
 }
+
+/// Fail closed (403) when a stored record is outside the caller's
+/// company scope FOR A WRITE (C3 task 315, strict by default).
+/// Unlike the read check above (rule A), a write requires an exact
+/// company match: a company caller may write only their own
+/// company's records — global (unscoped) records are platform-only
+/// — and an unresolved caller may write nothing. Mutation handlers
+/// call this right after loading the record they mutate; handlers
+/// that only read the record, or load a parent to scope a child
+/// write, keep the read check.
+pub(super) fn require_record_writable_in_company_scope_uuid(
+    record_company_id: &Uuid,
+    caller_company: &Option<String>,
+) -> UnifiedResult<()> {
+    match caller_company {
+        Some(caller) => match Uuid::parse_str(caller) {
+            Ok(scope) if scope == *record_company_id => Ok(()),
+            _ => Err(UnifiedError::forbidden(
+            "A write requires an exact company match: the record belongs to a different company or is a shared (global) record",
+        )),
+        },
+        None => Err(UnifiedError::forbidden(
+            "A write requires an exact company match: the record belongs to a different company or is a shared (global) record",
+        )),
+    }
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -406,7 +435,7 @@ mod tests {
     }
 
     #[test]
-    fn require_company_match_uuid_refuses_body_company_from_unresolved_callers() {
+    fn require_company_match_uuid_refuses_writes_from_unresolved_callers() {
         use actix_web::HttpMessage;
         let company = Uuid::now_v7();
         let build = |tenant_company: &str| {
@@ -431,10 +460,7 @@ mod tests {
         let req = build("");
         let tenant = require_tenant(&req).expect("tenant context must resolve");
         assert!(require_company_match_uuid(&tenant, &req, &Some(company)).is_err());
-        assert_eq!(
-            require_company_match_uuid(&tenant, &req, &None).unwrap(),
-            None
-        );
+        assert!(require_company_match_uuid(&tenant, &req, &None).is_err());
         let req = build(&company.to_string());
         let tenant = require_tenant(&req).expect("tenant context must resolve");
         assert_eq!(

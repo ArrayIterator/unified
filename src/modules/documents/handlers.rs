@@ -1,7 +1,8 @@
 // documents — HTTP handlers.
 
-use super::*;
+use super::types::UpdateDocumentMetadataRequest;
 use super::validation::push_multipart_text;
+use super::*;
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
 use unified_core::json;
@@ -113,6 +114,46 @@ pub(crate) async fn get_document(
             ));
         }
         Ok(document)
+    })();
+    json::respond(result, debug)
+}
+
+/// Update a document's metadata (`PATCH /{id}`, body
+/// `UpdateDocumentMetadataRequest`). Only the owner or an admin
+/// may edit metadata (same rule as delete / flip / re-upload);
+/// the file, its versions, and its visibility are untouched.
+/// The updated record is published to the Search module
+/// (`search.index`) when anything actually changed.
+pub(crate) async fn update_document_metadata(
+    state: web::Data<Arc<DocumentsState>>,
+    ctx: web::Data<Arc<AppContext>>,
+    req: HttpRequest,
+    path: web::Path<String>,
+    body: web::Json<UpdateDocumentMetadataRequest>,
+) -> HttpResponse {
+    let debug = ctx.is_debug();
+
+    let _tenant = match require_tenant(&req) {
+        Ok(tenant) => tenant,
+        Err(error) => return json::error_response(&error, debug),
+    };
+    let _scope = match caller_company(&_tenant, &req) {
+        Ok(scope) => scope,
+        Err(error) => return json::error_response(&error, debug),
+    };
+    let found = match authorize(&ctx, &req, PERM_WRITE) {
+        Ok(found) => found,
+        Err(error) => return json::error_response(&error, debug),
+    };
+    let result: UnifiedResult<DocumentRecord> = (|| {
+        let document = state.load_document(path.as_str())?;
+        require_record_in_company_scope(&document.company_id, &_scope)?;
+        if document.owner_id != found.actor && !check_capability(&ctx, &found.role, PERM_ADMIN) {
+            return Err(UnifiedError::forbidden(
+                "Only the owner or an admin may edit this document's metadata",
+            ));
+        }
+        state.update_document_metadata(path.as_str(), body.into_inner())
     })();
     json::respond(result, debug)
 }
@@ -939,6 +980,11 @@ mod tests {
         DocumentRecord {
             id: "doc-1".to_string(),
             name: "cover.jpg".to_string(),
+            title: "cover.jpg".to_string(),
+            alt_text: None,
+            caption: None,
+            description: None,
+            custom_metadata: serde_json::Map::new(),
             module_id: "content".to_string(),
             company_id: company_id.to_string(),
             owner_id: "user-1".to_string(),

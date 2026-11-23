@@ -32,7 +32,7 @@ use super::constants::PERM_LOYALTY_VIEW;
 use super::helpers::append_ledger;
 use super::helpers::balance_view;
 use super::helpers::caller;
-use super::helpers::caller_company;
+use super::helpers::{caller_company, require_company_for_write};
 use super::helpers::created;
 use super::helpers::err;
 use super::helpers::expire_program;
@@ -140,7 +140,7 @@ pub(crate) async fn create_program(
     let debug = ctx.is_debug();
     let result: UnifiedResult<LoyaltyProgram> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LOYALTY_MANAGE)?;
@@ -250,7 +250,7 @@ pub(crate) async fn update_program(
     let debug = ctx.is_debug();
     let result: UnifiedResult<LoyaltyProgram> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LOYALTY_MANAGE)?;
@@ -301,7 +301,7 @@ pub(crate) async fn delete_program(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LOYALTY_MANAGE)?;
@@ -340,7 +340,7 @@ pub(crate) async fn activate_program(
     let debug = ctx.is_debug();
     let result: UnifiedResult<LoyaltyProgram> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LOYALTY_MANAGE)?;
@@ -380,7 +380,7 @@ pub(crate) async fn deactivate_program(
     let debug = ctx.is_debug();
     let result: UnifiedResult<LoyaltyProgram> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LOYALTY_MANAGE)?;
@@ -491,7 +491,7 @@ pub(crate) async fn create_earn_rule(
     let debug = ctx.is_debug();
     let result: UnifiedResult<LoyaltyEarnRule> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LOYALTY_MANAGE)?;
@@ -572,7 +572,7 @@ pub(crate) async fn update_earn_rule(
     let debug = ctx.is_debug();
     let result: UnifiedResult<LoyaltyEarnRule> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LOYALTY_MANAGE)?;
@@ -633,7 +633,7 @@ pub(crate) async fn delete_earn_rule(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LOYALTY_MANAGE)?;
@@ -694,7 +694,7 @@ pub(crate) async fn create_tier(
     let debug = ctx.is_debug();
     let result: UnifiedResult<LoyaltyTier> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LOYALTY_MANAGE)?;
@@ -792,7 +792,7 @@ pub(crate) async fn update_tier(
     let debug = ctx.is_debug();
     let result: UnifiedResult<LoyaltyTier> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LOYALTY_MANAGE)?;
@@ -856,7 +856,7 @@ pub(crate) async fn delete_tier(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LOYALTY_MANAGE)?;
@@ -882,7 +882,7 @@ pub(crate) async fn earn_points(
     let debug = ctx.is_debug();
     let result: UnifiedResult<LoyaltyLedgerEntry> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LOYALTY_MANAGE)?;
@@ -965,7 +965,7 @@ pub(crate) async fn adjust_points(
     let debug = ctx.is_debug();
     let result: UnifiedResult<LoyaltyLedgerEntry> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LOYALTY_MANAGE)?;
@@ -1030,7 +1030,7 @@ pub(crate) async fn expire_points(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LOYALTY_MANAGE)?;
@@ -1201,7 +1201,7 @@ pub(crate) async fn redeem_points(
     let debug = ctx.is_debug();
     let result: UnifiedResult<LoyaltyRedemption> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LOYALTY_VIEW)?;
@@ -1375,7 +1375,7 @@ pub(crate) async fn cancel_redemption(
     let debug = ctx.is_debug();
     let result: UnifiedResult<LoyaltyRedemption> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LOYALTY_MANAGE)?;

@@ -12,6 +12,11 @@ For each module, per routed handler (routed = names appearing in
   - write rule: POST/PUT/PATCH/DELETE handlers must resolve the
     company with `require_caller_company(`; GET handlers must resolve
     it with `caller_company(` (mismatch -> 403)
+
+Task 315 (2026-11-23): `require_caller_company` is the pre-315
+strict write gate, equivalent to the newer
+`require_company_for_write`; these modules already used it, so
+the C.3 rename left them untouched and this rule is unchanged.
   - excluded: names passed on the command line after the module
 
 Usage: c3_group_e_verify.py <module> [excluded ...]

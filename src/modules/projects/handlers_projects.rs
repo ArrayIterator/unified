@@ -125,7 +125,7 @@ pub(crate) async fn create_project(
     let (viewer_id, viewer_role) = viewer_of(&req);
     let result: UnifiedResult<Project> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_capability(&state, viewer_role.as_deref(), "projects:create")?;
         let input = body.into_inner();
         let name = input.name.trim().to_string();
@@ -310,7 +310,7 @@ pub(crate) async fn update_project(
     let (viewer_id, viewer_role) = viewer_of(&req);
     let result: UnifiedResult<Project> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_capability(&state, viewer_role.as_deref(), "projects:edit")?;
         let input = body.into_inner();
         let project = state.get_project(&project_id)?;
@@ -443,7 +443,7 @@ pub(crate) async fn delete_project(
     let (viewer_id, viewer_role) = viewer_of(&req);
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_capability(&state, viewer_role.as_deref(), "projects:delete")?;
         let project = state.get_project(&project_id)?;
         require_project_access(
@@ -536,7 +536,7 @@ pub(crate) async fn archive_project(
     let (viewer_id, viewer_role) = viewer_of(&req);
     let result: UnifiedResult<Project> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_capability(&state, viewer_role.as_deref(), "projects:edit")?;
         let project = state.get_project(&project_id)?;
         require_project_access(
@@ -588,7 +588,7 @@ pub(crate) async fn restore_project(
     let (viewer_id, viewer_role) = viewer_of(&req);
     let result: UnifiedResult<Project> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_capability(&state, viewer_role.as_deref(), "projects:edit")?;
         let project = state.get_project(&project_id)?;
         require_project_access(

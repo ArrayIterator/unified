@@ -80,7 +80,7 @@ pub(crate) async fn issue_fee_receipt(
 ) -> HttpResponse {
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = fee_caller(&req)?;
         fee_require_manage(&ctx, &caller)?;
         let charge = state
@@ -493,7 +493,7 @@ pub(crate) async fn create_fee_discount(
 ) -> HttpResponse {
     let result: UnifiedResult<FeeDiscount> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = fee_caller(&req)?;
         fee_require_manage(&ctx, &caller)?;
         let input = body.into_inner();
@@ -612,7 +612,7 @@ pub(crate) async fn update_fee_discount(
 ) -> HttpResponse {
     let result: UnifiedResult<FeeDiscount> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = fee_caller(&req)?;
         fee_require_manage(&ctx, &caller)?;
         let input = body.into_inner();
@@ -677,7 +677,7 @@ pub(crate) async fn delete_fee_discount(
 ) -> HttpResponse {
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = fee_caller(&req)?;
         fee_require_manage(&ctx, &caller)?;
         if !state.fee_discounts.contains_key(path.as_str()) {
@@ -755,7 +755,7 @@ pub(crate) async fn create_fee_guardian(
 ) -> HttpResponse {
     let result: UnifiedResult<FeeGuardianLink> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = fee_caller(&req)?;
         fee_require_manage(&ctx, &caller)?;
         let input = body.into_inner();
@@ -811,7 +811,7 @@ pub(crate) async fn delete_fee_guardian(
 ) -> HttpResponse {
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = fee_caller(&req)?;
         fee_require_manage(&ctx, &caller)?;
         let mut link = state

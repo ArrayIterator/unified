@@ -10,7 +10,7 @@ use serde_json::{json, Value};
 use std::collections::{HashMap};
 use std::sync::{Arc};
 use super::helpers::{
-    caller, caller_company, in_company_scope, require_permission, require_product_in_scope,
+    caller, caller_company, require_company_for_write, in_company_scope, require_permission, require_product_in_scope,
     require_tenant,
 };
 use super::types::{AdjustInventory, AttachTag, CreateProductFile, CreateProductVersion, CreateTag, CreateTaxonomyNode, Inventory, MoveTaxonomyNode, PERM_PRODUCTS_CREATE, PERM_PRODUCTS_MANAGE, PERM_PRODUCTS_READ, ProductFile, ProductVersion, TAXONOMY_KINDS, Tag, TagCount, TaxonomyNode, UpdateTag, UpdateTaxonomyNode};
@@ -119,7 +119,7 @@ pub(crate) async fn adjust_inventory(
 ) -> HttpResponse {
     let result: UnifiedResult<Inventory> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRODUCTS_MANAGE)?;
         let input = body.into_inner();
@@ -289,7 +289,7 @@ pub(crate) async fn create_product_file(
 ) -> HttpResponse {
     let result: UnifiedResult<ProductFile> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRODUCTS_CREATE)?;
         let input = body.into_inner();
@@ -332,7 +332,7 @@ pub(crate) async fn delete_product_file(
 ) -> HttpResponse {
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRODUCTS_MANAGE)?;
         let record = state
@@ -410,7 +410,7 @@ pub(crate) async fn create_product_version(
 ) -> HttpResponse {
     let result: UnifiedResult<ProductVersion> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRODUCTS_CREATE)?;
         let input = body.into_inner();
@@ -456,7 +456,7 @@ pub(crate) async fn delete_product_version(
 ) -> HttpResponse {
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRODUCTS_MANAGE)?;
         let record = state
@@ -574,7 +574,7 @@ pub(crate) async fn create_taxonomy_node(
 ) -> HttpResponse {
     let result: UnifiedResult<TaxonomyNode> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRODUCTS_CREATE)?;
         let input = body.into_inner();
@@ -673,7 +673,7 @@ pub(crate) async fn update_taxonomy_node(
 ) -> HttpResponse {
     let result: UnifiedResult<TaxonomyNode> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRODUCTS_MANAGE)?;
         let input = body.into_inner();
@@ -732,7 +732,7 @@ pub(crate) async fn delete_taxonomy_node(
 ) -> HttpResponse {
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRODUCTS_MANAGE)?;
         let node = state
@@ -778,7 +778,7 @@ pub(crate) async fn move_taxonomy_node(
 ) -> HttpResponse {
     let result: UnifiedResult<TaxonomyNode> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRODUCTS_MANAGE)?;
         let input = body.into_inner();
@@ -922,7 +922,7 @@ pub(crate) async fn create_tag(
 ) -> HttpResponse {
     let result: UnifiedResult<Tag> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRODUCTS_CREATE)?;
         let input = body.into_inner();
@@ -995,7 +995,7 @@ pub(crate) async fn update_tag(
 ) -> HttpResponse {
     let result: UnifiedResult<Tag> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRODUCTS_MANAGE)?;
         let input = body.into_inner();
@@ -1041,7 +1041,7 @@ pub(crate) async fn delete_tag(
 ) -> HttpResponse {
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRODUCTS_MANAGE)?;
         let tag = state
@@ -1174,7 +1174,7 @@ pub(crate) async fn attach_product_tag(
 ) -> HttpResponse {
     let result: UnifiedResult<Vec<Tag>> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRODUCTS_CREATE)?;
         let input = body.into_inner();
@@ -1211,7 +1211,7 @@ pub(crate) async fn detach_product_tag(
     let (product_id, tag_id) = path.into_inner();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PRODUCTS_MANAGE)?;
         let _product = require_product_in_scope(&state, &product_id, &_scope)?;

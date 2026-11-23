@@ -45,6 +45,7 @@ pub mod contracts;
 pub mod crm;
 pub mod curriculum;
 pub mod dashboards;
+pub mod data_tools;
 pub mod delivery_notes;
 pub mod departments;
 pub mod documents;
@@ -192,6 +193,10 @@ pub fn register_all(registry: &ModuleRegistry) {
     timeline::register(registry);
     saved_views::register(registry);
     backup::register(registry);
+    // Data Tools answers the scheduler's `cleanup.requested` hook
+    // and owns the cleanup rules + runs; it reaches other modules'
+    // tables only through the `data_tools.cleanup.<target>` hook.
+    data_tools::register(registry);
     clusters::register(registry);
     load_balancer::register(registry);
     hosting::register(registry);

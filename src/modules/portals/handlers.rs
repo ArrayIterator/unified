@@ -311,7 +311,7 @@ pub(crate) async fn update_portal(
         require_permission(&ctx, &caller.role, PERM_PORTALS_MANAGE)?;
         let scope = caller_company_scope(&_tenant, &req)?;
         let mut portal = load_portal(&state, &path.into_inner())?;
-        require_record_in_company_scope_str(&portal.company_id, &scope)?;
+        require_record_writable_in_company_scope_str(&portal.company_id, &scope)?;
         let input = body.into_inner();
         let mut domain_changed = false;
         if let Some(name) = &input.name {
@@ -456,7 +456,7 @@ pub(crate) async fn update_domain_status(
         require_permission(&ctx, &caller.role, PERM_PORTALS_MANAGE)?;
         let scope = caller_company_scope(&_tenant, &req)?;
         let mut portal = load_portal(&state, &path.into_inner())?;
-        require_record_in_company_scope_str(&portal.company_id, &scope)?;
+        require_record_writable_in_company_scope_str(&portal.company_id, &scope)?;
         let input = body.into_inner();
         apply_domain_verification(&mut portal, &input.status, input.domain.as_deref())?;
         let status = portal.domain_status.clone();
@@ -497,7 +497,7 @@ pub(crate) async fn delete_portal(
         require_permission(&ctx, &caller.role, PERM_PORTALS_MANAGE)?;
         let scope = caller_company_scope(&_tenant, &req)?;
         let portal = load_portal(&state, &path.into_inner())?;
-        require_record_in_company_scope_str(&portal.company_id, &scope)?;
+        require_record_writable_in_company_scope_str(&portal.company_id, &scope)?;
         let id = portal.id;
         state.portals.remove(&id);
         let stale_menus: Vec<Uuid> = state

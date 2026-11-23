@@ -275,6 +275,7 @@ fn read_file_head(path: &Path, limit: usize) -> UnifiedResult<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use super::super::types::UpdateDocumentMetadataRequest;
     use unified_core::hardening::{HardeningState, SecuritySettings};
     use unified_core::hooks::HookContext;
     use chrono::{Duration, TimeZone};
@@ -298,6 +299,11 @@ mod tests {
         DocumentRecord {
             id: "doc-1".to_string(),
             name: "report.pdf".to_string(),
+            title: "report.pdf".to_string(),
+            alt_text: None,
+            caption: None,
+            description: None,
+            custom_metadata: serde_json::Map::new(),
             module_id: "documents".to_string(),
             company_id: "company-1".to_string(),
             owner_id: "user-1".to_string(),
@@ -1187,5 +1193,217 @@ mod tests {
         assert!(!orphan.exists());
         assert!(sessions_root.join("live-session").exists());
         let _ = std::fs::remove_dir_all(&spool_root);
+    }
+
+    #[tokio::test]
+    async fn metadata_patch_merges_removes_and_reindexes() {
+        // A PDF upload through the single-shot path: the title
+        // defaults to the file name, metadata starts empty, and
+        // the create publishes one `search.index` event.
+        let mut state = DocumentsState::new();
+        // No real storage in tests: writes go to a scratch
+        // provider rooted at a temp directory.
+        let store_root = std::env::temp_dir().join(format!(
+            "unified-documents-metadata-test-{}",
+            Uuid::new_v4()
+        ));
+        let _ = std::fs::remove_dir_all(&store_root);
+        state.provider = Some(Arc::new(LocalProvider::new(store_root.clone()).unwrap()));
+        // Capture every `search.index` payload the module emits.
+        let indexed: Arc<Mutex<Vec<Value>>> = Arc::new(Mutex::new(Vec::new()));
+        let captured = Arc::clone(&indexed);
+        state.bus().register(
+            "search.index",
+            "test-capture",
+            Arc::new(move |ctx: &mut HookContext| {
+                captured
+                    .lock()
+                    .expect("lock poisoned")
+                    .push(ctx.data.clone());
+            }),
+        );
+        let tenant = Uuid::parse_str("019a1234-5678-7abc-def0-123456789abc").unwrap();
+        let pdf = b"%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\n";
+        let record = state
+            .finalize_upload(
+                "annual-report.pdf".to_string(),
+                "documents".to_string(),
+                String::new(),
+                "user-1".to_string(),
+                "owner".to_string(),
+                tenant,
+                None,
+                pdf.to_vec(),
+                "private".to_string(),
+                None,
+            )
+            .await
+            .unwrap();
+        assert_eq!(record.mime, "application/pdf");
+        assert_eq!(record.title, "annual-report.pdf");
+        assert_eq!(record.alt_text, None);
+        assert_eq!(record.caption, None);
+        assert_eq!(record.description, None);
+        assert!(record.custom_metadata.is_empty());
+        {
+            let events = indexed.lock().expect("lock poisoned");
+            assert_eq!(events.len(), 1);
+            assert_eq!(
+                events[0].get("kind").and_then(Value::as_str),
+                Some("documents.document")
+            );
+            assert_eq!(
+                events[0].get("id").and_then(Value::as_str),
+                Some(record.id.as_str())
+            );
+            assert_eq!(
+                events[0].get("title").and_then(Value::as_str),
+                Some("annual-report.pdf")
+            );
+            assert_eq!(
+                events[0].get("url").and_then(Value::as_str),
+                Some(format!("/api/v1/documents/{}", record.id).as_str())
+            );
+        }
+        // PATCH: rename + describe + set the worked `notes` key.
+        let mut custom = serde_json::Map::new();
+        custom.insert("notes".to_string(), json!("Q4 final, reviewed"));
+        custom.insert("department".to_string(), json!("finance"));
+        let updated = state
+            .update_document_metadata(
+                &record.id,
+                UpdateDocumentMetadataRequest {
+                    title: Some("Annual Report 2026".to_string()),
+                    alt_text: None,
+                    caption: Some("Cover page".to_string()),
+                    description: Some("The cooperative's annual report.".to_string()),
+                    custom_metadata: Some(custom),
+                },
+            )
+            .unwrap();
+        assert_eq!(updated.title, "Annual Report 2026");
+        assert_eq!(updated.caption.as_deref(), Some("Cover page"));
+        assert_eq!(
+            updated.description.as_deref(),
+            Some("The cooperative's annual report.")
+        );
+        assert_eq!(
+            updated.custom_metadata.get("notes").and_then(Value::as_str),
+            Some("Q4 final, reviewed")
+        );
+        assert_eq!(
+            updated
+                .custom_metadata
+                .get("department")
+                .and_then(Value::as_str),
+            Some("finance")
+        );
+        // The update re-indexes with the new title and the
+        // description as the snippet.
+        {
+            let events = indexed.lock().expect("lock poisoned");
+            assert_eq!(events.len(), 2);
+            assert_eq!(
+                events[1].get("title").and_then(Value::as_str),
+                Some("Annual Report 2026")
+            );
+            assert_eq!(
+                events[1].get("snippet").and_then(Value::as_str),
+                Some("The cooperative's annual report.")
+            );
+        }
+        // PATCH: null removes `notes`, a new value overwrites
+        // `department`, and an empty caption clears it.
+        let mut custom = serde_json::Map::new();
+        custom.insert("notes".to_string(), Value::Null);
+        custom.insert("department".to_string(), json!("treasury"));
+        let updated = state
+            .update_document_metadata(
+                &record.id,
+                UpdateDocumentMetadataRequest {
+                    title: None,
+                    alt_text: None,
+                    caption: Some("   ".to_string()),
+                    description: None,
+                    custom_metadata: Some(custom),
+                },
+            )
+            .unwrap();
+        assert_eq!(updated.title, "Annual Report 2026");
+        assert_eq!(updated.caption, None);
+        assert!(updated.custom_metadata.get("notes").is_none());
+        assert_eq!(
+            updated
+                .custom_metadata
+                .get("department")
+                .and_then(Value::as_str),
+            Some("treasury")
+        );
+        // A patch that changes nothing is a no-op: no third index
+        // event, and the stored record is untouched.
+        let unchanged = state
+            .update_document_metadata(
+                &record.id,
+                UpdateDocumentMetadataRequest {
+                    title: Some("Annual Report 2026".to_string()),
+                    alt_text: None,
+                    caption: None,
+                    description: None,
+                    custom_metadata: None,
+                },
+            )
+            .unwrap();
+        assert_eq!(unchanged.title, "Annual Report 2026");
+        assert_eq!(indexed.lock().expect("lock poisoned").len(), 2);
+        // Invalid keys and empty titles are rejected, and the
+        // stored record is untouched by the rejection.
+        let mut bad = serde_json::Map::new();
+        bad.insert("Bad-Key".to_string(), json!(1));
+        assert!(
+            state
+                .update_document_metadata(
+                    &record.id,
+                    UpdateDocumentMetadataRequest {
+                        title: None,
+                        alt_text: None,
+                        caption: None,
+                        description: None,
+                        custom_metadata: Some(bad),
+                    },
+                )
+                .is_err()
+        );
+        assert!(
+            state
+                .update_document_metadata(
+                    &record.id,
+                    UpdateDocumentMetadataRequest {
+                        title: Some("   ".to_string()),
+                        alt_text: None,
+                        caption: None,
+                        description: None,
+                        custom_metadata: None,
+                    },
+                )
+                .is_err()
+        );
+        assert!(
+            state
+                .update_document_metadata(
+                    "missing",
+                    UpdateDocumentMetadataRequest {
+                        title: Some("Nope".to_string()),
+                        alt_text: None,
+                        caption: None,
+                        description: None,
+                        custom_metadata: None,
+                    },
+                )
+                .is_err()
+        );
+        let stored = state.load_document(&record.id).unwrap();
+        assert_eq!(stored.title, "Annual Report 2026");
+        assert_eq!(indexed.lock().expect("lock poisoned").len(), 2);
+        let _ = std::fs::remove_dir_all(&store_root);
     }
 }

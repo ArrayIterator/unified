@@ -364,8 +364,8 @@ pub(crate) fn caller_company(
 /// so the record is never stored unscoped under a scoped caller.
 /// When no caller scope is known, a body company is refused: an
 /// unresolved caller may not claim a company (the shared
-/// `CallerScope::Unresolved` rule); omitting the company stores
-/// a global row.
+/// `CallerScope::Unresolved` rule); omitting the company is refused (C3 task 315):
+/// a write requires a resolved company scope.
 pub(crate) fn require_company_match(
     tenant: &unified_core::tenancy::TenantContext,
     req: &HttpRequest,
@@ -389,7 +389,10 @@ pub(crate) fn require_company_match_for(
         (Some(body), None) => Err(UnifiedError::forbidden(
             "company_id does not match the caller's company scope",
         )),
-        (None, caller) => Ok(caller.clone()),
+        (None, Some(caller)) => Ok(Some(caller.clone())),
+        (None, None) => Err(UnifiedError::forbidden(
+            "A write requires a resolved company scope",
+        )),
     }
 }
 
@@ -398,15 +401,16 @@ pub(crate) fn require_company_match_for(
 /// global records match: unscoped records are visible, every
 /// company-owned record is denied (the shared
 /// `CallerScope::Unresolved` rule). With a scope, only records
-/// carrying exactly that company match; unscoped (legacy) records
-/// are hidden from scoped callers.
+/// carrying that company match, plus unscoped (global/legacy) records,
+/// which are shared content visible to any resolved scope (C3 task 320, rule A).
 pub(crate) fn in_company_scope(
     record_company_id: &Option<String>,
     caller_company: &Option<String>,
 ) -> bool {
     match caller_company {
         None => record_company_id.is_none(),
-        Some(company) => record_company_id.as_deref() == Some(company.as_str()),
+        Some(company) => record_company_id.is_none()
+                || record_company_id.as_deref() == Some(company.as_str()),
     }
 }
 
@@ -426,6 +430,28 @@ pub(crate) fn require_record_in_company_scope(
         ))
     }
 }
+
+/// Fail closed (403) when a stored record is outside the caller's
+/// company scope FOR A WRITE (C3 task 315, strict by default).
+/// Unlike the read check above (rule A), a write requires an exact
+/// company match: a company caller may write only their own
+/// company's records — global (unscoped) records are platform-only
+/// — and an unresolved caller may write nothing. Mutation handlers
+/// call this right after loading the record they mutate; handlers
+/// that only read the record, or load a parent to scope a child
+/// write, keep the read check.
+pub(crate) fn require_record_writable_in_company_scope(
+    record_company_id: &Option<String>,
+    caller_company: &Option<String>,
+) -> UnifiedResult<()> {
+    match (record_company_id, caller_company) {
+        (Some(record), Some(caller)) if record == caller => Ok(()),
+        _ => Err(UnifiedError::forbidden(
+            "A write requires an exact company match: the record belongs to a different company or is a shared (global) record",
+        )),
+    }
+}
+
 /// Project records carry `company_id: Option<String>`;
 /// sub-records (tasks, boards, milestones, sprints, phases,
 /// time entries, automation rules, templates, cycles, program
@@ -517,20 +543,20 @@ mod tenant_guard_tests {
     }
 
     #[test]
-    fn in_company_scope_hides_unscoped_records_from_scoped_callers() {
+    fn in_company_scope_shows_global_records_to_scoped_callers() {
         let scope = Some("acme".to_string());
         assert!(in_company_scope(&Some("acme".to_string()), &scope));
         assert!(!in_company_scope(&Some("other".to_string()), &scope));
-        assert!(!in_company_scope(&None, &scope));
+        assert!(in_company_scope(&None, &scope));
         assert!(in_company_scope(&None, &None));
         assert!(!in_company_scope(&Some("other".to_string()), &None));
     }
 
     #[test]
-    fn require_company_match_for_refuses_body_company_from_unresolved_callers() {
+    fn require_company_match_for_refuses_writes_from_unresolved_callers() {
         let body = Some("c1".to_string());
         assert!(require_company_match_for(&None, &body).is_err());
-        assert!(require_company_match_for(&None, &None).unwrap().is_none());
+        assert!(require_company_match_for(&None, &None).is_err());
         assert_eq!(
             require_company_match_for(&Some("c1".to_string()), &body).unwrap(),
             Some("c1".to_string())

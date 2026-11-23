@@ -115,7 +115,7 @@ pub(crate) async fn add_project_member(
     let (viewer_id, viewer_role) = viewer_of(&req);
     let result: UnifiedResult<ProjectMember> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_capability(&state, viewer_role.as_deref(), "projects:manage_members")?;
         let input = body.into_inner();
         let project = state.get_project(&project_id)?;
@@ -194,7 +194,7 @@ pub(crate) async fn update_project_member(
     let (viewer_id, viewer_role) = viewer_of(&req);
     let result: UnifiedResult<ProjectMember> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_capability(&state, viewer_role.as_deref(), "projects:manage_members")?;
         let input = body.into_inner();
         let project = state.get_project(&project_id)?;
@@ -282,7 +282,7 @@ pub(crate) async fn remove_project_member(
     let (viewer_id, viewer_role) = viewer_of(&req);
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         require_capability(&state, viewer_role.as_deref(), "projects:manage_members")?;
         let project = state.get_project(&project_id)?;
         require_project_access(

@@ -149,7 +149,7 @@ pub(crate) async fn update_member(
         require_circulate(&ctx, &caller.role)?;
         let input = body.into_inner();
         let mut member = load_member(&state, &path.into_inner())?;
-        super::auth::require_record_in_company_scope(&member.company_id, &company)?;
+        super::auth::require_record_writable_in_company_scope(&member.company_id, &company)?;
         let settings = state.settings();
         if let Some(member_type) = &input.member_type {
             member.member_type = require_in_list(member_type, "member_type", &settings.member_types)?;
@@ -212,7 +212,7 @@ pub(crate) async fn delete_member(
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_LIBRARY_MANAGE)?;
         let member = load_member(&state, &path.into_inner())?;
-        super::auth::require_record_in_company_scope(&member.company_id, &company)?;
+        super::auth::require_record_writable_in_company_scope(&member.company_id, &company)?;
         let active_loan = state.loans.iter().any(|entry| {
             entry.value().member_id == member.id
                 && (entry.value().status == LOAN_ACTIVE || entry.value().status == LOAN_OVERDUE)
@@ -630,7 +630,7 @@ pub(crate) async fn renew_loan(
         let caller = caller(&req)?;
         require_circulate(&ctx, &caller.role)?;
         let mut loan = load_loan(&state, &path.into_inner())?;
-        super::auth::require_record_in_company_scope(&loan.company_id, &company)?;
+        super::auth::require_record_writable_in_company_scope(&loan.company_id, &company)?;
         if loan.status != LOAN_ACTIVE && loan.status != LOAN_OVERDUE {
             return Err(UnifiedError::conflict(format!(
                 "Only an active loan can be renewed (status: {})",
@@ -700,7 +700,7 @@ pub(crate) async fn return_loan(
         let caller = caller(&req)?;
         require_circulate(&ctx, &caller.role)?;
         let mut loan = load_loan(&state, &path.into_inner())?;
-        super::auth::require_record_in_company_scope(&loan.company_id, &company)?;
+        super::auth::require_record_writable_in_company_scope(&loan.company_id, &company)?;
         if loan.status != LOAN_ACTIVE && loan.status != LOAN_OVERDUE {
             return Err(UnifiedError::conflict(format!(
                 "Only an active loan can be returned (status: {})",
@@ -779,7 +779,7 @@ pub(crate) async fn mark_loan_lost(
         require_circulate(&ctx, &caller.role)?;
         let input = body.into_inner();
         let mut loan = load_loan(&state, &path.into_inner())?;
-        super::auth::require_record_in_company_scope(&loan.company_id, &company)?;
+        super::auth::require_record_writable_in_company_scope(&loan.company_id, &company)?;
         if loan.status != LOAN_ACTIVE && loan.status != LOAN_OVERDUE {
             return Err(UnifiedError::conflict(format!(
                 "Only an active loan can be marked lost (status: {})",
@@ -846,7 +846,7 @@ pub(crate) async fn mark_loan_damaged(
         require_circulate(&ctx, &caller.role)?;
         let input = body.into_inner();
         let mut loan = load_loan(&state, &path.into_inner())?;
-        super::auth::require_record_in_company_scope(&loan.company_id, &company)?;
+        super::auth::require_record_writable_in_company_scope(&loan.company_id, &company)?;
         if loan.status != LOAN_ACTIVE && loan.status != LOAN_OVERDUE {
             return Err(UnifiedError::conflict(format!(
                 "Only an active loan can be marked damaged (status: {})",

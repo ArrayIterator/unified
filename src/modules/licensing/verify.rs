@@ -218,6 +218,7 @@ pub(crate) async fn list_activation_history(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
+        require_control_plane(&req)?;
         require_caller_capability(&ctx, &req, "licensing:view")?;
         let id = id.into_inner();
         if load_license(&ctx, id)?.is_none() {
@@ -251,6 +252,7 @@ pub(crate) async fn deactivate_activation(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
+        require_control_plane(&req)?;
         let caller = require_caller_capability(&ctx, &req, "licensing:manage")?;
         let (license_id, activation_id) = path.into_inner();
         let actor = caller.actor.clone();
@@ -329,6 +331,7 @@ pub(crate) async fn update_seats(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<License> = (|| {
+        require_control_plane(&req)?;
         let caller = require_caller_capability(&ctx, &req, "licensing:manage")?;
         let id = id.into_inner();
         let mut license = load_license(&ctx, id)?
@@ -388,6 +391,7 @@ pub(crate) async fn list_license_events(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
+        require_control_plane(&req)?;
         require_caller_capability(&ctx, &req, "licensing:view")?;
         let id = id.into_inner();
         if load_license(&ctx, id)?.is_none() {
@@ -418,6 +422,7 @@ pub(crate) async fn verify_license_events(
 ) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
+        require_control_plane(&req)?;
         require_caller_capability(&ctx, &req, "licensing:view")?;
         let id = id.into_inner();
         if load_license(&ctx, id)?.is_none() {

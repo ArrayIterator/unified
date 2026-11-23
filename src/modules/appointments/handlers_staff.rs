@@ -165,7 +165,7 @@ pub(crate) async fn create_staff_availability(
     let debug = ctx.is_debug();
     let result: UnifiedResult<StaffAvailability> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_APPOINTMENTS_MANAGE)?;
         let staff_user_id = valid_user_id(&path.into_inner(), "staff_user_id")?;
@@ -227,7 +227,7 @@ pub(crate) async fn update_staff_availability(
     let debug = ctx.is_debug();
     let result: UnifiedResult<StaffAvailability> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_APPOINTMENTS_MANAGE)?;
         let (staff_user_id, availability_id) = path.into_inner();
@@ -310,7 +310,7 @@ pub(crate) async fn delete_staff_availability(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_APPOINTMENTS_MANAGE)?;
         let (staff_user_id, availability_id) = path.into_inner();
@@ -379,7 +379,7 @@ pub(crate) async fn assign_staff_service(
     let debug = ctx.is_debug();
     let result: UnifiedResult<StaffService> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_APPOINTMENTS_MANAGE)?;
         let staff_user_id = valid_user_id(&path.into_inner(), "staff_user_id")?;
@@ -426,7 +426,7 @@ pub(crate) async fn unassign_staff_service(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_APPOINTMENTS_MANAGE)?;
         let (staff_user_id, service_id) = path.into_inner();

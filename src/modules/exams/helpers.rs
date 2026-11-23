@@ -91,6 +91,27 @@ pub(crate) fn caller_company(
     }
 }
 
+/// Resolve the caller's company for a WRITE (C3 task 315, strict by
+/// default): a write requires a resolved company scope, so an
+/// unresolved caller is refused with 403 instead of silently
+/// writing a global (unscoped) record. Mutation handlers call
+/// this instead of `caller_company`; read handlers keep
+/// `caller_company`, and the named carve-outs (self-service
+/// writes, settings with no company field, scan/test triggers,
+/// platform surfaces) keep it too.
+pub(crate) fn require_company_for_write(
+    tenant: &unified_core::tenancy::TenantContext,
+    req: &actix_web::HttpRequest,
+) -> UnifiedResult<Option<String>> {
+    match caller_company(tenant, req)? {
+        Some(company) => Ok(Some(company)),
+        None => Err(UnifiedError::forbidden(
+            "A write requires a resolved company scope",
+        )),
+    }
+}
+
+
 /// Verify a request body's company id against the caller's
 /// company scope and return the company id to store. Fails closed
 /// (403) when the body names a company other than the caller's.
@@ -98,8 +119,8 @@ pub(crate) fn caller_company(
 /// so the record is never stored unscoped under a scoped caller.
 /// When no caller scope is known, a body company is refused: an
 /// unresolved caller may not claim a company (the shared
-/// `CallerScope::Unresolved` rule); omitting the company stores
-/// a global row.
+/// `CallerScope::Unresolved` rule); omitting the company is refused (C3 task 315):
+/// a write requires a resolved company scope.
 pub(crate) fn require_company_match(
     tenant: &unified_core::tenancy::TenantContext,
     req: &HttpRequest,
@@ -123,7 +144,10 @@ pub(crate) fn require_company_match_for(
         (Some(body), None) => Err(UnifiedError::forbidden(
             "company_id does not match the caller's company scope",
         )),
-        (None, caller) => Ok(caller.clone()),
+        (None, Some(caller)) => Ok(Some(caller.clone())),
+        (None, None) => Err(UnifiedError::forbidden(
+            "A write requires a resolved company scope",
+        )),
     }
 }
 
@@ -132,8 +156,8 @@ pub(crate) fn require_company_match_for(
 /// global records match: unscoped records are visible, every
 /// company-owned record is denied (the shared
 /// `CallerScope::Unresolved` rule). With a scope, only records
-/// carrying exactly that company match; unscoped (legacy) records
-/// are hidden from scoped callers. Write strictness here is
+/// carrying that company match, plus unscoped (global/legacy) records,
+/// which are shared content visible to any resolved scope (C3 task 320, rule A). Write strictness here is
 /// mismatch-only (the pilot-3 elearning model): updates carry no
 /// company field in this module, so there is no company change to
 /// verify, and an unresolved caller may still write a global row
@@ -145,7 +169,8 @@ pub(crate) fn in_company_scope(
 ) -> bool {
     match caller_company {
         None => record_company_id.is_none(),
-        Some(company) => record_company_id.as_deref() == Some(company.as_str()),
+        Some(company) => record_company_id.is_none()
+                || record_company_id.as_deref() == Some(company.as_str()),
     }
 }
 
@@ -165,6 +190,28 @@ pub(crate) fn require_record_in_company_scope(
         ))
     }
 }
+
+/// Fail closed (403) when a stored record is outside the caller's
+/// company scope FOR A WRITE (C3 task 315, strict by default).
+/// Unlike the read check above (rule A), a write requires an exact
+/// company match: a company caller may write only their own
+/// company's records — global (unscoped) records are platform-only
+/// — and an unresolved caller may write nothing. Mutation handlers
+/// call this right after loading the record they mutate; handlers
+/// that only read the record, or load a parent to scope a child
+/// write, keep the read check.
+pub(crate) fn require_record_writable_in_company_scope(
+    record_company_id: &Option<String>,
+    caller_company: &Option<String>,
+) -> UnifiedResult<()> {
+    match (record_company_id, caller_company) {
+        (Some(record), Some(caller)) if record == caller => Ok(()),
+        _ => Err(UnifiedError::forbidden(
+            "A write requires an exact company match: the record belongs to a different company or is a shared (global) record",
+        )),
+    }
+}
+
 
 /// True when the named question bank is in the caller scope. A
 /// missing bank is out of scope (fail-closed), so list filters
@@ -228,6 +275,27 @@ pub(crate) fn require_exam_by_id_in_scope(
     Ok(exam)
 }
 
+/// Load an exam by id for a WRITE and fail closed (403) when it is
+/// outside the caller scope (C3 task 315, strict by default).
+/// Unlike `require_exam_by_id_in_scope` (rule A reads), a write
+/// requires an exact company match: a global exam is platform-only.
+/// Mutation-only loaders call this; read handlers keep
+/// `require_exam_by_id_in_scope`.
+pub(crate) fn require_exam_writable_by_id_in_scope(
+    state: &ExamsState,
+    exam_id: &str,
+    scope: &Option<String>,
+) -> UnifiedResult<Exam> {
+    let exam = state
+        .exams
+        .get(exam_id)
+        .map(|entry| entry.value().clone())
+        .ok_or_else(|| UnifiedError::not_found("Exam not found"))?;
+    require_record_writable_in_company_scope(&exam.company_id, scope)?;
+    Ok(exam)
+}
+
+
 /// Load a question by id and fail closed (403) when its parent
 /// bank is outside the caller scope.
 pub(crate) fn require_question_in_scope(
@@ -262,6 +330,26 @@ pub(crate) fn require_attempt_in_scope(
     Ok(attempt)
 }
 
+/// Load an attempt by id for a WRITE and fail closed (403) when its
+/// parent exam is outside the caller scope (C3 task 315, strict by
+/// default: the parent exam must match the caller's company exactly
+/// — an attempt under a global exam is platform-only). Mutation-only;
+/// read handlers keep `require_attempt_in_scope`.
+pub(crate) fn require_attempt_writable_in_scope(
+    state: &ExamsState,
+    attempt_id: &str,
+    scope: &Option<String>,
+) -> UnifiedResult<ExamAttempt> {
+    let attempt = state
+        .attempts
+        .get(attempt_id)
+        .map(|entry| entry.value().clone())
+        .ok_or_else(|| UnifiedError::not_found("Attempt not found"))?;
+    require_exam_writable_by_id_in_scope(state, &attempt.exam_id, scope)?;
+    Ok(attempt)
+}
+
+
 /// Load a rubric by id and fail closed (403) when its parent
 /// exam is outside the caller scope.
 pub(crate) fn require_rubric_in_scope(
@@ -278,8 +366,11 @@ pub(crate) fn require_rubric_in_scope(
     Ok(rubric)
 }
 
-/// Load a manual grade by id and fail closed (403) when its
-/// parent attempt's exam is outside the caller scope.
+/// Load a manual grade by id for a WRITE and fail closed (403) when
+/// its parent attempt's exam is outside the caller scope (C3 task
+/// 315, strict by default: the parent exam must match the caller's
+/// company exactly — a grade under a global exam is platform-only).
+/// Mutation-only.
 pub(crate) fn require_grade_in_scope(
     state: &ExamsState,
     grade_id: &str,
@@ -290,7 +381,7 @@ pub(crate) fn require_grade_in_scope(
         .get(grade_id)
         .map(|entry| entry.value().clone())
         .ok_or_else(|| UnifiedError::not_found("Grade not found"))?;
-    require_attempt_in_scope(state, &grade.attempt_id, scope)?;
+    require_attempt_writable_in_scope(state, &grade.attempt_id, scope)?;
     Ok(grade)
 }
 
@@ -1438,11 +1529,11 @@ mod tenant_guard_tests {
     }
 
     #[test]
-    fn in_company_scope_hides_unscoped_records_from_scoped_callers() {
+    fn in_company_scope_shows_global_records_to_scoped_callers() {
         let scope = Some("company-a".to_string());
         assert!(in_company_scope(&Some("company-a".to_string()), &scope));
         assert!(!in_company_scope(&Some("company-b".to_string()), &scope));
-        assert!(!in_company_scope(&None, &scope));
+        assert!(in_company_scope(&None, &scope));
         assert!(in_company_scope(&None, &None));
         assert!(!in_company_scope(&Some("company-b".to_string()), &None));
     }
@@ -1451,7 +1542,7 @@ mod tenant_guard_tests {
     fn require_company_match_for_rules() {
         let body = Some("company-a".to_string());
         assert!(require_company_match_for(&None, &body).is_err());
-        assert!(require_company_match_for(&None, &None).unwrap().is_none());
+        assert!(require_company_match_for(&None, &None).is_err());
         assert_eq!(
             require_company_match_for(&Some("company-a".to_string()), &body).unwrap(),
             Some("company-a".to_string())

@@ -71,7 +71,7 @@ pub(crate) async fn create_payment_method(
     let debug = ctx.is_debug();
     let result: UnifiedResult<PosPaymentMethod> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_POS_MANAGE)?;
@@ -140,7 +140,7 @@ pub(crate) async fn update_payment_method(
     let debug = ctx.is_debug();
     let result: UnifiedResult<PosPaymentMethod> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_POS_MANAGE)?;
@@ -206,7 +206,7 @@ pub(crate) async fn delete_payment_method(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
 
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_POS_MANAGE)?;

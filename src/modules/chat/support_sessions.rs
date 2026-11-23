@@ -104,7 +104,7 @@ pub(crate) async fn create_support_session(
 ) -> HttpResponse {
     let result: UnifiedResult<WidgetBootstrap> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let _actor = actor_id(&req)?;
         let body = body.into_inner();
         let visitor_id = match &body.visitor_id {
@@ -188,7 +188,7 @@ pub(crate) async fn accept_support_session(
 ) -> HttpResponse {
     let result: UnifiedResult<SupportSession> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let actor = actor_id(&req)?;
         if !state.agents.contains_key(&actor) {
             return Err(UnifiedError::not_found(format!(
@@ -196,7 +196,7 @@ pub(crate) async fn accept_support_session(
             )));
         }
         let mut session = load_session(&state, &path.into_inner())?;
-        require_record_in_company_scope(&session.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&session.company_id, &_scope)?;
         if session.status != SupportSessionStatus::Waiting {
             return Err(UnifiedError::conflict(format!(
                 "Only a waiting session can be accepted (status is {:?})",
@@ -256,7 +256,7 @@ pub(crate) async fn close_support_session(
 ) -> HttpResponse {
     let result: UnifiedResult<SupportSession> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let actor = actor_id(&req)?;
         if !state.agents.contains_key(&actor) {
             return Err(UnifiedError::not_found(format!(
@@ -264,7 +264,7 @@ pub(crate) async fn close_support_session(
             )));
         }
         let mut session = load_session(&state, &path.into_inner())?;
-        require_record_in_company_scope(&session.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&session.company_id, &_scope)?;
         if !can_manage_support_session(&session, &actor) {
             return Err(UnifiedError::forbidden(
                 "Only the assigned agent can close this session",
@@ -321,7 +321,7 @@ pub(crate) async fn transfer_support_session(
 ) -> HttpResponse {
     let result: UnifiedResult<SupportSession> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let actor = actor_id(&req)?;
         if !state.agents.contains_key(&actor) {
             return Err(UnifiedError::not_found(format!(
@@ -339,7 +339,7 @@ pub(crate) async fn transfer_support_session(
             None => String::new(),
         };
         let mut session = load_session(&state, &path.into_inner())?;
-        require_record_in_company_scope(&session.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&session.company_id, &_scope)?;
         if !can_manage_support_session(&session, &actor) {
             return Err(UnifiedError::forbidden(
                 "Only the assigned agent can transfer this session",
@@ -415,10 +415,10 @@ pub(crate) async fn escalate_support_session(
 ) -> HttpResponse {
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let actor = actor_id(&req)?;
         let mut session = load_session(&state, &path.into_inner())?;
-        require_record_in_company_scope(&session.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&session.company_id, &_scope)?;
         if session.escalated_ticket_id.is_some() {
             return Err(UnifiedError::conflict(
                 "This session was already escalated to a ticket",

@@ -11,7 +11,7 @@ use std::collections::{HashMap};
 use std::sync::{Arc};
 use uuid::Uuid;
 use super::helpers::{
-    caller, caller_company, file_company, in_company_scope, release_company,
+    caller, caller_company, require_company_for_write, file_company, in_company_scope, release_company,
     require_company_match, require_company_match_for, require_record_in_company_scope,
     require_software_in_scope, require_tenant, require_permission, version_company,
 };
@@ -130,7 +130,7 @@ pub(crate) async fn create_software(
 ) -> HttpResponse {
     let result: UnifiedResult<SoftwareDetail> = (|| {
         let _tenant = require_tenant(&req)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_SOFTWARE_CREATE)?;
         let input = body.into_inner();
@@ -255,7 +255,7 @@ pub(crate) async fn update_software(
 ) -> HttpResponse {
     let result: UnifiedResult<SoftwareDetail> = (|| {
         let _tenant = require_tenant(&req)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_SOFTWARE_MANAGE)?;
         let input = body.into_inner();
@@ -284,7 +284,7 @@ pub(crate) async fn update_software(
             .software
             .get_mut(path.as_str())
             .ok_or_else(|| UnifiedError::not_found("Software not found"))?;
-        require_record_in_company_scope(&software.vendor_company_id, &scope)?;
+        require_record_writable_in_company_scope(&software.vendor_company_id, &scope)?;
         if let Some(name) = input.name {
             if name.trim().is_empty() {
                 return Err(UnifiedError::bad_request("Name must not be empty"));
@@ -372,7 +372,7 @@ pub(crate) async fn delete_software(
 ) -> HttpResponse {
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_SOFTWARE_MANAGE)?;
         require_software_in_scope(&state, path.as_str(), &scope)?;
@@ -412,14 +412,14 @@ pub(crate) async fn publish_software(
 ) -> HttpResponse {
     let result: UnifiedResult<SoftwareDetail> = (|| {
         let _tenant = require_tenant(&req)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_SOFTWARE_MANAGE)?;
         let mut software = state
             .software
             .get_mut(path.as_str())
             .ok_or_else(|| UnifiedError::not_found("Software not found"))?;
-        require_record_in_company_scope(&software.vendor_company_id, &scope)?;
+        require_record_writable_in_company_scope(&software.vendor_company_id, &scope)?;
         validate_status_transition(&software.status, "published")?;
         software.status = "published".to_string();
         software.updated_at = now();
@@ -442,14 +442,14 @@ pub(crate) async fn unpublish_software(
 ) -> HttpResponse {
     let result: UnifiedResult<SoftwareDetail> = (|| {
         let _tenant = require_tenant(&req)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_SOFTWARE_MANAGE)?;
         let mut software = state
             .software
             .get_mut(path.as_str())
             .ok_or_else(|| UnifiedError::not_found("Software not found"))?;
-        require_record_in_company_scope(&software.vendor_company_id, &scope)?;
+        require_record_writable_in_company_scope(&software.vendor_company_id, &scope)?;
         validate_status_transition(&software.status, "draft")?;
         software.status = "draft".to_string();
         software.updated_at = now();
@@ -698,7 +698,7 @@ pub(crate) async fn attach_software_tag(
 ) -> HttpResponse {
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_SOFTWARE_CREATE)?;
         require_software_in_scope(&state, path.as_str(), &scope)?;
@@ -733,7 +733,7 @@ pub(crate) async fn detach_software_tag(
     let (software_id, tag_id) = path.into_inner();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let scope = caller_company(&_tenant, &req)?;
+        let scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_SOFTWARE_MANAGE)?;
         require_software_in_scope(&state, software_id.as_str(), &scope)?;

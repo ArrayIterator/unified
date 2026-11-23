@@ -67,7 +67,7 @@ pub(crate) async fn create_report(
 ) -> HttpResponse {
     let result: UnifiedResult<ReportDefinition> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         analytics_authorize(&ctx, &req, PERM_ANALYTICS_MANAGE)?;
         let input = body.into_inner();
         let name = require_name(&input.name)?;
@@ -149,7 +149,7 @@ pub(crate) async fn update_report(
 ) -> HttpResponse {
     let result: UnifiedResult<ReportDefinition> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         analytics_authorize(&ctx, &req, PERM_ANALYTICS_MANAGE)?;
         let input = body.into_inner();
         let mut definition = state.definition(path.as_str())?;
@@ -214,7 +214,7 @@ pub(crate) async fn delete_report(
 ) -> HttpResponse {
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         analytics_authorize(&ctx, &req, PERM_ANALYTICS_MANAGE)?;
         let definition = state.definition(path.as_str())?;
         state.definitions.remove(&definition.id);

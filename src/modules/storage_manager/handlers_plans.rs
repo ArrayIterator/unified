@@ -577,7 +577,7 @@ pub(crate) async fn cancel_plan_assignment(
     let result: UnifiedResult<PlanAssignment> = (|| {
         let input = body.into_inner();
         let mut assignment = load_assignment(&state, &id)?;
-        require_record_in_company_scope(&assignment.company_id, &_scope)?;
+        require_record_writable_in_company_scope(&assignment.company_id, &_scope)?;
         if assignment.status != "active" {
             return Err(UnifiedError::conflict(format!(
                 "Plan assignment {} is already {} and cannot be cancelled",
@@ -631,7 +631,7 @@ pub(crate) async fn get_my_plan(
         Ok(found) => found,
         Err(error) => return err_response(error, debug),
     };
-    let is_admin = check_capability(&ctx, &found.role, PERM_MANAGE_PLANS);
+    let is_admin = is_platform_admin(&ctx, &found.role, &req, PERM_MANAGE_PLANS);
     let user_id = if is_admin {
         query
             .get("user_id")

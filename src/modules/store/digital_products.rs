@@ -423,7 +423,7 @@ pub(crate) async fn update_digital_product(
             input.formats.as_deref(),
         )?;
         let existing = load_digital_product(&state, path.as_str())?;
-        require_record_in_company_scope(&existing.royalty_payee_company_id, &scope)?;
+        require_record_writable_in_company_scope(&existing.royalty_payee_company_id, &scope)?;
         let new_payee_company = input
             .royalty_payee_company_id
             .clone()
@@ -611,7 +611,7 @@ pub(crate) fn set_digital_product_status(
         .digital_products
         .get_mut(id)
         .ok_or_else(|| UnifiedError::not_found("Digital product not found"))?;
-    require_record_in_company_scope(&digital.royalty_payee_company_id, scope)?;
+    require_record_writable_in_company_scope(&digital.royalty_payee_company_id, scope)?;
     if digital.status == status {
         return Err(UnifiedError::conflict(format!(
             "Digital product is already {status}"

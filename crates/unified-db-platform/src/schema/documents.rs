@@ -26,6 +26,11 @@ diesel::table! {
         visibility -> Text,
         created_at -> Timestamptz,
         updated_at -> Timestamptz,
+        title -> Text,
+        alt_text -> Nullable<Text>,
+        caption -> Nullable<Text>,
+        description -> Nullable<Text>,
+        custom_metadata -> Jsonb,
     }
 }
 
@@ -122,6 +127,10 @@ diesel::table! {
         id -> Uuid,
         session_id -> Uuid,
         document_id -> Nullable<Uuid>,
+        // C11 (migration 000126): tenant scope of the job, copied
+        // from the upload session at creation. NULL for jobs
+        // created before the column existed.
+        tenant_id -> Nullable<Uuid>,
         status -> Text,
         attempts -> Int4,
         last_error -> Nullable<Text>,

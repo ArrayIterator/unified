@@ -71,7 +71,7 @@ pub(crate) async fn create_plan(
     let debug = ctx.is_debug();
     let result: UnifiedResult<PropertyPlan> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PROPERTIES_CREATE)?;
         let property = load_property(&state, &path.into_inner())?;
@@ -162,7 +162,7 @@ pub(crate) async fn update_plan(
     let debug = ctx.is_debug();
     let result: UnifiedResult<PropertyPlan> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PROPERTIES_VIEW)?;
         let (property_id, plan_id) = path.into_inner();
@@ -224,7 +224,7 @@ pub(crate) async fn delete_plan(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_PROPERTIES_MANAGE)?;
         let (property_id, plan_id) = path.into_inner();

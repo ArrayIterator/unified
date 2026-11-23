@@ -115,7 +115,7 @@ pub(crate) async fn create_report(
     let debug = ctx.is_debug();
     let result: UnifiedResult<BiReport> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_BI_MANAGE)?;
         let name = require_text(&body.name, "name", MAX_NAME_LEN)?;
@@ -240,7 +240,7 @@ pub(crate) async fn update_report(
     let debug = ctx.is_debug();
     let result: UnifiedResult<BiReport> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_BI_MANAGE)?;
         let mut report = load_report(&state, &path.into_inner())?;
@@ -345,7 +345,7 @@ pub(crate) async fn delete_report(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_BI_MANAGE)?;
         let report = load_report(&state, &path.into_inner())?;
@@ -560,7 +560,7 @@ pub(crate) async fn create_schedule(
     let debug = ctx.is_debug();
     let result: UnifiedResult<BiReportSchedule> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_BI_MANAGE)?;
         let report = load_report(&state, &path.into_inner())?;
@@ -668,7 +668,7 @@ pub(crate) async fn delete_schedule(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_BI_MANAGE)?;
         let (report_id, schedule_id) = path.into_inner();
@@ -1017,7 +1017,7 @@ pub(crate) async fn create_dashboard(
     let debug = ctx.is_debug();
     let result: UnifiedResult<BiKpiDashboard> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_BI_MANAGE)?;
         let name = require_text(&body.name, "name", MAX_NAME_LEN)?;
@@ -1099,7 +1099,7 @@ pub(crate) async fn update_dashboard(
     let debug = ctx.is_debug();
     let result: UnifiedResult<BiKpiDashboard> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_BI_MANAGE)?;
         let mut dashboard = load_dashboard(&state, &path.into_inner())?;
@@ -1147,7 +1147,7 @@ pub(crate) async fn delete_dashboard(
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let _tenant = require_tenant(&req)?;
-        let _scope = caller_company(&_tenant, &req)?;
+        let _scope = require_company_for_write(&_tenant, &req)?;
         let caller = caller(&req)?;
         require_permission(&ctx, &caller.role, PERM_BI_MANAGE)?;
         let dashboard = load_dashboard(&state, &path.into_inner())?;
