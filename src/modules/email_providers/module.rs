@@ -73,7 +73,7 @@
 //   `email_provider.oauth_refreshed`, `email.sent`, `email.failed`.
 
 use super::{
-    adapters::*, credentials::*, crypto::*, events::*, handlers::*, hooks::*, http::*, module::*,
+    adapters::*, credentials::*, crypto::*, events::*, handlers::*, hooks::*, http::*,
     oauth_handlers::*, provider_kinds::*, registry::*, store::*, worker::*,
 };
 use actix_web::{HttpRequest, HttpResponse, web};
