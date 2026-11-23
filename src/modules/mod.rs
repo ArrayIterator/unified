@@ -3,10 +3,10 @@
 // Every module in this directory is registered in the binary, is fully
 // hookable, and exposes its HTTP routes under `/api/v1/<module-id>`.
 // Each module file exposes `register(registry)` and a `*Module` struct
-// implementing `crate::core::modules::Module`.
+// implementing `unified_core::modules::Module`.
 //
 // Interconnection between modules happens through the hook/event bus — no
-// module calls another module directly. See `crate::core::hooks::events`
+// module calls another module directly. See `unified_core::hooks::events`
 // for the well-known event names.
 
 pub mod academic;
@@ -31,7 +31,6 @@ pub mod bank_transfer;
 pub mod bi;
 pub mod billing;
 pub mod cache;
-pub mod calculator;
 pub mod calendar;
 pub mod cards;
 pub mod certificates;
@@ -46,6 +45,7 @@ pub mod contracts;
 pub mod crm;
 pub mod curriculum;
 pub mod dashboards;
+pub mod delivery_notes;
 pub mod departments;
 pub mod documents;
 pub mod domain_verification;
@@ -55,6 +55,7 @@ pub mod elearning;
 pub mod email_providers;
 pub mod email_templates;
 pub mod entitlements;
+pub mod esg;
 pub mod events;
 pub mod exams;
 pub mod expenses;
@@ -62,6 +63,8 @@ pub mod extensions;
 pub mod field_service;
 pub mod files;
 pub mod forms;
+pub mod forums;
+pub mod frontend;
 pub mod gamification;
 pub mod geo;
 pub mod holidays;
@@ -72,6 +75,7 @@ pub mod import_export;
 pub mod inbox;
 pub mod incidents;
 pub mod knowledgebase;
+pub mod kyc;
 pub mod library;
 pub mod licensing;
 pub mod load_balancer;
@@ -91,7 +95,9 @@ pub mod notifications;
 pub mod okrs;
 pub mod panels;
 pub mod payments;
+pub mod phone;
 pub mod planner;
+pub mod plm;
 pub mod portals;
 pub mod pos;
 pub mod presets;
@@ -107,6 +113,8 @@ pub mod providers;
 pub mod quality;
 pub mod records;
 pub mod recruitment;
+pub mod referral;
+pub mod rental;
 pub mod risk;
 pub mod roles;
 pub mod routes;
@@ -120,8 +128,12 @@ pub mod security;
 pub mod seo;
 pub mod service_monitor;
 pub mod settings;
+pub mod sign;
 pub mod site_builder;
+pub mod sms_marketing;
+pub mod social_marketing;
 pub mod software;
+pub mod spreadsheets;
 pub mod statuspage;
 pub mod storage;
 pub mod storage_manager;
@@ -147,7 +159,7 @@ pub mod webinars;
 pub mod whitelabel;
 pub mod workflows;
 
-use crate::core::modules::ModuleRegistry;
+use unified_core::modules::ModuleRegistry;
 
 /// Register every core module, in dependency order.
 pub fn register_all(registry: &ModuleRegistry) {
@@ -188,11 +200,15 @@ pub fn register_all(registry: &ModuleRegistry) {
     cloudflare::register(registry);
     maintenance::register(registry);
     meetings::register(registry);
+    phone::register(registry);
     calendar::register(registry);
     appointments::register(registry);
     holidays::register(registry);
     routes::register(registry);
     dashboards::register(registry);
+    // Public pages (home and auth) live next to the dashboards they
+    // lead into; their paths come from the same route registry.
+    frontend::register(registry);
     analytics::register(registry);
     bi::register(registry);
     planner::register(registry);
@@ -223,6 +239,8 @@ pub fn register_all(registry: &ModuleRegistry) {
     email_providers::register(registry);
     newsletter::register(registry);
     marketing::register(registry);
+    sms_marketing::register(registry);
+    social_marketing::register(registry);
     // Education and learning.
     academic::register(registry);
     admissions::register(registry);
@@ -248,17 +266,23 @@ pub fn register_all(registry: &ModuleRegistry) {
     expenses::register(registry);
     pos::register(registry);
     loyalty::register(registry);
+    rental::register(registry);
     // Business operations.
     company::register(registry);
     contracts::register(registry);
+    sign::register(registry);
+    spreadsheets::register(registry);
+    kyc::register(registry);
     assets::register(registry);
     field_service::register(registry);
     logistics::register(registry);
+    delivery_notes::register(registry);
     manufacturing::register(registry);
+    plm::register(registry);
     procurement::register(registry);
     properties::register(registry);
     printing::register(registry);
-    calculator::register(registry);
+    unified_calculator::register(registry);
     okrs::register(registry);
     supervision::register(registry);
     domains::register(registry);
@@ -274,6 +298,7 @@ pub fn register_all(registry: &ModuleRegistry) {
     incidents::register(registry);
     // Governance, risk and compliance.
     compliance::register(registry);
+    esg::register(registry);
     auditors::register(registry);
     risk::register(registry);
     quality::register(registry);
@@ -285,10 +310,12 @@ pub fn register_all(registry: &ModuleRegistry) {
     departments::register(registry);
     hr::register(registry);
     recruitment::register(registry);
+    referral::register(registry);
     tickets::register(registry);
     chat::register(registry);
     inbox::register(registry);
     community::register(registry);
+    forums::register(registry);
     portals::register(registry);
     gamification::register(registry);
     surveys::register(registry);
@@ -304,4 +331,12 @@ pub fn register_all(registry: &ModuleRegistry) {
     api_manager::register(registry);
     apikeys::register(registry);
     mcp::register(registry);
+
+    // External modules (see docs/WORKSPACE_AND_EXTERNAL_MODULES.md section 4).
+    // Each line is one external crate's `register` function. An external
+    // module is compiled into the binary; adding one is a code change,
+    // a rebuild, and a restart -- never a runtime install.
+    // The TypeScript scripting host registers itself here; the `.ts`
+    // modules it loads register through it at startup, not here.
+    unified_scripting::register(registry);
 }

@@ -1,0 +1,51 @@
+{{!-- Tickets list view (module:tickets/list).
+  Renders `items` (array of ticket records) with an
+  optional `pagination` object. Each row may carry `detail_url` (linked
+  from the first column) and `status_class` (badge modifier, for
+  example `badge-success`). --}}
+<section class="admin-section section-panel" data-section="tickets" aria-labelledby="tickets-list-heading">
+  <h1 id="tickets-list-heading">{{#if title}}{{title}}{{else}}Tickets{{/if}}</h1>
+  <p class="page-intro">Support tickets from customers, with priority and status.</p>
+  {{#if is_admin_user}}
+  {{#if create_url}}
+  <p><a class="button" href="{{create_url}}">New ticket</a></p>
+  {{/if}}
+  {{/if}}
+  {{#if items}}
+  <table class="table">
+    <thead>
+      <tr>
+        <th scope="col">Title</th>
+        <th scope="col">Priority</th>
+        <th scope="col">Status</th>
+        <th scope="col">Category</th>
+        <th scope="col">Department</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each items}}
+      <tr>
+        <td>{{#if detail_url}}<a href="{{detail_url}}">{{title}}</a>{{else}}{{title}}{{/if}}</td>
+        <td>{{priority}}</td>
+        <td><span class="badge {{#if status_class}}{{status_class}}{{else}}badge-neutral{{/if}}">{{status}}</span></td>
+        <td>{{category}}</td>
+        <td>{{department_id}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+  {{#if pagination}}
+  <nav class="pagination" aria-label="Pagination">
+    {{#if pagination.has_prev}}
+    <a class="pagination-button" href="{{pagination.prev_url}}">Previous</a>
+    {{/if}}
+    <span class="pagination-info">Page {{pagination.page}} of {{pagination.total_pages}} ({{pagination.total}} total)</span>
+    {{#if pagination.has_next}}
+    <a class="pagination-button" href="{{pagination.next_url}}">Next</a>
+    {{/if}}
+  </nav>
+  {{/if}}
+  {{else}}
+  <p class="empty-state"><span class="empty-state-title">No tickets yet.</span>{{#if empty_message}} {{empty_message}}{{/if}}</p>
+  {{/if}}
+</section>

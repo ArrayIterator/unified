@@ -32,12 +32,12 @@
 // feature; its control handlers then fail with the "gateway feature
 // not enabled" error instead of starting anything.
 
-use crate::core::context::AppContext;
-use crate::core::error::{UnifiedError, UnifiedResult};
-use crate::core::hooks::{events, HookBus, HookContext};
-use crate::core::json;
-use crate::core::modules::{CliCommandDef, CliRegistry, Module, ModuleRegistry, RouteInfo};
-use crate::core::pagination::{PageResult, PaginationParams};
+use unified_core::context::AppContext;
+use unified_core::error::{UnifiedError, UnifiedResult};
+use unified_core::hooks::{events, HookBus, HookContext};
+use unified_core::json;
+use unified_core::modules::{CliCommandDef, CliRegistry, Module, ModuleRegistry, RouteInfo};
+use unified_core::pagination::{PageResult, PaginationParams};
 use crate::gateway::health::{
     backend_health_key, check_now as health_check_now, mark_healthy, mark_unhealthy,
     start_health_sweeper,
@@ -207,6 +207,8 @@ impl Module for GatewayModule {
                 path,
                 owner: "gateway",
                 description,
+                // Table-driven admin routes: none of these is public.
+                auth: unified_core::auth::RouteAuth::Authenticated,
             })
             .collect()
     }
@@ -912,7 +914,7 @@ fn gateway_cli_stop() -> UnifiedResult<()> {
 fn gateway_cli_status() -> UnifiedResult<()> {
     // Read the live status from the daemon's management API instead
     // of reporting a fresh process's empty in-memory state.
-    let config = crate::core::config::AppConfig::load_default().unwrap_or_default();
+    let config = unified_core::config::AppConfig::load_default().unwrap_or_default();
     let base = config
         .app
         .tcp

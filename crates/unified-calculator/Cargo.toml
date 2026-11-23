@@ -1,0 +1,18 @@
+[package]
+name = "unified-calculator"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Calculator Enterprise module for the Unified server: business and economics calculations (ROI, break-even, loan amortisation, depreciation, NPV/IRR, cash-flow, pricing, salary, currency conversion, tax estimation). Depends on unified-core only."
+publish = false
+
+[dependencies]
+# The only Unified crate a module may depend on.
+unified-core = { path = "../unified-core" }
+actix-web.workspace = true
+chrono.workspace = true
+dashmap.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true

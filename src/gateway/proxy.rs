@@ -40,25 +40,27 @@
 // (pingora-6) for the one-line alternative if `Server::shutdown`
 // exists in the resolved Pingora version.
 
-use crate::core::error::{UnifiedError, UnifiedResult};
 use crate::gateway::health::{
     address_health_key, backend_for_direct_address, connections_snapshot, eligible_for_gateway,
     is_eligible,
 };
-use crate::gateway::routing::{select_rule, RoutingRule, UpstreamRef};
-use crate::gateway::{GatewayState, RequestLogEntry, GATEWAY_STARTED, GATEWAY_STOPPED};
+use crate::gateway::routing::{RoutingRule, UpstreamRef, select_rule};
+use crate::gateway::{GATEWAY_STARTED, GATEWAY_STOPPED, GatewayState, RequestLogEntry};
 use crate::modules::load_balancer::{
-    note_backend_connection_closed, note_backend_connection_open, select_backend, Backend,
+    Backend, note_backend_connection_closed, note_backend_connection_open, select_backend,
 };
 use async_trait::async_trait;
+use bytes::Bytes;
 use chrono::Utc;
 use pingora::http::{RequestHeader, ResponseHeader};
-use pingora::proxy::{http_proxy_service, ProxyHttp, Session};
+use pingora::proxy::{ProxyHttp, Session, http_proxy_service};
 use pingora::upstreams::peer::HttpPeer;
 use serde_json::json as json_value;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
+use unified_core::error::{UnifiedError, UnifiedResult};
+use unified_core::json::error_json;
 use uuid::Uuid;
 
 /// Hop-by-hop headers, stripped from upstream responses before they
@@ -296,6 +298,41 @@ fn proxy_error(message: &str) -> pingora::Error {
     pingora::Error::new(pingora::ErrorType::InternalError)
 }
 
+/// Write a gateway rejection in the standard API envelope
+/// (`{"error": {"message", "code", "metadata"}}`, see
+/// `crates/unified-core/src/json.rs`) instead of Pingora's bare
+/// error page, so gateway rejections look exactly like any other API
+/// error. `debug` is always false here: gateway errors carry no
+/// trace, so there is nothing a debug render could add.
+///
+/// UNCERTAIN (pingora-12): `Session::write_response_header` /
+/// `write_response_body` on the proxy `Session`, and
+/// `ResponseHeader::build` / `insert_header` on the response
+/// header. Expected to write the given header, then the body, and
+/// finish the stream (`end: true`); the `Content-Length` header is
+/// set explicitly so the downstream connection stays reusable. If
+/// the resolved Pingora version names these differently, replace
+/// this helper in one place. Any failure writing the envelope falls
+/// back to Pingora's own `respond_error`, so a client still gets the
+/// right status code.
+async fn respond_envelope_error(session: &mut Session, status: u16, message: &str) {
+    let error = UnifiedError::new(message, status);
+    let body = error_json(&error, false).to_string();
+    let written = async {
+        let mut header = ResponseHeader::build(status, None)?;
+        header.insert_header("content-type", "application/json")?;
+        header.insert_header("content-length", body.len().to_string())?;
+        session.write_response_header(Box::new(header)).await?;
+        session.write_response_body(Bytes::from(body), true).await?;
+        Ok::<(), pingora::Error>(())
+    }
+    .await;
+    if let Err(error) = written {
+        log::error!("Gateway envelope error write failed ({error}); falling back to Pingora error page");
+        let _ = session.respond_error(status).await;
+    }
+}
+
 #[async_trait]
 impl ProxyHttp for GatewayProxy {
     type CTX = GatewayCtx;
@@ -322,13 +359,11 @@ impl ProxyHttp for GatewayProxy {
         ctx: &mut Self::CTX,
     ) -> pingora::Result<bool> {
         if self.state.stop_requested.load(std::sync::atomic::Ordering::SeqCst) {
-            // UNCERTAIN (pingora-3): `Session::respond_error(code)`.
-            // Expected to write an error response for the given HTTP
-            // status and return after it completes. If the resolved
-            // version lacks it, return `Err(proxy_error(...))`
-            // instead; Pingora then renders its own upstream-error
-            // response.
-            let _ = session.respond_error(503).await;
+            // Draining: reject with the standard error envelope, not
+            // Pingora's bare error page. `Session::respond_error`
+            // survives only as the fallback inside
+            // `respond_envelope_error`.
+            respond_envelope_error(session, 503, "Gateway is draining").await;
             return Ok(true);
         }
         let req_header = session.req_header();
@@ -356,18 +391,18 @@ impl ProxyHttp for GatewayProxy {
             // upstream, or reject the request.
             let config = self.state.config_snapshot();
             let Some(default_upstream) = config.default_upstream.clone() else {
-                let _ = session.respond_error(404).await;
+                respond_envelope_error(session, 404, "No gateway route matched").await;
                 return Ok(true);
             };
             let rule = match fallback_rule_for_default(&default_upstream) {
                 Ok(rule) => rule,
                 Err(_) => {
-                    let _ = session.respond_error(502).await;
+                    respond_envelope_error(session, 502, "Default upstream is misconfigured").await;
                     return Ok(true);
                 }
             };
             if rule.require_tls && !ctx.terminated_tls {
-                let _ = session.respond_error(426).await;
+                respond_envelope_error(session, 426, "TLS is required for this route").await;
                 return Ok(true);
             }
             ctx.rule_id = Some(rule.id);
@@ -375,7 +410,7 @@ impl ProxyHttp for GatewayProxy {
             return Ok(false);
         };
         if rule.require_tls && !ctx.terminated_tls {
-            let _ = session.respond_error(426).await;
+            respond_envelope_error(session, 426, "TLS is required for this route").await;
             return Ok(true);
         }
         ctx.rule_id = Some(rule.id);

@@ -1,0 +1,29 @@
+<section class="auth-card" aria-labelledby="register-heading">
+  <h1 id="register-heading">Create an account</h1>
+  <p class="page-intro">Create your account, then sign in to open your dashboard.</p>
+
+  <div id="register-status" class="flash flash-error" role="alert" hidden></div>
+
+  <form id="register-form" data-login-url="{{login_url}}" autocomplete="on" novalidate>
+    <div class="field">
+      <label for="register-name" class="field-required">Full name</label>
+      <input id="register-name" name="name" type="text" required autocomplete="name" placeholder="Ada Lovelace">
+    </div>
+    <div class="field">
+      <label for="register-email" class="field-required">Email</label>
+      <input id="register-email" name="email" type="email" required autocomplete="email" placeholder="you@example.com">
+    </div>
+    <div class="field">
+      <label for="register-password" class="field-required">Password</label>
+      <input id="register-password" name="password" type="password" required minlength="8" autocomplete="new-password" placeholder="At least 8 characters">
+      <p class="field-help">Your password is stored as an Argon2 hash; it is never stored or shown in plain text.</p>
+    </div>
+    <button class="button button-block" type="submit" id="register-submit">Create account</button>
+  </form>
+
+  <p class="auth-links">
+    <a href="{{login_url}}">Already have an account? Sign in</a>
+  </p>
+  <p class="field-help">Accounts are created by an administrator when self-registration is disabled: the form will tell you if that is the case.</p>
+</section>
+<script src="/assets/js/auth.js" defer></script>

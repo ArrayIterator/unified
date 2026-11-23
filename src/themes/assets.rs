@@ -24,8 +24,14 @@
 //      characters of the SHA-256 digest), so a changed file gets a new
 //      URL and browsers never serve a stale copy.
 
-use crate::core::error::{UnifiedError, UnifiedResult};
-use crate::core::json;
+/// Asset minification (JavaScript and CSS), declared here as a
+/// child of the asset module: minification is part of the asset
+/// pipeline, the same way `engine.rs` declares its own child
+/// modules. See `minify.rs`.
+pub mod minify;
+
+use unified_core::error::{UnifiedError, UnifiedResult};
+use unified_core::json;
 use actix_web::{HttpRequest, HttpResponse, web};
 use sha2::{Digest, Sha256};
 use std::collections::{HashMap, HashSet};
@@ -448,18 +454,27 @@ impl<'a> AssetQueue<'a> {
 // Fingerprinting
 // ---------------------------------------------------------------------------
 
+/// Short content fingerprint of bytes: the first 12 hex characters
+/// of the SHA-256 digest. The fingerprint of the exact bytes the
+/// server serves — see `minify::served_fingerprint`.
+pub fn fingerprint_bytes(bytes: &[u8]) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(bytes);
+    let hash = hasher.finalize();
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let mut fingerprint = String::with_capacity(12);
+    for &byte in &hash[..6] {
+        fingerprint.push(HEX[(byte >> 4) as usize] as char);
+        fingerprint.push(HEX[(byte & 0x0f) as usize] as char);
+    }
+    fingerprint
+}
+
 /// Short content fingerprint of a file: the first 12 hex characters
 /// of its SHA-256 digest. `None` when the file cannot be read.
 pub fn fingerprint_file(path: &Path) -> Option<String> {
     let bytes = std::fs::read(path).ok()?;
-    let mut hasher = Sha256::new();
-    hasher.update(bytes);
-    let hash = hasher.finalize();
-    let mut fingerprint = String::with_capacity(12);
-    for byte in &hash[..6] {
-        fingerprint.push_str(&format!("{byte:02x}"));
-    }
-    Some(fingerprint)
+    Some(fingerprint_bytes(&bytes))
 }
 
 /// Append a fingerprint query (`?v=<hash>`) to a URL when the file
@@ -485,8 +500,11 @@ pub fn fingerprinted_url(url: &str, file: &Path) -> String {
 ///   - Anything else resolves to the global assets directory,
 ///     served under `/assets/<path>`.
 ///
-/// The returned URL carries a `?v=` fingerprint when the file exists
-/// on disk.
+/// The returned URL carries a `?v=` fingerprint: for assets served
+/// from the compiled maps (transpiled/minified JavaScript and
+/// compiled stylesheets) the fingerprint hashes the exact served
+/// bytes, registered at startup; otherwise it hashes the file on
+/// disk when the file exists.
 pub fn resolve_asset_url(
     assets_dir: &Path,
     themes_dir: &Path,
@@ -523,8 +541,32 @@ pub fn resolve_asset_url(
         return format!("/assets/{path}");
     }
     let url = format!("/assets/{path}");
+    // Served from the compiled maps (transpiled/minified JavaScript
+    // and compiled stylesheets held in RAM): the fingerprint hashes
+    // the exact served bytes, registered at startup, so it changes
+    // exactly when the served bytes change.
+    if let Some(hash) = minify::served_fingerprint(path) {
+        let separator = if url.contains('?') { '&' } else { '?' };
+        return format!("{url}{separator}v={hash}");
+    }
     let file = assets_dir.join(path);
-    fingerprinted_url(&url, &file)
+    if file.is_file() {
+        return fingerprinted_url(&url, &file);
+    }
+    // Dashboard scripts: no `.js` file exists on disk anymore — the
+    // JavaScript is compiled from the `.ts` source at startup. The
+    // fingerprint above already covers the compiled scripts (it
+    // hashes the served bytes from the registry); this fallback
+    // only applies to a script that failed to compile and is not
+    // in the registry, so the fingerprint still changes when the
+    // source changes.
+    if let Some(ts_path) = path.strip_suffix(".js") {
+        let ts_file = assets_dir.join(format!("{ts_path}.ts"));
+        if ts_file.is_file() {
+            return fingerprinted_url(&url, &ts_file);
+        }
+    }
+    url
 }
 
 // ---------------------------------------------------------------------------
@@ -538,6 +580,18 @@ pub fn resolve_asset_url(
 pub struct StaticAssetConfig {
     pub assets_dir: PathBuf,
     pub themes_dir: PathBuf,
+    /// Dashboard scripts compiled from TypeScript at startup
+    /// (`assets/js/*.ts` -> JavaScript, via the `unified-ts` crate):
+    /// public path (`js/<name>.js`) to compiled JavaScript source,
+    /// held in RAM and served from memory by `serve_asset`. No `.js`
+    /// files exist in the repository anymore.
+    pub compiled_scripts: Arc<HashMap<String, String>>,
+    /// Stylesheets compiled at startup (`assets/css/*.css`,
+    /// minified in release builds, as written in debug builds):
+    /// public path (`css/<name>.css`) to served CSS source, held
+    /// in RAM and served from memory by `serve_asset`, mirroring
+    /// `compiled_scripts`.
+    pub compiled_styles: Arc<HashMap<String, String>>,
     /// Render error traces in responses (debug mode only).
     pub debug: bool,
 }
@@ -547,19 +601,46 @@ impl Default for StaticAssetConfig {
         Self {
             assets_dir: PathBuf::from("assets"),
             themes_dir: PathBuf::from("themes"),
+            compiled_scripts: Arc::new(HashMap::new()),
+            compiled_styles: Arc::new(HashMap::new()),
             debug: false,
         }
     }
 }
 
 /// `GET /assets/{path}`: serve a file from the global assets
-/// directory.
+/// directory — or, for a dashboard script, the JavaScript compiled
+/// from its TypeScript source at startup and held in RAM (see
+/// `StaticAssetConfig::compiled_scripts`).
 pub async fn serve_asset(
     config: web::Data<StaticAssetConfig>,
     req: HttpRequest,
     path: web::Path<String>,
 ) -> HttpResponse {
-    serve_file(&config.assets_dir, &path.into_inner(), &req, config.debug)
+    let relative = path.into_inner();
+    if let Some(js) = config.compiled_scripts.get(&relative) {
+        let cache_control = if has_fingerprint_query(&req) {
+            "public, max-age=31536000, immutable"
+        } else {
+            "public, max-age=3600"
+        };
+        return HttpResponse::Ok()
+            .content_type("text/javascript")
+            .insert_header(("Cache-Control", cache_control))
+            .body(js.clone());
+    }
+    if let Some(css) = config.compiled_styles.get(&relative) {
+        let cache_control = if has_fingerprint_query(&req) {
+            "public, max-age=31536000, immutable"
+        } else {
+            "public, max-age=3600"
+        };
+        return HttpResponse::Ok()
+            .content_type("text/css")
+            .insert_header(("Cache-Control", cache_control))
+            .body(css.clone());
+    }
+    serve_file(&config.assets_dir, &relative, &req, config.debug)
 }
 
 /// `GET /theme/{id}/assets/{path}`: serve a file from one theme's
@@ -677,4 +758,21 @@ fn serve_file(base_dir: &Path, relative: &str, req: &HttpRequest, debug: bool) -
         .content_type(content_type_for(&canonical_file))
         .insert_header(("Cache-Control", cache_control))
         .body(bytes)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn fingerprint_file_hashes_first_six_digest_bytes_as_hex() {
+        // SHA-256("abc") starts with ba7816bf8f01cfea...; only the
+        // first 6 digest bytes (12 hex chars) are kept.
+        let path = std::env::temp_dir().join("unified-fingerprint-test.txt");
+        std::fs::write(&path, b"abc").expect("write test file");
+        let fingerprint = fingerprint_file(&path);
+        let _ = std::fs::remove_file(&path);
+        assert_eq!(fingerprint.as_deref(), Some("ba7816bf8f01"));
+        assert_eq!(fingerprint_file(&path), None);
+    }
 }

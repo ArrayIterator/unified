@@ -49,6 +49,8 @@
       </div>
       <div class="builder-actions">
         <button id="save-template" class="button" type="submit">Save template</button>
+        <button id="preview-template" class="button button-secondary" type="button">Preview</button>
+        <button id="test-send-template" class="button button-secondary" type="button">Send test</button>
         <button id="clear-template" class="button button-secondary" type="button">Clear canvas</button>
       </div>
     </form>
@@ -57,7 +59,7 @@
 
     <div id="gjs"></div>
 
-    <p><a href="/dashboard/email-templates">Back to email templates</a></p>
+    <p><a href="/admin/email-templates">Back to email templates</a></p>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/grapesjs@0.22.6/dist/grapes.min.js"></script>
@@ -72,7 +74,15 @@
       var subjectInput = document.getElementById("template-subject");
       var categoryInput = document.getElementById("template-category");
       var saveButton = document.getElementById("save-template");
+      var previewButton = document.getElementById("preview-template");
+      var testSendButton = document.getElementById("test-send-template");
       var clearButton = document.getElementById("clear-template");
+
+      // Editing an existing template: `?id=<template-id>` loads it
+      // from the API (name, subject, category, and the stored GrapeJS
+      // design JSON). Without `?id=` the form creates a new template.
+      var params = new URLSearchParams(window.location.search);
+      var templateId = params.get("id") || null;
 
       var editor = grapesjs.init({
         container: "#gjs",
@@ -114,11 +124,60 @@
           subject: subjectInput.value.trim(),
           category: categoryInput.value,
           html: editor.getHtml(),
-          css: editor.getCss(),
-          // The GrapeJS component tree, so the template can be reopened
-          // in the editor later instead of only as raw HTML.
-          design: editor.getProjectData(),
+          // The API stores the GrapeJS design under `json` (see
+          // `TemplateInput`): sending it as `design` would be
+          // silently dropped and the template could never be
+          // reopened in the editor. There is no `css` field on the
+          // API; the editor's CSS ships inside the project data.
+          json: editor.getProjectData(),
         };
+      }
+
+      function apiRequest(url, method, payload) {
+        return window
+          .fetch(url, {
+            method: method,
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+            credentials: "same-origin",
+            body: payload === undefined ? undefined : JSON.stringify(payload),
+          })
+          .then(function (response) {
+            return response.json().then(function (body) {
+              if (!response.ok) {
+                var message =
+                  (body && body.error && body.error.message) ||
+                  "Request failed with HTTP " + response.status;
+                throw new Error(message);
+              }
+              return body && body.data !== undefined ? body.data : body;
+            });
+          });
+      }
+
+      // Load an existing template into the editor when `?id=` is set.
+      if (templateId) {
+        saveButton.textContent = "Save changes";
+        apiRequest("/api/v1/email-templates/" + encodeURIComponent(templateId), "GET")
+          .then(function (template) {
+            nameInput.value = template.name || "";
+            subjectInput.value = template.subject || "";
+            if (template.category) {
+              categoryInput.value = template.category;
+            }
+            var design = template.json;
+            if (design && typeof design === "object" && Object.keys(design).length > 0) {
+              editor.loadProjectData(design);
+            } else if (template.html) {
+              editor.setComponents(template.html);
+            }
+            showStatus('Editing template "' + (template.name || templateId) + '".', "info");
+          })
+          .catch(function (error) {
+            showStatus("Could not load the template: " + error.message, "error");
+          });
       }
 
       form.addEventListener("submit", function (event) {
@@ -134,30 +193,20 @@
         }
         saveButton.disabled = true;
         saveButton.textContent = "Saving…";
-        window
-          .fetch("/api/v1/email-templates", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Accept: "application/json",
-            },
-            credentials: "same-origin",
-            body: JSON.stringify(payload),
-          })
-          .then(function (response) {
-            return response.json().then(function (body) {
-              if (!response.ok) {
-                var message =
-                  (body && body.error && body.error.message) ||
-                  "Saving failed with HTTP " + response.status;
-                throw new Error(message);
-              }
-              return body;
-            });
-          })
-          .then(function (envelope) {
-            var saved = envelope && envelope.data ? envelope.data : null;
-            var id = saved && (saved.id || saved.name);
+        var url = templateId
+          ? "/api/v1/email-templates/" + encodeURIComponent(templateId)
+          : "/api/v1/email-templates";
+        var method = templateId ? "PUT" : "POST";
+        apiRequest(url, method, payload)
+          .then(function (saved) {
+            if (!templateId && saved && saved.id) {
+              templateId = saved.id;
+              saveButton.textContent = "Save changes";
+              var next = new URL(window.location.href);
+              next.searchParams.set("id", templateId);
+              window.history.replaceState(null, "", next.toString());
+            }
+            var id = (saved && saved.id) || templateId;
             showStatus(
               id
                 ? 'Template "' + payload.name + '" saved (id: ' + id + ")."
@@ -170,7 +219,54 @@
           })
           .finally(function () {
             saveButton.disabled = false;
-            saveButton.textContent = "Save template";
+            saveButton.textContent = templateId ? "Save changes" : "Save template";
+          });
+      });
+
+      previewButton.addEventListener("click", function () {
+        if (!templateId) {
+          showStatus("Save the template first, then preview it.", "warning");
+          return;
+        }
+        apiRequest(
+          "/api/v1/email-templates/" + encodeURIComponent(templateId) + "/preview",
+          "POST",
+          { variables: {} }
+        )
+          .then(function (data) {
+            var win = window.open("", "_blank");
+            if (!win) {
+              showStatus("The preview was blocked by a pop-up blocker.", "warning");
+              return;
+            }
+            win.document.open();
+            win.document.write(data.rendered_html || "");
+            win.document.close();
+          })
+          .catch(function (error) {
+            showStatus("Could not preview the template: " + error.message, "error");
+          });
+      });
+
+      testSendButton.addEventListener("click", function () {
+        if (!templateId) {
+          showStatus("Save the template first, then send a test.", "warning");
+          return;
+        }
+        var to = window.prompt("Send a test email to which address?");
+        if (!to) {
+          return;
+        }
+        apiRequest(
+          "/api/v1/email-templates/" + encodeURIComponent(templateId) + "/test-send",
+          "POST",
+          { to: to.trim() }
+        )
+          .then(function () {
+            showStatus("Test email sent to " + to.trim() + ".", "success");
+          })
+          .catch(function (error) {
+            showStatus("Could not send the test email: " + error.message, "error");
           });
       });
 

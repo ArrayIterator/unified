@@ -1,0 +1,51 @@
+{{!-- Contacts list view (module:crm/list).
+  Renders `items` (array of contact records) with an
+  optional `pagination` object. Each row may carry `detail_url` (linked
+  from the first column) and `status_class` (badge modifier, for
+  example `badge-success`). --}}
+<section class="admin-section section-panel" data-section="crm" aria-labelledby="crm-list-heading">
+  <h1 id="crm-list-heading">{{#if title}}{{title}}{{else}}Contacts{{/if}}</h1>
+  <p class="page-intro">Customer contacts managed by the CRM.</p>
+  {{#if is_admin_user}}
+  {{#if create_url}}
+  <p><a class="button" href="{{create_url}}">New contact</a></p>
+  {{/if}}
+  {{/if}}
+  {{#if items}}
+  <table class="table">
+    <thead>
+      <tr>
+        <th scope="col">Name</th>
+        <th scope="col">Email</th>
+        <th scope="col">Company</th>
+        <th scope="col">Phone</th>
+        <th scope="col">Created</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each items}}
+      <tr>
+        <td>{{#if detail_url}}<a href="{{detail_url}}">{{name}}</a>{{else}}{{name}}{{/if}}</td>
+        <td>{{email}}</td>
+        <td>{{company}}</td>
+        <td>{{phone}}</td>
+        <td>{{created_at}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+  {{#if pagination}}
+  <nav class="pagination" aria-label="Pagination">
+    {{#if pagination.has_prev}}
+    <a class="pagination-button" href="{{pagination.prev_url}}">Previous</a>
+    {{/if}}
+    <span class="pagination-info">Page {{pagination.page}} of {{pagination.total_pages}} ({{pagination.total}} total)</span>
+    {{#if pagination.has_next}}
+    <a class="pagination-button" href="{{pagination.next_url}}">Next</a>
+    {{/if}}
+  </nav>
+  {{/if}}
+  {{else}}
+  <p class="empty-state"><span class="empty-state-title">No contacts yet.</span>{{#if empty_message}} {{empty_message}}{{/if}}</p>
+  {{/if}}
+</section>

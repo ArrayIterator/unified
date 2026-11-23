@@ -193,7 +193,6 @@ pub struct MonitorCollector {
     networks: Networks,
     prev_networks: HashMap<String, (u64, u64)>,
     prev_instant: Instant,
-    prev_disks: HashMap<String, (u64, u64)>,
     cached_disks: Vec<DiskInfo>,
     last_disk_refresh: Option<Instant>,
     process_sort: ProcessSort,
@@ -210,13 +209,12 @@ impl MonitorCollector {
         Self {
             cpu_brand: first_cpu.map(|cpu| cpu.brand().to_string()),
             cpu_frequency_mhz: first_cpu.map(|cpu| cpu.frequency()).unwrap_or(0),
-            physical_cores: System::physical_core_count(),
+            physical_cores: system.physical_core_count(),
             system,
             disks: Disks::new_with_refreshed_list(),
             networks: Networks::new_with_refreshed_list(),
             prev_networks: HashMap::new(),
             prev_instant: Instant::now(),
-            prev_disks: HashMap::new(),
             cached_disks: Vec::new(),
             last_disk_refresh: None,
             process_sort: ProcessSort::Cpu,
@@ -299,42 +297,22 @@ impl MonitorCollector {
         }
         processes.truncate(TOP_PROCESSES);
 
-        // Disks change rarely: refresh the mount list, usage and I/O rates
+        // Disks change rarely: refresh the mount list and usage
         // at most every 30 seconds and reuse the cached rows in between.
         let disks_due = self
             .last_disk_refresh
             .map(|last| last.elapsed() >= DISK_REFRESH_INTERVAL)
             .unwrap_or(true);
         if disks_due {
-            // Rates span the time since the previous disk refresh (~30 s),
-            // not the 1 s tick, or the values would read ~30x too high.
-            let disk_elapsed = self
-                .last_disk_refresh
-                .map(|last| now.duration_since(last).as_secs_f64().max(0.001))
-                .unwrap_or(1.0);
             self.disks.refresh();
             self.cached_disks = self
                 .disks
                 .list()
                 .iter()
                 .map(|disk| {
-                    let usage = disk.usage();
-                    let key = disk.mount_point().to_string_lossy().into_owned();
-                    let (read_bytes_per_sec, written_bytes_per_sec) =
-                        match self.prev_disks.get(&key) {
-                            Some((prev_read, prev_written)) => (
-                                ((usage.total_read_bytes.saturating_sub(*prev_read)) as f64
-                                    / disk_elapsed) as u64,
-                                ((usage.total_written_bytes.saturating_sub(*prev_written))
-                                    as f64
-                                    / disk_elapsed) as u64,
-                            ),
-                            None => (0, 0),
-                        };
-                    self.prev_disks.insert(
-                        key,
-                        (usage.total_read_bytes, usage.total_written_bytes),
-                    );
+                    // sysinfo 0.32 removed per-disk I/O counters
+                    // (`Disk::usage`), so read/write rates are zero.
+                    let (read_bytes_per_sec, written_bytes_per_sec) = (0, 0);
                     DiskInfo {
                         name: disk.name().to_string_lossy().into_owned(),
                         mount: disk.mount_point().to_string_lossy().into_owned(),

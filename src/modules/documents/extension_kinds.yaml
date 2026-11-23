@@ -1,0 +1,78 @@
+# Default extension -> content-kind registry (CONFIG DATA, not code).
+#
+# Maps known file extensions to their storage kind. The documents
+# module loads this file at startup (embedded, so it travels with
+# the binary) and merges admin overrides from `documents.extensions`
+# in config.yaml over it (same shape: `extension: kind`).
+#
+# Unknown extensions fall back to kind `others`, and keep their
+# suffix only when it passes the strict check (`[a-z0-9]{1,10}`
+# after lowercasing); otherwise the object is stored with no
+# suffix. This file is the source of truth for KNOWN extensions.
+#
+# `kind` must be one of: documents, media, others.
+
+# Documents: office files, text, ebooks.
+pdf: documents
+doc: documents
+docx: documents
+xls: documents
+xlsx: documents
+ppt: documents
+pptx: documents
+odt: documents
+ods: documents
+odp: documents
+rtf: documents
+txt: documents
+md: documents
+csv: documents
+epub: documents
+mobi: documents
+pages: documents
+numbers: documents
+key: documents
+tex: documents
+
+# Media: images, audio, video.
+jpg: media
+jpeg: media
+png: media
+gif: media
+webp: media
+avif: media
+svg: media
+bmp: media
+ico: media
+tif: media
+tiff: media
+heic: media
+heif: media
+mp3: media
+wav: media
+ogg: media
+flac: media
+aac: media
+m4a: media
+mp4: media
+webm: media
+mov: media
+avi: media
+mkv: media
+m4v: media
+3gp: media
+
+# Others: archives and structured data files.
+zip: others
+tar: others
+gz: others
+bz2: others
+xz: others
+7z: others
+rar: others
+json: others
+xml: others
+yaml: others
+yml: others
+toml: others
+sql: others

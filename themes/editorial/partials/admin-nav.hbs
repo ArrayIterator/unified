@@ -1,0 +1,9 @@
+<nav class="sidebar-nav admin-nav" aria-label="Admin sections">
+  <p class="sidebar-section">Administration</p>
+  {{#each nav}}
+  <a class="sidebar-link{{#if active}} is-active{{/if}}" href="{{href}}"{{#if active}} aria-current="page"{{/if}}>
+    <svg class="icon" aria-hidden="true"><use href="#{{icon}}"></use></svg>
+    <span class="sidebar-label">{{label}}</span>
+  </a>
+  {{/each}}
+</nav>

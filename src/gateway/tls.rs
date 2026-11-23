@@ -2,7 +2,7 @@
 //
 // The gateway does not parse certificates, does not store them, and
 // does not implement its own resolver. Everything certificate-shaped
-// goes through the existing `SslStorage` (`crate::http::tls`):
+// goes through the existing `SslStorage` (`unified_core::tls`):
 // SNI lookup, expiry, certificate names, the self-signed fallback,
 // and the rustls `ServerConfig` used by the listener. This file only
 // adapts that storage to the gateway's questions:
@@ -19,9 +19,9 @@
 // config-only TLS status. Presence is then "configured", never
 // "verified live".
 
-use crate::core::config::AppConfig;
-use crate::core::error::{UnifiedError, UnifiedResult};
-use crate::http::tls::SslStorage;
+use unified_core::config::AppConfig;
+use unified_core::error::{UnifiedError, UnifiedResult};
+use unified_core::tls::SslStorage;
 use rustls::ServerConfig;
 use serde::Serialize;
 use std::sync::Arc;
@@ -109,7 +109,7 @@ pub fn resolve_certificate(storage: &SslStorage, server_name: &str) -> UnifiedRe
 /// the gateway terminates TLS with exactly the certificates the main
 /// server already serves. No second TLS stack is built.
 pub fn build_server_config(storage: &Arc<SslStorage>) -> UnifiedResult<ServerConfig> {
-    crate::http::tls::server_config(storage)
+    unified_core::tls::server_config(storage)
 }
 
 /// Check every configured TLS listen name at startup and report the

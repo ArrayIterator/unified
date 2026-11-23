@@ -3,7 +3,7 @@
 // Implemented in the sibling files of this directory.
 
 pub mod acme;
+pub mod auth;
 pub mod cert_swap;
 pub mod server;
-pub mod tls;
 pub mod websocket;

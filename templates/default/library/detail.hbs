@@ -1,0 +1,30 @@
+{{!-- Item detail view (module:library/detail).
+  Renders one item record as `item`, with an optional
+  `back_url` to the list. --}}
+<section class="admin-section section-panel" data-section="library" aria-labelledby="library-detail-heading">
+  {{#if has_data}}
+  {{#if item}}
+  <h1 id="library-detail-heading">{{#if title}}{{title}}{{else}}{{item.title}}{{/if}}</h1>
+  {{#if back_url}}
+  <p><a class="button button-secondary button-small" href="{{back_url}}">&larr; Back to list</a></p>
+  {{/if}}
+  <table class="table">
+    <tbody>
+      <tr><th scope="row">Title</th><td>{{item.title}}</td></tr>
+      <tr><th scope="row">Subtitle</th><td>{{item.subtitle}}</td></tr>
+      <tr><th scope="row">Authors</th><td>{{#each item.authors}}{{#unless @first}}, {{/unless}}{{this}}{{/each}}</td></tr>
+      <tr><th scope="row">ISBN</th><td>{{item.isbn}}</td></tr>
+      <tr><th scope="row">Edition</th><td>{{item.edition}}</td></tr>
+      <tr><th scope="row">Series</th><td>{{item.series}}</td></tr>
+      <tr><th scope="row">Publisher</th><td>{{item.publisher}}</td></tr>
+      <tr><th scope="row">Published year</th><td>{{item.published_year}}</td></tr>
+      <tr><th scope="row">Language</th><td>{{item.language}}</td></tr>
+    </tbody>
+  </table>
+  {{else}}
+  <p class="empty-state"><span class="empty-state-title">Not found.</span></p>
+  {{/if}}
+  {{else}}
+  <p class="empty-note">No data to show.</p>
+  {{/if}}
+</section>

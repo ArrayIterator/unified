@@ -1,0 +1,8 @@
+# Local build configuration for the Unified project.
+# The musl target produces a fully static binary that runs on any
+# x86_64 Linux machine without a glibc install (portable release artifact).
+# Requires: rustup target add x86_64-unknown-linux-musl
+#           musl-gcc (Debian/Ubuntu: sudo apt install musl-tools)
+
+[target.x86_64-unknown-linux-musl]
+linker = "musl-gcc"

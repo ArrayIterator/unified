@@ -1,0 +1,16 @@
+[package]
+name = "unified-ts"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "TypeScript-to-JavaScript transpiler for the Unified dashboard frontend (OXC, transpile-only — no JS engine)."
+publish = false
+
+[dependencies]
+oxc_allocator = "0.159.0"
+oxc_codegen = "0.159.0"
+oxc_parser = "0.159.0"
+oxc_semantic = "0.159.0"
+oxc_span = "0.159.0"
+oxc_transformer = "0.159.0"

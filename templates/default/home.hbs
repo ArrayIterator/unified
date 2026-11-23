@@ -58,7 +58,7 @@
 
     {{#if counts}}
     <section class="home-stats" aria-label="Installation statistics">
-      <p><strong>{{counts.modules_total}}</strong> modules registered &middot; <strong>{{counts.sites_total}}</strong> sites &middot; <strong>{{counts.users_total}}</strong> users</p>
+      <p><strong>{{counts.modules_total}}</strong> modules registered{{#if counts.sites_total}} &middot; <strong>{{counts.sites_total}}</strong> sites{{/if}}{{#if counts.users_total}} &middot; <strong>{{counts.users_total}}</strong> users{{/if}}</p>
     </section>
     {{/if}}
   </main>

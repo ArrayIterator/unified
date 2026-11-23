@@ -1,0 +1,23 @@
+[package]
+name = "external-esignature"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+description = "E-signature workflow, evidence, and audit layer for the Unified server: signature requests, HMAC-signed signing links, a hash-chained audit trail, and completion certificates. Does not render or modify PDF bytes."
+license = "LicenseRef-Proprietary"
+publish = false
+
+[dependencies]
+# The only Unified crate an external module may depend on.
+unified-core = { path = "../unified-core" }
+# Shared versions come from the root workspace [workspace.dependencies].
+actix-web.workspace = true
+base64.workspace = true
+chrono.workspace = true
+dashmap.workspace = true
+hmac.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+url.workspace = true
+uuid.workspace = true

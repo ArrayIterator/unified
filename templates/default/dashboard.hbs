@@ -6,10 +6,12 @@
   <title>Dashboard &mdash; {{#if app_name}}{{app_name}}{{else}}Unified{{/if}}</title>
   <meta name="description" content="Unified administration dashboard.">
   <link rel="stylesheet" href="/assets/css/dashboard.css">
+  <link rel="stylesheet" href="/assets/css/icons.css">
 </head>
 <body>
   <a class="skip-link" href="#dashboard-content">Skip to content</a>
   {{> icons}}
+  {{{module_icons_sprite}}}
   <div class="dashboard-shell">
     <div class="sidebar-backdrop" data-sidebar-backdrop hidden></div>
     <aside class="sidebar" id="sidebar" aria-label="Dashboard navigation">
@@ -42,7 +44,7 @@
           {{#if modules}}
           {{#each modules}}
           <a class="sidebar-link" href="{{route_url "user_dashboard"}}/{{id}}">
-            <svg class="icon" aria-hidden="true"><use href="#icon-layers"></use></svg>
+            {{{module_icon_use id}}}
             <span class="sidebar-label">{{name}}</span>
           </a>
           {{/each}}
@@ -252,7 +254,7 @@
             {{#if modules}}
             {{#each modules}}
             <article class="module-card">
-              <span class="module-card-icon" aria-hidden="true"><svg class="icon icon-lg"><use href="#icon-layers"></use></svg></span>
+              <span class="module-card-icon" aria-hidden="true">{{{module_icon_use id}}}</span>
               <h3>{{name}}</h3>
               <p class="module-description">{{description}}</p>
               <p class="module-meta">

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+<title>SaaS Packages</title>
+<rect x="4" y="14.5" width="16" height="5.5" rx="1.5" fill="var(--icon-accent, #D97706)"/>
+<rect x="5.5" y="9.5" width="13" height="5" rx="1.5" fill="var(--icon-primary, #2563EB)"/>
+<rect x="7.5" y="4.5" width="9" height="5" rx="1.5" fill="var(--icon-accent, #D97706)"/>
+<rect x="11" y="4.5" width="2" height="5" rx="1" fill="var(--icon-primary, #2563EB)"/>
+</svg>

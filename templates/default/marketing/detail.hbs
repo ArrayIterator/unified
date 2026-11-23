@@ -1,0 +1,47 @@
+{{!-- Campaign detail view (module:marketing/detail).
+  Renders one campaign record as `item`, with an optional
+  `back_url` to the list. --}}
+<section class="admin-section section-panel" data-section="marketing" aria-labelledby="marketing-detail-heading">
+  {{#if has_data}}
+  {{#if item}}
+  <h1 id="marketing-detail-heading">{{#if title}}{{title}}{{else}}{{item.name}}{{/if}}</h1>
+  {{#if back_url}}
+  <p><a class="button button-secondary button-small" href="{{back_url}}">&larr; Back to list</a></p>
+  {{/if}}
+  <table class="table">
+    <tbody>
+      <tr><th scope="row">Name</th><td>{{item.name}}</td></tr>
+      <tr><th scope="row">Subject</th><td>{{item.subject}}</td></tr>
+      <tr><th scope="row">Status</th><td><span class="badge {{#if item.status_class}}{{item.status_class}}{{else}}badge-neutral{{/if}}">{{item.status}}</span></td></tr>
+      <tr><th scope="row">Scheduled</th><td>{{item.scheduled_at}}</td></tr>
+      <tr><th scope="row">Sent at</th><td>{{item.sent_at}}</td></tr>
+      <tr><th scope="row">Template</th><td>{{item.template_id}}</td></tr>
+      <tr><th scope="row">Segment</th><td>{{item.segment_id}}</td></tr>
+      <tr><th scope="row">List</th><td>{{item.newsletter_list_id}}</td></tr>
+      <tr><th scope="row">Created by</th><td>{{item.created_by}}</td></tr>
+      <tr><th scope="row">Created</th><td>{{item.created_at}}</td></tr>
+      <tr><th scope="row">Updated</th><td>{{item.updated_at}}</td></tr>
+    </tbody>
+  </table>
+  {{#if item.stats}}
+  <h2>Delivery stats</h2>
+  <table class="table">
+    <tbody>
+      <tr><th scope="row">Queued</th><td>{{item.stats.queued}}</td></tr>
+      <tr><th scope="row">Sent</th><td>{{item.stats.sent}}</td></tr>
+      <tr><th scope="row">Delivered</th><td>{{item.stats.delivered}}</td></tr>
+      <tr><th scope="row">Failed</th><td>{{item.stats.failed}}</td></tr>
+      <tr><th scope="row">Skipped</th><td>{{item.stats.skipped}}</td></tr>
+      <tr><th scope="row">Opened</th><td>{{item.stats.opened}}</td></tr>
+      <tr><th scope="row">Clicked</th><td>{{item.stats.clicked}}</td></tr>
+      <tr><th scope="row">Unsubscribed</th><td>{{item.stats.unsubscribed}}</td></tr>
+    </tbody>
+  </table>
+  {{/if}}
+  {{else}}
+  <p class="empty-state"><span class="empty-state-title">Not found.</span></p>
+  {{/if}}
+  {{else}}
+  <p class="empty-note">No data to show.</p>
+  {{/if}}
+</section>

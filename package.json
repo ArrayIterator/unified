@@ -1,0 +1,1 @@
+{"description":"TypeScript sources for the Unified dashboard frontend. The Rust server transpiles these in-memory at startup (see crates/unified-ts); no .js files are kept in the repo.","devDependencies":{"typescript":"^5.9.3"},"name":"unified-frontend","private":true,"scripts":{"check":"tsc --noEmit"},"version":"0.1.0"}

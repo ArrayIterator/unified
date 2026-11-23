@@ -1,0 +1,29 @@
+{{!-- Article detail view (module:knowledgebase/detail).
+  Renders one article record as `item`, with an optional
+  `back_url` to the list. --}}
+<section class="admin-section section-panel" data-section="knowledgebase" aria-labelledby="knowledgebase-detail-heading">
+  {{#if has_data}}
+  {{#if item}}
+  <h1 id="knowledgebase-detail-heading">{{#if title}}{{title}}{{else}}{{item.title}}{{/if}}</h1>
+  {{#if back_url}}
+  <p><a class="button button-secondary button-small" href="{{back_url}}">&larr; Back to list</a></p>
+  {{/if}}
+  <table class="table">
+    <tbody>
+      <tr><th scope="row">Title</th><td>{{item.title}}</td></tr>
+      <tr><th scope="row">Body</th><td>{{item.body}}</td></tr>
+      <tr><th scope="row">Category</th><td>{{item.category_id}}</td></tr>
+      <tr><th scope="row">Status</th><td><span class="badge {{#if item.status_class}}{{item.status_class}}{{else}}badge-neutral{{/if}}">{{item.status}}</span></td></tr>
+      <tr><th scope="row">Tags</th><td>{{#each item.tags}}{{#unless @first}}, {{/unless}}{{this}}{{/each}}</td></tr>
+      <tr><th scope="row">Version</th><td>{{item.version}}</td></tr>
+      <tr><th scope="row">Created</th><td>{{item.created_at}}</td></tr>
+      <tr><th scope="row">Updated</th><td>{{item.updated_at}}</td></tr>
+    </tbody>
+  </table>
+  {{else}}
+  <p class="empty-state"><span class="empty-state-title">Not found.</span></p>
+  {{/if}}
+  {{else}}
+  <p class="empty-note">No data to show.</p>
+  {{/if}}
+</section>

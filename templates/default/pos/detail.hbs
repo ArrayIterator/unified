@@ -1,0 +1,60 @@
+{{!-- Sale detail view (module:pos/detail).
+  Renders one sale record as `item`, with an optional
+  `back_url` to the list. --}}
+<section class="admin-section section-panel" data-section="pos" aria-labelledby="pos-detail-heading">
+  {{#if has_data}}
+  {{#if item}}
+  <h1 id="pos-detail-heading">{{#if title}}{{title}}{{else}}{{item.number}}{{/if}}</h1>
+  {{#if back_url}}
+  <p><a class="button button-secondary button-small" href="{{back_url}}">&larr; Back to list</a></p>
+  {{/if}}
+  <table class="table">
+    <tbody>
+      <tr><th scope="row">Number</th><td>{{item.number}}</td></tr>
+      <tr><th scope="row">Register</th><td>{{item.register_id}}</td></tr>
+      <tr><th scope="row">Shift</th><td>{{item.shift_id}}</td></tr>
+      <tr><th scope="row">Cashier</th><td>{{item.cashier_id}}</td></tr>
+      <tr><th scope="row">Subtotal</th><td>{{item.subtotal}}</td></tr>
+      <tr><th scope="row">Discount</th><td>{{item.discount_total}}</td></tr>
+      <tr><th scope="row">Tax</th><td>{{item.tax_total}}</td></tr>
+      <tr><th scope="row">Total</th><td>{{item.total}} {{item.currency}}</td></tr>
+      <tr><th scope="row">Currency</th><td>{{item.currency}}</td></tr>
+      <tr><th scope="row">Paid</th><td>{{item.amount_paid}}</td></tr>
+      <tr><th scope="row">Change</th><td>{{item.change_due}}</td></tr>
+      <tr><th scope="row">Refunded</th><td>{{item.refunded_amount}}</td></tr>
+      <tr><th scope="row">Customer</th><td>{{item.customer_name}}</td></tr>
+      <tr><th scope="row">Notes</th><td>{{item.notes}}</td></tr>
+    </tbody>
+  </table>
+  {{#if item.items}}
+  <h2>Sale items</h2>
+  <table class="table">
+    <thead>
+      <tr>
+        <th scope="col">Product</th>
+        <th scope="col">SKU</th>
+        <th scope="col">Quantity</th>
+        <th scope="col">Unit price</th>
+        <th scope="col">Line total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each item.items}}
+      <tr>
+        <td>{{name}}</td>
+        <td>{{sku}}</td>
+        <td>{{quantity}}</td>
+        <td>{{unit_price}}</td>
+        <td>{{line_total}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+  {{/if}}
+  {{else}}
+  <p class="empty-state"><span class="empty-state-title">Not found.</span></p>
+  {{/if}}
+  {{else}}
+  <p class="empty-note">No data to show.</p>
+  {{/if}}
+</section>

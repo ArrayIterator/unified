@@ -1,0 +1,30 @@
+{{!-- License detail view (module:licensing/detail).
+  Renders one license record as `item`, with an optional
+  `back_url` to the list. --}}
+<section class="admin-section section-panel" data-section="licensing" aria-labelledby="licensing-detail-heading">
+  {{#if has_data}}
+  {{#if item}}
+  <h1 id="licensing-detail-heading">{{#if title}}{{title}}{{else}}{{item.license_key}}{{/if}}</h1>
+  {{#if back_url}}
+  <p><a class="button button-secondary button-small" href="{{back_url}}">&larr; Back to list</a></p>
+  {{/if}}
+  <table class="table">
+    <tbody>
+      <tr><th scope="row">License key</th><td>{{item.license_key}}</td></tr>
+      <tr><th scope="row">Product</th><td>{{item.product}}</td></tr>
+      <tr><th scope="row">Customer</th><td>{{item.user_id}}</td></tr>
+      <tr><th scope="row">Company</th><td>{{item.company_id}}</td></tr>
+      <tr><th scope="row">Status</th><td><span class="badge {{#if item.status_class}}{{item.status_class}}{{else}}badge-neutral{{/if}}">{{item.status}}</span></td></tr>
+      <tr><th scope="row">Max activations</th><td>{{item.max_activations}}</td></tr>
+      <tr><th scope="row">Expires</th><td>{{item.expires_at}}</td></tr>
+      <tr><th scope="row">Created</th><td>{{item.created_at}}</td></tr>
+      <tr><th scope="row">Updated</th><td>{{item.updated_at}}</td></tr>
+    </tbody>
+  </table>
+  {{else}}
+  <p class="empty-state"><span class="empty-state-title">Not found.</span></p>
+  {{/if}}
+  {{else}}
+  <p class="empty-note">No data to show.</p>
+  {{/if}}
+</section>

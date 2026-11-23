@@ -1,10 +1,84 @@
-[package]
-name = "unified"
+[workspace]
+members = [".", "crates/unified-core", "crates/example-hello-module", "crates/unified-calculator", "crates/unified-db-core", "crates/unified-db-commerce", "crates/unified-db-education", "crates/unified-db-people", "crates/unified-db-operations", "crates/unified-db-platform", "crates/unified-db-infra", "crates/unified-ts", "crates/unified-scripting", "crates/external-whatsapp", "crates/external-esignature", "crates/external-fleet", "crates/external-iot", "crates/external-bi"]
+resolver = "2"
+
+[workspace.package]
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.85"
-description = "Unified Pentagonal Project — high-performance unified management system"
 license = "LicenseRef-Proprietary"
+
+[workspace.dependencies]
+# Shared version pins, copied from the root package [dependencies] below.
+# Members inherit them as `dep.workspace = true`.
+actix-web = { version = "4", features = ["rustls-0_23", "secure-cookies"] }
+actix-ws = "0.4"
+actix-service = "2.0"
+actix-multipart = "0.7"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "time", "signal", "fs", "sync", "process"] }
+async-trait = "0.1"
+parking_lot = "0.12"
+futures-util = "0.3"
+diesel = { version = "2.2", features = ["postgres", "r2d2", "chrono", "uuid", "64-column-tables", "serde_json"] }
+diesel_migrations = "2.2"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0", features = ["raw_value"] }
+serde_yaml = "0.9"
+uuid = { version = "1", features = ["serde", "v4", "v7"] }
+chrono = { version = "0.4", features = ["serde"] }
+semver = { version = "1.0", features = ["serde"] }
+regex = "1.12"
+argon2 = "0.5"
+totp-rs = { version = "5.7", features = ["qr", "otpauth", "gen_secret"] }
+hmac = "0.12"
+sha1 = "0.10"
+sha2 = "0.10"
+rand = "0.9"
+base64 = "0.22"
+base32 = "0.5"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls-webpki-roots", "stream", "multipart"] }
+pingora = { version = "0.4" }
+rustls = { version = "0.23", features = ["aws-lc-rs", "std"] }
+rustls-pemfile = "2.2"
+rustls-pki-types = "1.12"
+rcgen = "0.14"
+x509-certificate = "0.25"
+instant-acme = { version = "0.8", features = ["aws-lc-rs"] }
+maxminddb = "0.27"
+hickory-resolver = { version = "0.25", features = ["tokio"] }
+hickory-proto = "0.25"
+lettre = { version = "0.11", default-features = false, features = ["tokio1-rustls-tls", "smtp-transport", "builder", "hostname"] }
+url = "2.5"
+redis = { version = "1.0", features = ["tokio-comp"] }
+clap = { version = "4.5", features = ["derive", "string"] }
+ratatui = "0.29"
+crossterm = "0.28"
+sysinfo = "0.32"
+nix = { version = "0.30", features = ["user", "process", "signal", "fs"] }
+log = "0.4"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "json", "tracing-log"] }
+handlebars = "6.3"
+rust-embed = "8.11"
+mime = "0.3"
+infer = "0.19"
+walkdir = "2.5"
+arc-swap = "1"
+dashmap = "6.1"
+bytes = "1.10"
+zip = "2.4"
+tar = "0.4"
+flate2 = "1.1"
+path-clean = "1.0"
+humantime = "2.3"
+
+[package]
+name = "unified"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "Unified Pentagonal Project — high-performance unified management system"
+license.workspace = true
 publish = false
 
 [[bin]]
@@ -21,18 +95,23 @@ path = "src/main.rs"
 gateway = ["dep:pingora"]
 
 [dependencies]
+# Library crate holding the core engine, database layer, and TLS storage.
+unified-core = { path = "crates/unified-core" }
+unified-calculator = { path = "crates/unified-calculator" }
+unified-scripting = { path = "crates/unified-scripting" }
+unified-ts = { path = "crates/unified-ts" }
 # Web and async
 actix-web = { version = "4", features = ["rustls-0_23", "secure-cookies"] }
 actix-ws = "0.4"
 actix-service = "2.0"
 actix-multipart = "0.7"
-tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "time", "signal", "fs", "sync"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "time", "signal", "fs", "sync", "process"] }
 async-trait = "0.1"
 parking_lot = "0.12"
 futures-util = "0.3"
 
 # Database
-diesel = { version = "2.2", features = ["postgres", "r2d2", "chrono", "uuid"] }
+diesel = { version = "2.2", features = ["postgres", "r2d2", "chrono", "uuid", "64-column-tables", "serde_json"] }
 diesel_migrations = "2.2"
 
 # Serialization and config
@@ -46,7 +125,7 @@ regex = "1.12"
 
 # Cryptography and auth
 argon2 = "0.5"
-totp-rs = { version = "5.7", features = ["qr", "otpauth"] }
+totp-rs = { version = "5.7", features = ["qr", "otpauth", "gen_secret"] }
 hmac = "0.12"
 sha1 = "0.10"
 sha2 = "0.10"
@@ -55,27 +134,27 @@ base64 = "0.22"
 base32 = "0.5"
 
 # Network, TLS, and downloads
-reqwest = { version = "0.12", default-features = false, features = ["json", "rustls", "stream", "multipart"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls-webpki-roots", "stream", "multipart"] }
 # Pingora reverse proxy (optional: only with the `gateway` feature).
 # Version pin is unverified (no toolchain or registry access here):
 # 0.4 matches the API shape the gateway proxy code is written
 # against (`Server::new`, `http_proxy_service`, `ProxyHttp`,
 # `HttpPeer`, `TlsSettings`), but newer lines exist (0.8.1 fixes a
 # Pingora HTTP/2 denial-of-service, 0.9.0 is current) — confirm the
-# pin against the resolved Pingora API, including the 11 UNCERTAIN
+# pin against the resolved Pingora API, including the 12 UNCERTAIN
 # (pingora-N) points marked in `src/gateway/proxy.rs`, before
 # enabling the feature in a release build.
-pingora = { version = "0.4", optional = true }
+pingora = { workspace = true, optional = true }
 rustls = { version = "0.23", features = ["aws-lc-rs", "std"] }
 rustls-pemfile = "2.2"
 rustls-pki-types = "1.12"
 rcgen = "0.14"
-x509-certificate = "0.27"
+x509-certificate = "0.25"
 instant-acme = { version = "0.8", features = ["aws-lc-rs"] }
 maxminddb = "0.27"
 hickory-resolver = { version = "0.25", features = ["tokio"] }
 hickory-proto = "0.25"
-lettre = { version = "0.11", default-features = false, features = ["tokio1-rustls", "smtp-transport", "builder", "hostname"] }
+lettre = { version = "0.11", default-features = false, features = ["tokio1-rustls-tls", "smtp-transport", "builder", "hostname"] }
 url = "2.5"
 redis = { version = "1.0", features = ["tokio-comp"] }
 
@@ -84,7 +163,7 @@ clap = { version = "4.5", features = ["derive", "string"] }
 ratatui = "0.29"
 crossterm = "0.28"
 sysinfo = "0.32"
-nix = { version = "0.30", features = ["user", "process", "signal"] }
+nix = { version = "0.30", features = ["user", "process", "signal", "fs"] }
 
 # Logging
 log = "0.4"

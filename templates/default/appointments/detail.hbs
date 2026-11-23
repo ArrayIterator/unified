@@ -1,0 +1,39 @@
+{{!-- Appointment detail view (module:appointments/detail).
+  Renders one appointment record as `item`, with an optional
+  `back_url` to the list. --}}
+<section class="admin-section section-panel" data-section="appointments" aria-labelledby="appointments-detail-heading">
+  {{#if has_data}}
+  {{#if item}}
+  <h1 id="appointments-detail-heading">{{#if title}}{{title}}{{else}}{{item.customer_name}}{{/if}}</h1>
+  {{#if back_url}}
+  <p><a class="button button-secondary button-small" href="{{back_url}}">&larr; Back to list</a></p>
+  {{/if}}
+  <table class="table">
+    <tbody>
+      <tr><th scope="row">Customer</th><td>{{item.customer_name}}</td></tr>
+      <tr><th scope="row">Email</th><td>{{item.customer_email}}</td></tr>
+      <tr><th scope="row">Phone</th><td>{{item.customer_phone}}</td></tr>
+      <tr><th scope="row">Service</th><td>{{item.service_id}}</td></tr>
+      <tr><th scope="row">Staff</th><td>{{item.staff_user_id}}</td></tr>
+      <tr><th scope="row">Starts</th><td>{{item.starts_at}}</td></tr>
+      <tr><th scope="row">Ends</th><td>{{item.ends_at}}</td></tr>
+    </tbody>
+  </table>
+  {{#if item.service}}
+  <h2>Service</h2>
+  <table class="table">
+    <tbody>
+      <tr><th scope="row">Name</th><td>{{item.service.name}}</td></tr>
+      <tr><th scope="row">Duration (min)</th><td>{{item.service.duration_minutes}}</td></tr>
+      <tr><th scope="row">Price</th><td>{{item.service.price}} {{item.service.currency}}</td></tr>
+      <tr><th scope="row">Capacity</th><td>{{item.service.capacity}}</td></tr>
+    </tbody>
+  </table>
+  {{/if}}
+  {{else}}
+  <p class="empty-state"><span class="empty-state-title">Not found.</span></p>
+  {{/if}}
+  {{else}}
+  <p class="empty-note">No data to show.</p>
+  {{/if}}
+</section>

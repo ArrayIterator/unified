@@ -10,14 +10,15 @@
 // directory URLs); providers that require External Account Binding pass
 // their EAB credentials at account creation.
 
-use crate::core::config::AppConfig;
-use crate::core::error::{UnifiedError, UnifiedResult};
-use crate::http::tls::{to_ascii_name, SslStorage};
+use unified_core::config::AppConfig;
+use unified_core::error::{UnifiedError, UnifiedResult};
+use unified_core::tls::{to_ascii_name, SslStorage};
 use chrono::{Duration, Utc};
 use futures_util::StreamExt;
 use instant_acme::{
     Account, AuthorizationHandle, AuthorizationStatus, ChallengeStatus, ChallengeType,
-    ExternalAccountKey, Identifier, Key, NewAccount, NewOrder, OrderStatus, RetryPolicy,
+    ExternalAccountKey, Identifier, Key, NewAccount, NewOrder, Order, OrderStatus,
+    RetryPolicy,
 };
 use rcgen::{
     CertificateParams, DistinguishedName, KeyPair, PKCS_ECDSA_P256_SHA256,
@@ -126,11 +127,14 @@ impl AcmeProvider {
         }
     }
 
-    /// True when the provider can issue wildcard certificates. All
-    /// listed providers support wildcards, but only over DNS-01, so
-    /// this client (HTTP-01 only) still rejects wildcard orders.
+    /// Whether this client can obtain a wildcard certificate from
+    /// the provider. Always false: the providers can issue
+    /// wildcards, but only over DNS-01, and this client is HTTP-01
+    /// only — `order_certificate` rejects `*.` domains. Reporting
+    /// the provider's capability here would over-claim what the
+    /// client can actually do.
     pub fn supports_wildcard(&self) -> bool {
-        !matches!(self, Self::BuyPass)
+        false
     }
 
     /// True when the provider can issue certificates for IP addresses.
@@ -166,12 +170,34 @@ fn acme_err(error: instant_acme::Error) -> UnifiedError {
 /// Deactivate a pending or valid authorization, so a failed order does
 /// not leave a dangling authorization consuming the authority's rate
 /// limit. Failures are ignored: deactivation is best-effort cleanup.
-async fn deactivate(authorization: &mut AuthorizationHandle) {
+async fn deactivate(authorization: &mut AuthorizationHandle<'_>) {
     if matches!(
         authorization.status,
         AuthorizationStatus::Pending | AuthorizationStatus::Valid
     ) {
         authorization.deactivate().await.ok();
+    }
+}
+
+/// Deactivate one authorization of an order by its position in the
+/// order's authorization list, using a fresh handle.
+///
+/// `AuthorizationHandle::challenge` takes `&'a mut self` where `'a`
+/// is the handle's own lifetime, so once a challenge handle has been
+/// created the original handle stays mutably borrowed for the rest
+/// of the iteration and cannot be passed to `deactivate` again. A
+/// fresh handle from a new `authorizations()` iterator has never been
+/// challenged, so it can be deactivated. The order's authorization
+/// states are cached after the first pass, so this re-iterates
+/// without extra fetches.
+async fn deactivate_authorization(order: &mut Order, index: usize) {
+    let mut authorizations = order.authorizations();
+    let mut target = None;
+    for _ in 0..=index {
+        target = authorizations.next().await;
+    }
+    if let Some(Ok(mut handle)) = target {
+        deactivate(&mut handle).await;
     }
 }
 
@@ -233,11 +259,31 @@ fn save_account_key(path: &Path, key_pair: &KeyPair) -> UnifiedResult<()> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
     }
-    std::fs::write(path, key_pair.serialize_pem())?;
+    // Create the key file with mode 0600 atomically: the old
+    // `fs::write` + `set_permissions(0o600)` left the key briefly
+    // world-readable (default umask) between the two calls.
     #[cfg(unix)]
     {
+        use std::os::unix::fs::OpenOptionsExt;
+        let mut file = std::fs::OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .mode(0o600)
+            .open(path)?;
+        use std::io::Write;
+        file.write_all(key_pair.serialize_pem().as_bytes())?;
+        file.sync_all()?;
+        // `mode(0o600)` only applies when the file is created; an
+        // already-existing key keeps its old permissions, so tighten
+        // unconditionally. The file was just created 0600 (or was
+        // already there), so no world-readable window opens here.
         use std::os::unix::fs::PermissionsExt;
         std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600))?;
+    }
+    #[cfg(not(unix))]
+    {
+        std::fs::write(path, key_pair.serialize_pem())?;
     }
     Ok(())
 }
@@ -346,21 +392,6 @@ impl AcmeClient {
         &self.directory_url
     }
 
-    /// Shared HTTP-01 challenge map. The HTTP server serves
-    /// `/.well-known/acme-challenge/<token>` from this map.
-    pub fn challenges(&self) -> Arc<RwLock<HashMap<String, String>>> {
-        self.challenges.clone()
-    }
-
-    /// Key authorization for one challenge token, if currently pending.
-    pub fn challenge_response(&self, token: &str) -> Option<String> {
-        self.challenges
-            .read()
-            .ok()?
-            .get(token)
-            .cloned()
-    }
-
     /// Order a certificate for `domains` via HTTP-01. Returns
     /// `(certificate chain PEM, private key PEM)`. Wildcard domains are
     /// rejected: HTTP-01 cannot validate them (DNS-01 is required).
@@ -408,42 +439,60 @@ impl AcmeClient {
         let csr = params.serialize_request(&cert_key).map_err(rcgen_err)?;
 
         let mut tokens = ChallengeTokens::new(self.challenges.clone());
+        let mut authorization_index = 0usize;
         let mut authorizations = order.authorizations();
         while let Some(authorization) = authorizations.next().await {
-            let mut authorization = authorization.map_err(acme_err)?;
-            let mut challenge = authorization
-                .challenge(ChallengeType::Http01)
-                .ok_or_else(|| {
-                    UnifiedError::internal(
-                        "ACME server offers no HTTP-01 challenge for this domain",
-                    )
-                })?;
-            let token = challenge.token.clone();
-            let key_authorization = challenge
-                .key_authorization(self.account.credentials().key())
-                .map_err(acme_err)?;
-            self.challenges
-                .write()
-                .expect("challenge map lock poisoned")
-                .insert(token.clone(), key_authorization.as_str().to_string());
-            challenge_store()
-                .write()
-                .expect("challenge store lock poisoned")
-                .insert(token.clone(), key_authorization.as_str().to_string());
-            tokens.published.push(token);
-            // A challenge that is already valid needs no ready signal.
-            if challenge.status == ChallengeStatus::Pending {
-                if let Err(error) = challenge.set_ready().await {
-                    deactivate(&mut authorization).await;
-                    return Err(acme_err(error));
+            // `AuthorizationHandle::challenge` borrows the handle for
+            // the handle's whole lifetime, so the per-authorization
+            // work runs in its own scope: the handle is dropped at
+            // the end of the scope, and only then can the iterator be
+            // dropped and a fresh handle taken from the order to
+            // deactivate a failed authorization.
+            let failure: Option<UnifiedError> = {
+                let mut authorization = authorization.map_err(acme_err)?;
+                let mut challenge = authorization
+                    .challenge(ChallengeType::Http01)
+                    .ok_or_else(|| {
+                        UnifiedError::internal(
+                            "ACME server offers no HTTP-01 challenge for this domain",
+                        )
+                    })?;
+                let token = challenge.token.clone();
+                let key_authorization = challenge.key_authorization();
+                self.challenges
+                    .write()
+                    .expect("challenge map lock poisoned")
+                    .insert(token.clone(), key_authorization.as_str().to_string());
+                challenge_store()
+                    .write()
+                    .expect("challenge store lock poisoned")
+                    .insert(token.clone(), key_authorization.as_str().to_string());
+                tokens.published.push(token);
+                // A challenge that is already valid needs no ready signal.
+                let mut set_ready_error = None;
+                if challenge.status == ChallengeStatus::Pending {
+                    if let Err(error) = challenge.set_ready().await {
+                        set_ready_error = Some(error);
+                    }
                 }
+                let problem = challenge.error.clone();
+                drop(challenge);
+                if let Some(error) = set_ready_error {
+                    Some(acme_err(error))
+                } else if let Some(problem) = problem {
+                    Some(UnifiedError::internal(format!(
+                        "ACME challenge failed: {problem:?}"
+                    )))
+                } else {
+                    None
+                }
+            };
+            if let Some(error) = failure {
+                drop(authorizations);
+                deactivate_authorization(&mut order, authorization_index).await;
+                return Err(error);
             }
-            if let Some(problem) = challenge.error.clone() {
-                deactivate(&mut authorization).await;
-                return Err(UnifiedError::internal(format!(
-                    "ACME challenge failed: {problem:?}"
-                )));
-            }
+            authorization_index += 1;
         }
         let status = order
             .poll_ready(&RetryPolicy::new())
@@ -487,22 +536,6 @@ impl AcmeClient {
         }
         self.renew_stored(storage, domain).await?;
         Ok(true)
-    }
-
-    /// Renew the stored certificate for `domain` regardless of expiry.
-    /// Useful for a forced renewal (for example after a key compromise
-    /// or an authority-mandated reissue).
-    pub async fn renew_certificate(
-        &self,
-        storage: &SslStorage,
-        domain: &str,
-    ) -> UnifiedResult<()> {
-        if storage.cert_expiry(domain).is_none() {
-            return Err(UnifiedError::not_found(format!(
-                "no certificate stored for {domain}"
-            )));
-        }
-        self.renew_stored(storage, domain).await
     }
 
     /// Order a replacement for the stored certificate and swap it into
@@ -589,26 +622,9 @@ impl ChallengeKind {
     }
 }
 
-/// Challenge types the certificate authority offers, per provider.
-/// All listed providers offer both challenge types at the CA level.
-pub fn supported_challenges(provider: &AcmeProvider) -> &'static [ChallengeKind] {
-    match provider {
-        AcmeProvider::LetsEncrypt
-        | AcmeProvider::Google
-        | AcmeProvider::ZeroSsl
-        | AcmeProvider::BuyPass
-        | AcmeProvider::Custom(_) => &[ChallengeKind::Http01, ChallengeKind::Dns01],
-    }
-}
-
 /// Challenge types this client actually performs. HTTP-01 only: DNS-01
 /// needs a DNS provider integration, which this codebase does not have.
 pub const CLIENT_SUPPORTED_CHALLENGES: &[ChallengeKind] = &[ChallengeKind::Http01];
-
-/// True when this client can perform the challenge type.
-pub fn client_supports_challenge(kind: ChallengeKind) -> bool {
-    CLIENT_SUPPORTED_CHALLENGES.contains(&kind)
-}
 
 /// Private key algorithm for newly issued certificates.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -677,7 +693,10 @@ pub fn provider_matrix() -> Vec<ProviderInfo> {
             requires_eab: provider.requires_eab(),
             supports_wildcard: provider.supports_wildcard(),
             supports_ip: provider.supports_ip(),
-            challenges: supported_challenges(&provider)
+            // What this client can actually perform (HTTP-01 only),
+            // not what the CA offers: listing DNS-01 here would
+            // over-claim like the old wildcard flag did.
+            challenges: CLIENT_SUPPORTED_CHALLENGES
                 .iter()
                 .map(ChallengeKind::as_str)
                 .collect(),
@@ -690,9 +709,9 @@ pub fn provider_matrix() -> Vec<ProviderInfo> {
         staging_url: None,
         staging_available: false,
         requires_eab: false,
-        supports_wildcard: true,
+        supports_wildcard: false,
         supports_ip: false,
-        challenges: vec!["http-01", "dns-01"],
+        challenges: vec!["http-01"],
     });
     out
 }
@@ -981,22 +1000,6 @@ impl AcmeClient {
     /// HTTP-01 only (no DNS provider integration), so a DNS-01 order
     /// would fail halfway through. The rest of the flow mirrors
     /// `order_certificate` exactly.
-    pub async fn order_certificate_with_challenge(
-        &self,
-        domains: &[String],
-        key_type: KeyType,
-        curve: &str,
-        challenge: ChallengeKind,
-    ) -> UnifiedResult<(String, String)> {
-        if challenge != ChallengeKind::Http01 {
-            return Err(UnifiedError::bad_request(
-                "DNS-01 validation is not performed by this client (no DNS provider integration); use HTTP-01, or install a certificate issued with DNS-01 elsewhere",
-            ));
-        }
-        self.order_certificate_with_key_type(domains, key_type, curve)
-            .await
-    }
-
     /// Order a certificate for `domains` via HTTP-01 with a key of
     /// the requested algorithm. Returns `(certificate chain PEM,
     /// private key PEM)`. Wildcard domains are rejected: HTTP-01
@@ -1044,41 +1047,60 @@ impl AcmeClient {
         let csr = params.serialize_request(&cert_key).map_err(rcgen_err)?;
 
         let mut tokens = ChallengeTokens::new(self.challenges.clone());
+        let mut authorization_index = 0usize;
         let mut authorizations = order.authorizations();
         while let Some(authorization) = authorizations.next().await {
-            let mut authorization = authorization.map_err(acme_err)?;
-            let mut challenge = authorization
-                .challenge(ChallengeType::Http01)
-                .ok_or_else(|| {
-                    UnifiedError::internal(
-                        "ACME server offers no HTTP-01 challenge for this domain",
-                    )
-                })?;
-            let token = challenge.token.clone();
-            let key_authorization = challenge
-                .key_authorization(self.account.credentials().key())
-                .map_err(acme_err)?;
-            self.challenges
-                .write()
-                .expect("challenge map lock poisoned")
-                .insert(token.clone(), key_authorization.as_str().to_string());
-            challenge_store()
-                .write()
-                .expect("challenge store lock poisoned")
-                .insert(token.clone(), key_authorization.as_str().to_string());
-            tokens.published.push(token);
-            if challenge.status == ChallengeStatus::Pending {
-                if let Err(error) = challenge.set_ready().await {
-                    deactivate(&mut authorization).await;
-                    return Err(acme_err(error));
+            // `AuthorizationHandle::challenge` borrows the handle for
+            // the handle's whole lifetime, so the per-authorization
+            // work runs in its own scope: the handle is dropped at
+            // the end of the scope, and only then can the iterator be
+            // dropped and a fresh handle taken from the order to
+            // deactivate a failed authorization.
+            let failure: Option<UnifiedError> = {
+                let mut authorization = authorization.map_err(acme_err)?;
+                let mut challenge = authorization
+                    .challenge(ChallengeType::Http01)
+                    .ok_or_else(|| {
+                        UnifiedError::internal(
+                            "ACME server offers no HTTP-01 challenge for this domain",
+                        )
+                    })?;
+                let token = challenge.token.clone();
+                let key_authorization = challenge.key_authorization();
+                self.challenges
+                    .write()
+                    .expect("challenge map lock poisoned")
+                    .insert(token.clone(), key_authorization.as_str().to_string());
+                challenge_store()
+                    .write()
+                    .expect("challenge store lock poisoned")
+                    .insert(token.clone(), key_authorization.as_str().to_string());
+                tokens.published.push(token);
+                // A challenge that is already valid needs no ready signal.
+                let mut set_ready_error = None;
+                if challenge.status == ChallengeStatus::Pending {
+                    if let Err(error) = challenge.set_ready().await {
+                        set_ready_error = Some(error);
+                    }
                 }
+                let problem = challenge.error.clone();
+                drop(challenge);
+                if let Some(error) = set_ready_error {
+                    Some(acme_err(error))
+                } else if let Some(problem) = problem {
+                    Some(UnifiedError::internal(format!(
+                        "ACME challenge failed: {problem:?}"
+                    )))
+                } else {
+                    None
+                }
+            };
+            if let Some(error) = failure {
+                drop(authorizations);
+                deactivate_authorization(&mut order, authorization_index).await;
+                return Err(error);
             }
-            if let Some(problem) = challenge.error.clone() {
-                deactivate(&mut authorization).await;
-                return Err(UnifiedError::internal(format!(
-                    "ACME challenge failed: {problem:?}"
-                )));
-            }
+            authorization_index += 1;
         }
         let status = order
             .poll_ready(&RetryPolicy::new())

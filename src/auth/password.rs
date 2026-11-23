@@ -5,7 +5,7 @@
 // PHC strings, so the parameters travel with the hash and old hashes can
 // be detected for rehashing. Passwords are never logged.
 
-use crate::core::error::{UnifiedError, UnifiedResult};
+use unified_core::error::{UnifiedError, UnifiedResult};
 use argon2::password_hash::{ParamsString, PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng};
 use argon2::{Algorithm, Argon2, Params, Version};
 
@@ -40,7 +40,7 @@ pub fn hash_with_params(
     if password.is_empty() {
         return Err(UnifiedError::bad_request("Password must not be empty"));
     }
-    let params = Params::new(m_cost, t_cost, p_cost, DEFAULT_OUTPUT_LEN).map_err(|error| {
+    let params = Params::new(m_cost, t_cost, p_cost, Some(DEFAULT_OUTPUT_LEN)).map_err(|error| {
         UnifiedError::internal(format!("Invalid Argon2 parameters: {error}"))
     })?;
     let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
@@ -91,5 +91,5 @@ pub fn needs_rehash(hash: &str) -> bool {
 
 /// Read one decimal parameter from a PHC parameter string.
 fn decimal_param(params: &ParamsString, name: &str) -> Option<u32> {
-    params.get_decimal(name).and_then(|result| result.ok())
+    params.get_decimal(name)
 }

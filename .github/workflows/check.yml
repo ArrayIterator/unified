@@ -1,0 +1,51 @@
+name: Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  # CI has network access; a cold cache must be able to fetch dependencies.
+  UNIFIED_OFFLINE: "0"
+  RUSTC_WRAPPER: sccache
+
+jobs:
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y libpq-dev
+          sudo apt-get install -y mold || echo "mold unavailable; continuing with GNU ld"
+
+      - name: Install sccache
+        uses: taiki-e/install-action@v2
+        with:
+          tool: sccache
+        continue-on-error: true
+
+      - name: Cache cargo dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Run checks
+        run: bash scripts/check.sh
+
+      - name: Check (--features gateway)
+        run: |
+          cargo check --offline -p unified --features gateway
+          cargo clippy --offline -p unified --all-targets --features gateway -- -D warnings

@@ -1,3 +1,4 @@
+{{#if section_overview}}
 <section class="user-overview" data-section="{{section}}">
   <h1>Your dashboard</h1>
   <p class="page-intro">Your licenses, downloads, orders, tickets, and services in one place.</p>
@@ -99,3 +100,124 @@
     {{/if}}
   </div>
 </section>
+{{/if}}
+
+{{#if section_licenses}}
+<section class="user-section section-panel" data-section="licenses" aria-labelledby="user-licenses-heading">
+  <h1 id="user-licenses-heading">My Licenses</h1>
+  <p class="page-intro">Licenses issued to your account. Loaded live from the dashboards API.</p>
+  <div id="user-licenses-list"><p>Loading licenses…</p></div>
+</section>
+{{/if}}
+
+{{#if section_downloads}}
+<section class="user-section section-panel" data-section="downloads" aria-labelledby="user-downloads-heading">
+  <h1 id="user-downloads-heading">My Downloads</h1>
+  <p class="page-intro">Downloads available under your licenses. Loaded live from the dashboards API.</p>
+  <div id="user-downloads-list"><p>Loading downloads…</p></div>
+</section>
+{{/if}}
+
+{{#if section_orders}}
+<section class="user-section section-panel" data-section="orders" aria-labelledby="user-orders-heading">
+  <h1 id="user-orders-heading">My Orders</h1>
+  <p class="page-intro">Your store orders. Loaded live from the dashboards API.</p>
+  <div id="user-orders-list"><p>Loading orders…</p></div>
+</section>
+{{/if}}
+
+{{#if section_school_fees}}
+<section class="user-section section-panel" data-section="school-fees" aria-labelledby="user-fees-heading">
+  <h1 id="user-fees-heading">My School Fees</h1>
+  <p class="page-intro">Your school fee records.</p>
+  {{#if section_data.available}}
+  <p class="section-status section-status-ok">School fee data is available from its owning module.</p>
+  {{else}}
+  <p class="empty-note">School fee details are not connected yet{{#if section_data.reason}} &mdash; {{section_data.reason}}{{/if}}.</p>
+  {{/if}}
+</section>
+{{/if}}
+
+{{#if section_tickets}}
+<section class="user-section section-panel" data-section="tickets" aria-labelledby="user-tickets-heading">
+  <h1 id="user-tickets-heading">My Tickets</h1>
+  <p class="page-intro">Your support tickets.</p>
+  {{#if section_data.available}}
+  <p class="section-status section-status-ok">Ticket data is available from its owning module.</p>
+  {{else}}
+  <p class="empty-note">Ticket details are not connected yet{{#if section_data.reason}} &mdash; {{section_data.reason}}{{/if}}.</p>
+  {{/if}}
+</section>
+{{/if}}
+
+{{#if section_services}}
+<section class="user-section section-panel" data-section="services" aria-labelledby="user-services-heading">
+  <h1 id="user-services-heading">My Services</h1>
+  <p class="page-intro">Services running under your account.</p>
+  {{#if section_data.available}}
+  <p class="section-status section-status-ok">Service data is available from its owning module.</p>
+  {{else}}
+  <p class="empty-note">Service details are not connected yet{{#if section_data.reason}} &mdash; {{section_data.reason}}{{/if}}.</p>
+  {{/if}}
+</section>
+{{/if}}
+
+{{#if section_apikeys}}
+<section class="user-section section-panel" data-section="apikeys" aria-labelledby="user-apikeys-heading">
+  <h1 id="user-apikeys-heading">API Keys</h1>
+  <p class="page-intro">API keys for your account.</p>
+  {{#if section_data.available}}
+  <p class="section-status section-status-ok">API key data is available from its owning module.</p>
+  {{else}}
+  <p class="empty-note">API keys are not connected yet{{#if section_data.reason}} &mdash; {{section_data.reason}}{{/if}}. Keys are managed by the API keys module.</p>
+  {{/if}}
+</section>
+{{/if}}
+
+{{#if section_profile}}
+<section class="user-section section-panel" data-section="profile" aria-labelledby="user-profile-heading">
+  <h1 id="user-profile-heading">Profile</h1>
+  <p class="page-intro">Your account details, as stored for your user id.</p>
+  {{#if user}}
+  <dl class="record-list">
+    <div><dt>Name</dt><dd>{{user.name}}</dd></div>
+    <div><dt>Email</dt><dd>{{user.email}}</dd></div>
+    <div><dt>User id</dt><dd>{{user.id}}</dd></div>
+    {{#if user.company_id}}<div><dt>Company id</dt><dd>{{user.company_id}}</dd></div>{{/if}}
+  </dl>
+  {{else}}
+  <p class="empty-note">No profile is available for this session.</p>
+  {{/if}}
+  <p class="field-help">Profile changes are made by an administrator through the users API.</p>
+</section>
+{{/if}}
+
+{{#if section_reseller_clients}}
+<section class="user-section section-panel" data-section="reseller/clients" aria-labelledby="reseller-clients-heading">
+  <h1 id="reseller-clients-heading">My Clients</h1>
+  <p class="page-intro">Clients linked to your reseller account.</p>
+  <p class="stat-note">{{reseller.clients_total}} linked clients.</p>
+  {{#if reseller.client_ids}}
+  <ul class="record-list">
+    {{#each reseller.client_ids}}
+    <li><span class="record-name">{{this}}</span></li>
+    {{/each}}
+  </ul>
+  {{else}}
+  <p class="empty-note">No clients are linked yet. Link a client from the reseller API.</p>
+  {{/if}}
+</section>
+{{/if}}
+
+{{#if section_reseller_payouts}}
+<section class="user-section section-panel" data-section="reseller/payouts" aria-labelledby="reseller-payouts-heading">
+  <h1 id="reseller-payouts-heading">Commissions &amp; Payouts</h1>
+  <p class="page-intro">Commission totals for your linked clients.</p>
+  <p class="stat-note">{{reseller.counts.client_orders}} client orders &middot; {{reseller.counts.client_orders_value}} total value.</p>
+  {{#if section_data.available}}
+  <p class="section-status section-status-ok">Commission data is available from its owning module.</p>
+  {{else}}
+  <p class="empty-note">Commission details are not connected yet{{#if section_data.reason}} &mdash; {{section_data.reason}}{{/if}}.</p>
+  {{/if}}
+</section>
+{{/if}}

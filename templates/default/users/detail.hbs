@@ -1,0 +1,28 @@
+{{!-- User detail view (module:users/detail).
+  Renders one user record as `item`, with an optional
+  `back_url` to the list. --}}
+<section class="admin-section section-panel" data-section="users" aria-labelledby="users-detail-heading">
+  {{#if has_data}}
+  {{#if item}}
+  <h1 id="users-detail-heading">{{#if title}}{{title}}{{else}}{{item.name}}{{/if}}</h1>
+  {{#if back_url}}
+  <p><a class="button button-secondary button-small" href="{{back_url}}">&larr; Back to list</a></p>
+  {{/if}}
+  <table class="table">
+    <tbody>
+      <tr><th scope="row">Name</th><td>{{item.name}}</td></tr>
+      <tr><th scope="row">Email</th><td>{{item.email}}</td></tr>
+      <tr><th scope="row">Active</th><td>{{#if item.is_active}}Active{{else}}Inactive{{/if}}</td></tr>
+      <tr><th scope="row">Company</th><td>{{item.company_id}}</td></tr>
+      <tr><th scope="row">Roles</th><td>{{#each item.roles}}{{#unless @first}}, {{/unless}}{{this}}{{/each}}</td></tr>
+      <tr><th scope="row">Created</th><td>{{item.created_at}}</td></tr>
+      <tr><th scope="row">Updated</th><td>{{item.updated_at}}</td></tr>
+    </tbody>
+  </table>
+  {{else}}
+  <p class="empty-state"><span class="empty-state-title">Not found.</span></p>
+  {{/if}}
+  {{else}}
+  <p class="empty-note">No data to show.</p>
+  {{/if}}
+</section>

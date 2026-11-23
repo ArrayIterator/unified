@@ -93,9 +93,11 @@
 // hook and fail closed (no answer means not allowed). Admin work
 // needs `saas_domains.manage`; reading needs `saas_domains.read`;
 // a tenant acting on its own records needs
-// `saas_domains.self_assign` plus an `X-Company-Id` header that
-// matches the record's company. A caller without the manage
-// capability can never see or touch another tenant's records.
+// `saas_domains.self_assign` plus a verified caller company that
+// matches the record's company (the company is resolved
+// server-side from the tenant record, never from a header). A caller
+// without the manage capability can never see or touch another
+// tenant's records.
 //
 // Product-subdomain events emitted on the hook bus:
 //   - `saas.product_subdomain.claimed`, `.verified`, `.activated`,

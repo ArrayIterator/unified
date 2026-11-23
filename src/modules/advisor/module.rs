@@ -213,14 +213,14 @@ impl Module for AdvisorModule {
 
     fn route_info(&self) -> Vec<RouteInfo> {
         vec![
-            RouteInfo { method: "GET", path: "/api/v1/advisor/suggestions", owner: "advisor", description: "List suggestions (paginated; filter by severity, status, company_id, rule_id)." },
-            RouteInfo { method: "POST", path: "/api/v1/advisor/suggestions/re-evaluate", owner: "advisor", description: "Evaluate rules on demand for a company (optional CRM activity and subscription snapshots)." },
-            RouteInfo { method: "GET", path: "/api/v1/advisor/suggestions/{id}", owner: "advisor", description: "Get one suggestion with its rule, severity formula, and source figures." },
-            RouteInfo { method: "POST", path: "/api/v1/advisor/suggestions/{id}/acknowledge", owner: "advisor", description: "Acknowledge a suggestion." },
-            RouteInfo { method: "POST", path: "/api/v1/advisor/suggestions/{id}/dismiss", owner: "advisor", description: "Dismiss a suggestion (never resurrected by re-evaluation)." },
-            RouteInfo { method: "POST", path: "/api/v1/advisor/suggestions/{id}/snooze", owner: "advisor", description: "Snooze a suggestion until a date or for a number of days." },
-            RouteInfo { method: "GET", path: "/api/v1/advisor/rules", owner: "advisor", description: "List the rule definitions with conditions and severity formulas." },
-            RouteInfo { method: "GET", path: "/api/v1/advisor/rule-runs", owner: "advisor", description: "List rule evaluation runs (audit trail of what was evaluated)." },
+            RouteInfo { method: "GET", path: "/api/v1/advisor/suggestions", owner: "advisor", description: "List suggestions (paginated; filter by severity, status, company_id, rule_id).", auth: unified_core::auth::RouteAuth::Authenticated},
+            RouteInfo { method: "POST", path: "/api/v1/advisor/suggestions/re-evaluate", owner: "advisor", description: "Evaluate rules on demand for a company (optional CRM activity and subscription snapshots).", auth: unified_core::auth::RouteAuth::Authenticated},
+            RouteInfo { method: "GET", path: "/api/v1/advisor/suggestions/{id}", owner: "advisor", description: "Get one suggestion with its rule, severity formula, and source figures.", auth: unified_core::auth::RouteAuth::Authenticated},
+            RouteInfo { method: "POST", path: "/api/v1/advisor/suggestions/{id}/acknowledge", owner: "advisor", description: "Acknowledge a suggestion.", auth: unified_core::auth::RouteAuth::Authenticated},
+            RouteInfo { method: "POST", path: "/api/v1/advisor/suggestions/{id}/dismiss", owner: "advisor", description: "Dismiss a suggestion (never resurrected by re-evaluation).", auth: unified_core::auth::RouteAuth::Authenticated},
+            RouteInfo { method: "POST", path: "/api/v1/advisor/suggestions/{id}/snooze", owner: "advisor", description: "Snooze a suggestion until a date or for a number of days.", auth: unified_core::auth::RouteAuth::Authenticated},
+            RouteInfo { method: "GET", path: "/api/v1/advisor/rules", owner: "advisor", description: "List the rule definitions with conditions and severity formulas.", auth: unified_core::auth::RouteAuth::Authenticated},
+            RouteInfo { method: "GET", path: "/api/v1/advisor/rule-runs", owner: "advisor", description: "List rule evaluation runs (audit trail of what was evaluated).", auth: unified_core::auth::RouteAuth::Authenticated},
         ]
     }
 }

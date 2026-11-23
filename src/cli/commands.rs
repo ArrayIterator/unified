@@ -28,11 +28,11 @@
 
 use crate::cli::daemon::{self, DaemonStatus};
 use crate::cli::monitor;
-use crate::core::config::AppConfig;
-use crate::core::context::AppContext;
-use crate::core::error::UnifiedResult;
-use crate::core::hooks::{events, HookBus};
-use crate::core::modules::{CliRegistry, ModuleRegistry};
+use unified_core::config::AppConfig;
+use unified_core::context::AppContext;
+use unified_core::error::UnifiedResult;
+use unified_core::hooks::{events, HookBus};
+use unified_core::modules::{CliRegistry, ModuleRegistry};
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use nix::sys::signal::Signal;
 use serde_json::json;
@@ -338,7 +338,7 @@ fn do_start(config_path: &Path, daemonize_flag: bool) -> i32 {
         eprintln!("Refusing to start. Fix the configuration or run `unified -t` to test it.");
         return 1;
     }
-    crate::core::logging::init_logging(config.is_debug());
+    crate::logging::init_logging(config.is_debug());
     println!(
         "Starting Unified server in {} mode on {}.",
         config.app.mode,
@@ -401,9 +401,9 @@ async fn start_server(config: AppConfig, config_path: PathBuf) -> UnifiedResult<
         log::info!("No database configured; continuing without a database.");
     } else {
         let db_config = ctx.config.read().expect("config lock poisoned").clone();
-        match crate::db::pool_from_config(&db_config) {
+        match unified_core::db::pool_from_config(&db_config) {
             Ok(pool) => {
-                crate::db::run_migrations(&pool)?;
+                unified_core::db::run_migrations(&pool)?;
                 ctx.set_db(pool);
                 log::info!("Database connected and migrations applied.");
             }

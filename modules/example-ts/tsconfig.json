@@ -1,0 +1,1 @@
+{"$schema":"https://json.schemastore.org/tsconfig","compilerOptions":{"forceConsistentCasingInFileNames":true,"lib":["ES2020"],"module":"ES2020","noEmit":true,"skipLibCheck":true,"strict":true,"target":"ES2020"},"include":["module.ts","../../crates/unified-scripting/unified.d.ts"]}

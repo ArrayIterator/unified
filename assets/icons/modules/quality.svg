@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+<title>Quality</title>
+<polygon points="9,13 7,20.5 10,18.5 11.5,14" fill="var(--icon-primary, #2563EB)"/>
+<polygon points="15,13 17,20.5 14,18.5 12.5,14" fill="var(--icon-primary, #2563EB)"/>
+<circle cx="12" cy="9.5" r="5.5" fill="var(--icon-accent, #D97706)"/>
+<circle cx="12" cy="9.5" r="2.8" fill="var(--icon-primary, #2563EB)"/>
+</svg>

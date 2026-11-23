@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en" class="theme-dark editorial" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{#if title}}{{title}} &mdash; {{/if}}{{app_name}} Admin</title>
+  <meta name="description" content="Unified administration dashboard.">
+  <link rel="stylesheet" href="{{asset_url "css/dashboard.css"}}">
+  <link rel="stylesheet" href="{{asset_url "theme:editorial.css"}}">
+  <link rel="stylesheet" href="{{asset_url "css/admin.css"}}">
+</head>
+<body>
+  <a class="skip-link" href="#admin-content">Skip to content</a>
+  {{> icons}}
+  <div class="dashboard-shell admin-shell">
+    <div class="sidebar-backdrop" data-sidebar-backdrop hidden></div>
+    <aside class="sidebar admin-sidebar" id="sidebar" aria-label="Admin navigation">
+      <div class="sidebar-brand">
+        <a class="brand" href="/{{admin_path}}">
+          <span class="brand-mark" aria-hidden="true">U</span>
+          <span class="brand-name">{{#if app_name}}{{app_name}}{{else}}Unified{{/if}}</span>
+        </a>
+        <span class="scope-badge scope-badge-admin">Admin</span>
+        <button type="button" class="icon-button sidebar-collapse" data-sidebar-collapse aria-label="Collapse sidebar" aria-expanded="true">
+          <svg class="icon" aria-hidden="true"><use href="#icon-chevron-down"></use></svg>
+        </button>
+        <button type="button" class="sidebar-close" data-sidebar-toggle aria-label="Close sidebar" aria-expanded="false">&times;</button>
+      </div>
+      {{> admin-nav}}
+    </aside>
+
+    <div class="dashboard-main">
+      <header class="dashboard-topbar admin-topbar">
+        <button type="button" class="icon-button sidebar-open" data-sidebar-toggle aria-label="Open navigation" aria-expanded="false">
+          <svg class="icon" aria-hidden="true"><use href="#icon-menu"></use></svg>
+        </button>
+        <p class="topbar-title">{{#if title}}{{title}}{{else}}Admin{{/if}}</p>
+        {{#if user}}
+        <span class="topbar-user">{{user.name}} &lt;{{user.email}}&gt;</span>
+        {{/if}}
+        <button type="button" class="icon-button" data-theme-toggle aria-label="Switch to dark theme">
+          <span data-theme-icon aria-hidden="true"><svg class="icon"><use href="#icon-moon"></use></svg></span>
+          <span class="theme-toggle-label">Dark</span>
+        </button>
+      </header>
+
+      {{#if view_as.active}}
+      <div class="view-as-banner" role="alert" data-view-as-banner>
+        <svg class="icon" aria-hidden="true"><use href="#icon-alert"></use></svg>
+        <p>
+          <strong>Viewing as user</strong>
+          {{#if view_as.target_name}}{{view_as.target_name}} ({{view_as.target_user_id}}){{else}}{{view_as.target_user_id}}{{/if}}
+          {{#if view_as.expires_at}}&mdash; expires {{view_as.expires_at}}{{/if}}
+          {{#if view_as.reason}}&mdash; {{view_as.reason}}{{/if}}
+        </p>
+        <button type="button" class="view-as-stop" data-view-as-stop>Stop viewing as user</button>
+      </div>
+      {{/if}}
+
+      <main class="layout-main" id="admin-content">
+        {{{body}}}
+      </main>
+    </div>
+  </div>
+
+  <script src="{{asset_url "js/dashboard.js"}}" defer></script>
+  <script src="{{asset_url "js/admin.js"}}" defer></script>
+</body>
+</html>

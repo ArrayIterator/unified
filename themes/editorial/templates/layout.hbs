@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en" class="theme-dark editorial" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{#if title}}{{title}} &mdash; {{/if}}{{app_name}}</title>
+  {{#if description}}<meta name="description" content="{{description}}">{{/if}}
+  <link rel="stylesheet" href="{{asset_url "css/dashboard.css"}}">
+  <link rel="stylesheet" href="{{asset_url "theme:editorial.css"}}">
+  {{#if styles}}
+  {{#each styles}}
+  <link rel="stylesheet" href="{{this}}">
+  {{/each}}
+  {{/if}}
+</head>
+<body>
+  <a class="skip-link" href="#layout-content">Skip to content</a>
+  {{> icons}}
+  {{> header}}
+
+  <main class="layout-main" id="layout-content">
+    {{#if flash}}
+    <div class="flash flash-{{flash.type}}" role="alert" data-flash>{{flash.message}}</div>
+    {{/if}}
+    {{{body}}}
+  </main>
+
+  {{> footer}}
+
+  {{> palette}}
+
+  <script src="{{asset_url "js/dashboard.js"}}" defer></script>
+  {{#if scripts}}
+  {{#each scripts}}
+  <script src="{{this}}" defer></script>
+  {{/each}}
+  {{/if}}
+</body>
+</html>

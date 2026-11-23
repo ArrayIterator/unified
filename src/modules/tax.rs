@@ -7,10 +7,11 @@
 // HTTP connector framework for tax reporting / filing providers.
 //
 // Company scoping: every record belongs to one company (`company_id`).
-// Callers identify themselves with the `X-User-Id` / `X-Role` headers
-// and the company they act for with `X-Company-Id` (falling back to
-// the `user.company_requested` hook, the same shape the AI module
-// uses). A caller whose company differs from the target company's
+// Callers identify themselves server-side and the company they act
+// for is resolved from the verified caller and the tenant context
+// (falling back to the `user.company_requested` hook, the same shape
+// the AI module uses); the `X-Company-Id` header is never trusted.
+// A caller whose company differs from the target company's
 // records is refused with 403. Capability checks run on every route
 // through the `role.check` hook and fail closed: `tax:view` for reads,
 // `tax:manage` for rule / settings / filing writes, `tax:file` for

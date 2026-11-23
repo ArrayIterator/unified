@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+<title>Status Page</title>
+<rect x="4" y="14" width="3" height="6" rx="1" fill="var(--icon-primary, #2563EB)"/>
+<rect x="8" y="11" width="3" height="9" rx="1" fill="var(--icon-primary, #2563EB)"/>
+<rect x="12" y="8" width="3" height="12" rx="1" fill="var(--icon-primary, #2563EB)"/>
+<circle cx="17.4" cy="7" r="3.4" fill="var(--icon-accent, #D97706)"/>
+<polygon points="15.2,7.2 16.8,8.8 19.8,5.6 20.6,6.4 16.8,10.2 14.4,8" fill="var(--icon-primary, #2563EB)"/>
+</svg>

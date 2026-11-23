@@ -22,10 +22,10 @@
 // idempotent instead of blindly toggling: they only send SIGUSR1/SIGUSR2
 // when the daemon is not already in the requested state.
 
-use crate::core::config::AppConfig;
-use crate::core::context::AppContext;
-use crate::core::error::{UnifiedError, UnifiedResult};
-use crate::core::hooks::events;
+use unified_core::config::AppConfig;
+use unified_core::context::AppContext;
+use unified_core::error::{UnifiedError, UnifiedResult};
+use unified_core::hooks::events;
 use nix::sys::signal::{kill, Signal};
 use nix::unistd::Pid;
 use serde::{Deserialize, Serialize};
@@ -273,7 +273,8 @@ fn report_daemon_start() -> ! {
 
 /// Redirect stdin from `/dev/null` and stdout / stderr to the log file.
 fn redirect_stdio() -> UnifiedResult<()> {
-    use std::os::unix::io::AsRawFd;
+    use std::os::fd::OwnedFd;
+    use std::os::unix::io::FromRawFd;
 
     let dev_null = std::fs::File::open("/dev/null")
         .map_err(|error| UnifiedError::internal(format!("Cannot open /dev/null: {error}")))?;
@@ -287,12 +288,22 @@ fn redirect_stdio() -> UnifiedResult<()> {
                 log_file_path().display()
             ))
         })?;
-    nix::unistd::dup2(dev_null.as_raw_fd(), 0)
+    // nix 0.30 `dup2` takes the target as `&mut OwnedFd`. Build it from
+    // the well-known descriptor number, then forget it so the descriptor
+    // stays open for the daemon's lifetime (dropping it would close it).
+    // SAFETY: descriptors 0/1/2 are open in every process.
+    let mut stdin_fd = unsafe { OwnedFd::from_raw_fd(0) };
+    nix::unistd::dup2(&dev_null, &mut stdin_fd)
         .map_err(|error| UnifiedError::internal(format!("Cannot redirect stdin: {error}")))?;
-    nix::unistd::dup2(log.as_raw_fd(), 1)
+    std::mem::forget(stdin_fd);
+    let mut stdout_fd = unsafe { OwnedFd::from_raw_fd(1) };
+    nix::unistd::dup2(&log, &mut stdout_fd)
         .map_err(|error| UnifiedError::internal(format!("Cannot redirect stdout: {error}")))?;
-    nix::unistd::dup2(log.as_raw_fd(), 2)
+    std::mem::forget(stdout_fd);
+    let mut stderr_fd = unsafe { OwnedFd::from_raw_fd(2) };
+    nix::unistd::dup2(&log, &mut stderr_fd)
         .map_err(|error| UnifiedError::internal(format!("Cannot redirect stderr: {error}")))?;
+    std::mem::forget(stderr_fd);
     Ok(())
 }
 

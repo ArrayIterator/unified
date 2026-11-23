@@ -15,10 +15,18 @@ app:
   session_name: "vault"
   # CSRF token lifetime in minutes (5..86400). Default: 30.
   csrf_duration: 30
-  # Secret and salt keys. In production, secret_key must be at least 32
-  # characters and salt_key at least 16 characters, and they must differ.
+  # Secret and salt keys. Both are mandatory in every mode:
+  # secret_key must be at least 32 characters, salt_key at least
+  # 16 characters, and they must differ. Startup refuses to boot
+  # (and reload refuses to apply) until both hold real random
+  # values — the placeholder values below are rejected.
   secret_key: "change-this-to-a-random-secret-string"
   salt_key: "change-this-to-a-random-salt-string"
+  # Sunset date (YYYY-MM-DD) for legacy unpeppered API-key hashes:
+  # on or after this date a key stored under the plain SHA-256
+  # digest stops authenticating and its owner must rotate it.
+  # Empty means the built-in default (2027-03-01).
+  apikey_legacy_hash_sunset: ""
   # System user the daemon runs as (empty means auto-detect).
   user: ""
   # TCP listen addresses.
@@ -285,6 +293,47 @@ storage:
     - name: "local"
       kind: "local"
       base_dir: "data/storage"
+
+# ----------------------------------------
+# Documents configuration (chunked uploads)
+# ----------------------------------------
+documents:
+  # Temp files directory for chunked-upload part spool files.
+  # Null means the default under the local storage root
+  # (`<storage>/temps/uploads`, session directories nested by UTC
+  # date: `<root>/YYYY/MM/DD/<session-id>`). Applies to sessions
+  # created after the change; in-flight sessions keep the directory
+  # they started in.
+  spool_dir: null
+  # Maximum chunk data held in RAM in bytes (100 MiB .. 8 GiB,
+  # default 100 MiB). Bounds the in-RAM buffering of the
+  # chunked-upload path; parts always spill to disk, the cap is
+  # the safety ceiling.
+  max_chunk_ram_bytes: null
+  # Extension -> content-kind overrides for the extension registry
+  # (merged over the shipped defaults in
+  # src/modules/documents/extension_kinds.yaml). Keys are
+  # lowercased; values must be documents, media, or others.
+  # Example:
+  # extensions:
+  #   heic: media
+  #   pages: documents
+  extensions: null
+
+# ----------------------------------------
+# Runtime asset configuration (JS/CSS minification)
+# ----------------------------------------
+assets:
+  # Minify the JavaScript and CSS served by the runtime asset
+  # pipeline: the dashboard TypeScript sources are transpiled to
+  # JavaScript at startup and minified before they are served, and
+  # the stylesheets under assets/css/ are minified the same way.
+  # Null (default) means automatic: minify unless the application
+  # runs in development mode (app.mode == "development"). True
+  # always minifies, false never minifies. Takes effect at startup
+  # only; changing it requires a restart, like the TypeScript
+  # compilation itself.
+  minify: null
 
 # ----------------------------------------
 # Load balancer configuration

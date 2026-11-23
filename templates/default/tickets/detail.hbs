@@ -1,0 +1,53 @@
+{{!-- Ticket detail view (module:tickets/detail).
+  Renders one ticket record as `item`, with an optional
+  `back_url` to the list. --}}
+<section class="admin-section section-panel" data-section="tickets" aria-labelledby="tickets-detail-heading">
+  {{#if has_data}}
+  {{#if item}}
+  <h1 id="tickets-detail-heading">{{#if title}}{{title}}{{else}}{{item.title}}{{/if}}</h1>
+  {{#if back_url}}
+  <p><a class="button button-secondary button-small" href="{{back_url}}">&larr; Back to list</a></p>
+  {{/if}}
+  <table class="table">
+    <tbody>
+      <tr><th scope="row">Title</th><td>{{item.title}}</td></tr>
+      <tr><th scope="row">Description</th><td>{{item.body}}</td></tr>
+      <tr><th scope="row">Customer</th><td>{{item.user_id}}</td></tr>
+      <tr><th scope="row">Company</th><td>{{item.company_id}}</td></tr>
+      <tr><th scope="row">Priority</th><td>{{item.priority}}</td></tr>
+      <tr><th scope="row">Status</th><td><span class="badge {{#if item.status_class}}{{item.status_class}}{{else}}badge-neutral{{/if}}">{{item.status}}</span></td></tr>
+      <tr><th scope="row">Category</th><td>{{item.category}}</td></tr>
+      <tr><th scope="row">Product</th><td>{{item.product}}</td></tr>
+      <tr><th scope="row">Department</th><td>{{item.department_id}}</td></tr>
+    </tbody>
+  </table>
+  {{#if item.comments}}
+  <h2>Comments</h2>
+  <table class="table">
+    <thead>
+      <tr>
+        <th scope="col">Author</th>
+        <th scope="col">Comment</th>
+        <th scope="col">Kind</th>
+        <th scope="col">Created</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each item.comments}}
+      <tr>
+        <td>{{author_id}}</td>
+        <td>{{body}}</td>
+        <td>{{kind}}</td>
+        <td>{{created_at}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+  {{/if}}
+  {{else}}
+  <p class="empty-state"><span class="empty-state-title">Not found.</span></p>
+  {{/if}}
+  {{else}}
+  <p class="empty-note">No data to show.</p>
+  {{/if}}
+</section>

@@ -1,0 +1,15 @@
+[package]
+name = "unified-db-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Diesel schema and models for the Unified core bounded context: Identity, tenancy, and platform foundation: users, roles, companies, domains, tenants, licensing, store, software, hosting, tasks, and time tracking."
+publish = false
+
+[dependencies]
+diesel.workspace = true
+chrono.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true

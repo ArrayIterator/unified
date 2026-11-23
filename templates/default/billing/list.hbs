@@ -1,0 +1,53 @@
+{{!-- Invoices list view (module:billing/list).
+  Renders `items` (array of invoice records) with an
+  optional `pagination` object. Each row may carry `detail_url` (linked
+  from the first column) and `status_class` (badge modifier, for
+  example `badge-success`). --}}
+<section class="admin-section section-panel" data-section="billing" aria-labelledby="billing-list-heading">
+  <h1 id="billing-list-heading">{{#if title}}{{title}}{{else}}Invoices{{/if}}</h1>
+  <p class="page-intro">Invoices issued to customers, with balances and due dates.</p>
+  {{#if is_admin_user}}
+  {{#if create_url}}
+  <p><a class="button" href="{{create_url}}">New invoice</a></p>
+  {{/if}}
+  {{/if}}
+  {{#if items}}
+  <table class="table">
+    <thead>
+      <tr>
+        <th scope="col">Number</th>
+        <th scope="col">Reference</th>
+        <th scope="col">Customer</th>
+        <th scope="col">Balance</th>
+        <th scope="col">Due date</th>
+        <th scope="col">Paid</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each items}}
+      <tr>
+        <td>{{#if detail_url}}<a href="{{detail_url}}">{{number}}</a>{{else}}{{number}}{{/if}}</td>
+        <td>{{reference}}</td>
+        <td>{{user_id}}</td>
+        <td>{{balance}}</td>
+        <td>{{due_date}}</td>
+        <td>{{paid_at}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+  {{#if pagination}}
+  <nav class="pagination" aria-label="Pagination">
+    {{#if pagination.has_prev}}
+    <a class="pagination-button" href="{{pagination.prev_url}}">Previous</a>
+    {{/if}}
+    <span class="pagination-info">Page {{pagination.page}} of {{pagination.total_pages}} ({{pagination.total}} total)</span>
+    {{#if pagination.has_next}}
+    <a class="pagination-button" href="{{pagination.next_url}}">Next</a>
+    {{/if}}
+  </nav>
+  {{/if}}
+  {{else}}
+  <p class="empty-state"><span class="empty-state-title">No invoices yet.</span>{{#if empty_message}} {{empty_message}}{{/if}}</p>
+  {{/if}}
+</section>

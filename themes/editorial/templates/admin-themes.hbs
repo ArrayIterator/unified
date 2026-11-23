@@ -1,0 +1,22 @@
+<section class="admin-section" data-section="themes" aria-labelledby="themes-heading">
+  <h1 id="themes-heading">Themes</h1>
+  <p class="page-intro">Themes are validated before they can be activated: a theme that fails validation cannot become active. The active theme applies to pages rendered after activation.</p>
+
+  <div id="th-status" class="flash flash-info" role="status" hidden></div>
+
+  <p class="page-intro" id="th-active">Loading active theme…</p>
+
+  <div class="table-wrap">
+    <table class="data-table" aria-label="Themes">
+      <thead>
+        <tr><th scope="col">Name</th><th scope="col">Version</th><th scope="col">Description</th><th scope="col">Screenshot</th><th scope="col">Actions</th></tr>
+      </thead>
+      <tbody id="th-list">
+        <tr><td colspan="5">Loading themes…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="field-help">Disk themes live in the <code>themes/</code> directory next to the server binary: each theme ships a <code>theme.yaml</code> manifest and a <code>templates/</code> directory. The embedded <code>default</code> theme always exists as the fallback.</p>
+</section>
+<script src="/assets/js/admin-pages.js" defer></script>

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+<title>Security</title>
+<path d="M12 3.5 L18.8 6 a1.2 1.2 0 0 1 .8 1.1 V12 a7.6 7.6 0 0 1 -15.2 0 V7.1 a1.2 1.2 0 0 1 .8-1.1 Z" fill="var(--icon-primary, #2563EB)"/>
+<polygon points="7.6,12.4 10.4,15.2 17.2,8 15.8,6.6 10.4,12.2 9,10.8" fill="#FFFFFF"/>
+</svg>

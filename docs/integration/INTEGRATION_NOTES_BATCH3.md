@@ -130,8 +130,8 @@ deltas): 329 files, 152 `.rs` files, 299,616 Rust lines.
 - Stub macros (`todo!` / `unimplemented!`): 0 across all batch-3 files
   (including the three files B5 edited).
 - Forbidden reference-project name: 0 real hits. The only grep hits are
-  the identifier `OrgChartNode` in hr.rs (4 occurrences — the substring
-  "tnode" inside "ChartNode"), a false positive.
+  the identifier `OrgChartNode` in hr.rs (4 occurrences — a substring
+  match inside "ChartNode"), a false positive.
 - Indonesian words (word-boundary scan): 0 in all batch-3 `.rs` files.
 - Delimiter balance: 0 difference on every batch-3 file, including the
   four files edited in place (products/store/billing/site_builder).

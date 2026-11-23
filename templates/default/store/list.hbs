@@ -1,0 +1,51 @@
+{{!-- Products list view (module:store/list).
+  Renders `items` (array of product records) with an
+  optional `pagination` object. Each row may carry `detail_url` (linked
+  from the first column) and `status_class` (badge modifier, for
+  example `badge-success`). --}}
+<section class="admin-section section-panel" data-section="store" aria-labelledby="store-list-heading">
+  <h1 id="store-list-heading">{{#if title}}{{title}}{{else}}Products{{/if}}</h1>
+  <p class="page-intro">Products sold through the store, with prices and license flags.</p>
+  {{#if is_admin_user}}
+  {{#if create_url}}
+  <p><a class="button" href="{{create_url}}">New product</a></p>
+  {{/if}}
+  {{/if}}
+  {{#if items}}
+  <table class="table">
+    <thead>
+      <tr>
+        <th scope="col">Name</th>
+        <th scope="col">Kind</th>
+        <th scope="col">Price</th>
+        <th scope="col">Licensed</th>
+        <th scope="col">Slug</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each items}}
+      <tr>
+        <td>{{#if detail_url}}<a href="{{detail_url}}">{{name}}</a>{{else}}{{name}}{{/if}}</td>
+        <td>{{kind}}</td>
+        <td>{{price}} {{currency}}</td>
+        <td>{{#if license_product}}Yes{{else}}No{{/if}}</td>
+        <td>{{slug}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+  {{#if pagination}}
+  <nav class="pagination" aria-label="Pagination">
+    {{#if pagination.has_prev}}
+    <a class="pagination-button" href="{{pagination.prev_url}}">Previous</a>
+    {{/if}}
+    <span class="pagination-info">Page {{pagination.page}} of {{pagination.total_pages}} ({{pagination.total}} total)</span>
+    {{#if pagination.has_next}}
+    <a class="pagination-button" href="{{pagination.next_url}}">Next</a>
+    {{/if}}
+  </nav>
+  {{/if}}
+  {{else}}
+  <p class="empty-state"><span class="empty-state-title">No products yet.</span>{{#if empty_message}} {{empty_message}}{{/if}}</p>
+  {{/if}}
+</section>

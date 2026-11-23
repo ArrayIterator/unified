@@ -1,3 +1,4 @@
+#![recursion_limit = "1024"]
 // Unified Pentagonal Project — binary entry point.
 //
 // The binary is assembled by the CLI module: it parses arguments, loads and
@@ -6,8 +7,6 @@
 
 mod auth;
 mod cli;
-mod core;
-mod db;
 // Feature-gated on purpose (not a plain `mod gateway;`): the gateway
 // module references the load balancer module, which is not declared
 // in `src/modules/mod.rs` yet, so an unconditional declaration would
@@ -18,6 +17,7 @@ mod db;
 #[cfg(feature = "gateway")]
 mod gateway;
 mod http;
+mod logging;
 mod modules;
 mod themes;
 

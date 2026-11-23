@@ -1,7 +1,7 @@
 // Dynamic SSL swap: replace the live certificate store (or one
 // certificate inside it) without restarting the server.
 //
-// Hot-swap semantics, verified against `crate::http::tls` (read the
+// Hot-swap semantics, verified against `unified_core::tls` (read the
 // code, do not take this on trust):
 //
 //   1. Per-certificate hot swap (the live path). `SslStorage` holds
@@ -29,8 +29,11 @@
 //      Do not claim otherwise. The per-certificate path (1) is the one
 //      that changes live traffic.
 //
-// Integrator wiring (one line in the server startup, owned by the
-// server builder — this file does not touch `server.rs`):
+// Wiring (already live in the server startup, `server.rs`):
+// the server builder creates the swap holder from the storage,
+// builds the TLS config from it, and registers the swap hooks —
+// exactly the three lines below, in that order. This file does
+// not touch `server.rs`.
 //
 //   let swap = Arc::new(CertStoreSwap::new(storage.clone()));
 //   let tls_config = crate::http::cert_swap::server_config_from_swap(&swap)?;
@@ -54,9 +57,9 @@
 //     completion from inside the request handler cannot loop.
 //   * Whole-store swap: `ssl.store.swapped` with `{swapped_at}`.
 
-use crate::core::error::{UnifiedError, UnifiedResult};
-use crate::core::hooks::{events, HookBus, HookContext};
-use crate::http::tls::{server_config, to_ascii_name, validate_pem_pair, SslStorage};
+use unified_core::error::{UnifiedError, UnifiedResult};
+use unified_core::hooks::{events, HookBus, HookContext};
+use unified_core::tls::{server_config, to_ascii_name, validate_pem_pair, SslStorage};
 use arc_swap::ArcSwap;
 use chrono::{DateTime, Utc};
 use rustls::ServerConfig;

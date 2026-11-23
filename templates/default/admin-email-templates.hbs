@@ -1,0 +1,35 @@
+<section class="admin-section" data-section="email-templates" aria-labelledby="email-templates-heading">
+  <h1 id="email-templates-heading">Email Templates</h1>
+  <p class="page-intro">Templates are designed in the visual email builder and sent through the mail module. Every template keeps its versions, so an earlier design can be restored.</p>
+
+  <div id="et-status" class="flash flash-info" role="status" hidden></div>
+
+  <p class="builder-actions">
+    <a class="button" href="/assets/email-builder.html">New template in the email builder</a>
+    <a class="button button-secondary" href="/assets/email-builder.html">Open email builder</a>
+  </p>
+
+  <div class="table-wrap">
+    <table class="data-table" aria-label="Email templates">
+      <thead>
+        <tr><th scope="col">Name</th><th scope="col">Subject</th><th scope="col">Category</th><th scope="col">Version</th><th scope="col">Actions</th></tr>
+      </thead>
+      <tbody id="et-list">
+        <tr><td colspan="5">Loading templates…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <section class="panel section-panel" aria-labelledby="et-versions-heading" id="et-versions" hidden>
+    <h2 id="et-versions-heading">Versions</h2>
+    <div class="table-wrap">
+      <table class="data-table" aria-label="Template versions">
+        <thead>
+          <tr><th scope="col">Version</th><th scope="col">Subject</th><th scope="col">Created</th><th scope="col">Actions</th></tr>
+        </thead>
+        <tbody id="et-version-list"></tbody>
+      </table>
+    </div>
+  </section>
+</section>
+<script src="/assets/js/admin-pages.js" defer></script>

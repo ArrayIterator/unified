@@ -1,0 +1,27 @@
+# Editorial Dark theme manifest.
+name: Editorial Dark
+version: 1.0.0
+description: "Dark editorial variant of the default Unified theme: serif headlines, gold accents, and a dark canvas. Reuses every default template with its own palette."
+# No screenshot ships with this theme; a theme that has one names
+# its file here (for example `screenshot.png`).
+screenshot: ""
+directories:
+  - templates
+  - partials
+templates:
+  - layout
+  - dashboard
+  - home
+  - error
+  - admin-layout
+  - admin-dashboard
+  - user-layout
+  - user-dashboard
+  - login
+  - register
+  - forgot-password
+  - reset-password
+  - admin-site-builder
+  - admin-email-templates
+  - admin-settings
+  - admin-themes

@@ -7,9 +7,9 @@
 // WebSocket state; `WsHub::new` still exists for tests and for code
 // that wants an isolated hub.
 
-use crate::core::context::AppContext;
-use crate::core::error::UnifiedError;
-use crate::core::json;
+use unified_core::context::AppContext;
+use unified_core::error::UnifiedError;
+use unified_core::json;
 use crate::modules::network::{note_connection_closed, note_connection_open};
 use actix_web::{web, HttpRequest, HttpResponse};
 use actix_ws::Message;

@@ -14,8 +14,8 @@
 // Verification needs no database lookup. The signing key is
 // `secret_key` + `salt_key` from the application configuration.
 
-use crate::core::config::AppConfig;
-use crate::core::error::{UnifiedError, UnifiedResult};
+use unified_core::config::AppConfig;
+use unified_core::error::{UnifiedError, UnifiedResult};
 use chrono::Utc;
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
@@ -142,9 +142,12 @@ impl SessionTokenizer {
     /// Verify a token string and return its payload.
     ///
     /// Fails when the length or hex encoding is wrong, when the outer
-    /// signature does not match (tampered payload), or when the inner
-    /// signature does not match the embedded user id. Expiry is not
-    /// checked here; call `SessionPayload::is_expired` on the result.
+    /// signature does not match (tampered payload), when the inner
+    /// signature does not match the embedded user id, or when the
+    /// token is expired (issued in the future, or past `expired_at`).
+    /// Expiry is enforced here, in `parse()` itself, so no caller
+    /// can accept an expired token by forgetting to call
+    /// `SessionPayload::is_expired` on the result.
     pub fn parse(&self, token: &str) -> UnifiedResult<SessionPayload> {
         if token.len() != Self::LENGTH {
             return Err(UnifiedError::unauthorized(
@@ -200,13 +203,20 @@ impl SessionTokenizer {
             .verify_slice(inner_signature)
             .map_err(|_| UnifiedError::unauthorized("Session token identity check failed"))?;
 
-        Ok(SessionPayload {
+        let payload = SessionPayload {
             token: token.to_string(),
             user_id,
             timestamp,
             expired_at,
             random,
-        })
+        };
+        // Expiry is enforced here: a token whose time window has
+        // closed (or that claims a future issue time) is rejected
+        // even though its signatures are valid.
+        if payload.is_expired() {
+            return Err(UnifiedError::unauthorized("Session token has expired"));
+        }
+        Ok(payload)
     }
 }
 

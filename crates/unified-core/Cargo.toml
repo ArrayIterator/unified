@@ -1,0 +1,47 @@
+[package]
+name = "unified-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Core engine of the Unified server: module system, hooks, config, database layer, and TLS storage. The only library crate external modules may depend on."
+publish = false
+
+[dependencies]
+# Inherited from [workspace.dependencies]; see docs/WORKSPACE_AND_EXTERNAL_MODULES.md section 3.5.
+actix-web.workspace = true
+actix-service.workspace = true
+async-trait.workspace = true
+base64.workspace = true
+chrono.workspace = true
+clap.workspace = true
+dashmap.workspace = true
+diesel.workspace = true
+diesel_migrations.workspace = true
+unified-db-core = { path = "../unified-db-core" }
+unified-db-commerce = { path = "../unified-db-commerce" }
+unified-db-education = { path = "../unified-db-education" }
+unified-db-people = { path = "../unified-db-people" }
+unified-db-operations = { path = "../unified-db-operations" }
+unified-db-platform = { path = "../unified-db-platform" }
+unified-db-infra = { path = "../unified-db-infra" }
+futures-util.workspace = true
+hmac.workspace = true
+log.workspace = true
+rand.workspace = true
+rcgen.workspace = true
+redis.workspace = true
+regex.workspace = true
+reqwest.workspace = true
+rustls.workspace = true
+rustls-pemfile.workspace = true
+rustls-pki-types.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_yaml.workspace = true
+sha2.workspace = true
+tokio.workspace = true
+url.workspace = true
+uuid.workspace = true
+walkdir.workspace = true
+x509-certificate.workspace = true

@@ -5,7 +5,7 @@
 // pause / maintenance middleware returns 503 for every other route
 // while the daemon is paused or in maintenance mode. Plain TCP listeners
 // come from `app.tcp`; TLS listeners come from `app.ssl.listen` and use
-// the TLS configuration built from `crate::http::tls::SslStorage`
+// the TLS configuration built from `unified_core::tls::SslStorage`
 // through the `crate::http::cert_swap::CertStoreSwap` holder, so
 // per-certificate swaps (`ssl.swap`) take effect on new handshakes
 // while a whole-store swap only reaches ServerConfigs built after
@@ -14,24 +14,26 @@
 // The server runs until Ctrl-C or SIGTERM, then shuts down gracefully.
 
 use crate::cli::daemon::update_status_file;
-use crate::core::context::AppContext;
-use crate::core::error::{UnifiedError, UnifiedResult};
-use crate::core::hardening::{
+use unified_core::context::AppContext;
+use unified_core::error::{UnifiedError, UnifiedResult};
+use unified_core::hardening::{
     HardeningState, IpFilterMiddleware, RateLimitMiddleware, RequestSizeMiddleware,
     SecurityHeadersMiddleware, SecuritySettings,
 };
-use crate::core::hooks::{events, HookBus};
-use crate::core::json;
-use crate::core::middleware::{
+use unified_core::hooks::{events, HookBus};
+use unified_core::json;
+use unified_core::middleware::{
     MiddlewareManager, TenantResolutionConfig, TenantResolutionMiddleware,
 };
 use crate::http::acme::AcmeClient;
-use crate::http::tls::SslStorage;
+use unified_core::tls::SslStorage;
 use crate::modules::network::connection_stats;
 use crate::themes::assets::{serve_asset, serve_theme_asset, StaticAssetConfig};
 use actix_web::dev::Service;
+use actix_web::dev::ServiceResponse;
 use actix_web::http::{header, KeepAlive};
 use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer};
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -71,7 +73,7 @@ pub async fn run_server(ctx: Arc<AppContext>) -> UnifiedResult<()> {
             let config = ctx.config.read().expect("config lock poisoned");
             SecuritySettings::from_app_config(&config)
         };
-        crate::core::hardening::install_shared_state(Arc::new(HardeningState::new(
+        unified_core::hardening::install_shared_state(Arc::new(HardeningState::new(
             settings,
             ctx.hooks.clone(),
         )));
@@ -93,7 +95,7 @@ pub async fn run_server(ctx: Arc<AppContext>) -> UnifiedResult<()> {
             .app
             .ssl
             .clone();
-        let storage = crate::http::tls::SslStorage::from_config(&ssl)?;
+        let storage = unified_core::tls::SslStorage::from_config(&ssl)?;
         // CertStoreSwap (batch 8): the swap holder is the single
         // place holding the current store. The TLS config is built
         // from the holder (`server_config_from_swap`), and the
@@ -131,6 +133,105 @@ pub async fn run_server(ctx: Arc<AppContext>) -> UnifiedResult<()> {
         crate::gateway::set_tls_storage(storage.clone());
     }
 
+    // Asset minification (see `crate::themes::assets::minify`):
+    // the config decides once at startup — an explicit
+    // `assets.minify` wins, otherwise minify unless the
+    // application runs in development mode — and the decision
+    // applies to the whole startup compilation below. Minification
+    // is synchronous here, in the same step that already
+    // transpiles the TypeScript sources: the asset set is tiny
+    // (six scripts, ~130 KiB, plus three stylesheets, ~52 KiB),
+    // so the step costs milliseconds, and a synchronous step keeps
+    // one atomic served map — the bytes served for a URL never
+    // change during the process lifetime, which is what makes the
+    // fingerprint (a hash of the served bytes) correct.
+    let minify_assets = {
+        let config = ctx.config.read().expect("config lock poisoned");
+        config.assets.minify.unwrap_or(!config.is_debug())
+    };
+    crate::themes::assets::minify::set_minify_enabled(minify_assets);
+
+    // Dashboard scripts are TypeScript sources under `assets/js/`;
+    // the server transpiles them to JavaScript once at startup (OXC,
+    // via the `unified-ts` crate — transpile-only, no JS engine) and
+    // holds the compiled scripts in RAM, served from memory by
+    // `serve_asset`. In release builds the JavaScript is minified
+    // before it is stored; debug builds serve the transpiled
+    // JavaScript as written. A script that fails to transpile is
+    // logged and skipped, never fatal: the remaining scripts still
+    // serve, and the missing one answers 404 like any other absent
+    // asset.
+    let compiled_scripts = {
+        let scripts_dir = StaticAssetConfig::default().assets_dir.join("js");
+        let (compiled, errors) = unified_ts::compile_scripts_dir(&scripts_dir);
+        for (file, error) in &errors {
+            log::warn!("Dashboard script \"{file}\" did not compile: {error}");
+        }
+        let unminified_bytes: usize = compiled.values().map(String::len).sum();
+        let compiled = if minify_assets {
+            crate::themes::assets::minify::minify_compiled_scripts(compiled)
+        } else {
+            compiled
+        };
+        let minified_bytes: usize = compiled.values().map(String::len).sum();
+        if minify_assets {
+            log::info!(
+                "Compiled {} dashboard TypeScript scripts into memory, minified {} -> {} bytes",
+                compiled.len(),
+                unminified_bytes,
+                minified_bytes
+            );
+        } else {
+            log::info!(
+                "Compiled {} dashboard TypeScript scripts into memory ({} bytes, unminified)",
+                compiled.len(),
+                minified_bytes
+            );
+        }
+        Arc::new(compiled)
+    };
+
+    // Stylesheets under `assets/css/` are compiled the same way:
+    // read once at startup, held in RAM, served from memory by
+    // `serve_asset` — minified in release builds, as written in
+    // debug builds. A stylesheet that fails to compile is logged
+    // and skipped; the file is then served from disk instead, so
+    // the page still gets its styles.
+    let compiled_styles = {
+        let styles_dir = StaticAssetConfig::default().assets_dir.join("css");
+        let (compiled, errors) =
+            crate::themes::assets::minify::compile_styles_dir(&styles_dir, minify_assets);
+        for (file, error) in &errors {
+            log::warn!("Stylesheet \"{file}\" did not compile: {error}");
+        }
+        log::info!(
+            "Compiled {} stylesheets into memory ({} bytes{})",
+            compiled.len(),
+            compiled.values().map(String::len).sum::<usize>(),
+            if minify_assets {
+                ", minified"
+            } else {
+                ", unminified"
+            }
+        );
+        Arc::new(compiled)
+    };
+
+    // Fingerprints of the exact served bytes, so `resolve_asset_url`
+    // hashes what the browser actually receives (minified in
+    // release builds, as written in debug builds) instead of the
+    // source files.
+    {
+        let mut fingerprints: HashMap<String, String> = HashMap::new();
+        for (path, content) in compiled_scripts.iter().chain(compiled_styles.iter()) {
+            fingerprints.insert(
+                path.clone(),
+                crate::themes::assets::fingerprint_bytes(content.as_bytes()),
+            );
+        }
+        crate::themes::assets::minify::set_served_fingerprints(fingerprints);
+    }
+
     let factory_ctx = ctx.clone();
     let factory_counter = total_requests.clone();
     let mut server = HttpServer::new(move || {
@@ -145,13 +246,17 @@ pub async fn run_server(ctx: Arc<AppContext>) -> UnifiedResult<()> {
         ctx.modules.register_all_middleware(&mut middleware_manager);
         // Security hardening middleware, ordered by priority (highest
         // first): security headers (1000) -> tenant resolution (950)
-        // -> IP blocklist (900) -> rate limiting (800) ->
+        // -> auth (925) -> IP blocklist (900) -> rate limiting (800) ->
         // request-size guard (700) -> module middleware. The
         // dispatcher sorts by priority, so this order holds
         // regardless of registration order. Tenant resolution runs
         // before the IP filter and rate limiter so routing is decided
         // before any route dispatch, and after the security headers so
-        // its short-circuit responses still carry them.
+        // its short-circuit responses still carry them. Auth runs
+        // right after tenant resolution so the verified Caller can
+        // carry the resolved tenant id, and before the IP filter so
+        // unauthenticated requests are rejected before they consume
+        // rate-limit budget or reach module middleware.
         // The ACME HTTP-01 challenge route is exempt from the
         // blocklist and rate limiting inside the middleware: a blocked
         // or throttled challenge would break certificate issuance and
@@ -159,7 +264,7 @@ pub async fn run_server(ctx: Arc<AppContext>) -> UnifiedResult<()> {
         // attack or in maintenance; the challenge token itself is
         // unguessable and single-use, so the exemption does not open
         // an abuse vector.
-        let hardening = crate::core::hardening::shared_state();
+        let hardening = unified_core::hardening::shared_state();
         middleware_manager.register(SecurityHeadersMiddleware::new(hardening.clone()));
         // Tenant resolution (batch 8): resolves the Host header to a
         // tenant through the `tenant.resolve_requested` hook, attaches
@@ -173,11 +278,23 @@ pub async fn run_server(ctx: Arc<AppContext>) -> UnifiedResult<()> {
             ctx.clone(),
             TenantResolutionConfig::from_environment(),
         ));
+        // Global authentication (inspection C1/C2, 2026-11-22): every
+        // request outside the public allowlist must carry a valid
+        // Auth Manager JWT, verified by `AuthMiddleware` (see
+        // `crate::http::auth`), which attaches the server-verified
+        // `Caller` to the request extensions. Self-asserted
+        // `X-User-Id` / `X-Role` headers grant nothing anymore.
+        middleware_manager.register(crate::http::auth::AuthMiddleware::new(ctx.clone()));
         middleware_manager.register(IpFilterMiddleware::new(hardening.clone()));
         middleware_manager.register(RateLimitMiddleware::new(hardening.clone()));
         middleware_manager.register(RequestSizeMiddleware::new(hardening.clone()));
         let dispatcher = middleware_manager.create_dispatcher();
         let debug = ctx.is_debug();
+        // Compiled dashboard scripts and stylesheets (built once at
+        // startup, see above): each worker App gets a clone of the
+        // shared maps.
+        let compiled_scripts = Arc::clone(&compiled_scripts);
+        let compiled_styles = Arc::clone(&compiled_styles);
         App::new()
             .app_data(web::Data::new(ctx.clone()))
             // The dispatcher wraps the application inside the
@@ -198,6 +315,20 @@ pub async fn run_server(ctx: Arc<AppContext>) -> UnifiedResult<()> {
                     && (ctx.is_paused() || ctx.is_maintenance());
                 let maintenance = ctx.is_maintenance();
                 let started = Instant::now();
+                // The inner-service future is created here, outside
+                // the async block: `srv` is only borrowed for this
+                // call, and the returned future owns everything it
+                // needs. Calling `srv` inside the async block would
+                // make the returned future borrow `srv`, which
+                // `wrap_fn` does not allow. The request is moved into
+                // the service call, so the blocked branch builds its
+                // response from a cloned `HttpRequest` instead.
+                let http_req = req.request().clone();
+                let inner = if blocked {
+                    None
+                } else {
+                    Some(srv.call(req))
+                };
                 ctx.hooks.emit(
                     events::REQUEST_BEFORE,
                     serde_json::json!({ "method": method, "path": path }),
@@ -223,9 +354,11 @@ pub async fn run_server(ctx: Arc<AppContext>) -> UnifiedResult<()> {
                             }),
                         );
                         log::info!("{method} {path} -> 503 ({elapsed}ms)");
-                        return Ok(req.into_response(response));
+                        return Ok(ServiceResponse::new(http_req, response));
                     }
-                    let res = srv.call(req).await?;
+                    let res = inner
+                        .expect("inner service future exists when not blocked")
+                        .await?;
                     let status = res.status().as_u16();
                     let elapsed = started.elapsed().as_millis() as u64;
                     ctx.hooks.emit(
@@ -252,6 +385,8 @@ pub async fn run_server(ctx: Arc<AppContext>) -> UnifiedResult<()> {
                 // (`?v=<hash>`) with immutable cache headers.
                 cfg.app_data(web::Data::new(StaticAssetConfig {
                     debug,
+                    compiled_scripts,
+                    compiled_styles,
                     ..StaticAssetConfig::default()
                 }));
                 cfg.route("/assets/{path:.*}", web::get().to(serve_asset));
@@ -270,7 +405,7 @@ pub async fn run_server(ctx: Arc<AppContext>) -> UnifiedResult<()> {
         server = server.workers(workers);
     }
     server = server
-        .backlog(backlog as i32)
+        .backlog(backlog as u32)
         .keep_alive(if keep_alive == 0 {
             KeepAlive::Disabled
         } else {
@@ -329,7 +464,7 @@ pub async fn run_server(ctx: Arc<AppContext>) -> UnifiedResult<()> {
                         hooks.register(
                             events::SSL_RENEW,
                             "acme",
-                            Arc::new(move |context: &mut crate::core::hooks::HookContext| {
+                            Arc::new(move |context: &mut unified_core::hooks::HookContext| {
                                 let Some(domain) = context
                                     .get("domain")
                                     .and_then(|value| value.as_str())

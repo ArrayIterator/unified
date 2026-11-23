@@ -10,7 +10,7 @@
 // state. The secret is `secret_key` + `salt_key` from the application
 // configuration; the lifetime comes from `app.csrf_duration` (minutes).
 
-use crate::core::config::AppConfig;
+use unified_core::config::AppConfig;
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use chrono::Utc;

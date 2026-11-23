@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <title>Placeholder</title>
+  <rect x="5" y="7" width="14" height="13" rx="3" fill="var(--icon-primary, #2563EB)"/>
+  <circle cx="12" cy="6" r="2.8" fill="var(--icon-accent, #D97706)"/>
+  <circle cx="17.5" cy="13.5" r="2.2" fill="#FFFFFF"/>
+  <circle cx="9.5" cy="13.5" r="1.6" fill="#FFFFFF"/>
+</svg>

@@ -106,6 +106,7 @@ impl FlashItem {
     }
 }
 
+#[derive(Debug)]
 struct FlashManagerInner {
     /// Session id -> messages in insertion order.
     sessions: DashMap<String, VecDeque<FlashItem>>,

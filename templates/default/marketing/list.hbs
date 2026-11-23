@@ -1,0 +1,55 @@
+{{!-- Campaigns list view (module:marketing/list).
+  Renders `items` (array of campaign records) with an
+  optional `pagination` object. Each row may carry `detail_url` (linked
+  from the first column) and `status_class` (badge modifier, for
+  example `badge-success`). --}}
+<section class="admin-section section-panel" data-section="marketing" aria-labelledby="marketing-list-heading">
+  <h1 id="marketing-list-heading">{{#if title}}{{title}}{{else}}Campaigns{{/if}}</h1>
+  <p class="page-intro">Marketing campaigns and their delivery results.</p>
+  {{#if is_admin_user}}
+  {{#if create_url}}
+  <p><a class="button" href="{{create_url}}">New campaign</a></p>
+  {{/if}}
+  {{/if}}
+  {{#if items}}
+  <table class="table">
+    <thead>
+      <tr>
+        <th scope="col">Name</th>
+        <th scope="col">Subject</th>
+        <th scope="col">Status</th>
+        <th scope="col">Sent</th>
+        <th scope="col">Delivered</th>
+        <th scope="col">Opened</th>
+        <th scope="col">Clicked</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each items}}
+      <tr>
+        <td>{{#if detail_url}}<a href="{{detail_url}}">{{name}}</a>{{else}}{{name}}{{/if}}</td>
+        <td>{{subject}}</td>
+        <td><span class="badge {{#if status_class}}{{status_class}}{{else}}badge-neutral{{/if}}">{{status}}</span></td>
+        <td>{{stats.sent}}</td>
+        <td>{{stats.delivered}}</td>
+        <td>{{stats.opened}}</td>
+        <td>{{stats.clicked}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+  {{#if pagination}}
+  <nav class="pagination" aria-label="Pagination">
+    {{#if pagination.has_prev}}
+    <a class="pagination-button" href="{{pagination.prev_url}}">Previous</a>
+    {{/if}}
+    <span class="pagination-info">Page {{pagination.page}} of {{pagination.total_pages}} ({{pagination.total}} total)</span>
+    {{#if pagination.has_next}}
+    <a class="pagination-button" href="{{pagination.next_url}}">Next</a>
+    {{/if}}
+  </nav>
+  {{/if}}
+  {{else}}
+  <p class="empty-state"><span class="empty-state-title">No campaigns yet.</span>{{#if empty_message}} {{empty_message}}{{/if}}</p>
+  {{/if}}
+</section>

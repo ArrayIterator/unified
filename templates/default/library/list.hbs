@@ -1,0 +1,53 @@
+{{!-- Catalog list view (module:library/list).
+  Renders `items` (array of item records) with an
+  optional `pagination` object. Each row may carry `detail_url` (linked
+  from the first column) and `status_class` (badge modifier, for
+  example `badge-success`). --}}
+<section class="admin-section section-panel" data-section="library" aria-labelledby="library-list-heading">
+  <h1 id="library-list-heading">{{#if title}}{{title}}{{else}}Catalog{{/if}}</h1>
+  <p class="page-intro">Library catalog: books and media available to borrow.</p>
+  {{#if is_admin_user}}
+  {{#if create_url}}
+  <p><a class="button" href="{{create_url}}">New item</a></p>
+  {{/if}}
+  {{/if}}
+  {{#if items}}
+  <table class="table">
+    <thead>
+      <tr>
+        <th scope="col">Title</th>
+        <th scope="col">Authors</th>
+        <th scope="col">ISBN</th>
+        <th scope="col">Publisher</th>
+        <th scope="col">Year</th>
+        <th scope="col">Language</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each items}}
+      <tr>
+        <td>{{#if detail_url}}<a href="{{detail_url}}">{{title}}</a>{{else}}{{title}}{{/if}}</td>
+        <td>{{#each authors}}{{#unless @first}}, {{/unless}}{{this}}{{/each}}</td>
+        <td>{{isbn}}</td>
+        <td>{{publisher}}</td>
+        <td>{{published_year}}</td>
+        <td>{{language}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+  {{#if pagination}}
+  <nav class="pagination" aria-label="Pagination">
+    {{#if pagination.has_prev}}
+    <a class="pagination-button" href="{{pagination.prev_url}}">Previous</a>
+    {{/if}}
+    <span class="pagination-info">Page {{pagination.page}} of {{pagination.total_pages}} ({{pagination.total}} total)</span>
+    {{#if pagination.has_next}}
+    <a class="pagination-button" href="{{pagination.next_url}}">Next</a>
+    {{/if}}
+  </nav>
+  {{/if}}
+  {{else}}
+  <p class="empty-state"><span class="empty-state-title">No catalog yet.</span>{{#if empty_message}} {{empty_message}}{{/if}}</p>
+  {{/if}}
+</section>

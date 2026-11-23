@@ -1,0 +1,59 @@
+{{!-- Invoice detail view (module:billing/detail).
+  Renders one invoice record as `item`, with an optional
+  `back_url` to the list. --}}
+<section class="admin-section section-panel" data-section="billing" aria-labelledby="billing-detail-heading">
+  {{#if has_data}}
+  {{#if item}}
+  <h1 id="billing-detail-heading">{{#if title}}{{title}}{{else}}{{item.number}}{{/if}}</h1>
+  {{#if back_url}}
+  <p><a class="button button-secondary button-small" href="{{back_url}}">&larr; Back to list</a></p>
+  {{/if}}
+  <table class="table">
+    <tbody>
+      <tr><th scope="row">Number</th><td>{{item.number}}</td></tr>
+      <tr><th scope="row">Reference</th><td>{{item.reference}}</td></tr>
+      <tr><th scope="row">Order</th><td>{{item.order_id}}</td></tr>
+      <tr><th scope="row">Subscription</th><td>{{item.subscription_id}}</td></tr>
+      <tr><th scope="row">Customer</th><td>{{item.user_id}}</td></tr>
+      <tr><th scope="row">Balance</th><td>{{item.balance}}</td></tr>
+      <tr><th scope="row">Amount paid</th><td>{{item.amount_paid}}</td></tr>
+      <tr><th scope="row">Credit</th><td>{{item.credit_total}}</td></tr>
+      <tr><th scope="row">Issued</th><td>{{item.issue_date}}</td></tr>
+      <tr><th scope="row">Due</th><td>{{item.due_date}}</td></tr>
+      <tr><th scope="row">Payment terms (days)</th><td>{{item.payment_terms_days}}</td></tr>
+      <tr><th scope="row">Paid at</th><td>{{item.paid_at}}</td></tr>
+      <tr><th scope="row">Notes</th><td>{{item.notes}}</td></tr>
+    </tbody>
+  </table>
+  {{#if item.lines}}
+  <h2>Invoice lines</h2>
+  <table class="table">
+    <thead>
+      <tr>
+        <th scope="col">Name</th>
+        <th scope="col">Quantity</th>
+        <th scope="col">Unit price</th>
+        <th scope="col">Line total</th>
+        <th scope="col">Tax rate</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each item.lines}}
+      <tr>
+        <td>{{name}}</td>
+        <td>{{quantity}}</td>
+        <td>{{unit_price}}</td>
+        <td>{{line_total}}</td>
+        <td>{{tax_rate}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+  {{/if}}
+  {{else}}
+  <p class="empty-state"><span class="empty-state-title">Not found.</span></p>
+  {{/if}}
+  {{else}}
+  <p class="empty-note">No data to show.</p>
+  {{/if}}
+</section>

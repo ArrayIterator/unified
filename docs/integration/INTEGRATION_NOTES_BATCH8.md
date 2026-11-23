@@ -374,9 +374,11 @@ already there.)
   `/health`, `/.well-known/acme-challenge/`),
   `saas.tenant_header` (env `UNIFIED_SAAS_TENANT_HEADER`; default
   `X-Unified-Tenant`), `saas.unknown_host_policy` (env
-  `UNIFIED_SAAS_UNKNOWN_HOST_POLICY`; default `control_plane`),
+  `UNIFIED_SAAS_UNKNOWN_HOST_POLICY`; default `not_found` — fail
+  closed since the C3/C4 fix; `control_plane` is an explicit
+  operator opt-in only),
   `saas.missing_host_policy` (env `UNIFIED_SAAS_MISSING_HOST_POLICY`;
-  default `control_plane`).
+  default `not_found`).
 - Certificates settings via `PUT /api/v1/certificates/settings`:
   `custom_min_validity_days` (default 7, range 0–365),
   `cf_detect_dns` / `cf_detect_probe` / `cf_detect_api` (default true
@@ -466,9 +468,10 @@ tunables — recorded, not hidden):
    `domain.verification.completed` itself.
 5. B4: unknown-host vs failed-tenant-host 404 tension — the
    middleware cannot distinguish the two (a hook non-answer is
-   identical in both cases). Default policy sends both to control
-   plane; `saas.unknown_host_policy=not_found` 404s ALL unknown
-   hosts including main-host typos. Needs a contract refinement
+   identical in both cases). Default policy (fail closed since the
+   C3/C4 fix) 404s both; `saas.unknown_host_policy=control_plane`
+   is an explicit operator opt-in that sends both to the control
+   plane instead. Needs a contract refinement
    (e.g. B1 answering an explicit "known tenant host, resolution
    failed" result) to scope the 404 to tenant-only hosts. Also:
    invalid tenant-header config silently falls back to

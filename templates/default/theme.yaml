@@ -13,3 +13,15 @@ templates:
   - dashboard
   - home
   - error
+  - admin-layout
+  - admin-dashboard
+  - user-layout
+  - user-dashboard
+  - login
+  - register
+  - forgot-password
+  - reset-password
+  - admin-site-builder
+  - admin-email-templates
+  - admin-settings
+  - admin-themes

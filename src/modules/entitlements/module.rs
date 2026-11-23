@@ -433,6 +433,12 @@ impl Module for EntitlementsModule {
         // `state::stash_ctx`): without it the hook gate and the HTTP
         // path disagree on license-only entitlements.
         let _ = super::state::ENTITLEMENTS_CTX.set(super::state::stash_ctx(ctx));
+        // Stash the state itself so the licensing gate
+        // (`check_module_entitlement`, which only ever sees an
+        // `AppContext`) can consult the same stored rows
+        // `effective()` reads through the one shared
+        // `entitled_via_live_sources` decision.
+        super::state::stash_entitlements_state(self.state.clone());
         Ok(())
     }
 
@@ -566,26 +572,26 @@ impl Module for EntitlementsModule {
 
     fn route_info(&self) -> Vec<RouteInfo> {
         vec![
-            RouteInfo { method: "GET", path: "/api/v1/entitlements/my-modules", owner: "entitlements", description: "List every module with the calling tenant's per-module entitlement state and upgrade path (tenant context required, fail closed)." },
-            RouteInfo { method: "GET", path: "/api/v1/entitlements/modules/{module_id}/access", owner: "entitlements", description: "One module's access state for the calling tenant: entitled, grace_read_only, or locked." },
-            RouteInfo { method: "POST", path: "/api/v1/entitlements/modules/{module_id}/enable", owner: "entitlements", description: "Enable a module after the server-side entitlement check; 403 entitlement.required and an audited attempt when not entitled." },
-            RouteInfo { method: "POST", path: "/api/v1/entitlements/modules/{module_id}/disable", owner: "entitlements", description: "Disable a module the tenant enabled." },
-            RouteInfo { method: "POST", path: "/api/v1/entitlements/package-changes/apply", owner: "entitlements", description: "Compute and apply the module diff for a new package/product set; lost modules used outside the package require explicit confirmation." },
-            RouteInfo { method: "GET", path: "/api/v1/entitlements/package-changes", owner: "entitlements", description: "List package-change records for the calling tenant, paginated." },
-            RouteInfo { method: "GET", path: "/api/v1/entitlements/package-changes/{id}", owner: "entitlements", description: "One package-change record for the calling tenant." },
-            RouteInfo { method: "POST", path: "/api/v1/entitlements/package-changes/{id}/confirm", owner: "entitlements", description: "Confirm disabling the modules a package change listed as requires_confirmation, or discard the change." },
-            RouteInfo { method: "POST", path: "/api/v1/entitlements/ai/suggest", owner: "entitlements", description: "Suggest which package unlocks the modules the tenant tried to use most (suggestion only, never purchases)." },
-            RouteInfo { method: "GET", path: "/api/v1/entitlements/ai/capabilities", owner: "entitlements", description: "The AI capabilities this module offers." },
-            RouteInfo { method: "GET", path: "/api/v1/entitlements/history", owner: "entitlements", description: "Entitlement history per tenant/module (admin, paginated, filtered)." },
-            RouteInfo { method: "GET", path: "/api/v1/entitlements/denied-attempts", owner: "entitlements", description: "Denied enable attempts (admin, paginated, filtered)." },
-            RouteInfo { method: "GET", path: "/api/v1/entitlements/settings", owner: "entitlements", description: "Entitlement settings (grace period, read-only grace, default deny)." },
-            RouteInfo { method: "PUT", path: "/api/v1/entitlements/settings", owner: "entitlements", description: "Update entitlement settings (admin)." },
-            RouteInfo { method: "POST", path: "/api/v1/entitlements/sweep", owner: "entitlements", description: "Run the lapse/grace sweep now (admin)." },
-            RouteInfo { method: "POST", path: "/api/v1/entitlements/grants", owner: "entitlements", description: "Create a manual grant (admin, reason required)." },
-            RouteInfo { method: "GET", path: "/api/v1/entitlements", owner: "entitlements", description: "List entitlements (admin, paginated, filtered by company/module/source/status)." },
-            RouteInfo { method: "GET", path: "/api/v1/entitlements/{id}", owner: "entitlements", description: "One entitlement (admin)." },
-            RouteInfo { method: "PATCH", path: "/api/v1/entitlements/{id}", owner: "entitlements", description: "Revoke, extend, or change a grant (admin)." },
-            RouteInfo { method: "DELETE", path: "/api/v1/entitlements/{id}", owner: "entitlements", description: "Delete a manual-grant row (admin; history is kept, never tenant data)." },
+            RouteInfo { method: "GET", path: "/api/v1/entitlements/my-modules", owner: "entitlements", description: "List every module with the calling tenant's per-module entitlement state and upgrade path (tenant context required, fail closed).", auth: unified_core::auth::RouteAuth::Authenticated},
+            RouteInfo { method: "GET", path: "/api/v1/entitlements/modules/{module_id}/access", owner: "entitlements", description: "One module's access state for the calling tenant: entitled, grace_read_only, or locked.", auth: unified_core::auth::RouteAuth::Authenticated},
+            RouteInfo { method: "POST", path: "/api/v1/entitlements/modules/{module_id}/enable", owner: "entitlements", description: "Enable a module after the server-side entitlement check; 403 entitlement.required and an audited attempt when not entitled.", auth: unified_core::auth::RouteAuth::Authenticated},
+            RouteInfo { method: "POST", path: "/api/v1/entitlements/modules/{module_id}/disable", owner: "entitlements", description: "Disable a module the tenant enabled.", auth: unified_core::auth::RouteAuth::Authenticated},
+            RouteInfo { method: "POST", path: "/api/v1/entitlements/package-changes/apply", owner: "entitlements", description: "Compute and apply the module diff for a new package/product set; lost modules used outside the package require explicit confirmation.", auth: unified_core::auth::RouteAuth::Authenticated},
+            RouteInfo { method: "GET", path: "/api/v1/entitlements/package-changes", owner: "entitlements", description: "List package-change records for the calling tenant, paginated.", auth: unified_core::auth::RouteAuth::Authenticated},
+            RouteInfo { method: "GET", path: "/api/v1/entitlements/package-changes/{id}", owner: "entitlements", description: "One package-change record for the calling tenant.", auth: unified_core::auth::RouteAuth::Authenticated},
+            RouteInfo { method: "POST", path: "/api/v1/entitlements/package-changes/{id}/confirm", owner: "entitlements", description: "Confirm disabling the modules a package change listed as requires_confirmation, or discard the change.", auth: unified_core::auth::RouteAuth::Authenticated},
+            RouteInfo { method: "POST", path: "/api/v1/entitlements/ai/suggest", owner: "entitlements", description: "Suggest which package unlocks the modules the tenant tried to use most (suggestion only, never purchases).", auth: unified_core::auth::RouteAuth::Authenticated},
+            RouteInfo { method: "GET", path: "/api/v1/entitlements/ai/capabilities", owner: "entitlements", description: "The AI capabilities this module offers.", auth: unified_core::auth::RouteAuth::Authenticated},
+            RouteInfo { method: "GET", path: "/api/v1/entitlements/history", owner: "entitlements", description: "Entitlement history per tenant/module (admin, paginated, filtered).", auth: unified_core::auth::RouteAuth::Authenticated},
+            RouteInfo { method: "GET", path: "/api/v1/entitlements/denied-attempts", owner: "entitlements", description: "Denied enable attempts (admin, paginated, filtered).", auth: unified_core::auth::RouteAuth::Authenticated},
+            RouteInfo { method: "GET", path: "/api/v1/entitlements/settings", owner: "entitlements", description: "Entitlement settings (grace period, read-only grace, default deny).", auth: unified_core::auth::RouteAuth::Authenticated},
+            RouteInfo { method: "PUT", path: "/api/v1/entitlements/settings", owner: "entitlements", description: "Update entitlement settings (admin).", auth: unified_core::auth::RouteAuth::Authenticated},
+            RouteInfo { method: "POST", path: "/api/v1/entitlements/sweep", owner: "entitlements", description: "Run the lapse/grace sweep now (admin).", auth: unified_core::auth::RouteAuth::Authenticated},
+            RouteInfo { method: "POST", path: "/api/v1/entitlements/grants", owner: "entitlements", description: "Create a manual grant (admin, reason required).", auth: unified_core::auth::RouteAuth::Authenticated},
+            RouteInfo { method: "GET", path: "/api/v1/entitlements", owner: "entitlements", description: "List entitlements (admin, paginated, filtered by company/module/source/status).", auth: unified_core::auth::RouteAuth::Authenticated},
+            RouteInfo { method: "GET", path: "/api/v1/entitlements/{id}", owner: "entitlements", description: "One entitlement (admin).", auth: unified_core::auth::RouteAuth::Authenticated},
+            RouteInfo { method: "PATCH", path: "/api/v1/entitlements/{id}", owner: "entitlements", description: "Revoke, extend, or change a grant (admin).", auth: unified_core::auth::RouteAuth::Authenticated},
+            RouteInfo { method: "DELETE", path: "/api/v1/entitlements/{id}", owner: "entitlements", description: "Delete a manual-grant row (admin; history is kept, never tenant data).", auth: unified_core::auth::RouteAuth::Authenticated},
         ]
     }
 }

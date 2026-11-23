@@ -1,0 +1,22 @@
+[package]
+name = "external-whatsapp"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+description = "WhatsApp Business Cloud API connector module for the Unified server: outbound messaging, templates, webhook, message log, and conversations."
+license = "LicenseRef-Proprietary"
+publish = false
+
+[dependencies]
+# The only Unified crate an external module may depend on.
+unified-core = { path = "../unified-core" }
+# Shared versions come from the root workspace [workspace.dependencies].
+actix-web.workspace = true
+chrono.workspace = true
+hmac.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+tokio.workspace = true
+uuid.workspace = true

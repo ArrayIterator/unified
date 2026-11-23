@@ -1,0 +1,20 @@
+[package]
+name = "external-fleet"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+description = "Fleet and vehicle management external module for the Unified server: vehicles, drivers, trips, GPS positions, fuel logs, maintenance, and cost rollups. Per-tenant in-memory store."
+license = "LicenseRef-Proprietary"
+publish = false
+
+[dependencies]
+# The only Unified crate an external module may depend on.
+unified-core = { path = "../unified-core" }
+# Shared versions come from the root workspace [workspace.dependencies].
+actix-web.workspace = true
+chrono.workspace = true
+dashmap.workspace = true
+regex.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true

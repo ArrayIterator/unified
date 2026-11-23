@@ -1,0 +1,20 @@
+[package]
+name = "external-bi"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "BI / data-warehouse connector module for the Unified server: dataset definitions, hook-driven extracts, immutable snapshots, a small query engine, webhook/file destinations, CSV/JSONL exports, and cron schedules. Depends on unified-core only."
+publish = false
+
+[dependencies]
+# The only Unified crate an external module may depend on.
+unified-core = { path = "../unified-core" }
+actix-web.workspace = true
+chrono.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+url.workspace = true
+uuid.workspace = true

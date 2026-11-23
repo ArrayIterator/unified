@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+<title>Records</title>
+<rect x="10" y="3.5" width="4" height="2" rx="1" fill="var(--icon-primary, #2563EB)"/>
+<rect x="4" y="4.5" width="16" height="3.5" rx="1.5" fill="var(--icon-accent, #D97706)"/>
+<rect x="4.5" y="8" width="15" height="12" rx="1.5" fill="var(--icon-primary, #2563EB)"/>
+<rect x="9.5" y="12" width="5" height="3.5" rx="1" fill="var(--icon-accent, #D97706)"/>
+</svg>

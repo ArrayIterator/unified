@@ -1,0 +1,107 @@
+<section class="admin-section" data-section="site-builder" aria-labelledby="site-builder-heading">
+  <h1 id="site-builder-heading">Site Builder</h1>
+  <p class="page-intro">Build pages from blocks and sections, then publish them. Pages render with the site builder API.</p>
+
+  <div id="sb-status" class="flash flash-info" role="status" hidden></div>
+
+  <div class="builder-grid">
+    <section class="panel" aria-labelledby="sb-pages-heading">
+      <h2 id="sb-pages-heading">Pages</h2>
+      <form id="sb-new-page" autocomplete="off">
+        <div class="field">
+          <label for="sb-page-title" class="field-required">Title</label>
+          <input id="sb-page-title" name="title" type="text" required maxlength="200" placeholder="Landing page">
+        </div>
+        <div class="field">
+          <label for="sb-page-slug">Slug</label>
+          <input id="sb-page-slug" name="slug" type="text" maxlength="200" placeholder="landing-page">
+          <p class="field-help">Empty means a slug is derived from the title.</p>
+        </div>
+        <div class="field">
+          <label for="sb-page-theme" class="field-required">Theme</label>
+          <input id="sb-page-theme" name="theme_id" type="text" required maxlength="120" value="default">
+        </div>
+        <button class="button" type="submit">Create page</button>
+      </form>
+      <div class="table-wrap">
+        <table class="data-table" aria-label="Site builder pages">
+          <thead>
+            <tr><th scope="col">Title</th><th scope="col">Slug</th><th scope="col">Status</th><th scope="col">Actions</th></tr>
+          </thead>
+          <tbody id="sb-page-list">
+            <tr><td colspan="4">Loading pages…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="sb-editor-heading" id="sb-editor" hidden>
+      <h2 id="sb-editor-heading">Edit page</h2>
+      <p id="sb-editor-meta" class="page-intro"></p>
+      <p class="builder-actions">
+        <button class="button button-small" type="button" id="sb-publish">Publish</button>
+        <button class="button button-small button-secondary" type="button" id="sb-unpublish">Unpublish</button>
+        <button class="button button-small button-secondary" type="button" id="sb-preview">Preview</button>
+        <button class="button button-small button-danger" type="button" id="sb-delete-page">Delete page</button>
+      </p>
+
+      <h3>Blocks</h3>
+      <p class="field-help">Block types: hero, text, image, gallery, form, custom, pricing_table, marketplace_storefront. Content is JSON; the hint under the editor shows the fields each type reads.</p>
+      <div class="table-wrap">
+        <table class="data-table" aria-label="Page blocks">
+          <thead>
+            <tr><th scope="col">Order</th><th scope="col">Type</th><th scope="col">Content</th><th scope="col">Actions</th></tr>
+          </thead>
+          <tbody id="sb-block-list">
+            <tr><td colspan="4">Select a page to edit its blocks.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <form id="sb-new-block" autocomplete="off">
+        <div class="field">
+          <label for="sb-block-type" class="field-required">Block type</label>
+          <select id="sb-block-type" name="type">
+            <option value="hero">hero</option>
+            <option value="text">text</option>
+            <option value="image">image</option>
+            <option value="gallery">gallery</option>
+            <option value="form">form</option>
+            <option value="custom">custom</option>
+            <option value="pricing_table">pricing_table</option>
+            <option value="marketplace_storefront">marketplace_storefront</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="sb-block-content">Content (JSON)</label>
+          <textarea id="sb-block-content" name="content" rows="4" placeholder='{"heading": "Welcome"}'></textarea>
+          <p class="field-help" id="sb-block-hint">hero reads heading, subheading, image_url, cta_text, cta_url.</p>
+        </div>
+        <button class="button button-small" type="submit">Add block</button>
+      </form>
+
+      <h3>Sections</h3>
+      <div class="table-wrap">
+        <table class="data-table" aria-label="Page sections">
+          <thead>
+            <tr><th scope="col">Order</th><th scope="col">Name</th><th scope="col">Layout</th><th scope="col">Actions</th></tr>
+          </thead>
+          <tbody id="sb-section-list">
+            <tr><td colspan="4">Select a page to edit its sections.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <form id="sb-new-section" autocomplete="off">
+        <div class="field">
+          <label for="sb-section-name" class="field-required">Name</label>
+          <input id="sb-section-name" name="name" type="text" required maxlength="120" placeholder="Main">
+        </div>
+        <div class="field">
+          <label for="sb-section-layout">Layout</label>
+          <input id="sb-section-layout" name="layout" type="text" maxlength="120" placeholder="single-column">
+        </div>
+        <button class="button button-small" type="submit">Add section</button>
+      </form>
+    </section>
+  </div>
+</section>
+<script src="/assets/js/site-builder.js" defer></script>

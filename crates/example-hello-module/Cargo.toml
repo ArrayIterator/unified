@@ -1,0 +1,19 @@
+[package]
+name = "example-hello-module"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+description = "Example external module for the Unified server: one route, one hook listener, no database."
+license = "LicenseRef-Proprietary"
+publish = false
+
+[dependencies]
+# The only Unified crate an external module may depend on.
+# This path is relative to this crate: crates/example-hello-module
+# -> crates/unified-core. The unified-core crate does not exist yet;
+# the workspace follow-up step creates it with exactly the API surface
+# documented in docs/WORKSPACE_AND_EXTERNAL_MODULES.md section 3.
+unified-core = { path = "../unified-core" }
+actix-web = "4"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"

@@ -1,0 +1,65 @@
+/* Editorial Dark theme overrides.
+ *
+ * Loaded after the shared dashboard stylesheet by the editorial
+ * theme's layout templates. It only redefines design tokens and a
+ * few editorial details (serif headlines, wider measure, gold
+ * accent); layout, components, and behaviour stay shared with the
+ * default theme, so the variant cannot drift out of sync with it.
+ */
+
+html.editorial[data-theme="dark"] {
+  --bg: #141210;
+  --surface: #1e1b18;
+  --surface-muted: #26221e;
+  --surface-hover: #322b23;
+  --surface-raised: #241f1b;
+  --text: #f2ede6;
+  --muted: #b8ae9f;
+  --faint: #8d8271;
+  --border: #3a342c;
+  --border-strong: #57493a;
+  --accent: #d9a441;
+  --accent-hover: #e8bc62;
+  --accent-contrast: #1a1408;
+  --accent-soft: #332a10;
+  --gold: #e8bc62;
+  --gold-soft: #332a10;
+  --success: #d9a441;
+  --success-soft: #332a10;
+  --focus: #e8bc62;
+}
+
+html.editorial body {
+  font-family: Georgia, "Times New Roman", serif;
+  line-height: 1.65;
+}
+
+html.editorial h1,
+html.editorial h2,
+html.editorial h3,
+html.editorial .brand-name,
+html.editorial .topbar-title {
+  font-family: Georgia, "Times New Roman", serif;
+  letter-spacing: 0.01em;
+}
+
+html.editorial .hero h1 {
+  font-size: 2.75rem;
+  line-height: 1.1;
+}
+
+html.editorial .button {
+  background: var(--accent);
+  color: #1a1408;
+}
+
+html.editorial .button-secondary {
+  background: transparent;
+  color: var(--gold);
+  border-color: var(--accent);
+}
+
+html.editorial .stat-value,
+html.editorial .error-code {
+  color: var(--gold);
+}

@@ -1,0 +1,15 @@
+[package]
+name = "unified-db-platform"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Diesel schema and models for the Unified platform bounded context: Engagement platform: email, newsletters, events, webinars, community, forms, surveys, documents, meetings, contracts, and analytics."
+publish = false
+
+[dependencies]
+diesel.workspace = true
+chrono.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true

@@ -36,7 +36,7 @@
 // enforcement time, not at rule-creation time, because the hardening
 // module exposes no public rule lookup to validate against.
 
-use crate::core::error::{UnifiedError, UnifiedResult};
+use unified_core::error::{UnifiedError, UnifiedResult};
 use crate::modules::load_balancer::{
     parse_host_port, HealthCheckConfig, Strategy,
 };

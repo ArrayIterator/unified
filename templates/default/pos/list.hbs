@@ -1,0 +1,53 @@
+{{!-- Sales list view (module:pos/list).
+  Renders `items` (array of sale records) with an
+  optional `pagination` object. Each row may carry `detail_url` (linked
+  from the first column) and `status_class` (badge modifier, for
+  example `badge-success`). --}}
+<section class="admin-section section-panel" data-section="pos" aria-labelledby="pos-list-heading">
+  <h1 id="pos-list-heading">{{#if title}}{{title}}{{else}}Sales{{/if}}</h1>
+  <p class="page-intro">Point-of-sale transactions, with totals and payment status.</p>
+  {{#if is_admin_user}}
+  {{#if create_url}}
+  <p><a class="button" href="{{create_url}}">New sale</a></p>
+  {{/if}}
+  {{/if}}
+  {{#if items}}
+  <table class="table">
+    <thead>
+      <tr>
+        <th scope="col">Number</th>
+        <th scope="col">Register</th>
+        <th scope="col">Cashier</th>
+        <th scope="col">Total</th>
+        <th scope="col">Status</th>
+        <th scope="col">Customer</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each items}}
+      <tr>
+        <td>{{#if detail_url}}<a href="{{detail_url}}">{{number}}</a>{{else}}{{number}}{{/if}}</td>
+        <td>{{register_id}}</td>
+        <td>{{cashier_id}}</td>
+        <td>{{total}} {{currency}}</td>
+        <td><span class="badge {{#if status_class}}{{status_class}}{{else}}badge-neutral{{/if}}">{{status}}</span></td>
+        <td>{{customer_name}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+  {{#if pagination}}
+  <nav class="pagination" aria-label="Pagination">
+    {{#if pagination.has_prev}}
+    <a class="pagination-button" href="{{pagination.prev_url}}">Previous</a>
+    {{/if}}
+    <span class="pagination-info">Page {{pagination.page}} of {{pagination.total_pages}} ({{pagination.total}} total)</span>
+    {{#if pagination.has_next}}
+    <a class="pagination-button" href="{{pagination.next_url}}">Next</a>
+    {{/if}}
+  </nav>
+  {{/if}}
+  {{else}}
+  <p class="empty-state"><span class="empty-state-title">No sales yet.</span>{{#if empty_message}} {{empty_message}}{{/if}}</p>
+  {{/if}}
+</section>

@@ -1,0 +1,29 @@
+{{!-- Employee detail view (module:hr/detail).
+  Renders one employee record as `item`, with an optional
+  `back_url` to the list. --}}
+<section class="admin-section section-panel" data-section="hr" aria-labelledby="hr-detail-heading">
+  {{#if has_data}}
+  {{#if item}}
+  <h1 id="hr-detail-heading">{{#if title}}{{title}}{{else}}{{item.employee_code}}{{/if}}</h1>
+  {{#if back_url}}
+  <p><a class="button button-secondary button-small" href="{{back_url}}">&larr; Back to list</a></p>
+  {{/if}}
+  <table class="table">
+    <tbody>
+      <tr><th scope="row">Code</th><td>{{item.employee_code}}</td></tr>
+      <tr><th scope="row">User</th><td>{{item.user_id}}</td></tr>
+      <tr><th scope="row">Position</th><td>{{item.position_id}}</td></tr>
+      <tr><th scope="row">Department</th><td>{{item.department_id}}</td></tr>
+      <tr><th scope="row">Manager</th><td>{{item.manager_id}}</td></tr>
+      <tr><th scope="row">Status</th><td><span class="badge {{#if item.status_class}}{{item.status_class}}{{else}}badge-neutral{{/if}}">{{item.status}}</span></td></tr>
+      <tr><th scope="row">Hired</th><td>{{item.hire_date}}</td></tr>
+      <tr><th scope="row">Created</th><td>{{item.created_at}}</td></tr>
+    </tbody>
+  </table>
+  {{else}}
+  <p class="empty-state"><span class="empty-state-title">Not found.</span></p>
+  {{/if}}
+  {{else}}
+  <p class="empty-note">No data to show.</p>
+  {{/if}}
+</section>

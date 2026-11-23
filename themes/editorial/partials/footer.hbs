@@ -1,0 +1,15 @@
+<footer class="site-footer">
+  <div class="site-footer-inner">
+    <p class="site-footer-note">
+      {{#if app_name}}{{app_name}}{{else}}Unified{{/if}}{{#if version}} &middot; version {{version}}{{/if}}
+    </p>
+    {{#if footer_links}}
+    <nav class="site-footer-nav" aria-label="Footer navigation">
+      {{#each footer_links}}
+      <a href="{{url}}">{{label}}</a>
+      {{/each}}
+    </nav>
+    {{/if}}
+    <p class="site-footer-copy">&copy; {{#if year}}{{year}}{{else}}2026{{/if}} Unified Pentagonal Project. All rights reserved.</p>
+  </div>
+</footer>

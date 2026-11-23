@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+<title>Recruitment</title>
+<circle cx="9.5" cy="8.5" r="3.3" fill="var(--icon-primary, #2563EB)"/>
+<path d="M4 20 v-3 a5.5 5.5 0 0 1 11 0 V20 Z" fill="var(--icon-primary, #2563EB)"/>
+<path d="M13.1 13.5 a3.4 3.4 0 1 0 6.8 0 a3.4 3.4 0 1 0 -6.8 0 Z M14.5 13.5 a2 2 0 1 0 4 0 a2 2 0 1 0 -4 0 Z" fill="var(--icon-accent, #D97706)" fill-rule="evenodd"/>
+<polygon points="17.9,15.9 19,14.8 20.9,16.7 19.8,17.8" fill="var(--icon-accent, #D97706)"/>
+</svg>

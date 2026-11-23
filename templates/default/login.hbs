@@ -1,0 +1,38 @@
+<section class="auth-card" aria-labelledby="login-heading">
+  <h1 id="login-heading">Sign in</h1>
+  <p class="page-intro">Sign in to open your dashboard.</p>
+
+  <div id="login-status" class="flash flash-error" role="alert" hidden></div>
+
+  <form id="login-form" data-session-name="{{session_name}}" data-dashboard-url="{{dashboard_url}}" autocomplete="on" novalidate>
+    <div class="field">
+      <label for="login-email" class="field-required">Email</label>
+      <input id="login-email" name="email" type="email" required autocomplete="username" placeholder="you@example.com">
+    </div>
+    <div class="field">
+      <label for="login-password" class="field-required">Password</label>
+      <input id="login-password" name="password" type="password" required autocomplete="current-password" placeholder="Your password">
+    </div>
+    <div class="field" id="login-totp-field" hidden>
+      <label for="login-totp">Authenticator code</label>
+      <input id="login-totp" name="totp_code" type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="6-digit code">
+      <p class="field-help">Your account has two-factor authentication enabled. Enter the code from your authenticator app.</p>
+    </div>
+    <div class="field" id="login-recovery-field" hidden>
+      <label for="login-recovery">Recovery code</label>
+      <input id="login-recovery" name="recovery_code" type="text" autocomplete="off" placeholder="Recovery code">
+      <p class="field-help">Use a recovery code instead of an authenticator code.</p>
+    </div>
+    <p class="auth-toggle">
+      <button type="button" class="button-ghost" id="login-show-totp">Use an authenticator code</button>
+    </p>
+    <button class="button button-block" type="submit" id="login-submit">Sign in</button>
+  </form>
+
+  <p class="auth-links">
+    <a href="{{forgot_url}}">Forgot password?</a>
+    &middot;
+    <a href="{{register_url}}">Create an account</a>
+  </p>
+</section>
+<script src="/assets/js/auth.js" defer></script>

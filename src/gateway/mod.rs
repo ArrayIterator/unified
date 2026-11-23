@@ -5,7 +5,7 @@
 // each request against the routing rules, picks an upstream through the
 // load-balancer selection logic, and forwards the request. TLS is
 // terminated with the certificates already held by the shared
-// `SslStorage` (`crate::http::tls`); the gateway never parses or
+// `SslStorage` (`unified_core::tls`); the gateway never parses or
 // stores certificates itself.
 //
 // Feature gate: the Pingora dependency is optional. With the
@@ -26,16 +26,16 @@
 //     the load-balancer module's public selection API
 //     (`eligible_backends`, `select_backend`, `probe_backend`); those
 //     paths only resolve once the `load_balancer` module is declared.
-//   - `src/core/config.rs`: add the `GatewaySection` config section
+//   - crates/unified-core/src/config.rs`: add the `GatewaySection` config section
 //     (see the snippet in the coordinator report) and copy its values
 //     into `GatewayState` at startup. Until then the gateway runs on
 //     `GatewayConfig::default()` (disabled) and rules are managed
 //     through the management API only.
 
-use crate::core::config::AppConfig;
-use crate::core::error::{UnifiedError, UnifiedResult};
-use crate::core::hooks::HookBus;
-use crate::http::tls::SslStorage;
+use unified_core::config::AppConfig;
+use unified_core::error::{UnifiedError, UnifiedResult};
+use unified_core::hooks::HookBus;
+use unified_core::tls::SslStorage;
 use chrono::{DateTime, Utc};
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
@@ -112,7 +112,7 @@ pub fn require_feature_enabled() -> UnifiedResult<()> {
 // ---------------------------------------------------------------------------
 // Gateway configuration (runtime view).
 //
-// The durable YAML section lives in `crate::core::config`
+// The durable YAML section lives in `unified_core::config`
 // (`GatewaySection`, added by the integrator); this struct is the
 // runtime copy the gateway reads. It is deliberately independent of
 // `AppConfig` so the gateway module compiles and can be unit-tested
@@ -159,7 +159,7 @@ impl Default for GatewayConfig {
 impl GatewayConfig {
     /// Validate the configuration. Returns every problem found; an
     /// empty list means the configuration is valid. Mirrors the
-    /// listen-address validation in `crate::core::config` (that
+    /// listen-address validation in `unified_core::config` (that
     /// helper is private to the config module, so the check is
     /// repeated here rather than imported).
     pub fn validate(&self) -> Vec<String> {
@@ -231,7 +231,7 @@ impl GatewayConfig {
 }
 
 /// Validate one listen address (`host:port`). Accepts IP addresses
-/// and `localhost`, mirroring `crate::core::config`.
+/// and `localhost`, mirroring `unified_core::config`.
 fn validate_listen_address(address: &str) -> Result<(), String> {
     match address.parse::<SocketAddr>() {
         Ok(addr) => {

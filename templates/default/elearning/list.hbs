@@ -1,0 +1,53 @@
+{{!-- Courses list view (module:elearning/list).
+  Renders `items` (array of course records) with an
+  optional `pagination` object. Each row may carry `detail_url` (linked
+  from the first column) and `status_class` (badge modifier, for
+  example `badge-success`). --}}
+<section class="admin-section section-panel" data-section="elearning" aria-labelledby="elearning-list-heading">
+  <h1 id="elearning-list-heading">{{#if title}}{{title}}{{else}}Courses{{/if}}</h1>
+  <p class="page-intro">Courses offered through e-learning, with pricing and certificates.</p>
+  {{#if is_admin_user}}
+  {{#if create_url}}
+  <p><a class="button" href="{{create_url}}">New course</a></p>
+  {{/if}}
+  {{/if}}
+  {{#if items}}
+  <table class="table">
+    <thead>
+      <tr>
+        <th scope="col">Title</th>
+        <th scope="col">Category</th>
+        <th scope="col">Level</th>
+        <th scope="col">Language</th>
+        <th scope="col">Status</th>
+        <th scope="col">Price</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each items}}
+      <tr>
+        <td>{{#if detail_url}}<a href="{{detail_url}}">{{title}}</a>{{else}}{{title}}{{/if}}</td>
+        <td>{{category}}</td>
+        <td>{{level}}</td>
+        <td>{{language}}</td>
+        <td><span class="badge {{#if status_class}}{{status_class}}{{else}}badge-neutral{{/if}}">{{status}}</span></td>
+        <td>{{price_minor}} {{currency}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+  {{#if pagination}}
+  <nav class="pagination" aria-label="Pagination">
+    {{#if pagination.has_prev}}
+    <a class="pagination-button" href="{{pagination.prev_url}}">Previous</a>
+    {{/if}}
+    <span class="pagination-info">Page {{pagination.page}} of {{pagination.total_pages}} ({{pagination.total}} total)</span>
+    {{#if pagination.has_next}}
+    <a class="pagination-button" href="{{pagination.next_url}}">Next</a>
+    {{/if}}
+  </nav>
+  {{/if}}
+  {{else}}
+  <p class="empty-state"><span class="empty-state-title">No courses yet.</span>{{#if empty_message}} {{empty_message}}{{/if}}</p>
+  {{/if}}
+</section>

@@ -1,0 +1,147 @@
+/* Unified module icons: colour variables, grayscale mode, opt-in animation.
+ *
+ * Icons are flat solid fills whose colours are CSS custom properties
+ * (see assets/icons/README.md). This file is the only place the
+ * variables get values: colour defaults on :root, a stepped gray ramp
+ * under a parent [data-icon-theme="grayscale"] (or .icon-grayscale).
+ *
+ * Animation is OFF by default. It activates only through a trigger:
+ *   - data-icon-animation="spin|wiggle|pulse|bounce" on a parent
+ *     element (explicit choice: every icon inside animates that way),
+ *   - a parent .icon-animated, which runs each icon's OWN declared
+ *     animation (icons declare it with data-animation="..." in their
+ *     icon file; the sprite builder copies it onto the <symbol> and
+ *     the Rust accessor emits it as data-icon-animation — see
+ *     assets/icons/ANIMATION.md),
+ *   - :hover on the icon itself (same: its own declared animation).
+ * No module names appear in this file: which icons animate is data,
+ * declared in the icon files, not a hard-coded list.
+ * All motion is transform/opacity only (cheap, no layout).
+ * prefers-reduced-motion disables every animation.
+ */
+
+:root {
+  --icon-ink: #64748b;
+  --icon-primary: #2563eb;
+  --icon-accent: #d97706;
+  --icon-success: #16a34a;
+  --icon-danger: #b3261e;
+  --icon-teal: #0f766e;
+  --icon-violet: #7c3aed;
+  --icon-soft: #e2e8f0;
+}
+
+[data-icon-theme="grayscale"],
+.icon-grayscale {
+  --icon-ink: #475569;
+  --icon-primary: #334155;
+  --icon-accent: #64748b;
+  --icon-success: #525252;
+  --icon-danger: #0f172a;
+  --icon-teal: #57534e;
+  --icon-violet: #737373;
+  --icon-soft: #a8a29e;
+}
+
+.module-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  display: inline-block;
+  vertical-align: middle;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* Larger rendering inside module cards (matches the old icon-lg size). */
+.module-card-icon .module-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+@keyframes icon-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes icon-wiggle {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-10deg);
+  }
+  75% {
+    transform: rotate(10deg);
+  }
+}
+
+@keyframes icon-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 0.75;
+  }
+}
+
+@keyframes icon-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(3px);
+  }
+}
+
+/* Declared animation, gated by a parent .icon-animated or :hover.
+ * The data-icon-animation value comes from the icon file itself
+ * (via the sprite + the Rust accessor), never from a list here. */
+.icon-animated svg.module-icon[data-icon-animation="spin"],
+svg.module-icon[data-icon-animation="spin"]:hover {
+  animation: icon-spin 1.2s linear infinite;
+}
+
+.icon-animated svg.module-icon[data-icon-animation="wiggle"],
+svg.module-icon[data-icon-animation="wiggle"]:hover {
+  animation: icon-wiggle 0.8s ease-in-out infinite;
+}
+
+.icon-animated svg.module-icon[data-icon-animation="pulse"],
+svg.module-icon[data-icon-animation="pulse"]:hover {
+  animation: icon-pulse 1.6s ease-in-out infinite;
+}
+
+.icon-animated svg.module-icon[data-icon-animation="bounce"],
+svg.module-icon[data-icon-animation="bounce"]:hover {
+  animation: icon-bounce 1s ease-in-out infinite;
+}
+
+/* Explicit parent trigger: the parent chooses the animation, and it
+ * wins over each icon's declared default (later rule, equal weight). */
+[data-icon-animation="spin"] svg.module-icon {
+  animation: icon-spin 1.2s linear infinite;
+}
+
+[data-icon-animation="wiggle"] svg.module-icon {
+  animation: icon-wiggle 0.8s ease-in-out infinite;
+}
+
+[data-icon-animation="pulse"] svg.module-icon {
+  animation: icon-pulse 1.6s ease-in-out infinite;
+}
+
+[data-icon-animation="bounce"] svg.module-icon {
+  animation: icon-bounce 1s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  svg.module-icon {
+    animation: none !important;
+  }
+}

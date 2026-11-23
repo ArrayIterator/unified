@@ -1,0 +1,29 @@
+{{!-- Student detail view (module:academic/detail).
+  Renders one student record as `item`, with an optional
+  `back_url` to the list. --}}
+<section class="admin-section section-panel" data-section="academic" aria-labelledby="academic-detail-heading">
+  {{#if has_data}}
+  {{#if item}}
+  <h1 id="academic-detail-heading">{{#if title}}{{title}}{{else}}{{item.student_number}}{{/if}}</h1>
+  {{#if back_url}}
+  <p><a class="button button-secondary button-small" href="{{back_url}}">&larr; Back to list</a></p>
+  {{/if}}
+  <table class="table">
+    <tbody>
+      <tr><th scope="row">Student number</th><td>{{item.student_number}}</td></tr>
+      <tr><th scope="row">User</th><td>{{item.user_id}}</td></tr>
+      <tr><th scope="row">Program</th><td>{{item.program_id}}</td></tr>
+      <tr><th scope="row">Advisor</th><td>{{item.advisor_id}}</td></tr>
+      <tr><th scope="row">Enrolled</th><td>{{item.enrollment_year}}</td></tr>
+      <tr><th scope="row">Status</th><td><span class="badge {{#if item.status_class}}{{item.status_class}}{{else}}badge-neutral{{/if}}">{{item.status}}</span></td></tr>
+      <tr><th scope="row">Created</th><td>{{item.created_at}}</td></tr>
+      <tr><th scope="row">Updated</th><td>{{item.updated_at}}</td></tr>
+    </tbody>
+  </table>
+  {{else}}
+  <p class="empty-state"><span class="empty-state-title">Not found.</span></p>
+  {{/if}}
+  {{else}}
+  <p class="empty-note">No data to show.</p>
+  {{/if}}
+</section>

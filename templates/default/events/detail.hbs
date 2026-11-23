@@ -1,0 +1,39 @@
+{{!-- Event detail view (module:events/detail).
+  Renders one event record as `item`, with an optional
+  `back_url` to the list. --}}
+<section class="admin-section section-panel" data-section="events" aria-labelledby="events-detail-heading">
+  {{#if has_data}}
+  {{#if item}}
+  <h1 id="events-detail-heading">{{#if title}}{{title}}{{else}}{{item.title}}{{/if}}</h1>
+  {{#if back_url}}
+  <p><a class="button button-secondary button-small" href="{{back_url}}">&larr; Back to list</a></p>
+  {{/if}}
+  <table class="table">
+    <tbody>
+      <tr><th scope="row">Title</th><td>{{item.title}}</td></tr>
+      <tr><th scope="row">Description</th><td>{{item.description}}</td></tr>
+      <tr><th scope="row">Slug</th><td>{{item.slug}}</td></tr>
+      <tr><th scope="row">Categories</th><td>{{#each item.category}}{{#unless @first}}, {{/unless}}{{this}}{{/each}}</td></tr>
+      <tr><th scope="row">Tags</th><td>{{#each item.tags}}{{#unless @first}}, {{/unless}}{{this}}{{/each}}</td></tr>
+      <tr><th scope="row">Starts</th><td>{{item.starts_at}}</td></tr>
+      <tr><th scope="row">Ends</th><td>{{item.ends_at}}</td></tr>
+      <tr><th scope="row">Timezone</th><td>{{item.timezone}}</td></tr>
+    </tbody>
+  </table>
+  {{#if item.venue}}
+  <h2>Venue</h2>
+  <table class="table">
+    <tbody>
+      <tr><th scope="row">Name</th><td>{{item.venue.name}}</td></tr>
+      <tr><th scope="row">Address</th><td>{{item.venue.address}}</td></tr>
+      <tr><th scope="row">Capacity</th><td>{{item.venue.capacity}}</td></tr>
+    </tbody>
+  </table>
+  {{/if}}
+  {{else}}
+  <p class="empty-state"><span class="empty-state-title">Not found.</span></p>
+  {{/if}}
+  {{else}}
+  <p class="empty-note">No data to show.</p>
+  {{/if}}
+</section>

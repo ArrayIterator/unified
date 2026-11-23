@@ -1,0 +1,28 @@
+{{!-- Product detail view (module:store/detail).
+  Renders one product record as `item`, with an optional
+  `back_url` to the list. --}}
+<section class="admin-section section-panel" data-section="store" aria-labelledby="store-detail-heading">
+  {{#if has_data}}
+  {{#if item}}
+  <h1 id="store-detail-heading">{{#if title}}{{title}}{{else}}{{item.name}}{{/if}}</h1>
+  {{#if back_url}}
+  <p><a class="button button-secondary button-small" href="{{back_url}}">&larr; Back to list</a></p>
+  {{/if}}
+  <table class="table">
+    <tbody>
+      <tr><th scope="row">Name</th><td>{{item.name}}</td></tr>
+      <tr><th scope="row">Description</th><td>{{item.description}}</td></tr>
+      <tr><th scope="row">Kind</th><td>{{item.kind}}</td></tr>
+      <tr><th scope="row">Price</th><td>{{item.price}} {{item.currency}}</td></tr>
+      <tr><th scope="row">Licensed</th><td>{{#if item.license_product}}Yes{{else}}No{{/if}}</td></tr>
+      <tr><th scope="row">Slug</th><td>{{item.slug}}</td></tr>
+      <tr><th scope="row">File</th><td>{{item.file_id}}</td></tr>
+    </tbody>
+  </table>
+  {{else}}
+  <p class="empty-state"><span class="empty-state-title">Not found.</span></p>
+  {{/if}}
+  {{else}}
+  <p class="empty-note">No data to show.</p>
+  {{/if}}
+</section>
