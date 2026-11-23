@@ -29,6 +29,17 @@ pub const EVENT_EMAIL_PROVIDER_WEBHOOK_VERIFY: &str = "email_provider.webhook_ve
 /// `handlers.rs` for the result contract (task 350, addition A).
 pub const EVENT_EMAIL_PROVIDER_SETTINGS_FIELDS: &str = "email_provider.settings_fields";
 
+/// Emitted when the catalog lists providers: other modules may
+/// contribute provider definitions (task 354). Payload `{}`; an
+/// answer is one definition object or an array of them, each with
+/// at least `family: "email"`, a valid kebab-case `id`, a non-empty
+/// `display_name`, and an `adapter_kind`. See `list_catalog` in
+/// `handlers.rs` for the result contract: malformed answers are
+/// skipped, built-ins win on id collision, and a contributed
+/// definition still needs a registered adapter (string-keyed
+/// factory in `registry.rs`) to send.
+pub const EVENT_EMAIL_PROVIDER_DEFINITIONS: &str = "email_provider.definitions";
+
 /// Emitted when an OAuth account is linked to a connection (the
 /// callback stored fresh tokens). Payload `{ connection_id, kind,
 /// account, expires_at }`.

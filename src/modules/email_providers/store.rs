@@ -75,6 +75,12 @@ pub(crate) fn first_enabled_connection(kind: EmailProviderKind) -> Option<EmailC
 /// `campaign_id` / `subscriber_id`); adapters map it to the provider's
 /// custom-args / tags / metadata field where the provider supports one,
 /// so webhooks can be matched back to the campaign.
+///
+/// Deliverability (task 354, `deliverability.rs`): `bulk` marks a
+/// bulk/marketing send (deliverability headers on by default);
+/// `include_unsubscribe` adds List-Unsubscribe to a transactional
+/// send; `deliverability_opt_out` suppresses all deliverability
+/// headers for that send.
 pub struct EmailMessage {
     pub to: String,
     pub from: Option<String>,
@@ -87,6 +93,9 @@ pub struct EmailMessage {
     pub variables: HashMap<String, Value>,
     pub metadata: HashMap<String, String>,
     pub test_mode: bool,
+    pub bulk: bool,
+    pub include_unsubscribe: bool,
+    pub deliverability_opt_out: bool,
 }
 
 impl EmailMessage {

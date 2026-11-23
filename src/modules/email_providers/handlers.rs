@@ -8,13 +8,14 @@ use actix_web::{HttpRequest, HttpResponse, web};
 use chrono::Utc;
 use serde::Deserialize;
 use serde_json::{Value, json};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
 use unified_core::error::{UnifiedError, UnifiedResult};
 use unified_core::hooks::HookBus;
 use unified_core::json as api_json;
 use unified_core::pagination::{PageResult, PaginationParams};
+use unified_core::provider_registry::{ProviderDefinition, valid_provider_id};
 use uuid::Uuid;
 
 // ---------------------------------------------------------------------------
@@ -163,22 +164,73 @@ pub(crate) fn require_permission(
     }
 }
 
+/// The provider catalog (task 354): built-ins come from the
+/// registry catalog — iterate `catalog()`, not the enum, so a
+/// provider added through the registry appears with no code
+/// change — and `email_provider.definitions` hook answers are
+/// merged in. A hook answer is one definition object or an array
+/// of them; it must carry a valid id, a non-empty display name,
+/// and an adapter kind, and a built-in wins on id collision.
+/// Malformed answers are skipped, never fatal: a broken hook must
+/// not break the catalog. The entry carries the logo stem only
+/// (never a URL) and the description (free tier + best-for, from
+/// the definition notes).
 pub(crate) async fn list_catalog() -> HttpResponse {
-    let catalog: Vec<Value> = EmailProviderKind::all()
-        .iter()
-        .map(|kind| {
-            json!({
-                "kind": kind.as_str(),
-                "name": kind.display_name(),
-                "logo": kind.logo(),
-                "capabilities": capabilities_for(*kind),
-                "settings_fields": settings_fields_for_catalog(*kind),
-                "domain_notes": kind.domain_notes(),
-                "webhook_notes": kind.webhook_notes(),
-            })
-        })
-        .collect();
-    api_json::success_response(json!({ "providers": catalog }), 200)
+    let mut seen: HashSet<String> = HashSet::new();
+    // `entries`, not `catalog`: a local named `catalog` would shadow
+    // the imported `catalog()` function and `catalog()` in the loop
+    // would try to call the Vec (E0618 — the same shadowing bug
+    // that exists in ai/types.rs).
+    let mut entries: Vec<Value> = Vec::new();
+    for def in catalog() {
+        seen.insert(def.id.clone());
+        entries.push(catalog_entry_for_definition(&def));
+    }
+    if let Some(hooks) = email_hooks() {
+        let emitted = hooks.emit(EVENT_EMAIL_PROVIDER_DEFINITIONS, json!({}));
+        for result in &emitted.results {
+            let answers: Vec<Value> = match result {
+                Value::Array(items) => items.clone(),
+                Value::Object(_) => vec![result.clone()],
+                _ => continue,
+            };
+            for answer in answers {
+                let Ok(def) = serde_json::from_value::<ProviderDefinition>(answer) else {
+                    continue;
+                };
+                if !valid_provider_id(&def.id)
+                    || def.display_name.trim().is_empty()
+                    || def.adapter_kind.trim().is_empty()
+                {
+                    continue;
+                }
+                if seen.contains(&def.id) {
+                    continue;
+                }
+                seen.insert(def.id.clone());
+                entries.push(catalog_entry_for_definition(&def));
+            }
+        }
+    }
+    api_json::success_response(json!({ "providers": entries }), 200)
+}
+
+/// One catalog entry from a registry definition. A hook-provided
+/// definition has no enum kind, so its setup notes are empty —
+/// its free-tier and best-for text lives in the description.
+fn catalog_entry_for_definition(def: &ProviderDefinition) -> Value {
+    // from_str is inherent and already returns Option<Self>.
+    let kind = EmailProviderKind::from_str(&def.id);
+    json!({
+        "kind": def.id,
+        "name": def.display_name,
+        "logo": def.logo.clone().unwrap_or_else(|| format!("email-{}", def.id)),
+        "description": def.notes.clone().unwrap_or_default(),
+        "capabilities": capabilities_for_definition(def),
+        "settings_fields": settings_fields_for_definition_catalog(def),
+        "domain_notes": kind.map(|kind| kind.domain_notes()).unwrap_or(""),
+        "webhook_notes": kind.map(|kind| kind.webhook_notes()).unwrap_or(""),
+    })
 }
 
 /// Settings fields for one provider kind, after the
@@ -198,15 +250,37 @@ pub(crate) async fn list_catalog() -> HttpResponse {
 /// `placeholder`, `help`). With no hook bus (unit tests, module not
 /// initialized) the base list is returned unchanged.
 pub(crate) fn settings_fields_for_catalog(kind: EmailProviderKind) -> Vec<SettingsFieldDef> {
-    let mut fields = settings_fields(kind);
+    let Some(def) = kind.definition() else {
+        return Vec::new();
+    };
+    settings_fields_for_definition_catalog(&def)
+}
+
+/// The same hook pass for a definition directly (task 354): a
+/// hook-provided definition has no enum kind, so the catalog reads
+/// its fields here.
+pub(crate) fn settings_fields_for_definition_catalog(
+    def: &ProviderDefinition,
+) -> Vec<SettingsFieldDef> {
+    let fields = settings_fields_for_definition(def);
     let Some(hooks) = email_hooks() else {
         return fields;
     };
     let emitted = hooks.emit(
         EVENT_EMAIL_PROVIDER_SETTINGS_FIELDS,
-        json!({ "kind": kind.as_str(), "fields": fields }),
+        json!({ "kind": def.id, "fields": fields }),
     );
-    for result in &emitted.results {
+    apply_settings_fields_hook(fields, &emitted.results)
+}
+
+/// Apply one `email_provider.settings_fields` emission to a base
+/// field list: replace, remove, then add (a duplicate key replaces
+/// the base field). Malformed contributions are ignored.
+fn apply_settings_fields_hook(
+    mut fields: Vec<SettingsFieldDef>,
+    results: &[Value],
+) -> Vec<SettingsFieldDef> {
+    for result in results {
         if let Some(replacement) = result.get("fields").and_then(|value| value.as_array()) {
             let parsed: Vec<SettingsFieldDef> = replacement
                 .iter()
@@ -378,6 +452,9 @@ pub(crate) async fn create_connection(
         sender_email: input.sender_email.filter(|value| !value.trim().is_empty()),
         sender_name: input.sender_name.filter(|value| !value.trim().is_empty()),
         webhook_url: input.webhook_url.filter(|value| !value.trim().is_empty()),
+        unsubscribe_url: input
+            .unsubscribe_url
+            .filter(|value| !value.trim().is_empty()),
         smtp_host: input.smtp_host.filter(|value| !value.trim().is_empty()),
         smtp_port: input.smtp_port,
         smtp_tls: input.smtp_tls.filter(|value| !value.trim().is_empty()),
@@ -486,6 +563,10 @@ pub(crate) async fn update_connection(
             .webhook_url
             .clone()
             .or_else(|| connection.webhook_url.clone()),
+        unsubscribe_url: input
+            .unsubscribe_url
+            .clone()
+            .or_else(|| connection.unsubscribe_url.clone()),
         smtp_host: input
             .smtp_host
             .clone()
@@ -580,6 +661,13 @@ pub(crate) async fn update_connection(
             None
         } else {
             Some(webhook_url)
+        };
+    }
+    if let Some(unsubscribe_url) = input.unsubscribe_url {
+        connection.unsubscribe_url = if unsubscribe_url.trim().is_empty() {
+            None
+        } else {
+            Some(unsubscribe_url)
         };
     }
     // Secrets are write-only: an omitted field keeps the stored value,
@@ -813,6 +901,9 @@ pub(crate) struct SendInput {
     pub(crate) template_id: Option<String>,
     pub(crate) variables: Option<HashMap<String, Value>>,
     pub(crate) metadata: Option<HashMap<String, String>>,
+    pub(crate) bulk: Option<bool>,
+    pub(crate) include_unsubscribe: Option<bool>,
+    pub(crate) deliverability_opt_out: Option<bool>,
     pub(crate) test_mode: Option<bool>,
 }
 
@@ -843,6 +934,12 @@ pub(crate) fn send_input_to_message(
         template_id: input.template_id.clone(),
         variables: input.variables.clone().unwrap_or_default(),
         metadata: input.metadata.clone().unwrap_or_default(),
+        // Deliverability flags (task 354): bulk sends get the full
+        // header set by default; transactional sends only when the
+        // caller opts in; opt-out suppresses every header.
+        bulk: input.bulk.unwrap_or(false),
+        include_unsubscribe: input.include_unsubscribe.unwrap_or(false),
+        deliverability_opt_out: input.deliverability_opt_out.unwrap_or(false),
         test_mode: input.test_mode.unwrap_or(connection.test_mode),
     })
 }
@@ -966,6 +1063,9 @@ pub(crate) struct SendBatchInput {
     pub(crate) template_id: Option<String>,
     pub(crate) variables: Option<HashMap<String, Value>>,
     pub(crate) metadata: Option<HashMap<String, String>>,
+    pub(crate) bulk: Option<bool>,
+    pub(crate) include_unsubscribe: Option<bool>,
+    pub(crate) deliverability_opt_out: Option<bool>,
     pub(crate) test_mode: Option<bool>,
 }
 
@@ -1026,6 +1126,11 @@ pub(crate) async fn send_batch_handler(
         template_id: input.template_id.clone(),
         variables: input.variables.clone(),
         metadata: input.metadata.clone(),
+        // A batch send is a bulk send by definition (task 354):
+        // the full deliverability header set applies.
+        bulk: Some(true),
+        include_unsubscribe: input.include_unsubscribe,
+        deliverability_opt_out: input.deliverability_opt_out,
         test_mode: input.test_mode,
     };
     let mut message = match send_input_to_message(&base, &connection) {

@@ -209,6 +209,7 @@ mod tests {
             sender_email: Some("sender@example.com".to_string()),
             sender_name: None,
             webhook_url: None,
+            unsubscribe_url: None,
             smtp_host: None,
             smtp_port: None,
             smtp_tls: None,
@@ -251,6 +252,9 @@ mod tests {
             template_id: None,
             variables: HashMap::new(),
             metadata: HashMap::new(),
+            bulk: false,
+            include_unsubscribe: false,
+            deliverability_opt_out: false,
             test_mode: false,
         };
         run_send_job(QueuedSend {

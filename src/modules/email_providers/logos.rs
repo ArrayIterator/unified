@@ -4,16 +4,24 @@
 //! convention follows the module-icon sprite (`assets/icons/`): flat
 //! solid fills, 24x24, at most two colours
 //! (`var(--icon-primary, #brand)` + `var(--icon-secondary, #fff)`),
-//! no external fetches, no text elements. The files are the source
-//! of truth; the sprite (`logos/sprite.svg`, symbols
+//! no external fetches, no strokes. The files are the source of
+//! truth; the sprite (`logos/sprite.svg`, symbols
 //! `provider-logo-email-<id>`) is generated from them by
 //! `scripts/build-provider-logos-sprite.py` — re-run that script
 //! after adding or changing a logo.
 //!
+//! Lettermark exception (task 354): the 43 providers added in task
+//! 354 use simple lettermark SVGs — a rounded rect plus a `<text>`
+//! element with the provider's initials (Arial/Helvetica, bold,
+//! 7–8pt). That is the ONE deviation from the "no text elements"
+//! rule: lettermarks are clean initial monograms, not trademarked
+//! artwork redrawn in detail, and the 13 original logos already
+//! use letterforms as paths (Yahoo Y!, Mailchimp M). No other text
+//! elements are allowed in this directory.
+//!
 //! Why here and not in the module-icon sprite: that sprite is
 //! generated from module `icon.svg` files for the 150 modules, and
 //! provider brands are not modules. A provider logo belongs to the
-//! provider (WordPress-plugin model, same as the module icons), so
 //! it lives with the module code and the catalog returns only its
 //! stem (`"logo": "email-gmail"`), never a URL.
 //!
@@ -68,7 +76,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn sprite_holds_all_thirteen_provider_logos() {
+    fn sprite_holds_all_fifty_six_provider_logos() {
         for logo_id in [
             "email-mailchimp",
             "email-brevo",
@@ -83,6 +91,52 @@ mod tests {
             "email-yahoo",
             "email-outlook",
             "email-sendmail",
+            // Task 354: 26 mailbox SMTP presets.
+            "email-zoho",
+            "email-zoho-eu",
+            "email-proton",
+            "email-yandex",
+            "email-fastmail",
+            "email-icloud",
+            "email-gmx",
+            "email-mail-com",
+            "email-aol",
+            "email-qq-mail",
+            "email-mail-163",
+            "email-mail-126",
+            "email-sina",
+            "email-mail-ru",
+            "email-posteo",
+            "email-migadu",
+            "email-mailfence",
+            "email-startmail",
+            "email-runbox",
+            "email-kolabnow",
+            "email-infomaniak",
+            "email-ovh",
+            "email-gandi",
+            "email-namecheap",
+            "email-dreamhost",
+            "email-mxroute",
+            // Task 354: 13 dual API/SMTP relays via SMTP.
+            "email-sender-net",
+            "email-sendpulse",
+            "email-mailjet",
+            "email-mailtrap",
+            "email-elastic-email",
+            "email-smtp2go",
+            "email-mailersend",
+            "email-zeptomail",
+            "email-sendlayer",
+            "email-socketlabs",
+            "email-pepipost",
+            "email-smtp-com",
+            "email-campaign-monitor",
+            // Task 354: 4 generic HTTP providers.
+            "email-plunk",
+            "email-courier",
+            "email-loops",
+            "email-onesignal",
         ] {
             assert!(
                 provider_logo_exists(logo_id),

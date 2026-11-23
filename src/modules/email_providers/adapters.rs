@@ -1,14 +1,14 @@
 //! email_providers - adapters.
 
 use super::{
-    credentials::*, crypto::*, events::*, handlers::*, hooks::*, http::*, module::*, oauth::*,
-    provider_kinds::*, registry::*, store::*, worker::*,
+    credentials::*, crypto::*, deliverability::*, events::*, handlers::*, hooks::*, http::*,
+    module::*, oauth::*, provider_kinds::*, registry::*, store::*, worker::*,
 };
 use async_trait::async_trait;
 use base64::Engine;
 use chrono::{DateTime, Utc};
 use hmac::{Hmac, Mac};
-use lettre::message::header::ContentType;
+use lettre::message::header::{ContentType, HeaderName, HeaderValue};
 use lettre::message::{Mailbox, Message as LettreMessage, MultiPart};
 use lettre::transport::smtp::authentication::{Credentials as SmtpCredentials, Mechanism};
 use lettre::transport::smtp::client::{Tls, TlsParameters};
@@ -110,8 +110,17 @@ impl EmailProvider for MailchimpAdapter {
             "track_clicks": true,
             "metadata": message.metadata,
         });
+        // Deliverability headers (task 354): Mandrill takes custom
+        // headers in the message "headers" object; the
+        // deliverability values win on collision.
+        let deliverability = deliverability_headers_object(message, &self.connection);
+        let mut headers = Value::Null;
         if let Some(reply_to) = &message.reply_to {
-            mandrill_message["headers"] = json!({ "Reply-To": reply_to });
+            headers = merge_headers_object(&headers, &json!({ "Reply-To": reply_to }));
+        }
+        headers = merge_headers_object(&headers, &deliverability);
+        if headers.as_object().is_some_and(|object| !object.is_empty()) {
+            mandrill_message["headers"] = headers;
         }
         let url = Url::parse("https://mandrillapp.com/api/1.0/messages/send.json")
             .map_err(|_| UnifiedError::internal("Invalid Mandrill API URL"))?;
@@ -257,8 +266,17 @@ impl EmailProvider for BrevoAdapter {
         if let Some(reply_to) = &message.reply_to {
             payload["replyTo"] = json!({ "email": reply_to });
         }
-        if !message.metadata.is_empty() {
-            payload["headers"] = serde_json::to_value(&message.metadata).unwrap_or(Value::Null);
+        // Deliverability headers (task 354): Brevo takes custom
+        // headers in the payload "headers" object; the
+        // deliverability values win on collision with the message
+        // metadata.
+        let deliverability = deliverability_headers_object(message, &self.connection);
+        let headers = merge_headers_object(
+            &serde_json::to_value(&message.metadata).unwrap_or(Value::Null),
+            &deliverability,
+        );
+        if headers.as_object().is_some_and(|object| !object.is_empty()) {
+            payload["headers"] = headers;
         }
         let url = Url::parse("https://api.brevo.com/v3/smtp/email")
             .map_err(|_| UnifiedError::internal("Invalid Brevo API URL"))?;
@@ -355,6 +373,12 @@ impl EmailProvider for SendGridAdapter {
         });
         if let Some(reply_to) = &message.reply_to {
             payload["reply_to"] = json!({ "email": reply_to });
+        }
+        // Deliverability headers (task 354): SendGrid takes global
+        // custom headers in the top-level "headers" object.
+        let deliverability = deliverability_headers_object(message, &self.connection);
+        if deliverability.as_object().is_some_and(|object| !object.is_empty()) {
+            payload["headers"] = deliverability;
         }
         if message.test_mode {
             payload["mail_settings"] = json!({ "sandbox_mode": { "enable": true } });
@@ -507,6 +531,11 @@ impl EmailProvider for MailgunAdapter {
         if let Some(reply_to) = &message.reply_to {
             form.push(("h:Reply-To".to_string(), reply_to.clone()));
         }
+        // Deliverability headers (task 354): Mailgun takes custom
+        // headers as h:Name form fields.
+        for (name, value) in deliverability_headers(message, &self.connection, false) {
+            form.push((format!("h:{name}"), value));
+        }
         for (key, value) in &message.metadata {
             form.push((format!("v:{key}"), value.clone()));
         }
@@ -651,6 +680,15 @@ impl EmailProvider for PostmarkAdapter {
         });
         if let Some(reply_to) = &message.reply_to {
             payload["ReplyTo"] = json!(reply_to);
+        }
+        // Deliverability headers (task 354): Postmark takes custom
+        // headers in the "Headers" array.
+        let deliverability = deliverability_headers_array(message, &self.connection);
+        if deliverability
+            .as_array()
+            .is_some_and(|items| !items.is_empty())
+        {
+            payload["Headers"] = deliverability;
         }
         let url = Url::parse("https://api.postmarkapp.com/email")
             .map_err(|_| UnifiedError::internal("Invalid Postmark API URL"))?;
@@ -851,6 +889,9 @@ impl EmailProvider for SesAdapter {
                 "A sender email is required (set sender_email on the connection or from on the message)",
             ));
         }
+        // No deliverability headers: the SES SendEmail API has no
+        // custom-header support (task 354) — the SES SMTP interface
+        // is the alternative when headers are required.
         let source = match from_name.filter(|name| !name.trim().is_empty()) {
             Some(name) => format!("{name} <{from}>"),
             None => from.clone(),
@@ -959,6 +1000,12 @@ impl EmailProvider for ResendAdapter {
         });
         if let Some(reply_to) = &message.reply_to {
             payload["reply_to"] = json!(reply_to);
+        }
+        // Deliverability headers (task 354): Resend takes custom
+        // headers in the top-level "headers" object.
+        let deliverability = deliverability_headers_object(message, &self.connection);
+        if deliverability.as_object().is_some_and(|object| !object.is_empty()) {
+            payload["headers"] = deliverability;
         }
         let url = Url::parse("https://api.resend.com/emails")
             .map_err(|_| UnifiedError::internal("Invalid Resend API URL"))?;
@@ -1129,6 +1176,12 @@ impl EmailProvider for SparkPostAdapter {
         if let Some(reply_to) = &message.reply_to {
             content["reply_to"] = json!(reply_to);
         }
+        // Deliverability headers (task 354): SparkPost takes custom
+        // headers in the content "headers" object.
+        let deliverability = deliverability_headers_object(message, &self.connection);
+        if deliverability.as_object().is_some_and(|object| !object.is_empty()) {
+            content["headers"] = deliverability;
+        }
         let payload = json!({
             "options": { "sandbox": message.test_mode },
             "content": content,
@@ -1227,6 +1280,18 @@ pub(crate) fn build_lettre_message(
         })?;
         builder = builder.reply_to(reply_mailbox);
     }
+    // Deliverability headers (task 354, `deliverability.rs`):
+    // List-Unsubscribe on bulk or opted-in transactional sends,
+    // Precedence / X-Auto-Response-Suppress / Feedback-ID on bulk.
+    // Computed once here so SMTP, OAuth, and sendmail all emit
+    // them; the header names are static, so `raw_header` takes
+    // them directly.
+    for (name, value) in deliverability_headers(message, connection, true) {
+        builder = builder.raw_header(HeaderValue::new(
+            HeaderName::new_from_ascii_str(name),
+            value,
+        ));
+    }
     match (&message.body_text, &message.body_html) {
         (Some(text), Some(html)) => builder
             .multipart(MultiPart::alternative_plain_html(
@@ -1299,24 +1364,46 @@ impl SmtpAdapter {
         })
     }
 
-    fn transport(
+    /// Resolve the SMTP server: the connection's own settings win,
+    /// then the catalog preset for the kind (task 354), then the
+    /// adapter defaults (587, STARTTLS). A preset kind with no
+    /// preset host and no connection host is an honest 400.
+    fn resolve_server(
         connection: &EmailConnection,
-    ) -> UnifiedResult<AsyncSmtpTransport<Tokio1Executor>> {
+    ) -> UnifiedResult<(String, u16, String)> {
+        let preset = connection
+            .kind
+            .definition()
+            .and_then(|def| def.smtp_preset());
         let host = connection
             .smtp_host
             .clone()
             .filter(|value| !value.trim().is_empty())
+            .or_else(|| preset.as_ref().map(|(host, _, _)| host.clone()))
             .ok_or_else(|| {
                 UnifiedError::bad_request(format!(
-                    "Connection \"{}\" has no smtp_host configured",
-                    connection.name
+                    "Connection \"{}\" has no smtp_host configured and provider \"{}\" has no preset relay",
+                    connection.name,
+                    connection.kind.as_str()
                 ))
             })?;
-        let port = connection.smtp_port.unwrap_or(587);
+        let port = connection
+            .smtp_port
+            .or_else(|| preset.as_ref().map(|(_, port, _)| *port))
+            .unwrap_or(587);
         let tls_mode = connection
             .smtp_tls
             .clone()
+            .filter(|value| !value.trim().is_empty())
+            .or_else(|| preset.as_ref().map(|(_, _, tls)| tls.clone()))
             .unwrap_or_else(|| "starttls".to_string());
+        Ok((host, port, tls_mode))
+    }
+
+    fn transport(
+        connection: &EmailConnection,
+    ) -> UnifiedResult<AsyncSmtpTransport<Tokio1Executor>> {
+        let (host, port, tls_mode) = Self::resolve_server(connection)?;
         let password = decrypt_optional(&connection.credentials.password)?;
         smtp_transport(
             &host,
@@ -1331,7 +1418,9 @@ impl SmtpAdapter {
 #[async_trait]
 impl EmailProvider for SmtpAdapter {
     fn kind(&self) -> EmailProviderKind {
-        EmailProviderKind::Smtp
+        // The preset kind, not hard-coded `Smtp`: logs, capabilities,
+        // and the allow-list read the preset's definition.
+        self.connection.kind
     }
 
     fn connection(&self) -> &EmailConnection {
@@ -1344,8 +1433,18 @@ impl EmailProvider for SmtpAdapter {
     /// failed connection test is a result, not a handler error.
     async fn test_connection(&self) -> UnifiedResult<ConnectionTestResult> {
         let started = std::time::Instant::now();
-        let host = self.connection.smtp_host.clone().unwrap_or_default();
-        let port = self.connection.smtp_port.unwrap_or(587);
+        let (host, port, _) = match Self::resolve_server(&self.connection) {
+            Ok(server) => server,
+            Err(error) => {
+                return Ok(ConnectionTestResult {
+                    kind: self.kind().as_str().to_string(),
+                    reachable: false,
+                    latency_ms: started.elapsed().as_millis() as u64,
+                    account: None,
+                    detail: error.message,
+                });
+            }
+        };
         let transport = match Self::transport(&self.connection) {
             Ok(transport) => transport,
             Err(error) => {
@@ -1386,7 +1485,7 @@ impl EmailProvider for SmtpAdapter {
     async fn send(&self, message: &EmailMessage) -> UnifiedResult<SendResult> {
         validate_email_address(&message.to)?;
         if message.test_mode {
-            return Ok(simulated_result("smtp"));
+            return Ok(simulated_result(self.connection.kind.as_str()));
         }
         let transport = Self::transport(&self.connection)?;
         let lettre_message = build_lettre_message(&self.connection, message, None)?;
@@ -1394,15 +1493,12 @@ impl EmailProvider for SmtpAdapter {
             .send(lettre_message)
             .await
             .map_err(|error| UnifiedError::new(format!("SMTP delivery failed: {error}"), 502))?;
+        let (host, port, _) = Self::resolve_server(&self.connection)?;
         Ok(SendResult {
             provider_message_id: None,
             accepted: true,
             test_mode: false,
-            detail: format!(
-                "Accepted by SMTP {}:{}",
-                self.connection.smtp_host.clone().unwrap_or_default(),
-                self.connection.smtp_port.unwrap_or(587)
-            ),
+            detail: format!("Accepted by SMTP {host}:{port}"),
         })
     }
 
@@ -1806,6 +1902,337 @@ impl EmailProvider for SendmailAdapter {
     }
 }
 
+// --- Generic HTTP API providers (task 354) ---------------------------
+//
+// One adapter for the providers whose only send path is a simple
+// JSON HTTP API (Plunk, Courier, Loops, OneSignal): the endpoint,
+// auth scheme, payload template, and response id path all come
+// from the provider definition's `http_api` object, so a new
+// provider of this shape needs data, not code.
+//
+// Template placeholders (in string values):
+//   {to} {from} {from_name} {subject} {text} {html}
+//   {body} (HTML when present, else text)
+//   {reply_to} {template_id} {app_id} (the OneSignal App ID, from
+//   the connection's domain field)
+//   {variables} (whole value only — replaced by the variables object)
+//   {deliverability_headers} (whole value only — the deliverability
+//   headers object; dropped when empty)
+// A placeholder whose value is missing drops the key; an unknown
+// placeholder is an honest 400. A template that mentions
+// {template_id} requires one on the message (Loops); a message
+// that carries a template_id for a provider whose template has no
+// {template_id} is refused — template sends are not silently
+// downgraded to free-form sends.
+//
+// Deliverability headers: only Plunk's send API documents a
+// `headers` object, so only its template carries
+// {deliverability_headers}; Courier, Loops, and OneSignal have no
+// documented custom-header field on their send endpoints. The
+// generic adapter has no webhook override: webhook verification
+// falls back to the shared secret-token check (the provider's
+// native scheme is not implemented, as the webhook notes say).
+
+http_adapter!(GenericHttpAdapter);
+
+/// Render a generic HTTP payload template against one message.
+/// Returns `None` for a node that must be dropped (a missing
+/// optional placeholder); the caller drops the key (objects) or
+/// the item (arrays).
+fn render_http_template_value(
+    template: &Value,
+    message: &EmailMessage,
+    connection: &EmailConnection,
+) -> UnifiedResult<Option<Value>> {
+    match template {
+        Value::Object(object) => {
+            let mut rendered = serde_json::Map::new();
+            for (key, value) in object {
+                if let Some(value) =
+                    render_http_template_value(value, message, connection)?
+                {
+                    rendered.insert(key.clone(), value);
+                }
+            }
+            Ok(Some(Value::Object(rendered)))
+        }
+        Value::Array(items) => {
+            let mut rendered = Vec::new();
+            for item in items {
+                if let Some(value) =
+                    render_http_template_value(item, message, connection)?
+                {
+                    rendered.push(value);
+                }
+            }
+            Ok(Some(Value::Array(rendered)))
+        }
+        Value::String(text) => render_http_template_string(text, message, connection),
+        other => Ok(Some(other.clone())),
+    }
+}
+
+fn render_http_template_string(
+    text: &str,
+    message: &EmailMessage,
+    connection: &EmailConnection,
+) -> UnifiedResult<Option<Value>> {
+    // Whole-value object placeholders: {variables} and
+    // {deliverability_headers}.
+    if text == "{variables}" {
+        return Ok(Some(Value::Object(
+            message
+                .variables
+                .iter()
+                .map(|(key, value)| (key.clone(), value.clone()))
+                .collect(),
+        )));
+    }
+    if text == "{deliverability_headers}" {
+        let headers = deliverability_headers_object(message, connection);
+        if headers.as_object().is_some_and(|object| object.is_empty()) {
+            return Ok(None);
+        }
+        return Ok(Some(headers));
+    }
+    let (from, from_name) = message.sender(connection);
+    let body = message
+        .body_html
+        .clone()
+        .or_else(|| message.body_text.clone());
+    let mut rendered = text.to_string();
+    let mut missing = false;
+    let mut start = 0;
+    while let Some(open) = rendered[start..].find('{') {
+        let open = start + open;
+        let Some(close) = rendered[open..].find('}') else {
+            return Err(UnifiedError::bad_request(format!(
+                "Unmatched '{{' in the http_api payload template for provider \"{}\"",
+                connection.kind.as_str()
+            )));
+        };
+        let close = open + close;
+        let placeholder = &rendered[open + 1..close];
+        let value: Option<String> = match placeholder {
+            "to" => Some(message.to.clone()),
+            "from" => Some(from.clone()),
+            "from_name" => from_name.clone(),
+            "subject" => Some(message.subject.clone()),
+            "text" => message.body_text.clone(),
+            "html" => message.body_html.clone(),
+            "body" => body.clone(),
+            "reply_to" => message.reply_to.clone(),
+            "template_id" => message.template_id.clone(),
+            "app_id" => connection.domain.clone(),
+            _ => {
+                return Err(UnifiedError::bad_request(format!(
+                    "Unknown placeholder {{{placeholder}}} in the http_api payload template for provider \"{}\"",
+                    connection.kind.as_str()
+                )));
+            }
+        };
+        let Some(value) = value.filter(|value| !value.trim().is_empty()) else {
+            missing = true;
+            break;
+        };
+        rendered.replace_range(open..=close, &value);
+        start = open + value.len();
+    }
+    if missing {
+        return Ok(None);
+    }
+    Ok(Some(Value::String(rendered)))
+}
+
+/// Extract a provider message id from a JSON response by dotted
+/// path (`"id"`, `"requestId"`, `"data.id"`). `None` when the path
+/// is absent or the value is not a string.
+fn extract_id_path(body: &Value, path: &str) -> Option<String> {
+    let mut current = body;
+    for segment in path.split('.') {
+        current = current.get(segment)?;
+    }
+    current.as_str().map(str::to_string)
+}
+
+#[async_trait]
+impl EmailProvider for GenericHttpAdapter {
+    fn kind(&self) -> EmailProviderKind {
+        self.connection.kind
+    }
+
+    fn connection(&self) -> &EmailConnection {
+        &self.connection
+    }
+
+    /// No dedicated ping endpoint exists for these APIs, so the
+    /// test is a GET on the API base with the stored credentials:
+    /// any HTTP response proves reachability (the status is the
+    /// detail); only a transport failure is unreachable.
+    async fn test_connection(&self) -> UnifiedResult<ConnectionTestResult> {
+        let started = std::time::Instant::now();
+        let api_key = require_api_key(&self.connection)?;
+        let def = self.kind().definition().ok_or_else(|| {
+            UnifiedError::internal(format!(
+                "No provider definition registered for kind \"{}\"",
+                self.kind().as_str()
+            ))
+        })?;
+        let http_api = def.http_api.as_ref().ok_or_else(|| {
+            UnifiedError::internal(format!(
+                "Provider \"{}\" has no http_api configuration",
+                self.kind().as_str()
+            ))
+        })?;
+        let base = def.effective_base_url(false).ok_or_else(|| {
+            UnifiedError::internal(format!(
+                "Provider \"{}\" has no base URL",
+                self.kind().as_str()
+            ))
+        })?;
+        let url = Url::parse(base)
+            .map_err(|_| UnifiedError::internal("Invalid provider API base URL"))?;
+        check_allowlist(&url, self.kind())?;
+        let (header, value) = generic_http_auth(http_api, &api_key)?;
+        match self.client.get(url).header(header, value).send().await {
+            Ok(response) => Ok(ConnectionTestResult {
+                kind: self.kind().as_str().to_string(),
+                reachable: true,
+                latency_ms: started.elapsed().as_millis() as u64,
+                account: None,
+                detail: format!(
+                    "{} answered HTTP {}",
+                    self.kind().as_str(),
+                    response.status()
+                ),
+            }),
+            Err(error) => Ok(ConnectionTestResult {
+                kind: self.kind().as_str().to_string(),
+                reachable: false,
+                latency_ms: started.elapsed().as_millis() as u64,
+                account: None,
+                detail: format!("{} request failed: {error}", self.kind().as_str()),
+            }),
+        }
+    }
+
+    async fn send(&self, message: &EmailMessage) -> UnifiedResult<SendResult> {
+        validate_email_address(&message.to)?;
+        if message.test_mode && !self.kind().has_native_sandbox() {
+            return Ok(simulated_result(self.kind().as_str()));
+        }
+        let api_key = require_api_key(&self.connection)?;
+        let (from, _) = message.sender(&self.connection);
+        if from.is_empty() {
+            return Err(UnifiedError::bad_request(
+                "A sender email is required (set sender_email on the connection or from on the message)",
+            ));
+        }
+        let def = self.kind().definition().ok_or_else(|| {
+            UnifiedError::internal(format!(
+                "No provider definition registered for kind \"{}\"",
+                self.kind().as_str()
+            ))
+        })?;
+        let http_api = def.http_api.as_ref().ok_or_else(|| {
+            UnifiedError::internal(format!(
+                "Provider \"{}\" has no http_api configuration",
+                self.kind().as_str()
+            ))
+        })?;
+        let template = http_api.get("payload").ok_or_else(|| {
+            UnifiedError::internal(format!(
+                "Provider \"{}\" has no http_api payload template",
+                self.kind().as_str()
+            ))
+        })?;
+        let template_text = template.to_string();
+        if template_text.contains("{template_id}") && message.template_id.is_none() {
+            return Err(UnifiedError::bad_request(format!(
+                "Provider \"{}\" requires a template_id (create a published template in the provider dashboard and pass its id)",
+                self.kind().as_str()
+            )));
+        }
+        if message.template_id.is_some() && !template_text.contains("{template_id}") {
+            return Err(UnifiedError::bad_request(format!(
+                "Provider \"{}\" does not support template sends; provide a subject and body_text/body_html instead",
+                self.kind().as_str()
+            )));
+        }
+        let endpoint = http_api
+            .get("endpoint")
+            .and_then(Value::as_str)
+            .ok_or_else(|| {
+                UnifiedError::internal(format!(
+                    "Provider \"{}\" has no http_api endpoint",
+                    self.kind().as_str()
+                ))
+            })?;
+        let url = Url::parse(endpoint)
+            .map_err(|_| UnifiedError::internal("Invalid provider API endpoint"))?;
+        check_allowlist(&url, self.kind())?;
+        let payload = render_http_template_value(template, message, &self.connection)?
+            .unwrap_or(Value::Null);
+        let (header, value) = generic_http_auth(http_api, &api_key)?;
+        let body = send_json(
+            &self.client,
+            self.client
+                .post(url)
+                .header(header, value)
+                .header(CONTENT_TYPE, "application/json")
+                .json(&payload),
+            self.kind().as_str(),
+        )
+        .await?;
+        Ok(SendResult {
+            provider_message_id: http_api
+                .get("id_path")
+                .and_then(Value::as_str)
+                .and_then(|path| extract_id_path(&body, path)),
+            accepted: true,
+            test_mode: message.test_mode,
+            detail: format!("{} accepted the message", self.kind().as_str()),
+        })
+    }
+}
+
+/// The Authorization header for a generic HTTP provider, from the
+/// definition's `http_api.auth`: `"bearer"` sends
+/// `Bearer <api_key>`; `"basic-key"` sends `Basic <api_key>` (the
+/// raw key, not a base64 user:password pair — OneSignal's REST API
+/// key works this way).
+fn generic_http_auth(
+    http_api: &Value,
+    api_key: &str,
+) -> UnifiedResult<(reqwest::header::HeaderName, String)> {
+    let auth = http_api.get("auth");
+    let scheme = auth
+        .and_then(|value| value.get("scheme"))
+        .and_then(Value::as_str)
+        .unwrap_or("bearer");
+    let header_name = auth
+        .and_then(|value| value.get("header"))
+        .and_then(Value::as_str)
+        .unwrap_or("Authorization");
+    let header = header_name
+        .parse::<reqwest::header::HeaderName>()
+        .map_err(|_| {
+            UnifiedError::internal(format!(
+                "Invalid http_api auth header \"{header_name}\""
+            ))
+        })?;
+    let value = match scheme {
+        "basic-key" => format!("Basic {api_key}"),
+        "bearer" => format!("Bearer {api_key}"),
+        other => {
+            return Err(UnifiedError::internal(format!(
+                "Unsupported http_api auth scheme \"{other}\""
+            )));
+        }
+    };
+    Ok((header, value))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1822,6 +2249,7 @@ mod tests {
             sender_email: None,
             sender_name: None,
             webhook_url: None,
+            unsubscribe_url: None,
             smtp_host: None,
             smtp_port: None,
             smtp_tls: None,
@@ -1858,6 +2286,7 @@ mod tests {
             sender_email: Some("news@example.com".to_string()),
             sender_name: Some("Example News".to_string()),
             webhook_url: None,
+            unsubscribe_url: None,
             smtp_host: Some("smtp.example.com".to_string()),
             smtp_port: Some(587),
             smtp_tls: Some("starttls".to_string()),
@@ -1883,6 +2312,7 @@ mod tests {
             sender_email: Some("user@example.com".to_string()),
             sender_name: None,
             webhook_url: None,
+            unsubscribe_url: None,
             smtp_host: None,
             smtp_port: None,
             smtp_tls: None,
@@ -1920,6 +2350,9 @@ mod tests {
             template_id: None,
             variables: HashMap::new(),
             metadata: HashMap::new(),
+            bulk: false,
+            include_unsubscribe: false,
+            deliverability_opt_out: false,
             test_mode: false,
         }
     }
@@ -2067,5 +2500,142 @@ mod tests {
         let adapter = SendmailAdapter::new(&connection).unwrap();
         let err = adapter.send(&test_message()).await.unwrap_err();
         assert!(err.to_string().contains("No sendmail binary"));
+    }
+
+    // --- Task 354: preset resolution and generic HTTP rendering ---
+
+    #[test]
+    fn smtp_preset_resolution_prefers_connection_then_preset_then_default() {
+        // A Zoho connection with no host of its own resolves to the
+        // catalog preset (465, implicit SSL).
+        let mut connection = smtp_connection();
+        connection.kind = EmailProviderKind::Zoho;
+        connection.smtp_host = None;
+        connection.smtp_port = None;
+        connection.smtp_tls = None;
+        let (host, port, tls) = SmtpAdapter::resolve_server(&connection).unwrap();
+        assert_eq!(host, "smtp.zoho.com");
+        assert_eq!(port, 465);
+        assert_eq!(tls, "implicit");
+        // The connection's own host wins over the preset.
+        connection.smtp_host = Some("relay.example.com".to_string());
+        connection.smtp_port = Some(2525);
+        let (host, port, tls) = SmtpAdapter::resolve_server(&connection).unwrap();
+        assert_eq!(host, "relay.example.com");
+        assert_eq!(port, 2525);
+        assert_eq!(tls, "implicit");
+        // A kind with neither a host nor a preset fails loudly.
+        let mut bare = smtp_connection();
+        bare.kind = EmailProviderKind::Smtp;
+        bare.smtp_host = None;
+        bare.smtp_port = None;
+        bare.smtp_tls = None;
+        let err = SmtpAdapter::resolve_server(&bare).unwrap_err();
+        assert!(err.to_string().contains("no smtp_host configured"));
+    }
+
+    #[test]
+    fn generic_http_template_renders_plunk_payload() {
+        let def = EmailProviderKind::Plunk
+            .definition()
+            .expect("plunk definition");
+        let template = def
+            .http_api
+            .as_ref()
+            .expect("plunk http_api")
+            .get("payload")
+            .expect("plunk payload template")
+            .clone();
+        let connection = {
+            let mut connection = smtp_connection();
+            connection.kind = EmailProviderKind::Plunk;
+            connection
+        };
+        // Transactional: no deliverability headers, so the whole
+        // "headers" key is dropped from the payload.
+        let rendered = render_http_template_value(&template, &test_message(), &connection)
+            .unwrap()
+            .unwrap();
+        assert_eq!(rendered["to"], "reader@example.com");
+        assert_eq!(rendered["subject"], "Test");
+        assert_eq!(rendered["body"], "<p>Hello</p>");
+        assert_eq!(rendered["from"], "news@example.com");
+        assert_eq!(rendered["name"], "Example News");
+        assert!(rendered.get("headers").is_none());
+        // Bulk: the headers object is emitted and carries the
+        // unsubscribe header.
+        let mut bulk = test_message();
+        bulk.bulk = true;
+        let rendered = render_http_template_value(&template, &bulk, &connection)
+            .unwrap()
+            .unwrap();
+        let headers = rendered.get("headers").expect("bulk headers");
+        assert!(headers
+            .get("List-Unsubscribe")
+            .is_some_and(|value| value.as_str().is_some_and(|text| text
+                .contains("mailto:news@example.com"))));
+        assert_eq!(headers["Precedence"], "bulk");
+    }
+
+    #[test]
+    fn generic_http_template_drops_missing_keys_and_rejects_unknown_placeholders() {
+        let connection = smtp_connection();
+        let template = json!({
+            "to": "{to}",
+            "subject": "{subject}",
+            "reply_to": "{reply_to}",
+            "template_id": "{template_id}",
+            "variables": "{variables}",
+        });
+        let mut message = test_message();
+        message.variables.insert("name".to_string(), json!("Reader"));
+        let rendered =
+            render_http_template_value(&template, &message, &connection)
+                .unwrap()
+                .unwrap();
+        assert_eq!(rendered["to"], "reader@example.com");
+        // Missing optional placeholders drop their keys.
+        assert!(rendered.get("reply_to").is_none());
+        assert!(rendered.get("template_id").is_none());
+        // The whole-value {variables} becomes the variables object.
+        assert_eq!(rendered["variables"]["name"], "Reader");
+        // An unknown placeholder is an honest 400, not a passthrough.
+        let bad = json!({ "to": "{unknown_field}" });
+        let err = render_http_template_value(&bad, &message, &connection).unwrap_err();
+        assert!(err.to_string().contains("Unknown placeholder {unknown_field}"));
+        // An unmatched brace is an honest 400 too.
+        let bad = json!({ "to": "reader@example.com {to" });
+        let err = render_http_template_value(&bad, &message, &connection).unwrap_err();
+        assert!(err.to_string().contains("Unmatched '{'"));
+    }
+
+    #[test]
+    fn generic_http_auth_uses_bearer_or_raw_basic_key() {
+        let bearer = json!({ "scheme": "bearer", "header": "Authorization" });
+        let (header, value) = generic_http_auth(&bearer, "sk_test").unwrap();
+        assert_eq!(header.as_str(), "authorization");
+        assert_eq!(value, "Bearer sk_test");
+        // OneSignal: the REST API key is sent raw after "Basic",
+        // not as a base64 user:password pair.
+        let basic = json!({ "scheme": "basic-key", "header": "Authorization" });
+        let (_, value) = generic_http_auth(&basic, "os_rest_key").unwrap();
+        assert_eq!(value, "Basic os_rest_key");
+        let bad = json!({ "scheme": "digest" });
+        assert!(generic_http_auth(&bad, "key").is_err());
+    }
+
+    #[test]
+    fn generic_http_id_path_extraction_reads_nested_paths() {
+        let body = json!({ "id": "one-1", "requestId": "req-2", "data": { "id": "nested-3" } });
+        assert_eq!(extract_id_path(&body, "id").as_deref(), Some("one-1"));
+        assert_eq!(
+            extract_id_path(&body, "requestId").as_deref(),
+            Some("req-2")
+        );
+        assert_eq!(
+            extract_id_path(&body, "data.id").as_deref(),
+            Some("nested-3")
+        );
+        assert!(extract_id_path(&body, "missing").is_none());
     }
 }

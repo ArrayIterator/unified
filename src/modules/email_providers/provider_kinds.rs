@@ -31,6 +31,49 @@ pub enum EmailProviderKind {
     Yahoo,
     Outlook,
     Sendmail,
+    Zoho,
+    ZohoEu,
+    Proton,
+    Yandex,
+    Fastmail,
+    Icloud,
+    Gmx,
+    MailCom,
+    Aol,
+    QqMail,
+    Mail163,
+    Mail126,
+    Sina,
+    MailRu,
+    Posteo,
+    Migadu,
+    Mailfence,
+    Startmail,
+    Runbox,
+    Kolabnow,
+    Infomaniak,
+    Ovh,
+    Gandi,
+    Namecheap,
+    Dreamhost,
+    Mxroute,
+    SenderNet,
+    Sendpulse,
+    Mailjet,
+    Mailtrap,
+    ElasticEmail,
+    Smtp2go,
+    Mailersend,
+    Zeptomail,
+    Sendlayer,
+    Socketlabs,
+    Pepipost,
+    SmtpCom,
+    CampaignMonitor,
+    Plunk,
+    Courier,
+    Loops,
+    Onesignal,
 }
 
 impl EmailProviderKind {
@@ -49,6 +92,49 @@ impl EmailProviderKind {
             Self::Yahoo => "yahoo",
             Self::Outlook => "outlook",
             Self::Sendmail => "sendmail",
+            Self::Zoho => "zoho",
+            Self::ZohoEu => "zoho-eu",
+            Self::Proton => "proton",
+            Self::Yandex => "yandex",
+            Self::Fastmail => "fastmail",
+            Self::Icloud => "icloud",
+            Self::Gmx => "gmx",
+            Self::MailCom => "mail-com",
+            Self::Aol => "aol",
+            Self::QqMail => "qq-mail",
+            Self::Mail163 => "mail-163",
+            Self::Mail126 => "mail-126",
+            Self::Sina => "sina",
+            Self::MailRu => "mail-ru",
+            Self::Posteo => "posteo",
+            Self::Migadu => "migadu",
+            Self::Mailfence => "mailfence",
+            Self::Startmail => "startmail",
+            Self::Runbox => "runbox",
+            Self::Kolabnow => "kolabnow",
+            Self::Infomaniak => "infomaniak",
+            Self::Ovh => "ovh",
+            Self::Gandi => "gandi",
+            Self::Namecheap => "namecheap",
+            Self::Dreamhost => "dreamhost",
+            Self::Mxroute => "mxroute",
+            Self::SenderNet => "sender-net",
+            Self::Sendpulse => "sendpulse",
+            Self::Mailjet => "mailjet",
+            Self::Mailtrap => "mailtrap",
+            Self::ElasticEmail => "elastic-email",
+            Self::Smtp2go => "smtp2go",
+            Self::Mailersend => "mailersend",
+            Self::Zeptomail => "zeptomail",
+            Self::Sendlayer => "sendlayer",
+            Self::Socketlabs => "socketlabs",
+            Self::Pepipost => "pepipost",
+            Self::SmtpCom => "smtp-com",
+            Self::CampaignMonitor => "campaign-monitor",
+            Self::Plunk => "plunk",
+            Self::Courier => "courier",
+            Self::Loops => "loops",
+            Self::Onesignal => "onesignal",
         }
     }
 
@@ -67,6 +153,49 @@ impl EmailProviderKind {
             "yahoo" => Some(Self::Yahoo),
             "outlook" => Some(Self::Outlook),
             "sendmail" => Some(Self::Sendmail),
+            "zoho" => Some(Self::Zoho),
+            "zoho-eu" => Some(Self::ZohoEu),
+            "proton" => Some(Self::Proton),
+            "yandex" => Some(Self::Yandex),
+            "fastmail" => Some(Self::Fastmail),
+            "icloud" => Some(Self::Icloud),
+            "gmx" => Some(Self::Gmx),
+            "mail-com" => Some(Self::MailCom),
+            "aol" => Some(Self::Aol),
+            "qq-mail" => Some(Self::QqMail),
+            "mail-163" => Some(Self::Mail163),
+            "mail-126" => Some(Self::Mail126),
+            "sina" => Some(Self::Sina),
+            "mail-ru" => Some(Self::MailRu),
+            "posteo" => Some(Self::Posteo),
+            "migadu" => Some(Self::Migadu),
+            "mailfence" => Some(Self::Mailfence),
+            "startmail" => Some(Self::Startmail),
+            "runbox" => Some(Self::Runbox),
+            "kolabnow" => Some(Self::Kolabnow),
+            "infomaniak" => Some(Self::Infomaniak),
+            "ovh" => Some(Self::Ovh),
+            "gandi" => Some(Self::Gandi),
+            "namecheap" => Some(Self::Namecheap),
+            "dreamhost" => Some(Self::Dreamhost),
+            "mxroute" => Some(Self::Mxroute),
+            "sender-net" => Some(Self::SenderNet),
+            "sendpulse" => Some(Self::Sendpulse),
+            "mailjet" => Some(Self::Mailjet),
+            "mailtrap" => Some(Self::Mailtrap),
+            "elastic-email" => Some(Self::ElasticEmail),
+            "smtp2go" => Some(Self::Smtp2go),
+            "mailersend" => Some(Self::Mailersend),
+            "zeptomail" => Some(Self::Zeptomail),
+            "sendlayer" => Some(Self::Sendlayer),
+            "socketlabs" => Some(Self::Socketlabs),
+            "pepipost" => Some(Self::Pepipost),
+            "smtp-com" => Some(Self::SmtpCom),
+            "campaign-monitor" => Some(Self::CampaignMonitor),
+            "plunk" => Some(Self::Plunk),
+            "courier" => Some(Self::Courier),
+            "loops" => Some(Self::Loops),
+            "onesignal" => Some(Self::Onesignal),
             _ => None,
         }
     }
@@ -86,6 +215,49 @@ impl EmailProviderKind {
             Self::Yahoo,
             Self::Outlook,
             Self::Sendmail,
+            Self::Zoho,
+            Self::ZohoEu,
+            Self::Proton,
+            Self::Yandex,
+            Self::Fastmail,
+            Self::Icloud,
+            Self::Gmx,
+            Self::MailCom,
+            Self::Aol,
+            Self::QqMail,
+            Self::Mail163,
+            Self::Mail126,
+            Self::Sina,
+            Self::MailRu,
+            Self::Posteo,
+            Self::Migadu,
+            Self::Mailfence,
+            Self::Startmail,
+            Self::Runbox,
+            Self::Kolabnow,
+            Self::Infomaniak,
+            Self::Ovh,
+            Self::Gandi,
+            Self::Namecheap,
+            Self::Dreamhost,
+            Self::Mxroute,
+            Self::SenderNet,
+            Self::Sendpulse,
+            Self::Mailjet,
+            Self::Mailtrap,
+            Self::ElasticEmail,
+            Self::Smtp2go,
+            Self::Mailersend,
+            Self::Zeptomail,
+            Self::Sendlayer,
+            Self::Socketlabs,
+            Self::Pepipost,
+            Self::SmtpCom,
+            Self::CampaignMonitor,
+            Self::Plunk,
+            Self::Courier,
+            Self::Loops,
+            Self::Onesignal,
         ]
     }
 
@@ -171,6 +343,21 @@ impl EmailProviderKind {
             Self::Outlook => {
                 "The sender address must be the linked Microsoft account; Outlook rejects mail sent from any other address over XOAUTH2."
             }
+            Self::Zoho | Self::ZohoEu | Self::Proton | Self::Yandex | Self::Fastmail | Self::Icloud | Self::Gmx | Self::MailCom | Self::Aol | Self::QqMail | Self::Mail163 | Self::Mail126 | Self::Sina | Self::MailRu | Self::Posteo | Self::Migadu | Self::Mailfence | Self::Startmail | Self::Runbox | Self::Kolabnow | Self::Infomaniak | Self::Ovh | Self::Gandi | Self::Namecheap | Self::Dreamhost | Self::Mxroute | Self::SenderNet | Self::Sendpulse | Self::Mailjet | Self::Mailtrap | Self::ElasticEmail | Self::Smtp2go | Self::Mailersend | Self::Zeptomail | Self::Sendlayer | Self::Socketlabs | Self::Pepipost | Self::SmtpCom | Self::CampaignMonitor => {
+                "Delivery goes through this provider's SMTP relay (preset host and port from the catalog); the From domain should have SPF and DKIM records for that relay."
+            }
+            Self::Plunk => {
+                "Verify the sending domain in Plunk (Settings > Sending Domains) and add the SPF and DKIM records Plunk shows."
+            }
+            Self::Courier => {
+                "Verify the sending domain in Courier (Settings > Sending Domains) with SPF and DKIM records."
+            }
+            Self::Loops => {
+                "Verify the sending domain in Loops (Settings > Sending Domain) with SPF and DKIM records."
+            }
+            Self::Onesignal => {
+                "Verify the sending domain in OneSignal (Settings > Email) with SPF and DKIM records."
+            }
             Self::Sendmail => {
                 "Local delivery only: the From domain needs no DNS records, but receiving servers may reject mail from an unconfigured host."
             }
@@ -224,6 +411,12 @@ impl EmailProviderKind {
             }
             Self::Outlook => {
                 "Outlook has no webhooks; bounce and complaint handling is not available for this provider."
+            }
+            Self::Zoho | Self::ZohoEu | Self::Proton | Self::Yandex | Self::Fastmail | Self::Icloud | Self::Gmx | Self::MailCom | Self::Aol | Self::QqMail | Self::Mail163 | Self::Mail126 | Self::Sina | Self::MailRu | Self::Posteo | Self::Migadu | Self::Mailfence | Self::Startmail | Self::Runbox | Self::Kolabnow | Self::Infomaniak | Self::Ovh | Self::Gandi | Self::Namecheap | Self::Dreamhost | Self::Mxroute | Self::SenderNet | Self::Sendpulse | Self::Mailjet | Self::Mailtrap | Self::ElasticEmail | Self::Smtp2go | Self::Mailersend | Self::Zeptomail | Self::Sendlayer | Self::Socketlabs | Self::Pepipost | Self::SmtpCom | Self::CampaignMonitor => {
+                "SMTP has no webhooks; bounce and complaint handling is not available for this provider."
+            }
+            Self::Plunk | Self::Courier | Self::Loops | Self::Onesignal => {
+                "Webhook verification for this provider is not implemented; set a webhook_secret on the connection and require it as the X-Webhook-Secret header instead."
             }
             Self::Sendmail => {
                 "Local sendmail has no webhooks; bounces go to the sender mailbox on the server."
@@ -300,19 +493,23 @@ pub struct EmailCapabilities {
 /// 269). A missing definition reads as "supports nothing" (fail
 /// closed) instead of falling back to another provider.
 pub fn capabilities_for(kind: EmailProviderKind) -> EmailCapabilities {
-    let def = match kind.definition() {
-        Some(def) => def,
-        None => {
-            return EmailCapabilities {
-                transactional: false,
-                bulk: false,
-                templates: false,
-                webhooks: false,
-                tracking: false,
-                sandbox: false,
-            };
-        }
-    };
+    match kind.definition() {
+        Some(def) => capabilities_for_definition(&def),
+        None => EmailCapabilities {
+            transactional: false,
+            bulk: false,
+            templates: false,
+            webhooks: false,
+            tracking: false,
+            sandbox: false,
+        },
+    }
+}
+
+/// Capabilities from a registry definition directly (task 354):
+/// the catalog entry for a hook-provided definition has no enum
+/// kind, so it reads its capabilities here.
+pub fn capabilities_for_definition(def: &ProviderDefinition) -> EmailCapabilities {
     EmailCapabilities {
         transactional: def.capability("transactional"),
         bulk: def.capability("bulk"),
@@ -354,6 +551,15 @@ pub(crate) fn settings_fields(kind: EmailProviderKind) -> Vec<SettingsFieldDef> 
     let Some(def) = kind.definition() else {
         return Vec::new();
     };
+    settings_fields_for_definition(&def)
+}
+
+/// Settings-page field definitions from a registry definition
+/// directly (task 354): the catalog entry for a hook-provided
+/// definition has no enum kind, so it reads its fields here.
+pub(crate) fn settings_fields_for_definition(
+    def: &ProviderDefinition,
+) -> Vec<SettingsFieldDef> {
     def.credentials_shape
         .iter()
         .map(|shape| SettingsFieldDef {
@@ -428,7 +634,7 @@ mod tests {
 
     #[test]
     fn new_kinds_have_capabilities_logos_and_fields() {
-        assert_eq!(EmailProviderKind::all().len(), 13);
+        assert_eq!(EmailProviderKind::all().len(), 56);
         // OAuth kinds: transactional only, no webhooks, no sandbox.
         for kind in [
             EmailProviderKind::Gmail,
@@ -495,6 +701,77 @@ mod tests {
                 .iter()
                 .any(|field| field.key == "sender_email")
         );
+    }
+
+    #[test]
+    fn task354_preset_and_generic_kinds() {
+        // SMTP presets: transactional, no webhooks, logo stem from
+        // the registry, fields carry username/password/sender_email,
+        // never OAuth.
+        for kind in [
+            EmailProviderKind::Zoho,
+            EmailProviderKind::Proton,
+            EmailProviderKind::Mailjet,
+            EmailProviderKind::Mailtrap,
+            EmailProviderKind::CampaignMonitor,
+        ] {
+            let caps = capabilities_for(kind);
+            assert!(caps.transactional, "kind {}", kind.as_str());
+            assert!(!caps.webhooks);
+            assert!(!kind.is_oauth());
+            assert_eq!(kind.logo(), format!("email-{}", kind.as_str()));
+            let fields = settings_fields(kind);
+            assert!(
+                fields.iter().any(|field| field.key == "username" && field.required),
+                "kind {} has no username field",
+                kind.as_str()
+            );
+            assert!(
+                fields
+                    .iter()
+                    .any(|field| field.key == "password" && field.required && field.secret),
+                "kind {} has no secret password field",
+                kind.as_str()
+            );
+            assert!(fields.iter().any(|field| field.key == "sender_email"));
+        }
+        // Mailbox presets are not bulk; relay presets are.
+        assert!(!capabilities_for(EmailProviderKind::Zoho).bulk);
+        assert!(capabilities_for(EmailProviderKind::Mailjet).bulk);
+        assert!(capabilities_for(EmailProviderKind::Mailtrap).sandbox);
+        // Generic HTTP kinds: API key field, no OAuth, logo stem.
+        for kind in [
+            EmailProviderKind::Plunk,
+            EmailProviderKind::Courier,
+            EmailProviderKind::Loops,
+            EmailProviderKind::Onesignal,
+        ] {
+            assert!(capabilities_for(kind).transactional);
+            assert!(!kind.is_oauth());
+            let fields = settings_fields(kind);
+            assert!(
+                fields
+                    .iter()
+                    .any(|field| field.key == "api_key" && field.required && field.secret),
+                "kind {} has no secret api_key field",
+                kind.as_str()
+            );
+        }
+        // Loops is template-based; OneSignal needs its App ID.
+        assert!(capabilities_for(EmailProviderKind::Loops).templates);
+        assert!(
+            settings_fields(EmailProviderKind::Onesignal)
+                .iter()
+                .any(|field| field.key == "domain" && field.required)
+        );
+        // Every kind resolves its definition from the registry.
+        for kind in EmailProviderKind::all() {
+            assert!(
+                kind.definition().is_some(),
+                "kind {} has no definition",
+                kind.as_str()
+            );
+        }
     }
 
     #[test]

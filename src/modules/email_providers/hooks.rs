@@ -89,6 +89,21 @@ pub(crate) fn on_email_send_requested(ctx: &mut HookContext) {
         template_id: template_id.clone(),
         variables,
         metadata,
+        // Deliverability flags (task 354): a hook caller can mark a
+        // send as bulk or opt out of deliverability headers; the
+        // defaults keep transactional sends header-free.
+        bulk: data
+            .get("bulk")
+            .and_then(|value| value.as_bool())
+            .unwrap_or(false),
+        include_unsubscribe: data
+            .get("include_unsubscribe")
+            .and_then(|value| value.as_bool())
+            .unwrap_or(false),
+        deliverability_opt_out: data
+            .get("deliverability_opt_out")
+            .and_then(|value| value.as_bool())
+            .unwrap_or(false),
         test_mode: data
             .get("test_mode")
             .and_then(|value| value.as_bool())

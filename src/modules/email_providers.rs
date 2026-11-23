@@ -7,6 +7,7 @@
 pub mod adapters;
 pub mod credentials;
 pub mod crypto;
+pub mod deliverability;
 pub mod events;
 pub mod handlers;
 mod hooks;
@@ -21,10 +22,16 @@ pub mod store;
 mod worker;
 
 pub use self::adapters::{
-    BrevoAdapter, MailchimpAdapter, MailgunAdapter, OAuthSmtpAdapter, PostmarkAdapter,
-    ResendAdapter, SendGridAdapter, SendmailAdapter, SesAdapter, SmtpAdapter, SparkPostAdapter,
+    BrevoAdapter, GenericHttpAdapter, MailchimpAdapter, MailgunAdapter, OAuthSmtpAdapter,
+    PostmarkAdapter, ResendAdapter, SendGridAdapter, SendmailAdapter, SesAdapter, SmtpAdapter,
+    SparkPostAdapter,
 };
 pub(crate) use self::adapters::{build_lettre_message, smtp_transport, xml_tag};
+pub(crate) use self::deliverability::{
+    HEADER_AUTO_RESPONSE_SUPPRESS, HEADER_FEEDBACK_ID, HEADER_LIST_UNSUBSCRIBE,
+    HEADER_LIST_UNSUBSCRIBE_POST, HEADER_PRECEDENCE, deliverability_headers,
+    deliverability_headers_array, deliverability_headers_object, merge_headers_object,
+};
 pub(crate) use self::credentials::validate_connection;
 pub use self::credentials::{
     CreateConnectionRequest, EmailConnection, EmailConnectionView, EmailCredentials,
@@ -39,10 +46,11 @@ pub(crate) use self::events::{
 };
 pub use self::events::{
     EVENT_EMAIL_FAILED, EVENT_EMAIL_PROVIDER_CONNECTED, EVENT_EMAIL_PROVIDER_CONNECTION_CREATED,
-    EVENT_EMAIL_PROVIDER_CONNECTION_DELETED, EVENT_EMAIL_PROVIDER_OAUTH_LINKED,
-    EVENT_EMAIL_PROVIDER_OAUTH_REFRESHED, EVENT_EMAIL_PROVIDER_SETTINGS_FIELDS,
-    EVENT_EMAIL_PROVIDER_WEBHOOK_VERIFY, EVENT_EMAIL_SEND_REQUESTED, EVENT_EMAIL_SENT,
-    EVENT_MAIL_SEND_REQUESTED, EVENT_TEMPLATE_RENDER_REQUESTED,
+    EVENT_EMAIL_PROVIDER_CONNECTION_DELETED, EVENT_EMAIL_PROVIDER_DEFINITIONS,
+    EVENT_EMAIL_PROVIDER_OAUTH_LINKED, EVENT_EMAIL_PROVIDER_OAUTH_REFRESHED,
+    EVENT_EMAIL_PROVIDER_SETTINGS_FIELDS, EVENT_EMAIL_PROVIDER_WEBHOOK_VERIFY,
+    EVENT_EMAIL_SEND_REQUESTED, EVENT_EMAIL_SENT, EVENT_MAIL_SEND_REQUESTED,
+    EVENT_TEMPLATE_RENDER_REQUESTED,
 };
 pub use self::handlers::EmailProviderState;
 pub(crate) use self::handlers::{

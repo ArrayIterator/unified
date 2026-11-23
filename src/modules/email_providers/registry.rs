@@ -220,6 +220,264 @@ pub fn email_provider_registry() -> &'static EmailProviderRegistry {
                 Ok(Arc::new(SendmailAdapter::new(connection)?) as Arc<dyn EmailProvider>)
             }),
         );
+        registry.register_factory(
+            EmailProviderKind::Zoho,
+            Arc::new(|connection| {
+                Ok(Arc::new(SmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::ZohoEu,
+            Arc::new(|connection| {
+                Ok(Arc::new(SmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::Proton,
+            Arc::new(|connection| {
+                Ok(Arc::new(SmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::Yandex,
+            Arc::new(|connection| {
+                Ok(Arc::new(SmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::Fastmail,
+            Arc::new(|connection| {
+                Ok(Arc::new(SmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::Icloud,
+            Arc::new(|connection| {
+                Ok(Arc::new(SmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::Gmx,
+            Arc::new(|connection| {
+                Ok(Arc::new(SmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::MailCom,
+            Arc::new(|connection| {
+                Ok(Arc::new(SmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::Aol,
+            Arc::new(|connection| {
+                Ok(Arc::new(SmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::QqMail,
+            Arc::new(|connection| {
+                Ok(Arc::new(SmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::Mail163,
+            Arc::new(|connection| {
+                Ok(Arc::new(SmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::Mail126,
+            Arc::new(|connection| {
+                Ok(Arc::new(SmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::Sina,
+            Arc::new(|connection| {
+                Ok(Arc::new(SmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::MailRu,
+            Arc::new(|connection| {
+                Ok(Arc::new(SmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::Posteo,
+            Arc::new(|connection| {
+                Ok(Arc::new(SmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::Migadu,
+            Arc::new(|connection| {
+                Ok(Arc::new(SmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::Mailfence,
+            Arc::new(|connection| {
+                Ok(Arc::new(SmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::Startmail,
+            Arc::new(|connection| {
+                Ok(Arc::new(SmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::Runbox,
+            Arc::new(|connection| {
+                Ok(Arc::new(SmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::Kolabnow,
+            Arc::new(|connection| {
+                Ok(Arc::new(SmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::Infomaniak,
+            Arc::new(|connection| {
+                Ok(Arc::new(SmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::Ovh,
+            Arc::new(|connection| {
+                Ok(Arc::new(SmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::Gandi,
+            Arc::new(|connection| {
+                Ok(Arc::new(SmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::Namecheap,
+            Arc::new(|connection| {
+                Ok(Arc::new(SmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::Dreamhost,
+            Arc::new(|connection| {
+                Ok(Arc::new(SmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::Mxroute,
+            Arc::new(|connection| {
+                Ok(Arc::new(SmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::SenderNet,
+            Arc::new(|connection| {
+                Ok(Arc::new(SmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::Sendpulse,
+            Arc::new(|connection| {
+                Ok(Arc::new(SmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::Mailjet,
+            Arc::new(|connection| {
+                Ok(Arc::new(SmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::Mailtrap,
+            Arc::new(|connection| {
+                Ok(Arc::new(SmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::ElasticEmail,
+            Arc::new(|connection| {
+                Ok(Arc::new(SmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::Smtp2go,
+            Arc::new(|connection| {
+                Ok(Arc::new(SmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::Mailersend,
+            Arc::new(|connection| {
+                Ok(Arc::new(SmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::Zeptomail,
+            Arc::new(|connection| {
+                Ok(Arc::new(SmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::Sendlayer,
+            Arc::new(|connection| {
+                Ok(Arc::new(SmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::Socketlabs,
+            Arc::new(|connection| {
+                Ok(Arc::new(SmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::Pepipost,
+            Arc::new(|connection| {
+                Ok(Arc::new(SmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::SmtpCom,
+            Arc::new(|connection| {
+                Ok(Arc::new(SmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::CampaignMonitor,
+            Arc::new(|connection| {
+                Ok(Arc::new(SmtpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::Plunk,
+            Arc::new(|connection| {
+                Ok(Arc::new(GenericHttpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::Courier,
+            Arc::new(|connection| {
+                Ok(Arc::new(GenericHttpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::Loops,
+            Arc::new(|connection| {
+                Ok(Arc::new(GenericHttpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
+        registry.register_factory(
+            EmailProviderKind::Onesignal,
+            Arc::new(|connection| {
+                Ok(Arc::new(GenericHttpAdapter::new(connection)?) as Arc<dyn EmailProvider>)
+            }),
+        );
         registry
     })
 }
@@ -357,6 +615,7 @@ mod tests {
             sender_email: None,
             sender_name: None,
             webhook_url: None,
+            unsubscribe_url: None,
             smtp_host: None,
             smtp_port: None,
             smtp_tls: None,

@@ -125,6 +125,11 @@ pub struct EmailConnection {
     pub sender_name: Option<String>,
     /// Exact public webhook URL (needed to verify Mandrill signatures).
     pub webhook_url: Option<String>,
+    /// Optional public unsubscribe page, used for the https half of
+    /// the List-Unsubscribe header (task 354, `deliverability.rs`).
+    /// Empty means mailto only; no URL is ever invented. Validated
+    /// as an http(s) URL at write time.
+    pub unsubscribe_url: Option<String>,
     /// Generic SMTP server (kind `smtp` only): host, port, TLS mode
     /// (`starttls` | `implicit` | `none`), and the auth username.
     /// The password lives in `credentials.password` (encrypted).
@@ -158,6 +163,8 @@ pub struct EmailConnectionView {
     pub sender_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub webhook_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub unsubscribe_url: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub smtp_host: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -193,6 +200,7 @@ impl EmailConnection {
             sender_email: self.sender_email.clone(),
             sender_name: self.sender_name.clone(),
             webhook_url: self.webhook_url.clone(),
+            unsubscribe_url: self.unsubscribe_url.clone(),
             smtp_host: self.smtp_host.clone(),
             smtp_port: self.smtp_port,
             smtp_tls: self.smtp_tls.clone(),
@@ -229,6 +237,8 @@ pub struct CreateConnectionRequest {
     pub sender_name: Option<String>,
     #[serde(default)]
     pub webhook_url: Option<String>,
+    #[serde(default)]
+    pub unsubscribe_url: Option<String>,
     #[serde(default)]
     pub smtp_host: Option<String>,
     #[serde(default)]
@@ -278,6 +288,8 @@ pub struct UpdateConnectionRequest {
     #[serde(default)]
     pub webhook_url: Option<String>,
     #[serde(default)]
+    pub unsubscribe_url: Option<String>,
+    #[serde(default)]
     pub smtp_host: Option<String>,
     #[serde(default)]
     pub smtp_port: Option<u16>,
@@ -309,6 +321,31 @@ pub struct UpdateConnectionRequest {
     pub test_mode: Option<bool>,
     #[serde(default)]
     pub enabled: Option<bool>,
+}
+
+/// Validate a supplied SMTP override (host/port/TLS) the same way
+/// for generic SMTP and for the preset kinds: a port of 0 is never
+/// valid, and the TLS mode must be one of the three the adapter
+/// understands.
+fn validate_smtp_override(input: &CreateConnectionRequest) -> UnifiedResult<()> {
+    if let Some(0) = input.smtp_port {
+        return Err(UnifiedError::bad_request(
+            "smtp_port must be between 1 and 65535",
+        ));
+    }
+    if let Some(tls) = input
+        .smtp_tls
+        .as_deref()
+        .map(str::trim)
+        .filter(|v| !v.is_empty())
+    {
+        if !matches!(tls, "starttls" | "implicit" | "none") {
+            return Err(UnifiedError::bad_request(
+                "smtp_tls must be \"starttls\", \"implicit\" or \"none\"",
+            ));
+        }
+    }
+    Ok(())
 }
 
 pub(crate) fn validate_connection(
@@ -409,21 +446,88 @@ pub(crate) fn validate_connection(
                 }
                 Some(_) => {}
             }
-            if let Some(tls) = input
-                .smtp_tls
-                .as_deref()
-                .map(str::trim)
-                .filter(|v| !v.is_empty())
-            {
-                if !matches!(tls, "starttls" | "implicit" | "none") {
-                    return Err(UnifiedError::bad_request(
-                        "smtp_tls must be \"starttls\", \"implicit\" or \"none\"",
-                    ));
-                }
-            }
+            validate_smtp_override(input)?;
             if !has(&input.sender_email) {
                 return Err(UnifiedError::bad_request(
                     "Provider \"smtp\" requires sender_email",
+                ));
+            }
+        }
+        // SMTP presets (task 354): the relay host, port, and TLS
+        // mode come from the catalog definition, so the connection
+        // carries only the auth and the sender. A supplied
+        // smtp_host/port/tls overrides the preset and is validated
+        // the same way as for generic SMTP. Every preset relay
+        // requires authentication.
+        EmailProviderKind::Zoho
+        | EmailProviderKind::ZohoEu
+        | EmailProviderKind::Proton
+        | EmailProviderKind::Yandex
+        | EmailProviderKind::Fastmail
+        | EmailProviderKind::Icloud
+        | EmailProviderKind::Gmx
+        | EmailProviderKind::MailCom
+        | EmailProviderKind::Aol
+        | EmailProviderKind::QqMail
+        | EmailProviderKind::Mail163
+        | EmailProviderKind::Mail126
+        | EmailProviderKind::Sina
+        | EmailProviderKind::MailRu
+        | EmailProviderKind::Posteo
+        | EmailProviderKind::Migadu
+        | EmailProviderKind::Mailfence
+        | EmailProviderKind::Startmail
+        | EmailProviderKind::Runbox
+        | EmailProviderKind::Kolabnow
+        | EmailProviderKind::Infomaniak
+        | EmailProviderKind::Ovh
+        | EmailProviderKind::Gandi
+        | EmailProviderKind::Namecheap
+        | EmailProviderKind::Dreamhost
+        | EmailProviderKind::Mxroute
+        | EmailProviderKind::SenderNet
+        | EmailProviderKind::Sendpulse
+        | EmailProviderKind::Mailjet
+        | EmailProviderKind::Mailtrap
+        | EmailProviderKind::ElasticEmail
+        | EmailProviderKind::Smtp2go
+        | EmailProviderKind::Mailersend
+        | EmailProviderKind::Zeptomail
+        | EmailProviderKind::Sendlayer
+        | EmailProviderKind::Socketlabs
+        | EmailProviderKind::Pepipost
+        | EmailProviderKind::SmtpCom
+        | EmailProviderKind::CampaignMonitor => {
+            if !has(&input.smtp_username) {
+                return Err(missing("smtp_username"));
+            }
+            if !has(&input.password) {
+                return Err(missing("password"));
+            }
+            if !has(&input.sender_email) {
+                return Err(UnifiedError::bad_request(format!(
+                    "Provider \"{}\" requires sender_email",
+                    kind.as_str()
+                )));
+            }
+            validate_smtp_override(input)?;
+        }
+        // Generic HTTP providers (task 354): one API key. Loops
+        // needs a template at send time, not connection time.
+        EmailProviderKind::Plunk | EmailProviderKind::Courier | EmailProviderKind::Loops => {
+            if !has(&input.api_key) {
+                return Err(missing("api_key"));
+            }
+        }
+        // OneSignal also needs its App ID, stored in the domain
+        // field (the generic adapter reads it as app_id).
+        EmailProviderKind::Onesignal => {
+            if !has(&input.api_key) {
+                return Err(missing("api_key"));
+            }
+            if !has(&input.domain) {
+                return Err(UnifiedError::bad_request(
+                    "Provider \"onesignal\" requires domain (the OneSignal App ID)",
                 ));
             }
         }
@@ -435,6 +539,28 @@ pub(crate) fn validate_connection(
         if !email.trim().is_empty() && !email.contains('@') {
             return Err(UnifiedError::bad_request(
                 "sender_email is not a valid email address",
+            ));
+        }
+    }
+    // The unsubscribe URL (task 354) is the https half of
+    // List-Unsubscribe: it must be an http(s) URL with a host and
+    // no embedded credentials, so it can never smuggle a secret
+    // into a header.
+    if let Some(url) = input
+        .unsubscribe_url
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        let valid = url::Url::parse(url).is_ok_and(|parsed| {
+            matches!(parsed.scheme(), "http" | "https")
+                && parsed.host_str().is_some_and(|host| !host.is_empty())
+                && parsed.username().is_empty()
+                && parsed.password().is_none()
+        });
+        if !valid {
+            return Err(UnifiedError::bad_request(
+                "unsubscribe_url must be an http(s) URL with a host and no embedded credentials",
             ));
         }
     }
@@ -472,6 +598,7 @@ mod tests {
             sender_email: None,
             sender_name: None,
             webhook_url: None,
+            unsubscribe_url: None,
             smtp_host: None,
             smtp_port: None,
             smtp_tls: None,
@@ -560,6 +687,105 @@ mod tests {
             input.sender_email = Some("user@example.com".to_string());
             assert!(validate_connection(&input).is_ok(), "kind {kind}");
         }
+    }
+
+    #[test]
+    fn smtp_preset_validation_requires_auth_and_sender() {
+        // A preset relay needs no host/port (they come from the
+        // catalog), but it always needs auth and a sender.
+        let err = validate_connection(&base_input("zoho")).unwrap_err();
+        assert!(err.to_string().contains("smtp_username"), "kind zoho");
+        let mut input = base_input("zoho");
+        input.smtp_username = Some("you@yourdomain.com".to_string());
+        assert!(
+            validate_connection(&input)
+                .unwrap_err()
+                .to_string()
+                .contains("password")
+        );
+        input.password = Some("secret".to_string());
+        assert!(
+            validate_connection(&input)
+                .unwrap_err()
+                .to_string()
+                .contains("sender_email")
+        );
+        input.sender_email = Some("you@yourdomain.com".to_string());
+        assert_eq!(
+            validate_connection(&input).unwrap(),
+            EmailProviderKind::Zoho
+        );
+        // A supplied override is validated like generic SMTP.
+        input.smtp_port = Some(0);
+        assert!(
+            validate_connection(&input)
+                .unwrap_err()
+                .to_string()
+                .contains("smtp_port")
+        );
+        input.smtp_port = Some(465);
+        input.smtp_tls = Some("bogus".to_string());
+        assert!(
+            validate_connection(&input)
+                .unwrap_err()
+                .to_string()
+                .contains("smtp_tls")
+        );
+        // Every other preset kind validates the same way.
+        for kind in [
+            "proton", "mailjet", "mailtrap", "sender-net", "campaign-monitor",
+        ] {
+            let mut preset = base_input(kind);
+            preset.smtp_username = Some("user".to_string());
+            preset.password = Some("secret".to_string());
+            preset.sender_email = Some("news@example.com".to_string());
+            assert!(validate_connection(&preset).is_ok(), "kind {kind}");
+        }
+    }
+
+    #[test]
+    fn generic_http_validation_requires_api_key_and_app_id() {
+        for kind in ["plunk", "courier", "loops"] {
+            let err = validate_connection(&base_input(kind)).unwrap_err();
+            assert!(err.to_string().contains("api_key"), "kind {kind}");
+            let mut input = base_input(kind);
+            input.api_key = Some("key-1".to_string());
+            assert!(validate_connection(&input).is_ok(), "kind {kind}");
+        }
+        let mut onesignal = base_input("onesignal");
+        onesignal.api_key = Some("key-1".to_string());
+        assert!(
+            validate_connection(&onesignal)
+                .unwrap_err()
+                .to_string()
+                .contains("domain")
+        );
+        onesignal.domain = Some("00000000-0000-0000-0000-000000000000".to_string());
+        assert!(validate_connection(&onesignal).is_ok());
+    }
+
+    #[test]
+    fn unsubscribe_url_must_be_a_plain_http_url() {
+        let mut input = base_input("smtp");
+        input.smtp_host = Some("smtp.example.com".to_string());
+        input.smtp_port = Some(587);
+        input.sender_email = Some("news@example.com".to_string());
+        input.unsubscribe_url = Some("https://example.com/unsubscribe".to_string());
+        assert!(validate_connection(&input).is_ok());
+        for bad in [
+            "ftp://example.com/unsubscribe",
+            "https://user:secret@example.com/unsubscribe",
+            "https://",
+            "not a url",
+        ] {
+            input.unsubscribe_url = Some(bad.to_string());
+            assert!(
+                validate_connection(&input).is_err(),
+                "url {bad} must be refused"
+            );
+        }
+        input.unsubscribe_url = Some("".to_string());
+        assert!(validate_connection(&input).is_ok());
     }
 
     #[test]

@@ -149,6 +149,27 @@ pub struct ProviderDefinition {
     /// (`"stripe"`, `"s3"`, `"github"`), or the family's generic
     /// adapter (`"custom"` for payments/cloud).
     pub adapter_kind: String,
+    /// SMTP relay preset for email providers served by the generic
+    /// SMTP adapter (task 354): the relay host, port, and TLS mode
+    /// (`"starttls"` | `"implicit"` | `"none"`). A connection may
+    /// override all three; an empty connection field falls back to
+    /// these. `None` means "no preset" (custom SMTP, OAuth, API).
+    pub smtp_host: Option<String>,
+    pub smtp_port: Option<u16>,
+    pub smtp_tls: Option<String>,
+    /// Generic HTTP API configuration for email providers served by
+    /// the generic HTTP adapter (task 354): `{"endpoint",
+    /// "auth": {"scheme": "bearer" | "basic-key", "header":
+    /// "Authorization"}, "payload": <JSON template with
+    /// {to}/{from}/{subject}/{body}/{template_id}/{app_id}/
+    /// {variables} placeholders>, "id_path": <dotted key of the
+    /// provider message id in the response, or null>}`. `None`
+    /// means the provider has no generic HTTP API.
+    pub http_api: Option<Value>,
+    /// Affiliate URL for the provider, if the operator configured
+    /// one. Empty by default — never invented; the catalog never
+    /// returns one unless an admin set it.
+    pub affiliate_url: Option<String>,
     /// Whether connections need a user-supplied endpoint (payments).
     pub needs_endpoint: bool,
     /// Whether charges run through a delegate gateway connection
@@ -179,6 +200,11 @@ impl Default for ProviderDefinition {
             models: Vec::new(),
             default_model: None,
             adapter_kind: String::new(),
+            smtp_host: None,
+            smtp_port: None,
+            smtp_tls: None,
+            http_api: None,
+            affiliate_url: None,
             needs_endpoint: false,
             needs_delegate: false,
             notes: None,
@@ -243,6 +269,22 @@ impl ProviderDefinition {
             self.base_url.as_deref()
         }
     }
+
+    /// The SMTP relay preset for this provider (task 354): the relay
+    /// host plus the port and TLS mode with the adapter defaults
+    /// applied (587, STARTTLS). `None` when the provider has no
+    /// preset host — the connection must supply its own server.
+    pub fn smtp_preset(&self) -> Option<(String, u16, String)> {
+        let host = self.smtp_host.clone().filter(|value| !value.trim().is_empty())?;
+        Some((
+            host,
+            self.smtp_port.unwrap_or(587),
+            self.smtp_tls
+                .clone()
+                .filter(|value| !value.trim().is_empty())
+                .unwrap_or_else(|| "starttls".to_string()),
+        ))
+    }
 }
 
 /// A provider id is a lookup key, never free text: lowercase ASCII
@@ -285,6 +327,34 @@ fn validate_definition(def: &ProviderDefinition) -> UnifiedResult<()> {
         return Err(UnifiedError::bad_request(
             "Provider capabilities must be a JSON object",
         ));
+    }
+    // Task 354: an SMTP preset must be a usable relay (a port of 0
+    // is never valid; the TLS mode is one of the three the SMTP
+    // adapter understands), and a generic HTTP API config must be
+    // an object with an https endpoint.
+    if let Some(port) = def.smtp_port {
+        if port == 0 {
+            return Err(UnifiedError::bad_request(
+                "Provider smtp_port must be between 1 and 65535",
+            ));
+        }
+    }
+    if let Some(tls) = def.smtp_tls.as_deref().map(str::trim) {
+        if !tls.is_empty() && !matches!(tls, "starttls" | "implicit" | "none") {
+            return Err(UnifiedError::bad_request(
+                "Provider smtp_tls must be \"starttls\", \"implicit\" or \"none\"",
+            ));
+        }
+    }
+    if let Some(http_api) = &def.http_api {
+        let endpoint = http_api.get("endpoint").and_then(Value::as_str);
+        if !http_api.is_object()
+            || !endpoint.is_some_and(|url| url.starts_with("https://"))
+        {
+            return Err(UnifiedError::bad_request(
+                "Provider http_api must be an object with an https endpoint",
+            ));
+        }
     }
     Ok(())
 }
@@ -563,7 +633,7 @@ mod tests {
     fn builtin_catalog_counts_match_the_program_brief() {
         let registry = fresh();
         assert_eq!(registry.count_family(FAMILY_PAYMENTS), 12);
-        assert_eq!(registry.count_family(FAMILY_EMAIL), 13);
+        assert_eq!(registry.count_family(FAMILY_EMAIL), 56);
         assert_eq!(registry.count_family(FAMILY_STORAGE), 5);
         assert_eq!(registry.count_family(FAMILY_VCS), 3);
         assert_eq!(registry.count_family(FAMILY_AI), 4);
@@ -577,7 +647,7 @@ mod tests {
     #[test]
     fn builtin_ids_are_unique_and_valid() {
         let defs = builtin_definitions();
-        assert_eq!(defs.len(), 54);
+        assert_eq!(defs.len(), 97);
         let mut seen = std::collections::HashSet::new();
         for def in &defs {
             assert!(valid_provider_id(&def.id), "bad id {}", def.id);
@@ -661,7 +731,7 @@ mod tests {
         let def = registry.get(FAMILY_EMAIL, "acme_mail").unwrap();
         assert!(def.capability("charge"));
         assert!(def.host_allowed("api.acme.test"));
-        assert_eq!(registry.count_family(FAMILY_EMAIL), 14);
+        assert_eq!(registry.count_family(FAMILY_EMAIL), 57);
     }
 
     #[test]
@@ -826,5 +896,56 @@ mod tests {
             stripe.effective_base_url(true),
             Some("https://api.stripe.com")
         );
+    }
+
+    #[test]
+    fn email_smtp_presets_and_generic_http_configs_are_data() {
+        let registry = fresh();
+        // An SMTP preset resolves host/port/TLS from the definition.
+        let zoho = registry.get(FAMILY_EMAIL, "zoho").unwrap();
+        assert_eq!(
+            zoho.smtp_preset(),
+            Some((
+                "smtp.zoho.com".to_string(),
+                465,
+                "implicit".to_string()
+            ))
+        );
+        let proton = registry.get(FAMILY_EMAIL, "proton").unwrap();
+        assert_eq!(
+            proton.smtp_preset(),
+            Some(("127.0.0.1".to_string(), 1025, "none".to_string()))
+        );
+        // Custom SMTP has no preset: the connection supplies the server.
+        assert!(registry.get(FAMILY_EMAIL, "smtp").unwrap().smtp_preset().is_none());
+        // A generic HTTP provider carries its endpoint, auth, and
+        // payload template as data.
+        let loops = registry.get(FAMILY_EMAIL, "loops").unwrap();
+        let http_api = loops.http_api.as_ref().unwrap();
+        assert_eq!(
+            http_api.get("endpoint").and_then(Value::as_str),
+            Some("https://app.loops.so/api/v1/transactional")
+        );
+        assert_eq!(
+            http_api
+                .get("auth")
+                .and_then(|auth| auth.get("scheme"))
+                .and_then(Value::as_str),
+            Some("bearer")
+        );
+        // No affiliate URL is ever invented: every built-in is empty.
+        for def in registry.list_family(FAMILY_EMAIL) {
+            assert!(def.affiliate_url.is_none(), "affiliate set for {}", def.id);
+        }
+        // Validation refuses a bad preset and a bad HTTP config.
+        let mut bad = custom(FAMILY_EMAIL, "bad_preset");
+        bad.smtp_port = Some(0);
+        assert!(registry.register(bad).is_err());
+        let mut bad = custom(FAMILY_EMAIL, "bad_tls");
+        bad.smtp_tls = Some("bogus".to_string());
+        assert!(registry.register(bad).is_err());
+        let mut bad = custom(FAMILY_EMAIL, "bad_http");
+        bad.http_api = Some(serde_json::json!({"endpoint": "http://plain.example.com/x"}));
+        assert!(registry.register(bad).is_err());
     }
 }
