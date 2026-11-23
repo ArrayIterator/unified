@@ -1,7 +1,9 @@
 # Storage layout — public/private implementation spec (FINAL, user-settled 2026-11-23)
 
-Status: SPEC ONLY — implementation awaits the user's "gas" before any agent is
-dispatched. Do not implement from this file until then.
+Status: IMPLEMENTED — task 324, 2026-11-23 (tracker task 324, closed
+after verification). The user's "gas" was given 2026-11-23 ~08:35 WIB
+("Kirim ke agent sekarang"). The checklist below records the as-built
+state; the History section records what changed from the spec.
 
 ## Final layout (physical = provider root + stored key)
 
@@ -14,11 +16,11 @@ Temp:                 storage/temps/uploads/YYYY/MM/DD/SESSION-ID/000001.part
 
 The tenant has TWO storage areas: a public area and a private area.
 `/files/public/` serves the public area directly (zero checks);
-`/files/private/` is the gated route (see Flow section). The exact key
-shape inside each area is OPEN (part of the flip question): either the
-task-323 shape `TYPE/YYYY/MM/DD/UUIDv7.EXT` inside each area
-(visibility in the provider root), or visibility as the key's first
-segment. The flip mechanics decide it.
+`/files/private/` is the gated route (see Flow section). The key shape
+inside each area is the task-323 shape `TYPE/YYYY/MM/DD/UUIDv7.EXT`
+(visibility lives in the provider root, not in the stored key); flip
+= MOVE the object between the areas (see Flow section). Decided by
+the user's dispatch brief 2026-11-23 ~08:27 WIB.
 
 ## Stored key (DB `storage_key`, `documents` + `document_versions`)
 - Visibility is recorded in the `visibility` column on `documents`
@@ -192,10 +194,10 @@ segment. The flip mechanics decide it.
   receiving parts. Otherwise it sleeps and retries. Uploads
   (user-facing, latency-sensitive) always get full disk/CPU; hashing
   uses idle capacity only.
-- OPEN POINT (starvation guard): on a system with constant uploads,
-  an idle-only queue can starve a job forever. Recommended: a job
-  that has waited longer than N hours runs anyway (or runs in a
-  nightly maintenance window). Confirm the value of N with the user.
+- Starvation guard — DECIDED 2026-11-23 ~08:27 WIB (dispatch brief
+  default, accepted by the user's "Kirim ke agent sekarang"): N = 24
+  hours. A job that has waited longer than 24 hours runs anyway, even
+  when uploads are active.
 - The finalize job runs in the background, async, from a queue keyed by
   id (session id / document id). Runtime queue is a HashMap; the durable
   record is the DB session row — on restart, re-scan sessions that are
@@ -314,50 +316,115 @@ segment. The flip mechanics decide it.
   (public → skip header) and public listings. The `/files/public/`
   route never reads it (no DB read on that path).
 
-## Implementation checklist (for the agent brief)
-1. `build_object_key` + `StorageScope::{root, provider_key}`: the public
-   area and private area are separate roots (exact placement decided
-   with the flip question); the stored key stays visibility-neutral
-   until that decision lands.
-2. Upload paths (single + session complete) accept visibility (default
-   private), store it in the `visibility` column, and land the file in
-   the matching area.
-3. New `/files/{visibility}/...` route + handler (branch on segment):
-   public = direct serve from the public area, no auth, no DB, miss →
-   fall through to middleware; private = 4-rule flow (row → visibility
-   → header auth → object), all failures → 404 (XML error format per
-   the user's pick). Response headers per the Flow section above:
-   `Content-Type`, `Content-Length`, `Accept-Ranges: bytes`, Range →
-   `206` / `416`, inline by default, `?download=1` →
-   `Content-Disposition: attachment`. Provider gains a ranged-read
-   method (local seek / S3 GetObject Range) and the handler streams in
-   chunks — never buffers the whole file.
-4. Visibility-flip operation (OPEN — move between areas vs column-only;
-   see Flow section), wired to the future PATCH metadata endpoint
-   (task 322) or its own endpoint; content publish/unpublish flips it.
-5. Migration: add `visibility` enum column (default `'private'`) +
-   index on `visibility` + index on `storage_key`; add nullable
-   `checksum` (lazy finalize). Diesel schema updated (new column).
-6. Docs: module header docs + `config.example.yaml` comments if they
-   mention key layout.
-7. Tests: public serve without auth and without DB, public miss falls
-   through to middleware, private serve of a public file without auth
-   (Rule 1), private serve 404 without auth / with invalid auth /
-   wrong scope (uniform 404), private serve with valid auth, flip
-   (mechanics per decision), Range 206/416.
-8. Verification: rustfmt parse on touched files; grep zero
-   `public/`/`private/` first-segment key building and zero
-   object-move flip code; no `cargo check -p unified` / root-bin tests
-   (OOM wall — state plainly); `cargo test -p unified-core` only if
-   core files are touched (baseline 54/0).
-9. Tracker: create a new task (task 323 is closed; this is new work), close
+## Implementation checklist (AS BUILT — task 324, 2026-11-23)
+1. [x] `StorageScope::{root, provider_key, provider_key_for_area}` +
+   `StorageArea` (Public/Private): physical key is
+   `{root}/{area}/{key}`; the stored key stays visibility-neutral
+   (`TYPE/YYYY/MM/DD/UUIDv7.EXT`). `provider_key()` remains the
+   private-area default; every production serve path uses the
+   area-aware form.
+2. [x] Upload paths (single + session complete) accept `visibility`
+   (default private, validated); the scan runs BEFORE the store, so a
+   public request is honoured only on a clean scan; the object lands
+   in the matching area; the document row stores the visibility.
+3. [x] `/files/public/{key}` — zero checks (no auth, no DB read;
+   Content-Type from the extension only); miss → the app's normal 404
+   (JSON envelope, incl. the redirect check — the observable behaviour
+   of falling through to middleware). `/files/private/{key}` — 4-rule
+   flow (row → visibility → header auth or signed token → object), ALL
+   failures → 404 with an S3-style XML error body (decided by the
+   dispatch brief). Headers per the Flow section: `Content-Type`,
+   `Content-Length`, `Accept-Ranges: bytes`, Range → `206` / `416`,
+   inline by default, `?download=1` → `Content-Disposition: attachment;
+   filename="<original>"`. Provider gained `download_range` /
+   `object_size` / `move_object` (local seek + atomic rename; S3
+   GetObject Range + CopyObject + delete); handlers stream in 64 KiB
+   chunks — never buffer the whole file (the old `download_signed`
+   buffering is gone with the route).
+4. [x] Visibility flip — DECIDED: MOVE the object between the areas
+   (local = rename; S3 = copy → verify → delete + orphan sweeper for a
+   copy left behind by a failed rollback) + one UPDATE of the
+   `visibility` column; the URL never changes. All version objects
+   move (a flipped-to-private document's old versions must not linger
+   in the public area). Endpoint: `POST /api/v1/documents/{id}/flip`
+   (owner-or-admin, permissioned + audited via `VISIBILITY_FLIPPED`).
+   Content publish flips attached media public, unpublish flips it
+   back private (best-effort detached tasks from the `content.*`
+   hooks; the explicit flip endpoint is the reliable path). Flip to
+   public is refused unless the scan is clean.
+5. [x] Migration `2026-11-23-000123_storage_public_private`: `visibility`
+   enum column on `documents` (default `'private'`) + index on
+   `visibility` + index on `storage_key`; `checksum` nullable on
+   `documents` + `document_versions`; session status CHECK extended
+   with `'received'` + `'failed'`; NEW `finalize_jobs` table (see
+   Restart safety). Diesel schema + models updated.
+6. [x] Docs: module header docs rewritten (documents module.rs,
+   content hooks doc); `config.example.yaml` needed no key-layout
+   change.
+7. [x] Tests — in-file, root-bin modules (UNRUN: root bin is OOM-blocked;
+   only the unified-core lib tests actually ran, 56/56 incl. the 2 new
+   `validate_media_reference` tests): 4-rule flow
+   (`private_access_decision_covers_the_four_rules`), token scope
+   (`token_grants_access_requires_this_document_and_this_tenant` — a
+   token for another tenant/document never replays), atomic claim +
+   FIFO + stale-claim reaper + startup re-scan idempotency
+   (`state/finalize.rs`), picker public-only filter
+   (`picker_shows_only_public_documents_in_company_scope`), Range
+   parser (`parse_range_covers_the_supported_forms`), flip + lazy
+   finalize paths (documents state tests).
+8. [x] Verification: rustfmt parse clean on all touched files (my new
+   lines are fmt-clean; the remaining ~98 hunks are the pre-existing
+   tree-wide fmt debt — NOT reformatted); `cargo check -p unified-core`
+   exit 0; `cargo check -p unified-db-platform` exit 0; `tsc --noEmit`
+   exit 0 (incl. the new `assets/js/media-picker.ts`); `cargo test -p
+   unified-core --lib` 56 passed / 0 failed (baseline 54 + 2 new).
+   Root-bin `cargo check` / `cargo test` NOT run (VM OOM wall — the
+   bin rustc needs ~5.7 GiB on a 7.7 GiB VM; stated plainly, not
+   hidden).
+9. [x] Tracker: task 324 created first, moved to In progress, closed
    with `status_id: 4` only after verification, verified by fresh read.
-10. No push. No new dependencies. All English.
-11. Migrate the byte-serving API routes to `/files/*` (see "API is
-    JSON-only" section): retire `GET /api/v1/documents/{id}/download`
-    and `GET /api/v1/documents/download/{token}` (removal; no external
-    clients exist yet — the API is not public). Preview + signed-url
-    mint + upload stay (JSON).
+10. [x] Push: the "No push" in the old checklist is SUPERSEDED — the
+    user authorized push requests 2026-11-23 ~08:35 WIB ("boleh request
+    push juga"). No new dependencies. All English.
+11. [x] Byte-serving API routes migrated to `/files/*` (see "API is
+    JSON-only"): `GET /api/v1/documents/{id}/download` and
+    `GET /api/v1/documents/download/{token}` REMOVED (no redirect; no
+    external clients exist yet). Preview (JSON) + signed-url mint
+    (JSON `{"data": {"url": "/files/private/{key}?token=<redacted>}}`) +
+    upload stay under `/api/v1`. No file route under `/api/vX`;
+    `/files/*` has no version segment.
+12. [x] Shared media uploader/picker (scope C): `GET
+    /api/v1/documents/picker` (public-only + company scope + search +
+    module/mime filters; returns `/files/public/{key}` URLs);
+    `templates/default/documents/picker.hbs` + `assets/js/media-picker.ts`
+    (`window.UnifiedMediaPicker.open({ onAttach })`, public-only list
+    tab + upload tab, CSRF helper with retry-once, `data-media-picker-*`
+    attributes for edit forms). Wired into posts + pages (attachments
+    on Post/Page + publish/unpublish flip via `content.published` /
+    `content.unpublished` with tenant + attachments) and into the
+    other edit surfaces with media fields via the shared reference
+    contract: `unified_core::storage::validate_media_reference`
+    (document id OR `/files/{public,private}/{key}` URL; anything else
+    rejected) — store digital cover (`cover_storage_id`) + e-learning
+    course thumbnail (`thumbnail_ref`). Description lives WITH the
+    post's attachment reference, NOT on the document row (task 322
+    stays paused; no metadata columns built). NOT built, per scope:
+    folders tree/explorer UI, document_shares/sharing, Data Tools,
+    recalculate-hash.
+
+### Honest limitation — finalize_jobs write-through (C11)
+The `finalize_jobs` table exists as DDL + Diesel schema/models, and
+the finalize worker runs against the in-memory `finalize_jobs`
+DashMap with the same atomic-claim / stale-claim / idempotent-rescan
+semantics. The worker does NOT write job rows through to PostgreSQL:
+the documents module has zero Diesel/pool usage, and the table's FKs
+reference `documents` / `document_upload_sessions` rows that are
+themselves never persisted — a write-through would violate FKs without
+the full C11 persistence program (task 271). The table is the durable
+record schema + persistence target; runtime authority is the in-memory
+map; full restart recovery needs C11. This is recorded here so nobody
+reads the migration as "finalize jobs survive a restart" — they do
+not, yet.
 
 ## History (why the spec changed — do not re-litigate without the user)
 - Task 321: `tenants/{id}/{kind}/...` + `system/{kind}/...`, uuidv7 names.
@@ -380,3 +447,12 @@ segment. The flip mechanics decide it.
   private 404 format open (recommended: S3-style XML error); flip
   mechanics OPEN (zero-check public implies location encodes
   visibility).
+- 2026-11-23 ~08:27–08:35: dispatch brief filled the open points with
+  defaults (flip = MOVE, private 404 = S3-style XML error,
+  starvation-guard N = 24h); user said "Kirim ke agent sekarang" and
+  authorized push requests. Task 324 implemented it all (see the
+  as-built checklist above): migration 000123, finalize_jobs table,
+  /files/* routes, Range + streaming, flip endpoint, picker + media
+  reference contract, content publish/unpublish flips. Honest
+  limitation recorded in the checklist: finalize_jobs has no DB
+  write-through yet (C11, task 271).
