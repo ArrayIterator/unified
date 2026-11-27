@@ -14,9 +14,7 @@ use super::types::PortalMenu;
 use super::types::PortalRecord;
 use super::types::PortalView;
 
-// ---------------------------------------------------------------------------
 // Shared state
-// ---------------------------------------------------------------------------
 
 /// In-memory stores for portals. The hook bus is attached in `init`
 /// (the bus lives in `AppContext`); handlers tolerate a missing bus

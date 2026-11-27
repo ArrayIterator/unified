@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""C3 pilot 3 group A verification (task 314): pos, pricing_tables,
+"""C3 pilot 3 group A verification: pos, pricing_tables,
 loyalty, affiliates.
 
 For each module, per routed handler (same routed-set rule as
 /tmp/c3_verify.py: names appearing in `.to(name)` in the module):
 
-Task 315/320 (2026-11-23): mutation handlers resolve the strict
+Mutation handlers resolve the strict
 write gate `require_company_for_write` and record writes use the
 writable check `require_record_writable_in_company_scope*`; both
 count as scope markers. Reads use rule A: `in_company_scope` shows
@@ -44,7 +44,7 @@ SCOPE_MARKERS = (
     # body itself): pos sale-item handlers go through
     # load_editable_sale, which scope-checks the loaded sale.
     "load_editable_sale(",
-    # Task 315/320 (2026-11-23): the strict write gate and the
+    # The strict write gate and the
     # writable record checks count as scope markers too.
     "require_company_for_write",
     "require_record_writable_in_company_scope",

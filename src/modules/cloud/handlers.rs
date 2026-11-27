@@ -1,4 +1,4 @@
-// cloud module — hook-collected catalogue endpoints.
+// cloud module - hook-collected catalogue endpoints.
 //
 // Thin read endpoints over the collectors in `super::hooks`: the
 // "cloud panel" connector definitions and the SSL provider

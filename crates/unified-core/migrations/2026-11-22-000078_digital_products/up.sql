@@ -55,9 +55,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- Admin-extensible digital product type registry (seeded defaults).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS digital_product_types (
     id TEXT PRIMARY KEY,
     label TEXT NOT NULL CHECK (char_length(label) BETWEEN 1 AND 80),
@@ -75,9 +73,7 @@ INSERT INTO digital_product_types (id, label, description, enabled) VALUES
     ('digital-asset', 'Digital asset', 'A downloadable digital asset such as graphics, fonts, or data.', TRUE)
 ON CONFLICT (id) DO NOTHING;
 
--- ---------------------------------------------------------------------------
 -- Digital profile on a store product.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS digital_products (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     product_id TEXT NOT NULL,
@@ -107,9 +103,7 @@ CREATE INDEX IF NOT EXISTS digital_products_type_id_idx
 CREATE INDEX IF NOT EXISTS digital_products_status_idx
     ON digital_products (status);
 
--- ---------------------------------------------------------------------------
 -- Deliverable files of a digital product (storage references only).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS digital_product_files (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     digital_product_id UUID NOT NULL REFERENCES digital_products (id) ON DELETE CASCADE,
@@ -127,9 +121,7 @@ CREATE TABLE IF NOT EXISTS digital_product_files (
 CREATE INDEX IF NOT EXISTS digital_product_files_product_idx
     ON digital_product_files (digital_product_id);
 
--- ---------------------------------------------------------------------------
 -- Free excerpt / sample files of a digital product.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS digital_product_previews (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     digital_product_id UUID NOT NULL REFERENCES digital_products (id) ON DELETE CASCADE,
@@ -144,10 +136,8 @@ CREATE TABLE IF NOT EXISTS digital_product_previews (
 CREATE INDEX IF NOT EXISTS digital_product_previews_product_idx
     ON digital_product_previews (digital_product_id);
 
--- ---------------------------------------------------------------------------
 -- Royalty payout requests. Money moves in billing; this table only
 -- groups royalty rows into a request and tracks its lifecycle.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS digital_payout_requests (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     payee TEXT,
@@ -167,9 +157,7 @@ CREATE INDEX IF NOT EXISTS digital_payout_requests_payee_idx
 CREATE INDEX IF NOT EXISTS digital_payout_requests_status_idx
     ON digital_payout_requests (status);
 
--- ---------------------------------------------------------------------------
 -- Per-sale royalty ledger: one row per digital product per order.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS digital_royalties (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     digital_product_id UUID NOT NULL REFERENCES digital_products (id) ON DELETE RESTRICT,
@@ -196,9 +184,7 @@ CREATE INDEX IF NOT EXISTS digital_royalties_status_idx
 CREATE INDEX IF NOT EXISTS digital_royalties_order_idx
     ON digital_royalties (order_id);
 
--- ---------------------------------------------------------------------------
 -- Per-buyer download history: purchases and free samples alike.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS digital_downloads (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     digital_product_id UUID NOT NULL REFERENCES digital_products (id) ON DELETE RESTRICT,
@@ -221,10 +207,8 @@ CREATE INDEX IF NOT EXISTS digital_downloads_buyer_idx
 CREATE INDEX IF NOT EXISTS digital_downloads_order_idx
     ON digital_downloads (order_id);
 
--- ---------------------------------------------------------------------------
 -- Watermark format registry: which formats support buyer-identity
 -- metadata (seeded defaults).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS digital_watermark_formats (
     format TEXT PRIMARY KEY,
     metadata_supported BOOLEAN NOT NULL DEFAULT FALSE,

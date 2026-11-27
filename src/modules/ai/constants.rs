@@ -2,9 +2,7 @@
 
 use std::time::Duration;
 
-// ---------------------------------------------------------------------------
 // Events.
-// ---------------------------------------------------------------------------
 
 /// Emitted after a successful provider call (audit payload shape).
 pub const EVENT_AI_CALL_COMPLETED: &str = "ai.call.completed";
@@ -95,9 +93,7 @@ pub const EVENT_TICKET_CONTEXT_REQUESTED: &str = "ticket.context_requested";
 /// implements it; absence only means no transcript is merged).
 pub const EVENT_CHAT_CONTEXT_REQUESTED: &str = "chat.context_requested";
 
-// ---------------------------------------------------------------------------
 // Permissions (checked through the `role.check` hook; fail closed).
-// ---------------------------------------------------------------------------
 
 /// May generate completions and drafts.
 pub const PERM_AI_USE: &str = "ai:use";
@@ -111,9 +107,7 @@ pub const PERM_AI_APPROVE: &str = "ai:approve";
 /// May read usage records and the usage summary.
 pub const PERM_AI_READ_USAGE: &str = "ai:read_usage";
 
-// ---------------------------------------------------------------------------
 // Limits.
-// ---------------------------------------------------------------------------
 
 /// Longest provider HTTP timeout.
 pub(crate) const PROVIDER_TIMEOUT_SECS: u64 = 30;
@@ -153,7 +147,7 @@ pub(crate) const TEST_CALL_COMPLETION_TOKENS: u32 = 128;
 /// How long a cap reservation lives: a reservation is created at
 /// authorization time and reconciled (removed) once the call's
 /// actual usage is recorded. A reservation older than this is
-/// stale — its call never recorded usage — and is ignored by cap
+/// stale - its call never recorded usage - and is ignored by cap
 /// checks, so a leaked reservation cannot block caps forever.
 pub(crate) const CAP_RESERVATION_TTL_SECS: u64 = 600;
 

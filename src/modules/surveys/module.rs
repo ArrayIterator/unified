@@ -1,4 +1,4 @@
-// surveys module — Module definition and registration.
+// surveys module - Module definition and registration.
 //
 // Split from the former single-file module `src/modules/surveys.rs`.
 // The module root (`surveys.rs`) re-exports the public items, so the
@@ -32,9 +32,7 @@ use super::handlers_distributions::{create_distribution, delete_distribution, ge
 use super::handlers_public::{get_public_survey, submit_response};
 use super::ai_capabilities::AI_CAPABILITIES;
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct SurveysModule {
     pub(crate) state: SurveysState,

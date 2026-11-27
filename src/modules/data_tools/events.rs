@@ -1,4 +1,4 @@
-// data_tools — Hook events and the scheduler wiring.
+// data_tools - Hook events and the scheduler wiring.
 //
 // Ownership boundary (hard): Data Tools reaches other modules'
 // tables ONLY through these events, never directly.
@@ -13,16 +13,16 @@
 //   `{"target", "dry_run", "retention_days", "run_id"}` and the
 //   owning module answers by adding ONE result:
 //   `{"target", "counted", "removed", "errors": [], "note"}`.
-//   `dry_run: true` means count only — zero deletes, always.
+//   `dry_run: true` means count only - zero deletes, always.
 //   `cross_check` is always asked with `dry_run: true` (report-only).
 //   A target with no answering owner reports zero with a note; the
 //   resolver never crashes on an unanswered target.
 //
 //   Audit: every run emits `data_tools.run.started` and
 //   `data_tools.run.completed` (the run row in `cleanup_runs` is the
-//   audit record; the Audit module subscribes to these events —
+//   audit record; the Audit module subscribes to these events -
 //   follow-up: add them to `AUDITED_EVENTS` in the Audit module).
-//   Audit events are NEVER deleted by the cleaner — only the share
+//   Audit events are NEVER deleted by the cleaner - only the share
 //   row is.
 
 use super::*;

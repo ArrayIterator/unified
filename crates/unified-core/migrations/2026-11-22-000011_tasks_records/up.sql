@@ -29,11 +29,9 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- A task: title, description, assignee, reporter, priority, status
 -- workflow, due date, optional company linkage and project name,
 -- tags, and time estimate / time spent.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS tasks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title VARCHAR NOT NULL,
@@ -66,9 +64,7 @@ CREATE INDEX IF NOT EXISTS idx_tasks_company_id
 CREATE INDEX IF NOT EXISTS idx_tasks_due_date
     ON tasks (due_date);
 
--- ---------------------------------------------------------------------------
 -- One comment on a task.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS task_comments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     task_id UUID NOT NULL REFERENCES tasks (id) ON DELETE CASCADE ON UPDATE NO ACTION,
@@ -81,9 +77,7 @@ CREATE TABLE IF NOT EXISTS task_comments (
 CREATE INDEX IF NOT EXISTS idx_task_comments_task_id
     ON task_comments (task_id);
 
--- ---------------------------------------------------------------------------
 -- One checklist item on a task.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS task_checklist_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     task_id UUID NOT NULL REFERENCES tasks (id) ON DELETE CASCADE ON UPDATE NO ACTION,
@@ -97,11 +91,9 @@ CREATE TABLE IF NOT EXISTS task_checklist_items (
 CREATE INDEX IF NOT EXISTS idx_task_checklist_items_task_id
     ON task_checklist_items (task_id);
 
--- ---------------------------------------------------------------------------
 -- One system record: who did what, when, on which entity. Records
 -- are created only by listening to events on the hook bus; the
 -- retention purge is the only delete path.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS system_records (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     seq BIGINT NOT NULL,

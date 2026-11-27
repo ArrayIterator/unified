@@ -1,4 +1,4 @@
-// Events Manager — Hook-bus listeners.
+// Events Manager - Hook-bus listeners.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -71,9 +71,7 @@ pub(crate) fn on_reminders_send_requested(state: EventsState, ctx: &mut HookCont
     }
 }
 
-// ---------------------------------------------------------------------------
 // Payment listeners (mirror the store module)
-// ---------------------------------------------------------------------------
 
 /// Confirm a paid registration on `payment.captured`, mirroring
 /// `store.rs` `on_payment_captured`:
@@ -84,7 +82,7 @@ pub(crate) fn on_reminders_send_requested(state: EventsState, ctx: &mut HookCont
 /// - An explicit non-`captured` status is never treated as a
 ///   capture; a missing status means the event name is the claim.
 /// - Only `pending_payment` / `pending_verification` may move to
-///   confirmed — never `cancelled`; an already-confirmed
+///   confirmed - never `cancelled`; an already-confirmed
 ///   registration is a safe no-op, so redelivered captures are
 ///   safe.
 /// - Amount check: for gateway payments the captured amount

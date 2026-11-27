@@ -18,9 +18,7 @@ use super::{events::*, card_validation::*, card_settings::*, limits::*, provider
 
 
 #[async_trait]
-// ---------------------------------------------------------------------------
 // Common adapter interface.
-// ---------------------------------------------------------------------------
 /// The interface every payment adapter implements. Only `charge` is
 /// required in the sense that every kind supports it; every other
 /// operation has a default implementation that fails with a clear
@@ -132,9 +130,7 @@ pub(crate) fn unsupported(kind: PaymentProviderKind, action: &str, capability: &
 
 
 
-// ---------------------------------------------------------------------------
 // Shared HTTP helpers.
-// ---------------------------------------------------------------------------
 pub(crate) fn hex_encode(bytes: &[u8]) -> String {
     const HEX: &[u8; 16] = b"0123456789abcdef";
     let mut out = String::with_capacity(bytes.len() * 2);
@@ -371,7 +367,7 @@ pub(crate) fn major_to_minor(amount_major: f64, currency: &str) -> i64 {
 
 
 /// Convert a major-unit decimal string (for example `"10.50"` or
-/// `"10000"`) to integer minor units with integer arithmetic only —
+/// `"10000"`) to integer minor units with integer arithmetic only -
 /// no float is involved at any point. Rounds half-up on the first
 /// discarded fraction digit. Provider-facing code must use this
 /// (or `major_amount` / `major_decimal_value`) instead of parsing
@@ -442,7 +438,7 @@ pub(crate) fn major_decimal_value(amount_minor: i64, currency: &str) -> UnifiedR
 /// `pending_checkouts_store`). A charge or intent for that order
 /// must carry exactly that total in that currency; anything else
 /// is a tampered amount. Orders with no recorded checkout (direct
-/// API charges) have nothing to compare against, so they pass —
+/// API charges) have nothing to compare against, so they pass -
 /// the caller is trusted there, which is why this is a second line
 /// of defence and not a substitute for API authentication.
 pub(crate) fn check_pending_checkout_amount(
@@ -552,7 +548,7 @@ pub(crate) fn require_customer_any(
 /// payouts. Checked through the `role.check` hook exactly like
 /// the tenants and printing modules do, and fails closed on
 /// silence (no roles module answering means denied). The role
-/// comes from the `x-role` header — the same trusted-header
+/// comes from the `x-role` header - the same trusted-header
 /// caveat as the rest of the codebase applies until the auth
 /// extractor lands.
 pub(crate) const PAYMENTS_ADMIN_PERMISSION: &str = "payments:admin";
@@ -613,9 +609,7 @@ pub(crate) fn require_payments_admin(
     require_payments_admin_on_bus(&ctx.hooks, req)
 }
 
-// ---------------------------------------------------------------------------
 // Tenant edge guard (C3 pilot 5, group C).
-// ---------------------------------------------------------------------------
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request
@@ -665,7 +659,7 @@ pub(crate) fn list_customer_scope(
 
 /// Success status for a charge / pay / confirm outcome: 201 only
 /// when money was actually captured; every other recorded outcome
-/// — pending, requires_confirmation, authorized — is 202, so
+/// - pending, requires_confirmation, authorized - is 202, so
 /// callers can tell "paid" from "pending" by status code instead
 /// of only by the body's `status` field. The response body still
 /// carries the provider status.

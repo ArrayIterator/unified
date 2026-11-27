@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// --- Hook listeners ----------------------------------------------------------
+// Hook listeners
 
 /// Handle an approval decision from the approvals flow. Only a
 /// `submitted` report whose stored request id matches the event
@@ -143,7 +143,7 @@ pub(crate) fn request_generic_approval(state: &ExpensesState, report: &ExpenseRe
         return None;
     };
     let summary = format!(
-        "Expense report \"{}\" — {} {}",
+        "Expense report \"{}\" - {} {}",
         report.title, report.total_minor, report.currency
     );
     let context = bus.emit(
@@ -175,17 +175,17 @@ pub(crate) fn request_generic_approval(state: &ExpensesState, report: &ExpenseRe
 }
 
 /// Handle a generic `approval.decided` from the approvals flow.
-/// Correlates the decision to a submitted report — by the stored
+/// Correlates the decision to a submitted report - by the stored
 /// approvals `request_id` when the report carries one, otherwise
 /// by the (`module`, `record_type`, `record_id`) triple (requests
 /// created before this bridge landed, or by an admin through the
-/// approvals API) — then re-emits it as `expenses.approval.decided`
+/// approvals API) - then re-emits it as `expenses.approval.decided`
 /// so the existing listener applies the outcome (status move,
 /// reimbursement, notifications) exactly once. A decision for an
 /// unknown request, a mismatched report, or a report that is no
 /// longer `submitted` is ignored as a safe no-op. `approved` and
 /// `rejected` advance the report; `changes_requested` is re-emitted
-/// for listeners but leaves the report `submitted` — the requester
+/// for listeners but leaves the report `submitted` - the requester
 /// withdraws it to draft to revise it.
 pub(crate) fn on_generic_approval_decided(state: Arc<ExpensesState>, ctx: &mut HookContext) {
     if opt_string(&ctx.data, "module").as_deref() != Some(APPROVAL_MODULE) {
@@ -216,7 +216,7 @@ pub(crate) fn on_generic_approval_decided(state: Arc<ExpensesState>, ctx: &mut H
         return;
     }
     // When the report carries the approvals request id from submit,
-    // the decision must carry the same id — a stale decision for an
+    // the decision must carry the same id - a stale decision for an
     // earlier round (withdrawn and resubmitted) must not apply to
     // the current round. Without a stored id, the record triple
     // above is the correlation.
@@ -332,7 +332,7 @@ pub(crate) fn on_payment_event(state: Arc<ExpensesState>, ctx: &mut HookContext,
 /// confirmed the object exists. Matching is by storage key:
 /// that is the identity the receipt row stores. When the event
 /// names the uploading module, only this module's own uploads
-/// verify receipts here — an object another module stored under
+/// verify receipts here - an object another module stored under
 /// the same key is not this module's receipt.
 fn verify_receipts_for_key(state: &ExpensesState, key: &str, verified: bool) {
     let receipt_ids: Vec<Uuid> = state

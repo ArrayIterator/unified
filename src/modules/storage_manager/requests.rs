@@ -7,9 +7,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Request bodies.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct CreateBucketRequest {

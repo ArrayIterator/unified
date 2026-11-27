@@ -4,9 +4,7 @@ use super::{constants::*, events::*, settings::*, records::*, state::*, auth::*,
 
 
 
-// ---------------------------------------------------------------------------
 // Lifecycle vocabulary (data, not code paths).
-// ---------------------------------------------------------------------------
 /// Tenant lifecycle statuses. The vocabulary is data: the state
 /// machine below is the only place that gives it meaning.
 pub const STATUS_PROVISIONING: &str = "provisioning";
@@ -58,9 +56,7 @@ pub fn transition_allowed(from: &str, to: &str) -> bool {
 
 
 
-// ---------------------------------------------------------------------------
 // Provisioning pipeline vocabulary (data).
-// ---------------------------------------------------------------------------
 /// Pipeline steps, in execution order. A re-run resumes at the
 /// first step whose recorded status is not `completed`.
 pub const STEP_CREATE_RECORD: &str = "create_record";
@@ -87,7 +83,7 @@ pub const PROVISION_STEPS: &[&str] = &[
 ];
 
 
-/// Step statuses. `skipped` is a recorded, explained outcome —
+/// Step statuses. `skipped` is a recorded, explained outcome -
 ///
 /// never a silent drop.
 pub const STEP_PENDING: &str = "pending";

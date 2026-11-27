@@ -10,9 +10,7 @@ use uuid::Uuid;
 
 use super::types::PanelConnection;
 
-// ---------------------------------------------------------------------------
 // In-memory stores (same pattern as the provider connection store).
-// ---------------------------------------------------------------------------
 
 pub(crate) static CONNECTIONS: OnceLock<DashMap<Uuid, PanelConnection>> = OnceLock::new();
 

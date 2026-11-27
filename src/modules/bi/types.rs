@@ -237,9 +237,7 @@ pub struct ComputedKpi {
     pub status: String,
 }
 
-// ---------------------------------------------------------------------------
 // Request bodies
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct CreateReportRequest {

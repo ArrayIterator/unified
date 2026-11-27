@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// --- Handlers: reports ------------------------------------------------------
+// Handlers: reports
 
 pub(crate) async fn list_reports(
     ctx: web::Data<Arc<AppContext>>,
@@ -383,7 +383,7 @@ pub(crate) async fn submit_report(
         // generic `approval.decided` answer. When the approvals
         // module declines (no active definition) or is not
         // registered, the submit still succeeds and the report
-        // stays `submitted` — a missing definition never advances
+        // stays `submitted` - a missing definition never advances
         // the report on its own.
         if let Some(generic_id) = request_generic_approval(&state, &report) {
             report.generic_approval_request_id = Some(generic_id);
@@ -512,7 +512,7 @@ pub(crate) async fn export_report(
     ok(json!({ "report": report, "expenses": lines }))
 }
 
-// --- Report transitions (unit-testable state moves) ------------------------
+// Report transitions (unit-testable state moves)
 
 /// Atomically move a draft report to `submitted`. The draft
 /// check and the move happen while the per-report DashMap write
@@ -554,7 +554,7 @@ pub(crate) fn try_submit_transition(
 
 /// Withdraw a report: submitted or rejected back to draft. The
 /// approval correlation ids are cleared AND the stale decision
-/// metadata (`decided_at`, `decided_by`, `decision_reason`) — a
+/// metadata (`decided_at`, `decided_by`, `decision_reason`) - a
 /// withdrawn report is a fresh draft, and the earlier decision
 /// must not linger on it. Returns the expenses-side approval
 /// request id and the generic approvals request id that were

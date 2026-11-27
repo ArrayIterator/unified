@@ -108,7 +108,7 @@ pub(crate) async fn list_entries(
 
 /// Record a metric value (manager). When a value already
 /// exists for the same (metric, period, scope) combination,
-/// the value is updated instead of duplicated — the update
+/// the value is updated instead of duplicated - the update
 /// appends a history row and emits `esg.entry.updated`.
 pub(crate) async fn create_entry(
     state: web::Data<EsgState>,
@@ -372,9 +372,7 @@ pub(crate) async fn list_entry_history(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Shared write path
-// ---------------------------------------------------------------------------
 
 /// Append one value-history row for an entry.
 fn append_history(

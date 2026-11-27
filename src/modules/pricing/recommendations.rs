@@ -1,4 +1,4 @@
-// pricing — recommendations.
+// pricing - recommendations.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -57,9 +57,7 @@ impl CalculationLine {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Pure pricing engines (no database, no I/O; unit-tested below).
-// ---------------------------------------------------------------------------
 
 /// One cost component of a cost-plus recommendation.
 #[derive(Debug, Clone, Serialize, Deserialize)]

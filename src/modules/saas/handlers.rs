@@ -62,9 +62,7 @@ fn emit_theme_activated(state: &SaasState, answer: HookContext, site: &Site) {
     }
 }
 
-// ---------------------------------------------------------------------------
 // HTTP handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_sites(
     ctx: web::Data<Arc<AppContext>>,
@@ -562,9 +560,7 @@ pub(crate) async fn update_site_settings(
     api_json::success_response(json!({ "site_id": site_id, "settings": settings }), 200)
 }
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {

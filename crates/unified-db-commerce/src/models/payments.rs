@@ -11,9 +11,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Discount coupons.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable)]
 #[diesel(table_name = store_coupons)]
@@ -80,9 +78,7 @@ pub struct NewInvoiceSequence {
     pub name: String,
 }
 
-// ---------------------------------------------------------------------------
 // Payments and bank transfer (2026-11-22-000014_payments_bank_transfer).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = payment_connections)]

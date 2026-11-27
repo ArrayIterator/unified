@@ -29,9 +29,7 @@ pub struct NewAuthRecoveryCode {
     pub used_at: Option<DateTime<Utc>>,
 }
 
-// ---------------------------------------------------------------------------
 // Security (2026-11-22-000020_security).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = security_ip_lists)]
@@ -94,9 +92,7 @@ pub struct NewSecurityFailedAuthCluster {
     pub account: Option<String>,
 }
 
-// ---------------------------------------------------------------------------
 // MCP servers (2026-11-22-000029_mcp).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = mcp_servers)]
@@ -147,9 +143,7 @@ pub struct NewMcpSettings {
     pub read_only_role: Option<String>,
 }
 
-// ---------------------------------------------------------------------------
 // AI (2026-11-22-000030_ai).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = ai_provider_connections)]

@@ -13,9 +13,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Plans.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_plans(
     state: web::Data<StorageManagerState>,
@@ -389,7 +387,7 @@ pub(crate) async fn assign_plan(
             )));
         }
         // Tenant scoping: the assignment's company is verified
-        // against the caller's scope — a scoped caller assigns for
+        // against the caller's scope - a scoped caller assigns for
         // their own company (an omitted company adopts it); an
         // unresolved caller may only assign personally.
         let body_company = optional_text(&input.company_id, "company_id", 128)?;
@@ -414,7 +412,7 @@ pub(crate) async fn assign_plan(
         // Assignments are keyed by id and cancelled rows are
         // retained: an active assignment is updated in place (same
         // id, plan changed), while a buyer with no active
-        // assignment — including one whose only row is cancelled —
+        // assignment - including one whose only row is cancelled -
         // gets a fresh row with a new id. The cancelled row stays
         // resolvable and its history is preserved.
         if let Some(active) =
@@ -736,7 +734,7 @@ pub(crate) async fn report_metering(
     let result: UnifiedResult<MeteringReport> = (|| {
         let input = body.into_inner();
         // Tenant scoping: the report's company is verified against
-        // the caller's scope — a scoped caller reports for their
+        // the caller's scope - a scoped caller reports for their
         // own company (an omitted company adopts it); an unresolved
         // caller may only report personally.
         let body_company = optional_text(&input.company_id, "company_id", 128)?;

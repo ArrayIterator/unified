@@ -7,9 +7,7 @@ use std::sync::{Arc, RwLock};
 use unified_core::hooks::HookBus;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Shared state
-// ---------------------------------------------------------------------------
 
 /// In-memory stores for the spreadsheets module. The hook bus
 /// is attached in `init` (the bus lives in `AppContext`);

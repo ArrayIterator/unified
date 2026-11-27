@@ -1,4 +1,4 @@
-// Tax module — permission and vocabulary constants.
+// Tax module - permission and vocabulary constants.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use super::*;
@@ -23,9 +23,7 @@ use std::time::Duration;
 use url::Url;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Constants
-// ---------------------------------------------------------------------------
 
 /// Capabilities checked through the `role.check` hook.
 pub const PERM_VIEW: &str = "tax:view";

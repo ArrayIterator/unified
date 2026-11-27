@@ -1,4 +1,4 @@
-//! Compliance Center module — GDPR / ISO support: data export — Checklist handlers.
+//! Compliance Center module - GDPR / ISO support: data export - Checklist handlers.
 //!
 //! Split from `src/modules/compliance.rs`; behaviour unchanged.
 

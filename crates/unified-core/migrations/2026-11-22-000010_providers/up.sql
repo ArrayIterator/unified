@@ -28,9 +28,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One stored provider connection.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS provider_connections (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR NOT NULL,
@@ -54,10 +52,8 @@ CREATE INDEX IF NOT EXISTS idx_provider_connections_kind
 CREATE INDEX IF NOT EXISTS idx_provider_connections_enabled
     ON provider_connections (enabled);
 
--- ---------------------------------------------------------------------------
 -- Cached inventory: one server, container, pod, deployment, or
 -- cluster reported by a provider connection.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS provider_servers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     connection_id UUID NOT NULL REFERENCES provider_connections (id) ON DELETE CASCADE ON UPDATE NO ACTION,

@@ -1,4 +1,4 @@
-// Properties — Block status machine + audit history.
+// Properties - Block status machine + audit history.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -19,9 +19,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Block status machine + audit history
-// ---------------------------------------------------------------------------
 
 /// Write one audited history row for a block status change.
 pub(crate) fn record_history(

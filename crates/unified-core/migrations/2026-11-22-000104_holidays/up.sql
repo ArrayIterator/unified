@@ -53,9 +53,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- Provider registry (platform reference data).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS holiday_providers (
     id TEXT PRIMARY KEY CHECK (char_length(id) BETWEEN 1 AND 64),
     name TEXT NOT NULL CHECK (char_length(name) BETWEEN 1 AND 100),
@@ -74,9 +72,7 @@ CREATE TABLE IF NOT EXISTS holiday_providers (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- ---------------------------------------------------------------------------
 -- Country list (platform reference data, ISO 3166-1 alpha-2).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS holiday_countries (
     code TEXT PRIMARY KEY CHECK (char_length(code) = 2),
     name TEXT NOT NULL CHECK (char_length(name) BETWEEN 1 AND 100),
@@ -85,9 +81,7 @@ CREATE TABLE IF NOT EXISTS holiday_countries (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- ---------------------------------------------------------------------------
 -- Per-tenant sync configs (tenant business data).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS holiday_sync_configs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 128),
@@ -107,10 +101,8 @@ CREATE INDEX IF NOT EXISTS idx_holiday_sync_configs_tenant
 CREATE INDEX IF NOT EXISTS idx_holiday_sync_configs_provider
     ON holiday_sync_configs (provider_id);
 
--- ---------------------------------------------------------------------------
 -- Sync runs: last-sync state per (provider, country, year)
 -- (tenant business data).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS holiday_sync_runs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 128),
@@ -135,9 +127,7 @@ CREATE INDEX IF NOT EXISTS idx_holiday_sync_runs_config
 CREATE INDEX IF NOT EXISTS idx_holiday_sync_runs_provider_country_year
     ON holiday_sync_runs (provider_id, country, year);
 
--- ---------------------------------------------------------------------------
 -- Synced holidays (shared reference data, keyed by country+year).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS holidays (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     country TEXT NOT NULL CHECK (char_length(country) = 2),
@@ -158,11 +148,9 @@ CREATE INDEX IF NOT EXISTS idx_holidays_country_date
 CREATE INDEX IF NOT EXISTS idx_holidays_provider
     ON holidays (provider_id);
 
--- ---------------------------------------------------------------------------
 -- Manual overrides (tenant business data). One override per
 -- (tenant, country, date): a second override for the same date is
 -- refused by the module (409) and by the unique index below.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS holiday_overrides (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 128),

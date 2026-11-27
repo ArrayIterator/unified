@@ -26,7 +26,6 @@ use super::state::AcademicState;
 use super::types::Attendance;
 use super::types::Enrollment;
 
-// ---------------------------------------------------------------------------
 // AI capabilities (AI Capabilities Contract, see `crate::modules::ai`).
 //
 // Declared here, registered once in `init`, grounded through the
@@ -37,7 +36,7 @@ use super::types::Enrollment;
 /// Anonymised progress grounding for one student: GPA, credits,
 /// standing, enrollment and attendance aggregates, and per-subject
 /// average component scores. Carries no user id, no student
-/// number, and no names — only opaque subject codes and titles.
+/// number, and no names - only opaque subject codes and titles.
 pub(crate) fn academic_progress_grounding(state: &AcademicState, student_id: &str) -> Value {
     let (gpa, total_credits, earned_credits) = state.gpa_for(student_id);
     let enrollments: Vec<Enrollment> = state
@@ -122,7 +121,7 @@ pub(crate) fn academic_progress_grounding(state: &AcademicState, student_id: &st
 /// Run one registered academic AI capability:
 /// `POST /api/v1/academic/ai/{capability}` with body
 /// `{"input": {...}}`. Requires `ai:use` (plus the module's own
-/// `academic:read`, and — for `summarize_progress` — the module's
+/// `academic:read`, and - for `summarize_progress` - the module's
 /// read scoping for the named student, so an AI caller cannot
 /// summarize a student they may not read). Delegates to the AI
 /// module's gated runner.

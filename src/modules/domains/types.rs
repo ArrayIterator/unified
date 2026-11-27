@@ -6,9 +6,7 @@ use diesel::prelude::*;
 use serde::Deserialize;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Request types.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct CreateDomainRequest {

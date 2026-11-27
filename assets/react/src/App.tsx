@@ -51,7 +51,7 @@ function NotFoundPage() {
       </p>
       <p className="mt-4">
         <Link to="/" className="text-accent hover:underline">
-          ← Back to the dashboard
+          <- Back to the dashboard
         </Link>
       </p>
     </div>
@@ -152,7 +152,7 @@ export default function App() {
       </nav>
       <div className="mt-auto space-y-2 border-t border-border p-3 text-xs text-faint">
         <p>
-          React track — the classic dashboard lives at{" "}
+          React track - the classic dashboard lives at{" "}
           <a href="/dashboard" className="text-accent hover:underline">
             /dashboard
           </a>
@@ -192,7 +192,7 @@ export default function App() {
             ariaLabel={sidebarOpen || drawerOpen ? "Collapse sidebar" : "Expand sidebar"}
             ariaExpanded={sidebarOpen || drawerOpen}
           >
-            ☰
+            Menu
           </Button>
           <h1 className="text-lg font-semibold">{titleForPath(location.pathname)}</h1>
           <Button
@@ -204,7 +204,7 @@ export default function App() {
             }
             className="ml-auto"
           >
-            {theme === "dark" ? "☀ Light" : "☾ Dark"}
+            {theme === "dark" ? "Light" : "Dark"}
           </Button>
         </header>
 

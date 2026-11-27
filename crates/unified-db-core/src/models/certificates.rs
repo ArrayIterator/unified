@@ -10,9 +10,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Certificates (2026-11-22-000005_certificates).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 // NOTE: the path must stay fully qualified to the TABLE module.

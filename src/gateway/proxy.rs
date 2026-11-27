@@ -17,9 +17,9 @@
 // no crate registry access; see the coordinator report for the full
 // list): every Pingora API call below that is not part of that
 // documented shape is marked `UNCERTAIN (pingora-N)`. The rest of
-// this file — routing-rule matching, upstream selection through the
+// this file - routing-rule matching, upstream selection through the
 // load-balancer module, header handling, health exclusion, request
-// logging — uses only verified in-repo APIs.
+// logging - uses only verified in-repo APIs.
 //
 // Upstream selection delegates to the load balancer: balancer pools
 // resolve through `eligible_backends` + the pure `select_backend`
@@ -32,8 +32,8 @@
 //
 // Stop semantics: Pingora's graceful shutdown is signal-driven at
 // the process level (SIGTERM / SIGINT). `GatewayService::stop`
-// therefore drains the gateway — new requests are rejected with
-// 503 and in-flight requests finish — and the listener thread exits
+// therefore drains the gateway - new requests are rejected with
+// 503 and in-flight requests finish - and the listener thread exits
 // with the process. A stopped service cannot rebind its listen
 // addresses in the same process; restarting after a stop requires a
 // daemon restart. See `GatewayService::stop` and UNCERTAIN
@@ -98,7 +98,7 @@ pub struct GatewayCtx {
     pub rule_id: Option<Uuid>,
     /// The matched rule itself (cloned). The fallback rule for the
     /// default upstream is never stored in the rule store, so the
-    /// context must carry the rule — looking it up by id again in
+    /// context must carry the rule - looking it up by id again in
     /// `upstream_peer` would fail for the fallback path.
     pub rule: Option<RoutingRule>,
     pub upstream: Option<UpstreamChoice>,
@@ -575,9 +575,7 @@ fn fallback_rule_for_default(default_upstream: &str) -> UnifiedResult<RoutingRul
     })
 }
 
-// ---------------------------------------------------------------------------
 // Service lifecycle.
-// ---------------------------------------------------------------------------
 
 /// Handle to a running Pingora service thread. The thread itself is
 /// detached (Pingora's `run_forever` never returns); the handle only
@@ -737,7 +735,7 @@ impl GatewayService {
 
     /// Drain the gateway: new requests are rejected with 503 and
     /// in-flight requests finish. The Pingora listener thread keeps
-    /// its sockets until the process exits — Pingora's graceful
+    /// its sockets until the process exits - Pingora's graceful
     /// shutdown is signal-driven (SIGTERM / SIGINT) at the process
     /// level, and `run_forever` owns the `Server` value, so there is
     /// no in-process handle to close it with.

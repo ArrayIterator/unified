@@ -21,9 +21,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Attendance and history
-// ---------------------------------------------------------------------------
 
 fn attendance_view(participant: &Participant) -> AttendanceView {
     let duration_secs = match (participant.joined_at, participant.left_at) {

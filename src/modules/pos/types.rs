@@ -1,4 +1,4 @@
-// Pos module — register, shift, sale, receipt, and settings types.
+// Pos module - register, shift, sale, receipt, and settings types.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use unified_core::context::AppContext;
@@ -19,9 +19,7 @@ use std::sync::{
 use uuid::Uuid;
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// One POS terminal / register. `cashiers` holds the user ids
 /// allowed to open shifts and sell on this register; a manager

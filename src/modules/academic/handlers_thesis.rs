@@ -54,9 +54,7 @@ use super::types::UpdateDefinition;
 use super::types::UpdateSetting;
 use super::types::UpdateThesis;
 
-// ---------------------------------------------------------------------------
 // Handlers: theses
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_theses(
     ctx: web::Data<Arc<AppContext>>,
@@ -439,9 +437,7 @@ pub(crate) async fn delete_thesis(
     json::respond(result, debug)
 }
 
-// ---------------------------------------------------------------------------
 // Handlers: academic standing
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_standing(
     ctx: web::Data<Arc<AppContext>>,
@@ -606,9 +602,7 @@ pub(crate) async fn list_student_standing(
     json::respond(result, debug)
 }
 
-// ---------------------------------------------------------------------------
 // Handlers: definitions and settings
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_definitions(
     ctx: web::Data<Arc<AppContext>>,

@@ -35,9 +35,7 @@ pub(crate) const PRESENCE_STALE_SECS: i64 = 60;
 /// Default signed-URL lifetime for a stored recording (1 hour).
 pub(crate) const RECORDING_SIGNED_URL_SECS: u64 = 3600;
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// A participant's role inside one room.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -235,9 +233,7 @@ pub struct JoinResult {
     pub participant: Participant,
 }
 
-// ---------------------------------------------------------------------------
 // Request bodies
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct CreateRoomRequest {
@@ -285,7 +281,7 @@ pub struct PostMeetingMessageRequest {
 }
 
 /// One WebRTC signalling message. `payload` is the SDP (offer /
-/// answer) or ICE candidate object, passed through untouched — the
+/// answer) or ICE candidate object, passed through untouched - the
 /// server never parses media descriptions, it only routes them.
 #[derive(Debug, Deserialize)]
 pub struct SignalRequest {
@@ -333,9 +329,7 @@ pub struct MeetingsWsQuery {
     pub room: Option<String>,
 }
 
-// ---------------------------------------------------------------------------
 // Shared state
-// ---------------------------------------------------------------------------
 
 /// In-memory stores for meetings. The hook bus is attached in `init`
 /// (the bus lives in `AppContext`); handlers tolerate a missing bus

@@ -1,4 +1,4 @@
-// Gamification — Reward handlers.
+// Gamification - Reward handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -16,9 +16,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Reward handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_rewards(
     ctx: web::Data<Arc<AppContext>>,
@@ -240,7 +238,7 @@ pub(crate) async fn request_reward(
         // The scope the points are spent from is resolved here and
         // snapshotted onto the request: the balance is checked
         // within that (company, season) scope, and approval deducts
-        // within the same scope — never against the unscoped total,
+        // within the same scope - never against the unscoped total,
         // which could spend another company's or season's points.
         let scope = query.into_inner();
         let company_id = scope
@@ -249,7 +247,7 @@ pub(crate) async fn request_reward(
             .filter(|raw| !raw.is_empty());
         let (company_id, season_id) =
             resolve_reward_scope(&state, company_id, scope.season_id);
-        // No points are deducted on request — only on approval.
+        // No points are deducted on request - only on approval.
         // The request is refused up front when the balance in scope
         // cannot cover the cost, so a request can never be approved
         // into a negative balance in that scope.

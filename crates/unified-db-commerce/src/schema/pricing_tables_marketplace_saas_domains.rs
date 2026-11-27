@@ -3,12 +3,10 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Pricing Tables + Marketplace Builder (2026-11-22-000041_pricing_marketplace).
 // Note: `pricing_tiers` here is the 000041 shape (pricing-table
 // feature tiers); migration 000103_pricing creates a different
-// `pricing_tiers` (volume quantity tiers) — see the header note.
-// ---------------------------------------------------------------------------
+// `pricing_tiers` (volume quantity tiers) - see the header note.
 
 diesel::table! {
     pricing_tables (id) {
@@ -133,13 +131,11 @@ diesel::table! {
     }
 }
 
-// ---------------------------------------------------------------------------
 // SaaS domains (migration 000072_saas_domains), domain verification
 // (migration 000074_domain_verification), domain cert modes +
-// Cloudflare (migration 000075_domain_cert_modes); batch 8 notes §3.
+// Cloudflare (migration 000075_domain_cert_modes); batch 8 notes sec. 3.
 // The notes write bare `table!` and `BigInt`/`Integer`; normalised
 // to the file's `diesel::table!` / `Int8` / `Int4` style.
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     saas_domain_reservations (id) {
@@ -184,9 +180,7 @@ diesel::table! {
     }
 }
 
-// ---------------------------------------------------------------------------
-// SaaS product subdomains (batch 15 B2 notes §2).
-// ---------------------------------------------------------------------------
+// SaaS product subdomains (batch 15 B2 notes sec. 2).
 
 diesel::table! {
     saas_product_subdomains (id) {

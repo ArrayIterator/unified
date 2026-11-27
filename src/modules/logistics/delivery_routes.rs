@@ -1,4 +1,4 @@
-//! Logistics module — shipments, fleet, warehouses, delivery — Delivery route handlers.
+//! Logistics module - shipments, fleet, warehouses, delivery - Delivery route handlers.
 //!
 //! Split from `src/modules/logistics.rs`; behaviour unchanged.
 
@@ -814,7 +814,7 @@ mod tests {
         let route = test_route();
         // Stored order is far, near, mid; nearest neighbour from
         // (0, 0) must visit near (0, 1), then mid (0, 2), then far
-        // (0, 10) — and the returned vec must carry the new
+        // (0, 10) - and the returned vec must carry the new
         // sequences 1, 2, 3, matching what is stored.
         let far = test_stop(route.id, 1, 0.0, 10.0);
         let near = test_stop(route.id, 2, 0.0, 1.0);

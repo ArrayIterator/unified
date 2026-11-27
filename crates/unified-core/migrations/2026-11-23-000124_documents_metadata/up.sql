@@ -1,5 +1,5 @@
--- Documents metadata (task 322): human-facing metadata on the
--- `documents` row — title, alt_text, caption, description — plus
+-- Documents metadata: human-facing metadata on the
+-- `documents` row - title, alt_text, caption, description - plus
 -- one `custom_metadata` JSONB column for caller-defined keys.
 -- One table, not a separate metadata table: metadata is read with
 -- the document row, never joined. The in-memory DashMap store is

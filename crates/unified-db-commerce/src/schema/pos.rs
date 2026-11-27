@@ -3,11 +3,9 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Point of sale (migration 000076_pos). Every table except
 // `pos_registers` carries NUMERIC columns, so those six pairs skip
 // ALL serde derives per the repo header rule.
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     pos_registers (id) {

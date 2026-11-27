@@ -7,12 +7,12 @@
 // instead of fabricating an answer.
 //
 // Routes live under `/api/v1/ai-support`:
-//   - `POST /ask {message, conversation_id?}` — grounded answer.
-//   - `GET  /conversations` — paginated conversation history.
+//   - `POST /ask {message, conversation_id?}` - grounded answer.
+//   - `GET  /conversations` - paginated conversation history.
 //   - `GET/PATCH/DELETE /conversations/{id}`.
-//   - `POST /handoff {conversation_id}` — request a support ticket.
-//   - `POST /tickets {conversation_id, summary}` — same, with a summary.
-//   - `GET/POST  /connectors`, `GET/PATCH/DELETE /connectors/{id}` —
+//   - `POST /handoff {conversation_id}` - request a support ticket.
+//   - `POST /tickets {conversation_id, summary}` - same, with a summary.
+//   - `GET/POST  /connectors`, `GET/PATCH/DELETE /connectors/{id}` -
 //     external chat connector registry (webchat, telegram, whatsapp, ...).
 //
 // ERP interconnection (all through hooks, never direct module calls):
@@ -29,7 +29,7 @@
 // conversations. Every connector operation requires the
 // `ai-support.connectors.manage` capability via the `role.check`
 // hook (fail closed) plus `X-User-Id` / `X-Role` headers, and only
-// the owner — or a platform admin (`admin` / `super_admin` role) —
+// the owner - or a platform admin (`admin` / `super_admin` role) -
 // may read, update or delete one. The config is stored verbatim
 // but every response carries a redacted copy with secret-bearing
 // fields (tokens, API keys, secrets, passwords) masked.
@@ -51,9 +51,7 @@ use std::sync::Arc;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct AiSupportModule {
     pub(crate) state: AiSupportState,

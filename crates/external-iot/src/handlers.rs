@@ -1,4 +1,4 @@
-//! IoT external module (split from lib.rs; moved verbatim).
+//! IoT external module.
 
 use super::*;
 
@@ -10,9 +10,7 @@ pub(crate) fn paginate<T>(items: Vec<T>, page: u32, per_page: u32) -> Vec<T> {
     items.into_iter().skip(start).take(per_page).collect()
 }
 
-// ---------------------------------------------------------------------------
 // HTTP helpers
-// ---------------------------------------------------------------------------
 
 fn respond_ok(result: UnifiedResult<Value>) -> HttpResponse {
     json::respond(result, false)
@@ -120,9 +118,7 @@ fn parse_time_bound(value: &str) -> UnifiedResult<DateTime<Utc>> {
         .map_err(|_| UnifiedError::bad_request(format!("invalid timestamp '{value}'")))
 }
 
-// ---------------------------------------------------------------------------
 // Handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_device_types(state: web::Data<Arc<IotState>>) -> HttpResponse {
     respond_ok(Ok(json!({ "device_types": state.device_types() })))

@@ -35,9 +35,7 @@ use unified_core::error::UnifiedResult;
 use unified_core::hooks::{HookBus, HookContext};
 use unified_core::modules::{Module, ModuleRegistry, RouteInfo, RouteVersionSupport};
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct ReferralModule {
     pub(crate) state: ReferralState,
@@ -201,7 +199,7 @@ impl Module for ReferralModule {
                 method: "GET",
                 path: "/api/v1/referral/public/links/{token}",
                 owner: "referral",
-                description: "PUBLIC (token-gated): follow a referral link — increments the click count only, no IP or fingerprint stored; returns the job id.",
+                description: "PUBLIC (token-gated): follow a referral link - increments the click count only, no IP or fingerprint stored; returns the job id.",
                 auth: unified_core::auth::RouteAuth::Public,
             },
             RouteInfo {

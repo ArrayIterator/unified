@@ -1,4 +1,4 @@
-//! Content Management module. — Post handlers.
+//! Content Management module. - Post handlers.
 //!
 //! Split from `src/modules/content.rs`; behaviour unchanged.
 

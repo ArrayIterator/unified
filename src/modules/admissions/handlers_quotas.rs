@@ -1,4 +1,4 @@
-// admissions module — Quota handlers.
+// admissions module - Quota handlers.
 //
 // Split from the former single-file module `src/modules/admissions.rs`.
 // The module root (`admissions.rs`) re-exports the public items, so the
@@ -26,9 +26,7 @@ use super::helpers::{
 use super::state::AdmissionsState;
 use super::types::{CreateQuota, PeriodQuota, UpdateQuota};
 
-// ---------------------------------------------------------------------------
 // Handlers: quotas
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_quotas(
     ctx: web::Data<Arc<AppContext>>,

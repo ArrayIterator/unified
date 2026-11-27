@@ -1,4 +1,4 @@
-// Elearning — Hook listeners (store / Web3 events; defensive reads only).
+// Elearning - Hook listeners (store / Web3 events; defensive reads only).
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -24,11 +24,11 @@ use super::*;
 // Module notes moved here from the original file header
 // (kept verbatim so no documentation is lost):
 
-// HONESTY — READ THIS FIRST. What is real in this module:
+// HONESTY - READ THIS FIRST. What is real in this module:
 // in-memory course / module / lesson / enrollment / progress /
 // quiz / attempt / certificate / review / learning-path
 // management; free and paid enrollment (paid enrollment never
-// calls the store directly — it emits a purchase event and waits
+// calls the store directly - it emits a purchase event and waits
 // for `order.paid`); drip content by date and by previous-lesson
 // completion; multiple-choice quizzes with a per-quiz pass mark,
 // attempt limits, auto-grading, attempt history, and answer
@@ -42,22 +42,22 @@ use super::*;
 // durable storage (the DashMap stores are authoritative;
 // migration `2026-11-22-000076_elearning` is the persistence
 // target); payment capture itself (the store/billing modules own
-// it — this module only requests a purchase and reacts to the
+// it - this module only requests a purchase and reacts to the
 // paid/refunded events); media storage or playback (lesson video
-// and file content are storage references only — the storage
+// and file content are storage references only - the storage
 // module owns the bytes); on-chain anchoring itself (the Web3
-// module owns it — this module only emits `web3.anchor.requested`
+// module owns it - this module only emits `web3.anchor.requested`
 // and listens for the confirmed/failed outcome); and email/push
-// delivery (the notifications module owns delivery — this module
+// delivery (the notifications module owns delivery - this module
 // only emits `notification.requested`).
 //
-// CONFIG-DRIVEN — READ THIS FIRST. Nothing behavioural is
+// CONFIG-DRIVEN - READ THIS FIRST. Nothing behavioural is
 // hard-coded: the allowed course levels, categories, languages,
 // and lesson types, the default pass mark, the default attempt
 // limit, the default currency, the certificate issuer name, and
 // the anchoring switch all live in `ElearningSettings`, editable
 // by an administrator through `PUT /settings`. The values in
-// `ElearningSettings::default` are CONFIGURABLE DEFAULTS only —
+// `ElearningSettings::default` are CONFIGURABLE DEFAULTS only -
 // an admin change applies to every validation and default that
 // reads them, and no code path consults a baked-in list instead.
 // Lesson types, levels, categories, and languages are validated
@@ -85,7 +85,7 @@ use super::*;
 //     `elearning.enrollment.purchase_requested` (paid enrollment:
 //     `{"course_id", "user_id", "amount_minor", "currency",
 //     "module": "elearning", "item_type": "course_enrollment",
-//     "enrollment_id"}` — no store listener creates an order
+//     "enrollment_id"}` - no store listener creates an order
 //     from this request yet: a course is not a store product, so
 //     the buyer checks out with the course id on the checkout
 //     item and the paid order activates the enrollment),
@@ -113,29 +113,27 @@ use super::*;
 //   - `web3.anchor.requested` (certificate anchoring, only when
 //     anchoring is enabled in settings:
 //     `{"record_type": "elearning.certificate", "record_id",
-//     "content_sha256", "network_id"}` — the Web3 module owns the
+//     "content_sha256", "network_id"}` - the Web3 module owns the
 //     anchor itself)
 //   - `notification.requested` (enrollment activated, course
 //     completed, certificate issued, in the notifications
 //     module's payload shape).
-// Events this module listens to (all read defensively — a missing
+// Events this module listens to (all read defensively - a missing
 // field or an unknown course is skipped, never an error):
-//   - `elearning.course.requested` — answers `{exists, course_id,
+//   - `elearning.course.requested` - answers `{exists, course_id,
 //     title, status}` for the academic module's course links.
-//   - `order.paid`, `store.order.completed` — a paid order whose
+//   - `order.paid`, `store.order.completed` - a paid order whose
 //     payload names an e-learning course activates the matching
 //     pending enrollment (`course_id` plus `module` =
 //     `"elearning"`, or an `items` entry carrying `course_id`;
 //     serialized store items carry `module_id`, which is accepted
 //     too).
-//   - `store.order.refunded`, `store.order.cancelled` — suspends
+//   - `store.order.refunded`, `store.order.cancelled` - suspends
 //     the matching active enrollment.
-//   - `web3.anchor.confirmed`, `web3.anchor.failed` — updates the
+//   - `web3.anchor.confirmed`, `web3.anchor.failed` - updates the
 //     anchor status of the named certificate (`record_id`).
 
-// ---------------------------------------------------------------------------
 // Hook listeners (store / Web3 events; defensive reads only)
-// ---------------------------------------------------------------------------
 
 /// Extract the e-learning course id from a store order payload:
 /// either a top-level `course_id` with `module` = `"elearning"`,
@@ -168,7 +166,7 @@ pub(crate) fn order_course_id(data: &Value) -> Option<(Uuid, Option<String>)> {
     None
 }
 
-/// Answer `elearning.course.requested` (`{course_id}` — the
+/// Answer `elearning.course.requested` (`{course_id}` - the
 /// academic module asks whether a course exists before linking a
 /// subject to it): add `{exists, course_id, title, status}` for a
 /// known course, or `{exists: false, course_id}` when the id is

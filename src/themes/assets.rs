@@ -3,7 +3,7 @@
 //
 // Two pieces:
 //
-//   1. `AssetRegistry` / `AssetQueue` — modules and themes register
+//   1. `AssetRegistry` / `AssetQueue` - modules and themes register
 //      stylesheets and scripts by id, with dependencies (`inherits`),
 //      HTML attributes (`async`, `defer`, `integrity`, `nonce`, ...),
 //      and a header/footer placement for scripts. A per-render queue
@@ -13,7 +13,7 @@
 //      validated and values HTML-escaped, so a bad id or attribute
 //      can never break out of a tag.
 //
-//   2. Static serving — `serve_asset` serves the global `assets/`
+//   2. Static serving - `serve_asset` serves the global `assets/`
 //      directory under `/assets/`, and `serve_theme_asset` serves one
 //      theme's `assets/` directory under
 //      `/theme/{id}/assets/`. Both reject path traversal, resolve the
@@ -54,8 +54,8 @@ pub enum AssetSource {
 }
 
 /// One registered asset: an id, its kind, its source, the ids it
-/// depends on (rendered before it), extra HTML attributes, and — for
-/// scripts — whether it belongs in the page footer instead of the
+/// depends on (rendered before it), extra HTML attributes, and - for
+/// scripts - whether it belongs in the page footer instead of the
 /// header.
 #[derive(Debug, Clone)]
 pub struct Asset {
@@ -450,13 +450,11 @@ impl<'a> AssetQueue<'a> {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Fingerprinting
-// ---------------------------------------------------------------------------
 
 /// Short content fingerprint of bytes: the first 12 hex characters
 /// of the SHA-256 digest. The fingerprint of the exact bytes the
-/// server serves — see `minify::served_fingerprint`.
+/// server serves - see `minify::served_fingerprint`.
 pub fn fingerprint_bytes(bytes: &[u8]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(bytes);
@@ -553,7 +551,7 @@ pub fn resolve_asset_url(
     if file.is_file() {
         return fingerprinted_url(&url, &file);
     }
-    // Dashboard scripts: no `.js` file exists on disk anymore — the
+    // Dashboard scripts: no `.js` file exists on disk anymore - the
     // JavaScript is compiled from the `.ts` source at startup. The
     // fingerprint above already covers the compiled scripts (it
     // hashes the served bytes from the registry); this fallback
@@ -569,9 +567,7 @@ pub fn resolve_asset_url(
     url
 }
 
-// ---------------------------------------------------------------------------
 // Static serving
-// ---------------------------------------------------------------------------
 
 /// Directories the static asset handlers serve from. Defaults match
 /// the theme module: `assets/` for global assets, `themes/` for
@@ -609,7 +605,7 @@ impl Default for StaticAssetConfig {
 }
 
 /// `GET /assets/{path}`: serve a file from the global assets
-/// directory — or, for a dashboard script, the JavaScript compiled
+/// directory - or, for a dashboard script, the JavaScript compiled
 /// from its TypeScript source at startup and held in RAM (see
 /// `StaticAssetConfig::compiled_scripts`).
 pub async fn serve_asset(

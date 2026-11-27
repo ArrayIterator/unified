@@ -9,9 +9,7 @@ use std::sync::Arc;
 use super::store::HOOK_BUS;
 use super::handlers::{create_key, get_key, key_usage, list_keys, list_scopes, revoke_key, rotate_key, update_key, verify_key};
 
-// ---------------------------------------------------------------------------
 // Module definition.
-// ---------------------------------------------------------------------------
 
 pub struct ApiKeysModule;
 

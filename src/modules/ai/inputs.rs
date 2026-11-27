@@ -7,9 +7,7 @@ use super::constants::DEFAULT_RATE_LIMIT_PER_MINUTE;
 use super::types::AiProviderKind;
 use super::types::SiteContextInput;
 
-// ---------------------------------------------------------------------------
 // Request bodies.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct CreateProviderConnectionInput {
@@ -169,9 +167,7 @@ pub struct AnswerInput {
     pub use_personal_key: bool,
 }
 
-// ---------------------------------------------------------------------------
 // Access allowlist request bodies.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct CreateCompanyPolicyInput {

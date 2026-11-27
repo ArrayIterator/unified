@@ -5,9 +5,7 @@
 use unified_core::pagination::{PageResult, PaginationParams};
 use serde::Serialize;
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 pub(crate) fn paginate<T: Serialize + Clone>(items: Vec<T>, params: &PaginationParams) -> PageResult<T> {
     let pagination = params.normalized();

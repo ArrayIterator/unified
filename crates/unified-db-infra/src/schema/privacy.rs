@@ -3,9 +3,7 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Privacy (migration 000066_privacy).
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     privacy_field_declarations (id) {

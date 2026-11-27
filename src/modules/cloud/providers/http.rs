@@ -14,9 +14,7 @@ use url::Url;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Common adapter interface.
-// ---------------------------------------------------------------------------
 
 /// The interface every provider adapter implements. Create / scale /
 /// delete / start / stop / suspend / unsuspend / renew / change
@@ -111,7 +109,7 @@ pub trait CloudProvider: Send + Sync {
     }
 
     /// Renew a server (WHMCS Renew). Renewal is a billing-layer
-    /// concept — platforms bill automatically — so no built-in adapter
+    /// concept - platforms bill automatically - so no built-in adapter
     /// implements it yet. Guarded by `supports_renew`.
     async fn renew_server(&self, _id: &str) -> UnifiedResult<ServerInfo> {
         Err(unsupported(self.kind(), "renew", "supports_renew"))
@@ -160,9 +158,7 @@ pub(crate) fn metadata_with_version(kind: ProviderKind, api_version: &str) -> Pr
     }
 }
 
-// ---------------------------------------------------------------------------
 // Shared HTTP helpers.
-// ---------------------------------------------------------------------------
 
 pub(crate) fn hex_encode(bytes: &[u8]) -> String {
     const HEX: &[u8; 16] = b"0123456789abcdef";
@@ -422,7 +418,6 @@ pub(crate) fn encode_path_segment(segment: &str) -> String {
     encoded
 }
 
-// ---------------------------------------------------------------------------
 // Minimal XML extraction (AWS EC2 / Redshift query APIs).
 //
 // The EC2 and Redshift query APIs answer XML, and this codebase has no
@@ -430,7 +425,6 @@ pub(crate) fn encode_path_segment(segment: &str) -> String {
 // known response shapes (`DescribeInstances`, `DescribeClusters`):
 // it finds `<tag>value</tag>` text and splits repeated `<item>` blocks.
 // It is not a general XML parser and must not be used for anything else.
-// ---------------------------------------------------------------------------
 
 /// Text inside the first `<tag>...</tag>` at or after `from`, if any.
 pub(crate) fn xml_tag_at(text: &str, from: usize, tag: &str) -> Option<String> {
@@ -458,14 +452,12 @@ pub(crate) fn xml_blocks(text: &str, tag: &str) -> Vec<String> {
     blocks
 }
 
-// ---------------------------------------------------------------------------
 // AWS SigV4 signing (EC2, Redshift).
 //
 // Canonical request, credential scope, and the four-step HMAC key
 // derivation, following the AWS Signature Version 4 scheme. Only the
 // `host`, `x-amz-date`, and `content-type` headers are signed, and the
 // payload hash is always the SHA-256 of the (possibly empty) body.
-// ---------------------------------------------------------------------------
 
 pub(crate) struct SigV4Params {
     pub(crate) access_key_id: String,
@@ -519,13 +511,11 @@ pub(crate) fn sigv4_authorization(
     (authorization, amz_date)
 }
 
-// ---------------------------------------------------------------------------
 // Tencent Cloud TC3-HMAC-SHA256 signing (CVM).
 //
 // Same HMAC-chain shape as SigV4 with Tencent's own prefixes: the
 // signing key starts from `"TC3" + secret key`, the scope terminator
 // is `tc3_request`, and the algorithm name is `TC3-HMAC-SHA256`.
-// ---------------------------------------------------------------------------
 
 
 pub(crate) struct Tc3Params {
@@ -590,13 +580,11 @@ pub(crate) fn tc3_headers(
     Ok(headers)
 }
 
-// ---------------------------------------------------------------------------
 // Huawei Cloud SDK-HMAC-SHA256 signing (ECS).
 //
 // Same key derivation shape as SigV4 with the `"SDK"` prefix and the
 // `sdk_request` scope terminator. The signed headers are `host` and
 // `x-sdk-date`.
-// ---------------------------------------------------------------------------
 
 
 pub(crate) fn huawei_authorization(
@@ -635,14 +623,12 @@ pub(crate) fn huawei_authorization(
     Ok((authorization, sdk_date))
 }
 
-// ---------------------------------------------------------------------------
 // OVH signature.
 //
 // `"$1$" + SHA1(app_secret + "+" + consumer_key + "+" + method + "+" +
 // url + "+" + body + "+" + timestamp)`, sent as `X-Ovh-Signature`
 // alongside `X-Ovh-Application`, `X-Ovh-Consumer`, and
 // `X-Ovh-Timestamp`.
-// ---------------------------------------------------------------------------
 
 
 pub(crate) fn ovh_signature(
@@ -657,9 +643,7 @@ pub(crate) fn ovh_signature(
     format!("$1${}", hex_encode(&sha1::Sha1::digest(to_sign.as_bytes())))
 }
 
-// ---------------------------------------------------------------------------
 // Hetzner Cloud adapter.
-// ---------------------------------------------------------------------------
 
 /// Hetzner Cloud API (`api.hetzner.cloud`), token auth.
 

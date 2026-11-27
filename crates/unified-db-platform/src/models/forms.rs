@@ -10,9 +10,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Forms (migration 000047_forms).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = forms)]

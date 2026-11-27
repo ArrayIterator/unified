@@ -1,4 +1,4 @@
-// OKR / Goals — Small shared helpers: caller identity, capability checks, and HTTP responses.
+// OKR / Goals - Small shared helpers: caller identity, capability checks, and HTTP responses.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -25,9 +25,7 @@ use super::handlers_key_results::*;
 use super::hooks::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 /// Caller identity: the server-verified caller (user id plus
 /// server-resolved role, both required for capability checks),
@@ -54,7 +52,7 @@ pub(crate) fn caller(req: &HttpRequest) -> UnifiedResult<Caller> {
 /// `unified_core::tenancy` (`TENANT_SCOPE_CONTRACT`).
 ///
 /// OKR cycles and objectives carry `company_id: String`
-/// (required — never empty), so the scope helpers below compare
+/// (required - never empty), so the scope helpers below compare
 /// plain strings. Key results and check-ins carry no company id:
 /// they are scoped through their parent objective (checked after
 /// loading the parent). Update bodies carry no company id, so
@@ -68,7 +66,7 @@ pub(crate) fn require_tenant(
 /// The company scope the caller acts in: the tenant context's
 /// company first, the verified caller's server-resolved company
 /// otherwise. Fails closed (403) when both are present and disagree
-/// — a request must not carry one company in its tenant context and
+/// - a request must not carry one company in its tenant context and
 /// another in its verified identity. The `X-Company-Id` header is
 /// NEVER trusted here: only the verified caller (company resolved
 /// from the database at authentication time) and the
@@ -93,7 +91,7 @@ pub(crate) fn caller_company(
     }
 }
 
-/// Resolve the caller's company for a WRITE (C3 task 315, strict by
+/// Resolve the caller's company for a WRITE (C3, strict by
 /// default): a write requires a resolved company scope, so an
 /// unresolved caller is refused with 403 instead of silently
 /// writing a global (unscoped) record. Mutation handlers call
@@ -169,11 +167,11 @@ pub(crate) fn require_record_in_company_scope(
 }
 
 /// Fail closed (403) when a stored record is outside the caller's
-/// company scope FOR A WRITE (C3 task 315, strict by default).
+/// company scope FOR A WRITE (C3, strict by default).
 /// Unlike the read check above (rule A), a write requires an exact
 /// company match: a company caller may write only their own
-/// company's records — global (unscoped) records are platform-only
-/// — and an unresolved caller may write nothing. Mutation handlers
+/// company's records - global (unscoped) records are platform-only
+/// - and an unresolved caller may write nothing. Mutation handlers
 /// call this right after loading the record they mutate; handlers
 /// that only read the record, or load a parent to scope a child
 /// write, keep the read check.

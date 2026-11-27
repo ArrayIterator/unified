@@ -1,4 +1,4 @@
-// Marketing Automation — Segment handlers.
+// Marketing Automation - Segment handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -30,9 +30,7 @@ use super::handlers_audience::*;
 use super::hooks::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Segment handlers.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct SegmentInput {

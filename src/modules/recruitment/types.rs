@@ -15,9 +15,7 @@ use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 use super::{constants::*, state::*, helpers::*, module::*, handlers_jobs::*, handlers_applicants::*, handlers_interviews::*, handlers_evaluations::*, handlers_offers::*};
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// Lifecycle of a job posting: `draft` -> `published` -> `closed`.
 /// A closed job never reopens; a new posting is created instead.
@@ -322,9 +320,7 @@ pub struct Offer {
     pub updated_at: DateTime<Utc>,
 }
 
-// ---------------------------------------------------------------------------
 // Request bodies
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct CreateJobRequest {

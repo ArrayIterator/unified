@@ -1,11 +1,9 @@
-//! IoT external module (split from lib.rs; moved verbatim).
+//! IoT external module.
 
 use super::*;
 
 
-// ---------------------------------------------------------------------------
 // Domain types
-// ---------------------------------------------------------------------------
 
 /// Device lifecycle. `Decommissioned` is terminal: no transition out
 /// of it exists, and decommissioned devices reject telemetry,
@@ -333,9 +331,7 @@ pub struct Alert {
     pub created_at: DateTime<Utc>,
 }
 
-// ---------------------------------------------------------------------------
 // Request inputs
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct CreateDeviceInput {

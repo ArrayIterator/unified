@@ -280,7 +280,7 @@ pub(crate) async fn update_reward_rule(
 }
 
 /// Delete a reward rule (manager). Rewards already created
-/// from it are kept — they snapshot the rule — and jobs
+/// from it are kept - they snapshot the rule - and jobs
 /// that pointed at it fall back to the tenant default.
 pub(crate) async fn delete_reward_rule(
     state: web::Data<ReferralState>,

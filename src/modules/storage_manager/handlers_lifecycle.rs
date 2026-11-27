@@ -14,9 +14,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Lifecycle.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_lifecycle(
     state: web::Data<StorageManagerState>,
@@ -66,7 +64,7 @@ pub(crate) async fn list_lifecycle(
 /// Validate a lifecycle retention: negative values are always
 /// rejected; 0 is rejected unless the caller explicitly confirmed
 /// it, because a 0-day retention deletes every object older than
-/// now — i.e. everything. 1 or more days is always fine.
+/// now - i.e. everything. 1 or more days is always fine.
 pub(crate) fn validate_retention_days(
     retention_days: i64,
     confirm_zero_retention: bool,
@@ -479,7 +477,7 @@ pub(crate) async fn run_lifecycle(
     let input = body.into_inner();
     // Tenant scoping for the enqueue: the scheduler payload carries
     // only the requested rule / bucket ids, so the selection is
-    // checked BEFORE the scheduler is asked — a non-admin can never
+    // checked BEFORE the scheduler is asked - a non-admin can never
     // enqueue a run for a rule on a bucket they may not access, and
     // an unscoped all-rules run is refused for non-admins (the
     // scheduled run could not be scoped later).
@@ -524,7 +522,7 @@ pub(crate) async fn run_lifecycle(
     }
     // Ask the scheduler first when requested. Until the
     // `storage.lifecycle.run` kind is registered, the scheduler
-    // declines and the run executes in-process below — the decline
+    // declines and the run executes in-process below - the decline
     // is reported, never hidden.
     let mut scheduler_answer: Value = Value::Null;
     if input.enqueue.unwrap_or(false) {

@@ -9,9 +9,7 @@ use serde::Serialize;
 // dynamic translation overrides, and a translate lookup that falls back
 // to a caller-supplied string when no translation exists.
 
-// ---------------------------------------------------------------------------
 // Language catalogue
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize)]
 pub struct Language {

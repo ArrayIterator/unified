@@ -31,9 +31,7 @@ use std::time::{Duration, Instant};
 use uuid::Uuid;
 use super::{keys::*, expiry::*, store::*, hooks::*, types::*, validation::*, handlers::*, products::*, helpers::*, product_handlers::*, verify::*, offline::*, distribution::*, module::*};
 
-// ---------------------------------------------------------------------------
 // SaaS handlers: file-upload releases.
-// ---------------------------------------------------------------------------
 
 pub(crate) fn sanitize_release_file_name(raw: &str) -> UnifiedResult<String> {
     let name = raw

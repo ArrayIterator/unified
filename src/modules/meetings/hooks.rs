@@ -62,9 +62,7 @@ pub(crate) fn on_meeting_start_requested(state: MeetingsState, ctx: &mut HookCon
     ctx.add_result(json!({ "started": true, "room_id": room_id.to_string() }));
 }
 
-// ---------------------------------------------------------------------------
 // Signalling relay (WebRTC over the shared WebSocket hub)
-// ---------------------------------------------------------------------------
 
 /// Validate and relay one signalling message.
 ///
@@ -72,8 +70,8 @@ pub(crate) fn on_meeting_start_requested(state: MeetingsState, ctx: &mut HookCon
 /// global broadcast channel: `broadcast` delivers to every connected
 /// `GET /ws` client, and `subscribe` is how a session receives. There
 /// is no per-room channel in the hub, so routing is done with payload
-/// fields — every relayed event carries `room_id`, `sender_id`, and,
-/// for directed messages, `recipient_id` — and receivers filter on
+/// fields - every relayed event carries `room_id`, `sender_id`, and,
+/// for directed messages, `recipient_id` - and receivers filter on
 /// them (the meetings WebSocket endpoint does this server-side).
 /// Validation is enforced here, before anything is broadcast, so a
 /// participant can only signal inside rooms they have joined, and

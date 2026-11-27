@@ -28,10 +28,8 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- A backup job: what to back up, where to send it, when to run it,
 -- and how much history to keep.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS backup_jobs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR NOT NULL,
@@ -68,11 +66,9 @@ CREATE INDEX IF NOT EXISTS idx_backup_jobs_status
 CREATE INDEX IF NOT EXISTS idx_backup_jobs_enabled
     ON backup_jobs (enabled);
 
--- ---------------------------------------------------------------------------
 -- One execution of a backup job. `job_name`, `kind`, and `target`
 -- are denormalized from the job so a run stays readable after its
 -- job is deleted (the foreign key then becomes NULL).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS backup_runs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     job_id UUID REFERENCES backup_jobs (id) ON DELETE SET NULL ON UPDATE NO ACTION,
@@ -98,10 +94,8 @@ CREATE INDEX IF NOT EXISTS idx_backup_runs_status
 CREATE INDEX IF NOT EXISTS idx_backup_runs_started_at
     ON backup_runs (started_at);
 
--- ---------------------------------------------------------------------------
 -- A named storage target: local directory, S3-compatible bucket,
 -- Google Drive folder, or Cloudflare R2 bucket.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS storage_targets (
     name VARCHAR PRIMARY KEY,
     kind VARCHAR NOT NULL CHECK (kind IN ('local', 's3', 'drive', 'r2')),

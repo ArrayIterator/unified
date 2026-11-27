@@ -1,5 +1,5 @@
 -- Phone module (`src/modules/phone/`): WebRTC voice and
--- video calling over the web (internet-only) — 1:1 and group
+-- video calling over the web (internet-only) - 1:1 and group
 -- calls with ringing / active / held / ended / missed states,
 -- store-and-forward signalling (offer, answer, ICE
 -- candidates), call queues and routing rules as data,
@@ -76,7 +76,6 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- Calls: one voice/video call. `caller_id` is the user who
 -- initiated it; participants live in `phone_call_participants`.
 -- `queue_id` / `ivr_menu_id` record how the call arrived
@@ -85,7 +84,6 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- `summary` is the AI call summary, written after the call
 -- ends (NULL until then). `duration_secs` is computed from
 -- `started_at` / `ended_at` when the call ends.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS phone_calls (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -110,13 +108,11 @@ CREATE INDEX IF NOT EXISTS idx_phone_calls_tenant_status ON phone_calls (tenant_
 CREATE INDEX IF NOT EXISTS idx_phone_calls_tenant_caller ON phone_calls (tenant_id, caller_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_phone_calls_tenant_queue ON phone_calls (tenant_id, queue_id, created_at DESC) WHERE queue_id IS NOT NULL;
 
--- ---------------------------------------------------------------------------
 -- Participants: one participant of one call. `direction` is
 -- relative to the participant: `outbound` for the caller,
 -- `inbound` for everyone invited. A participant who never
 -- answered ends as `missed`; one who declined ends as
 -- `declined`.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS phone_call_participants (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -132,14 +128,12 @@ CREATE TABLE IF NOT EXISTS phone_call_participants (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_phone_participants_call_user ON phone_call_participants (call_id, user_id);
 CREATE INDEX IF NOT EXISTS idx_phone_participants_tenant_call ON phone_call_participants (tenant_id, call_id, created_at ASC);
 
--- ---------------------------------------------------------------------------
 -- Signals: one stored signalling message (store-and-forward).
 -- `payload` is the SDP or ICE JSON object, opaque to the
 -- server. `recipient_id` NULL means broadcast to the whole
 -- call. `delivered` is set when the recipient fetches the
 -- message from the signals inbox, so a reconnecting client
 -- does not receive the same offer twice.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS phone_signals (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -155,7 +149,6 @@ CREATE INDEX IF NOT EXISTS idx_phone_signals_tenant_call ON phone_signals (tenan
 CREATE INDEX IF NOT EXISTS idx_phone_signals_tenant_recipient ON phone_signals (tenant_id, recipient_id, created_at ASC) WHERE recipient_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_phone_signals_tenant_undelivered ON phone_signals (tenant_id, call_id, created_at ASC) WHERE delivered = FALSE;
 
--- ---------------------------------------------------------------------------
 -- Queues: one call queue, as data. `ring_strategy` is
 -- `sequential`, `simultaneous`, or `round_robin`;
 -- `ring_timeout_secs` bounds one ring attempt;
@@ -163,9 +156,8 @@ CREATE INDEX IF NOT EXISTS idx_phone_signals_tenant_undelivered ON phone_signals
 -- `overflow_queue_id` names the queue a caller falls through
 -- to when the wait expires (NULL means the caller stays
 -- queued); `overflow_action` names what happens when there
--- is no overflow queue (`ivr`, `hangup`, or a script code —
+-- is no overflow queue (`ivr`, `hangup`, or a script code -
 -- values are data).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS phone_queues (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -184,12 +176,10 @@ CREATE TABLE IF NOT EXISTS phone_queues (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_phone_queues_tenant_code ON phone_queues (tenant_id, code);
 CREATE INDEX IF NOT EXISTS idx_phone_queues_tenant_active ON phone_queues (tenant_id, active, code ASC);
 
--- ---------------------------------------------------------------------------
 -- Queue members: one agent on a queue. `position` is the ring
 -- order for sequential / simultaneous ringing;
 -- `last_answered_at` drives round-robin (least recently
 -- answered rings first).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS phone_queue_members (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -204,12 +194,10 @@ CREATE TABLE IF NOT EXISTS phone_queue_members (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_phone_queue_members_queue_user ON phone_queue_members (queue_id, user_id);
 CREATE INDEX IF NOT EXISTS idx_phone_queue_members_tenant_queue ON phone_queue_members (tenant_id, queue_id, position ASC);
 
--- ---------------------------------------------------------------------------
 -- Queue waiters: one caller waiting in a queue. `status` is
 -- `waiting`, `answered`, `abandoned`, or `timed_out`;
 -- `call_id` is the call created when an admin answers the
 -- waiter.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS phone_queue_waiters (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -223,7 +211,6 @@ CREATE TABLE IF NOT EXISTS phone_queue_waiters (
 CREATE INDEX IF NOT EXISTS idx_phone_queue_waiters_tenant_queue ON phone_queue_waiters (tenant_id, queue_id, status, joined_at ASC);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_phone_queue_waiters_queue_caller_waiting ON phone_queue_waiters (queue_id, caller_id) WHERE status = 'waiting';
 
--- ---------------------------------------------------------------------------
 -- Routing rules: one routing rule, as data. Rules are
 -- evaluated in `priority` order (lowest first); the first
 -- matching rule wins. `match_caller_id` is a caller pattern
@@ -233,7 +220,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_phone_queue_waiters_queue_caller_waiting O
 -- start wraps past midnight). `target_type` is `queue`,
 -- `user`, or `ivr_menu`; `target_id` names the target (a
 -- queue code, a user id, or a menu code).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS phone_routing_rules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -253,12 +239,10 @@ CREATE TABLE IF NOT EXISTS phone_routing_rules (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_phone_routing_rules_tenant_code ON phone_routing_rules (tenant_id, code);
 CREATE INDEX IF NOT EXISTS idx_phone_routing_rules_tenant_priority ON phone_routing_rules (tenant_id, active, priority ASC);
 
--- ---------------------------------------------------------------------------
 -- Presence: one user's presence. `status` is the declared
 -- status; `updated_at` is the last heartbeat, and a stale
 -- entry reads as `offline` (see `PRESENCE_STALE_SECS` in the
 -- module). `note` is a free-text status message.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS phone_presence (
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
     user_id TEXT NOT NULL CHECK (char_length(user_id) BETWEEN 1 AND 200),
@@ -269,12 +253,10 @@ CREATE TABLE IF NOT EXISTS phone_presence (
 );
 CREATE INDEX IF NOT EXISTS idx_phone_presence_tenant_status ON phone_presence (tenant_id, status, updated_at DESC);
 
--- ---------------------------------------------------------------------------
 -- IVR menus: one IVR menu, as data. `greeting` is the text
 -- the caller hears (or the text the AI voice reads) when the
 -- menu opens; `greeting_audio_ref` names a documents/storage
 -- object by reference when a recorded greeting exists.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS phone_ivr_menus (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -289,7 +271,6 @@ CREATE TABLE IF NOT EXISTS phone_ivr_menus (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_phone_ivr_menus_tenant_code ON phone_ivr_menus (tenant_id, code);
 CREATE INDEX IF NOT EXISTS idx_phone_ivr_menus_tenant_active ON phone_ivr_menus (tenant_id, active, code ASC);
 
--- ---------------------------------------------------------------------------
 -- IVR nodes: one key of one IVR menu. `key` is a single
 -- digit, letter, `*`, or `#`. `action` is `transfer_queue`,
 -- `transfer_user`, `play_message`, `run_script`,
@@ -297,7 +278,6 @@ CREATE INDEX IF NOT EXISTS idx_phone_ivr_menus_tenant_active ON phone_ivr_menus 
 -- names the target (a queue code, a user id, a script code,
 -- or a menu code); `message` is the text played for
 -- `play_message`.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS phone_ivr_nodes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -312,14 +292,12 @@ CREATE TABLE IF NOT EXISTS phone_ivr_nodes (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_phone_ivr_nodes_menu_key ON phone_ivr_nodes (menu_id, key);
 CREATE INDEX IF NOT EXISTS idx_phone_ivr_nodes_tenant_menu ON phone_ivr_nodes (tenant_id, menu_id, created_at ASC);
 
--- ---------------------------------------------------------------------------
 -- Auto-response scripts: one script, as data. `trigger` is a
 -- keyword or phrase, matched case-insensitively as a
 -- substring of the caller's question. `response_template` is
 -- the canned answer; `ai_capability` names the phone AI
 -- capability that answers when no template is set. A script
 -- needs one of the two.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS phone_auto_response_scripts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -336,13 +314,11 @@ CREATE TABLE IF NOT EXISTS phone_auto_response_scripts (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_phone_scripts_tenant_code ON phone_auto_response_scripts (tenant_id, code);
 CREATE INDEX IF NOT EXISTS idx_phone_scripts_tenant_priority ON phone_auto_response_scripts (tenant_id, active, priority ASC);
 
--- ---------------------------------------------------------------------------
 -- Recordings: one call recording. Only metadata lives here:
 -- the bytes live in the storage layer and are referenced by
 -- `storage_target` / `storage_key` (plus an optional signed
 -- `url`) once attached. `consent_given` records whether the
 -- call carried recording consent when the recording started.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS phone_recordings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -364,13 +340,11 @@ CREATE TABLE IF NOT EXISTS phone_recordings (
 CREATE INDEX IF NOT EXISTS idx_phone_recordings_tenant_call ON phone_recordings (tenant_id, call_id, created_at ASC);
 CREATE INDEX IF NOT EXISTS idx_phone_recordings_tenant_status ON phone_recordings (tenant_id, status, created_at DESC);
 
--- ---------------------------------------------------------------------------
 -- Per-tenant phone settings. `recording_requires_consent`
 -- defaults to true and is the only switch that can relax the
--- consent gate — it can only be turned off by a manager, and
+-- consent gate - it can only be turned off by a manager, and
 -- recordings started while it is off still record
 -- `consent_given: false` on the row so the gap stays visible.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS phone_settings (
     tenant_id TEXT PRIMARY KEY CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
     default_ring_timeout_secs BIGINT NOT NULL DEFAULT 30 CHECK (default_ring_timeout_secs BETWEEN 1 AND 600),

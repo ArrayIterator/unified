@@ -24,9 +24,7 @@ use super::store::load_alert;
 use super::types::Capa;
 use super::types::QualityAlert;
 
-// ---------------------------------------------------------------------------
 // Alert + block handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_alerts(
     ctx: web::Data<Arc<AppContext>>,
@@ -123,7 +121,7 @@ pub(crate) async fn get_alert(
 }
 
 /// Apply an alert transition to a loaded record: validate the
-/// move, stamp the actor, and — on resolve — clear `blocked`.
+/// move, stamp the actor, and - on resolve - clear `blocked`.
 /// Resolving an alert unblocks its target, so the stored record
 /// (and the emitted event, which carries the same payload) must
 /// say `blocked: false`; leaving `blocked: true` on a resolved

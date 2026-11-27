@@ -11,7 +11,7 @@
 //! tenant's stored IVR menus and auto-response scripts
 //! through the `phone.ai.answer_caller_question_requested`
 //! hook (answered in `hooks.rs`). The AI answers and may
-//! suggest a route or escalation — it never books, charges,
+//! suggest a route or escalation - it never books, charges,
 //! transfers, or changes anything on its own; the caller (or
 //! an admin through the API) performs any action.
 //!
@@ -105,7 +105,7 @@ mod tests {
     #[test]
     fn no_capability_allows_pii() {
         // Callers are answered from stored menus and scripts,
-        // and summaries from stored call facts — no capability
+        // and summaries from stored call facts - no capability
         // in this module needs PII.
         assert!(AI_CAPABILITIES.iter().all(|item| !item.allows_pii));
     }

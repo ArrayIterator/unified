@@ -134,9 +134,7 @@ pub(crate) fn validate_calendar_with(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Entitlement (meetings as a product)
-// ---------------------------------------------------------------------------
 
 /// Check, at join time, whether `user_id` may enter a paid room.
 ///
@@ -201,9 +199,7 @@ pub(crate) fn check_entitlement(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Scheduler linkage
-// ---------------------------------------------------------------------------
 
 /// Link a scheduled room to the scheduler module.
 ///
@@ -218,7 +214,7 @@ pub(crate) fn check_entitlement(
 /// `meeting.start` is a known scheduler kind: it is listed in the
 /// scheduler's `KNOWN_KINDS` (`scheduler/types.rs`) and dispatched
 /// at `scheduler/service.rs`, which emits `meeting.start_requested`
-/// when the job fires — the event this module already listens to
+/// when the job fires - the event this module already listens to
 /// below. When the scheduler is not registered or declines the job,
 /// this function records `scheduler_status: "declined"` instead of
 /// pretending the reminder was scheduled. The room is still created

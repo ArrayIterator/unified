@@ -10,9 +10,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Email and newsletter (2026-11-22-000016_email_newsletter).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = email_connections)]

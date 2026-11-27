@@ -13,9 +13,7 @@ use super::settings::SaasDomainsSettings;
 use super::store::aliases_store;
 use super::store::product_subdomains_store;
 
-// ---------------------------------------------------------------------------
 // Validation helpers.
-// ---------------------------------------------------------------------------
 
 /// TLDs that can never appear on the public internet: RFC 6761
 /// special-use names plus suffixes commonly used for private
@@ -103,7 +101,7 @@ pub(crate) fn normalize_domain(raw: &str) -> UnifiedResult<String> {
 /// Validate an alias target value for its type. CNAME targets must
 /// be valid hostnames whose TLD is a public suffix (or a domain
 /// this system already verified); A targets must be valid public
-/// IP literals — private, loopback, link-local, unspecified,
+/// IP literals - private, loopback, link-local, unspecified,
 /// multicast, CGNAT shared-address space (`100.64.0.0/10`), and
 /// IPv6 documentation addresses are rejected so an alias can never
 /// point a tenant at internal infrastructure.

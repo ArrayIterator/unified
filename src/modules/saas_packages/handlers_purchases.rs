@@ -20,9 +20,7 @@ use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 use super::{constants::*, types::*, state::*, seed::*, auth::*, helpers::*, provisioning::*, handlers_packages::*, handlers_ai::*, events::*, module::*};
 
-// ---------------------------------------------------------------------------
 // HTTP handlers -- purchases, provisioning, lifecycle.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn purchase_package(
     ctx: web::Data<Arc<AppContext>>,

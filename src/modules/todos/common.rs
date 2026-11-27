@@ -1,4 +1,4 @@
-// todos — common.
+// todos - common.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -26,9 +26,7 @@ use super::handlers_subtasks::*;
 use super::handlers_ai::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Helpers: caller, capabilities, validation.
-// ---------------------------------------------------------------------------
 
 /// The server-verified caller (see `unified_core::caller::Caller`):
 /// the user id identifies the actor, the server-resolved role is the
@@ -68,9 +66,7 @@ pub(crate) fn require_permission(ctx: &AppContext, role: &str, permission: &str)
     }
 }
 
-// ---------------------------------------------------------------------------
 // Tenant edge guard (C3 pilot 4, group B).
-// ---------------------------------------------------------------------------
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request

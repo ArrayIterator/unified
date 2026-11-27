@@ -24,7 +24,7 @@
 //!   next call runs fresh.
 //!
 //! The compiled JavaScript of every loaded module is held in RAM
-//! (`LoadedModule::compiled_js`) — the server never reads a `.js`
+//! (`LoadedModule::compiled_js`) - the server never reads a `.js`
 //! file from disk.
 
 use parking_lot::RwLock;
@@ -166,7 +166,7 @@ struct EngineShared {
     /// Mutable per-module metadata shared with the `TsModule`
     /// registered in the `ModuleRegistry` (its `route_info` reads
     /// this, so a reload updates the catalog without
-    /// re-registering the module — the registry refuses duplicate
+    /// re-registering the module - the registry refuses duplicate
     /// ids).
     ts_state: RwLock<HashMap<String, Arc<TsModuleState>>>,
 }
@@ -778,7 +778,7 @@ fn note_success(
 }
 
 /// Count a failed call against a module; at the cap the summary
-/// flips to `"error"` (the module stays loaded — an admin reloads
+/// flips to `"error"` (the module stays loaded - an admin reloads
 /// it). Both the worker map and the shared summaries map are
 /// updated, so `list_modules` sees the same state.
 fn record_failure(

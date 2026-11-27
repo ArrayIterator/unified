@@ -396,9 +396,7 @@ pub(crate) async fn return_progress_report(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Defect handlers
-// ---------------------------------------------------------------------------
 
 
 /// Per-project supervision summary, computed on read.
@@ -603,9 +601,7 @@ pub(crate) async fn project_dashboard(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Hook listeners (projects-module events)
-// ---------------------------------------------------------------------------
 
 // Acknowledge `project.created` / `project.updated`: this module
 // keeps no project cache, so there is nothing to update.

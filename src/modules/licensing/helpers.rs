@@ -31,9 +31,7 @@ use std::time::{Duration, Instant};
 use uuid::Uuid;
 use super::{keys::*, expiry::*, store::*, hooks::*, types::*, validation::*, handlers::*, products::*, product_handlers::*, verify::*, offline::*, distribution::*, releases::*, module::*};
 
-// ---------------------------------------------------------------------------
 // Small shared helpers (SaaS).
-// ---------------------------------------------------------------------------
 
 pub(crate) fn sha256_hex(data: &[u8]) -> String {
     let mut hasher = Sha256::new();
@@ -420,9 +418,7 @@ pub(crate) fn revoke_offline_tokens_for_license(license_id: Uuid) {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Capability checks and public API-key authentication (SaaS).
-// ---------------------------------------------------------------------------
 
 /// Caller identity: the server-verified caller (user id plus
 /// server-resolved role, both required for capability checks),
@@ -612,9 +608,9 @@ pub(crate) fn record_failed_verification(
 }
 
 /// Reject tenant-resolved requests from this control-plane
-/// handler (C3 task 315, decision (a)): platform writes go only
+/// handler (C3, decision (a)): platform writes go only
 /// through an explicit, audited platform scope. Mirrors
-/// `tenancy::ControlPlaneGuard` — a request that resolved to a
+/// `tenancy::ControlPlaneGuard` - a request that resolved to a
 /// tenant host is rejected outright (403); the guard's predicate
 /// (`ControlPlaneGuard::is_control_plane_request`) is the single
 /// source of truth, so this never drifts from the guard.

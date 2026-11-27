@@ -16,9 +16,7 @@ use super::helpers::{notify, record_run};
 use super::validation::{clamp_total_timeout, guard_url, pinned_http_client, url_port_or_default};
 use super::tools_tls::tool_ssl_check;
 
-// ---------------------------------------------------------------------------
 // Uptime: one-off check plus monitor evaluation.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn run_uptime_probe(
     url_text: &str,
@@ -159,9 +157,7 @@ pub(crate) async fn evaluate_monitor(
     }))
 }
 
-// ---------------------------------------------------------------------------
 // Certificate expiry watch evaluation.
-// ---------------------------------------------------------------------------
 
 /// Check every enabled watch: prefer the certificates module's live
 /// data for managed domains, otherwise probe live with the SSL/TLS
@@ -365,9 +361,7 @@ pub(crate) fn check_cert_watches_sync(ctx: &AppContext) -> Value {
     })
 }
 
-// ---------------------------------------------------------------------------
 // HTTP handlers.
-// ---------------------------------------------------------------------------
 
 /// Run a tool, record the run (success or failure), and answer with
 /// the standard envelope. Failures are recorded too, with the error

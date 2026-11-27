@@ -19,9 +19,7 @@ pub(crate) const BYO_MAX_VALIDATION_AGE_SECS: i64 = 24 * 3600;
 /// configured `app.secret_key` wins whenever it is set.
 pub(crate) const DEV_ENCRYPTION_SECRET: &str = "unified-storage-manager-development-secret";
 
-// ---------------------------------------------------------------------------
 // Permissions (capability names checked through the `role.check` hook).
-// ---------------------------------------------------------------------------
 
 pub(crate) const PERM_READ: &str = "storage_manager.read";
 pub(crate) const PERM_MANAGE_BUCKETS: &str = "storage_manager.manage_buckets";
@@ -36,6 +34,4 @@ pub(crate) const PERM_MANAGE_PLANS: &str = "storage_manager.manage_plans";
 pub(crate) const PERM_MANAGE_BYO: &str = "storage_manager.manage_byo";
 pub(crate) const PERM_BYO_USE: &str = "storage_manager.use_byo";
 
-// ---------------------------------------------------------------------------
 // Hook event names.
-// ---------------------------------------------------------------------------

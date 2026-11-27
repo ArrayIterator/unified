@@ -1,4 +1,4 @@
-// routes module — Views.
+// routes module - Views.
 //
 // Split from the former single-file module `src/modules/routes.rs`.
 // The module root (`routes.rs`) re-exports the public items, so the
@@ -19,9 +19,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::sync::{Arc, RwLock};
 
-// ---------------------------------------------------------------------------
 // Views.
-// ---------------------------------------------------------------------------
 
 /// One route as listed by the API: registry data plus the override
 /// value currently in force at each layer, so the admin UI can show

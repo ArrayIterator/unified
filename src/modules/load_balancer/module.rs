@@ -15,9 +15,7 @@ use super::health::*;
 use super::hooks::*;
 use super::store::*;
 
-// ---------------------------------------------------------------------------
 // Module definition.
-// ---------------------------------------------------------------------------
 
 pub struct LoadBalancerModule;
 
@@ -282,7 +280,6 @@ pub fn register(registry: &ModuleRegistry) {
     registry.register(Arc::new(LoadBalancerModule::new()));
 }
 
-// ---------------------------------------------------------------------------
 // INTEGRATOR NOTES -- snippets for shared files (do not apply here).
 //
 // 1. `src/modules/mod.rs` -- declare and register the module:

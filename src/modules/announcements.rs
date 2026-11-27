@@ -11,7 +11,7 @@
 // list, the unread list and the dashboard feed only ever return
 // announcements addressed to the calling user, whose identity is
 // resolved from the authenticated identity headers (`X-User-Id`,
-// `X-Role`, `X-Department`, `X-Segment`) — never from query
+// `X-Role`, `X-Department`, `X-Segment`) - never from query
 // parameters. A caller without identity headers sees broadcast
 // (`all`) announcements only. `users` means every user (there is no
 // user-directory hook to distinguish users from admins, so it
@@ -55,9 +55,9 @@
 // unread count, for the authenticated caller.
 //
 // Events emitted on the hook bus:
-//   - `announcement.published` — an announcement was published.
-//   - `changelog.created`      — a changelog entry was created.
-//   - `notification.requested` — emitted on publish (kind
+//   - `announcement.published` - an announcement was published.
+//   - `changelog.created`      - a changelog entry was created.
+//   - `notification.requested` - emitted on publish (kind
 //     `announcement`) so the Notifications module can fan the
 //     announcement out to its audience.
 

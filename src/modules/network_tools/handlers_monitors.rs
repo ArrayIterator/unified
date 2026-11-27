@@ -15,9 +15,7 @@ use super::helpers::{allow_private_probes, check_rate_limit, company_filter, has
 use super::validation::validate_domain;
 use super::tools_monitor::{check_cert_watches, evaluate_monitor};
 
-// ---------------------------------------------------------------------------
 // Uptime monitors (CRUD + trigger + events).
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_uptime_monitors(
     req: HttpRequest,
@@ -322,9 +320,7 @@ pub(crate) async fn list_uptime_events(
     json::respond(result, debug)
 }
 
-// ---------------------------------------------------------------------------
 // Certificate watches (CRUD + check).
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_cert_watches(
     req: HttpRequest,

@@ -19,9 +19,7 @@ use serde_json::json;
 use unified_core::hooks::HookContext;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // User deletion (users module owns the event)
-// ---------------------------------------------------------------------------
 
 /// `user.deleted` carries `user_id` (falling back to `id`, the
 /// same shape the forums module reads). The user's calls are
@@ -128,9 +126,7 @@ pub(crate) fn on_user_deleted(state: PhoneState, ctx: &mut HookContext) {
     }));
 }
 
-// ---------------------------------------------------------------------------
 // AI grounding (ai module owns the events)
-// ---------------------------------------------------------------------------
 
 /// Answer `phone.ai.answer_caller_question_requested` with
 /// the grounding the AI runner merges into the system prompt:

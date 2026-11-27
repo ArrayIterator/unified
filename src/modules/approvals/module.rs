@@ -1,40 +1,40 @@
-// Generic Approvals module — data-driven approval workflows for any
+// Generic Approvals module - data-driven approval workflows for any
 // record in any module, without duplicating another module's data.
 //
 // Routes live under `/api/v1/approvals`:
 //
 //   Definitions (admin: what gets approved, and by whom):
-//     GET/POST /definitions — list definitions / create a definition.
+//     GET/POST /definitions - list definitions / create a definition.
 //     GET/PATCH/DELETE /definitions/{id}.
-//     POST /definitions/{id}/steps — append a step to a definition.
-//     DELETE /definitions/{id}/steps/{step_id} — remove a step.
+//     POST /definitions/{id}/steps - append a step to a definition.
+//     DELETE /definitions/{id}/steps/{step_id} - remove a step.
 //   Requests (one approval flow for one record):
-//     GET/POST /requests — list requests / create a request.
-//     GET /requests/{id} — one request with its steps and decisions.
-//     POST /requests/{id}/decide — approve / reject / request-changes.
-//     POST /requests/{id}/resubmit — return a changes-requested or
+//     GET/POST /requests - list requests / create a request.
+//     GET /requests/{id} - one request with its steps and decisions.
+//     POST /requests/{id}/decide - approve / reject / request-changes.
+//     POST /requests/{id}/resubmit - return a changes-requested or
 //       expired request to in_progress (new decision round).
-//     POST /requests/{id}/cancel — cancel an open request.
-//     POST /requests/{id}/reassign — replace the approvers of one
+//     POST /requests/{id}/cancel - cancel an open request.
+//     POST /requests/{id}/reassign - replace the approvers of one
 //       pending step (admin; used for escalation handover).
-//     GET /requests/{id}/history — append-only decision history.
-//     POST /requests/sweep-expiry — expire overdue requests and
+//     GET /requests/{id}/history - append-only decision history.
+//     POST /requests/sweep-expiry - expire overdue requests and
 //       escalate them (admin; see the expiry note below).
 //   Dashboards:
-//     GET /my-pending — requests waiting on the caller (as approver
+//     GET /my-pending - requests waiting on the caller (as approver
 //       or as an active delegate), paginated.
-//     GET /my-requests — requests the caller asked for, paginated.
-//     GET /overdue — requests past their deadline, paginated.
-//     GET /by-record?module=&record_type=&record_id= — requests and
+//     GET /my-requests - requests the caller asked for, paginated.
+//     GET /overdue - requests past their deadline, paginated.
+//     GET /by-record?module=&record_type=&record_id= - requests and
 //       decisions for one record.
 //   Delegations:
-//     GET/POST /delegations — list / create a delegation.
-//     DELETE /delegations/{id} — revoke a delegation.
+//     GET/POST /delegations - list / create a delegation.
+//     DELETE /delegations/{id} - revoke a delegation.
 //   Settings (admin-editable configurable defaults):
 //     GET/PATCH /settings.
 //
 //
-// HOOK CONTRACT — the core of this module. Other modules never call
+// HOOK CONTRACT - the core of this module. Other modules never call
 // this module directly; everything crosses the hook bus.
 //
 //   `approval.requested` (emitted BY any module, consumed HERE).
@@ -44,7 +44,7 @@
 //       "record_type": "invoice",        // record kind in that module (required)
 //       "record_id": "9f...",            // record id as text (required)
 //       "requester_id": "user-42",        // who asks (required)
-//       "summary": "Invoice #1042 — 1,250,000 IDR",  // (required)
+//       "summary": "Invoice #1042 - 1,250,000 IDR",  // (required)
 //       "amount_minor": 125000000,       // optional, integer minor units
 //       "currency": "IDR",               // optional, ISO 4217 code
 //       "company_id": "acme"             // optional tenant scope
@@ -74,24 +74,24 @@
 //   record; this module never writes to another module's tables.
 //
 //   Other events emitted by this module:
-//     - `approval.created` — `{"request_id", "module", "record_type",
+//     - `approval.created` - `{"request_id", "module", "record_type",
 //       "record_id", "requester_id", "definition_id"}`.
-//     - `approval.resubmitted` — `{"request_id", "round"}`.
-//     - `approval.cancelled` — `{"request_id", "cancelled_by"}`.
-//     - `approval.escalated` — `{"request_id", "step_index",
+//     - `approval.resubmitted` - `{"request_id", "round"}`.
+//     - `approval.cancelled` - `{"request_id", "cancelled_by"}`.
+//     - `approval.escalated` - `{"request_id", "step_index",
 //       "escalation_count", "action"}`.
-//     - `approval.expired` — `{"request_id", "step_index"}` (only
+//     - `approval.expired` - `{"request_id", "step_index"}` (only
 //       when the escalation rule gives up and the request expires).
-//     - `notification.requested` — to the current step's approvers
+//     - `notification.requested` - to the current step's approvers
 //       when a request is created, and to the escalation target plus
 //       the current approvers when a request escalates, using the
 //       notifications module's payload shape (`to_user_id`,
 //       `title`, `body`). Delivery is the notifications module's job.
 //
 //   Events this module emits to resolve people (never duplicated
-//   user records — approvers are always resolved through other
+//   user records - approvers are always resolved through other
 //   modules):
-//     - `user.manager.query` — `{"user_id": "..."}`; the HR / users
+//     - `user.manager.query` - `{"user_id": "..."}`; the HR / users
 //       module answers with `{"manager_id": "..."}` (read from the
 //       `manager_id` key). When nobody answers, a `manager`
 //       approver slot stays unresolved: the step cannot be decided
@@ -100,11 +100,11 @@
 //       reassign the step instead of the request stalling silently.
 //
 //
-// DATA MODEL — everything is data, never baked into code:
+// DATA MODEL - everything is data, never baked into code:
 //
 //   An approval definition names a (`module`, `record_type`) pair and
-//   owns ordered steps. A step has a `mode` (`all` — every approver
-//   slot must approve; `any` — one approval completes the step) and a
+//   owns ordered steps. A step has a `mode` (`all` - every approver
+//   slot must approve; `any` - one approval completes the step) and a
 //   list of approver slots. A slot is `{kind, ref}` where kind is
 //   `user` (ref is the user id), `role` (ref is the role slug; any
 //   caller whose `X-Role` matches satisfies the slot), or `manager`
@@ -114,7 +114,7 @@
 //
 //   A request is polymorphic: (`module`, `record_type`, `record_id`)
 //   are plain text. There is deliberately NO foreign key into
-//   another module's tables — the owning module owns its records.
+//   another module's tables - the owning module owns its records.
 //
 //   Delegation: an approver delegates to another user for a date
 //   range. A delegate deciding records `acting_for` with the original
@@ -125,12 +125,12 @@
 //   `request_changes`, each with a comment (required for `reject` and
 //   `request_changes`, optional for `approve` unless the settings
 //   require it), a timestamp, and the acting identity. Decisions are
-//   never edited or deleted — there is no update/delete endpoint for
+//   never edited or deleted - there is no update/delete endpoint for
 //   them, and the SQL migration adds a trigger that rejects
 //   UPDATE/DELETE on the decisions table.
 //
 //
-// REQUEST LIFECYCLE — the state machine:
+// REQUEST LIFECYCLE - the state machine:
 //
 //   requested -> in_progress -> approved | rejected |
 //   changes_requested -> (resubmit) -> in_progress
@@ -157,13 +157,13 @@
 //   target and the current approvers, extend the deadline by
 //   `escalation_extension_hours`), `notify_and_reassign` (same, and
 //   the caller is expected to reassign the step through
-//   `POST /requests/{id}/reassign` — the escalation record names the
+//   `POST /requests/{id}/reassign` - the escalation record names the
 //   target), or `none` (the request expires immediately). After
 //   `max_escalations` escalations (settings default 3) the request
 //   expires. An expired request can be resubmitted.
 //
 //
-// HONESTY — READ THIS FIRST. What is real in this module:
+// HONESTY - READ THIS FIRST. What is real in this module:
 // in-memory definition / step / request / decision / delegation /
 // escalation management in DashMaps (the in-memory store is
 // authoritative; the SQL migration mirrors the tables for the
@@ -207,7 +207,7 @@
 //
 // Security: capability checks on every endpoint; all input validated
 // (lengths, UUIDs, enums, amounts); no raw SQL (Diesel only for the
-// future persistence layer — this file issues no SQL at all);
+// future persistence layer - this file issues no SQL at all);
 // secrets are never stored (there are no secrets in this module);
 // output is serialized through serde, never string-built HTML.
 
@@ -241,9 +241,7 @@ use super::handlers_dashboards::*;
 use super::hooks::*;
 use super::ai_capabilities::{AI_CAPABILITIES};
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct ApprovalsModule {
     state: ApprovalsState,

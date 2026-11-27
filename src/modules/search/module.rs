@@ -23,7 +23,7 @@
 // through the `role.check` hook, failing closed. The read endpoints
 // (search, suggest, stats) are public.
 //
-// Ranking algorithm (documented honestly — this is substring and token
+// Ranking algorithm (documented honestly - this is substring and token
 // matching, not a full-text engine): the query is lowercased and split
 // on whitespace into tokens. A document is a hit only when every token
 // appears as a substring of the title or the snippet (AND semantics).
@@ -58,9 +58,7 @@ use super::handlers::*;
 use super::hooks::*;
 use super::ai_capabilities::AI_CAPABILITIES;
 
-// ---------------------------------------------------------------------------
 // Module.
-// ---------------------------------------------------------------------------
 
 pub struct SearchModule {
     state: Arc<SearchState>,

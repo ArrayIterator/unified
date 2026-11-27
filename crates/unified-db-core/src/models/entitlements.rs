@@ -10,8 +10,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
-// Entitlements (batch 15 B1 notes §4). `EntitlementRow` /
+// Entitlements (batch 15 B1 notes sec. 4). `EntitlementRow` /
 // `NewEntitlementRow` are verbatim from the notes (the given
 // `NewEntitlementRow` deliberately carries the DB-defaulted
 // `status` / `granted_at`); the other five pairs follow the file
@@ -19,7 +18,6 @@ use uuid::Uuid;
 // name only a Queryable struct for `entitlement_settings` and
 // `entitlement_module_activations`; `New*` structs are added per
 // the file convention.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 // NOTE: the path must stay fully qualified to the TABLE module.

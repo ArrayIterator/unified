@@ -7,7 +7,7 @@
 //   - Status file `unified.status.json` (env `UNIFIED_STATUS_FILE`)
 //   - Log file    `unified.log`         (env `UNIFIED_LOG_FILE`)
 //
-// Control mechanism — Unix signals sent to the daemon process:
+// Control mechanism - Unix signals sent to the daemon process:
 //
 //   - SIGHUP  reload the configuration file. The file is loaded and
 //             validated first; a failing configuration never replaces

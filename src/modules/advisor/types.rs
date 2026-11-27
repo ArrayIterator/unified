@@ -7,9 +7,7 @@ use serde_json::Value;
 
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 /// A billing invoice fact cached from observed invoice events. Only
 /// the fields the rules read are kept; the full event payload is
 /// never stored.

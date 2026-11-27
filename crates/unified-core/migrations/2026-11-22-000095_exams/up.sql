@@ -49,9 +49,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- Question banks.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS exam_question_banks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title TEXT NOT NULL CHECK (char_length(title) BETWEEN 1 AND 200),
@@ -65,9 +63,7 @@ CREATE TABLE IF NOT EXISTS exam_question_banks (
 CREATE INDEX IF NOT EXISTS idx_exam_question_banks_category ON exam_question_banks (category);
 CREATE INDEX IF NOT EXISTS idx_exam_question_banks_owner ON exam_question_banks (owner_id);
 
--- ---------------------------------------------------------------------------
 -- Questions. Correct answers live ONLY here.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS exam_questions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     bank_id UUID NOT NULL,
@@ -92,9 +88,7 @@ CREATE INDEX IF NOT EXISTS idx_exam_questions_type ON exam_questions (question_t
 CREATE INDEX IF NOT EXISTS idx_exam_questions_difficulty ON exam_questions (difficulty);
 CREATE INDEX IF NOT EXISTS idx_exam_questions_status ON exam_questions (status);
 
--- ---------------------------------------------------------------------------
 -- Question versions (snapshots of superseded versions).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS exam_question_versions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     question_id UUID NOT NULL,
@@ -107,9 +101,7 @@ CREATE TABLE IF NOT EXISTS exam_question_versions (
 CREATE INDEX IF NOT EXISTS idx_exam_question_versions_question ON exam_question_versions (question_id);
 CREATE INDEX IF NOT EXISTS idx_exam_question_versions_version ON exam_question_versions (question_id, version);
 
--- ---------------------------------------------------------------------------
 -- Exams.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS exams (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title TEXT NOT NULL CHECK (char_length(title) BETWEEN 1 AND 200),
@@ -139,9 +131,7 @@ CREATE INDEX IF NOT EXISTS idx_exams_course ON exams (course_id);
 CREATE INDEX IF NOT EXISTS idx_exams_opens ON exams (opens_at);
 CREATE INDEX IF NOT EXISTS idx_exams_closes ON exams (closes_at);
 
--- ---------------------------------------------------------------------------
 -- Exam question links (an exam's question set, pinned versions).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS exam_question_links (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     exam_id UUID NOT NULL,
@@ -156,9 +146,7 @@ CREATE TABLE IF NOT EXISTS exam_question_links (
 CREATE INDEX IF NOT EXISTS idx_exam_question_links_exam ON exam_question_links (exam_id);
 CREATE INDEX IF NOT EXISTS idx_exam_question_links_question ON exam_question_links (question_id);
 
--- ---------------------------------------------------------------------------
 -- Rubrics.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS exam_rubrics (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     exam_id UUID NOT NULL,
@@ -171,9 +159,7 @@ CREATE TABLE IF NOT EXISTS exam_rubrics (
 );
 CREATE INDEX IF NOT EXISTS idx_exam_rubrics_exam ON exam_rubrics (exam_id);
 
--- ---------------------------------------------------------------------------
 -- Attempts. Answers only; correct answers are never stored here.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS exam_attempts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     exam_id UUID NOT NULL,
@@ -202,9 +188,7 @@ CREATE INDEX IF NOT EXISTS idx_exam_attempts_student ON exam_attempts (user_id);
 CREATE INDEX IF NOT EXISTS idx_exam_attempts_status ON exam_attempts (status);
 CREATE INDEX IF NOT EXISTS idx_exam_attempts_exam_student ON exam_attempts (exam_id, user_id);
 
--- ---------------------------------------------------------------------------
 -- Manual grades (essays) with rubrics and an audit trail.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS exam_grades (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     attempt_id UUID NOT NULL,
@@ -227,9 +211,7 @@ CREATE INDEX IF NOT EXISTS idx_exam_grades_exam ON exam_grades (exam_id);
 CREATE INDEX IF NOT EXISTS idx_exam_grades_status ON exam_grades (status);
 CREATE INDEX IF NOT EXISTS idx_exam_grades_grader ON exam_grades (grader_id);
 
--- ---------------------------------------------------------------------------
 -- Proctoring signals (records only; never auto-fail an attempt).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS exam_proctor_signals (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     attempt_id UUID NOT NULL,
@@ -243,9 +225,7 @@ CREATE INDEX IF NOT EXISTS idx_exam_proctor_signals_attempt ON exam_proctor_sign
 CREATE INDEX IF NOT EXISTS idx_exam_proctor_signals_exam ON exam_proctor_signals (exam_id);
 CREATE INDEX IF NOT EXISTS idx_exam_proctor_signals_type ON exam_proctor_signals (signal_type);
 
--- ---------------------------------------------------------------------------
 -- Results.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS exam_results (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     attempt_id UUID NOT NULL,

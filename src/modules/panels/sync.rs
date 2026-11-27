@@ -28,9 +28,7 @@ use super::store::sync_state_store;
 use super::types::PanelConnection;
 use super::types::RemoteRecord;
 
-// ---------------------------------------------------------------------------
 // Live fetch dispatch and module-level sync.
-// ---------------------------------------------------------------------------
 
 /// Fetch one collection live from an adapter, as generic records.
 pub(crate) async fn fetch_collection(

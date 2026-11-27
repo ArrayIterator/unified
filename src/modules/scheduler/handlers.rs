@@ -17,9 +17,7 @@ use super::{CreateJob, EnqueueRequest, Job, JobRun, QueueItem, SchedulerState, U
 pub(crate) const PERM_SCHEDULER_VIEW: &str = "scheduler.view";
 pub(crate) const PERM_SCHEDULER_MANAGE: &str = "scheduler.manage";
 
-// ---------------------------------------------------------------------------
 // Authentication and authorization
-// ---------------------------------------------------------------------------
 
 /// Caller identity: the server-verified caller (user id plus
 /// server-resolved role, both required for capability checks),
@@ -41,7 +39,7 @@ pub(crate) fn caller(req: &HttpRequest) -> UnifiedResult<Caller> {
 /// Ask the roles module whether `role` holds `permission` through
 /// the `role.check` hook on the scheduler's hook bus (wired to the
 /// application bus by `Module::init`). Fails closed: no answer means
-/// not allowed — before `init` the bus is empty, so every check
+/// not allowed - before `init` the bus is empty, so every check
 /// fails closed rather than letting an unauthenticated caller in.
 pub(crate) fn check_capability(state: &SchedulerState, role: &str, permission: &str) -> bool {
     let bus = state
@@ -77,7 +75,7 @@ pub(crate) fn require_permission(
 /// error response to send when the gate fails. Every handler calls
 /// this first: reads need `scheduler.view`, writes (create, update,
 /// delete, run, enqueue) need `scheduler.manage`. Without this gate
-/// anyone could create, run or delete jobs and enqueue any kind —
+/// anyone could create, run or delete jobs and enqueue any kind -
 /// including `tenant.destroy_due`, `backup.run`,
 /// `payment.subscription.renew`, `newsletter.send` and
 /// `marketing.campaign.send`.
@@ -95,9 +93,7 @@ fn authorize(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Job handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_jobs(
     state: web::Data<Arc<SchedulerState>>,
@@ -335,9 +331,7 @@ pub(crate) async fn list_runs(
     json::success_response(page, 200)
 }
 
-// ---------------------------------------------------------------------------
 // Queue handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_queue(
     state: web::Data<Arc<SchedulerState>>,

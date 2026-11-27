@@ -1,4 +1,4 @@
-// timetracker — Internal service helpers shared by the handlers.
+// timetracker - Internal service helpers shared by the handlers.
 
 use super::*;
 use unified_core::context::AppContext;

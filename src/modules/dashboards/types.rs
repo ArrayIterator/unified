@@ -29,9 +29,7 @@ pub const DEFAULT_ADMIN_PATH: &str = "admin";
 
 pub const DEFAULT_USER_PATH: &str = "dashboard";
 
-// ---------------------------------------------------------------------------
 // Capabilities declared by this module (resource:action, see the header).
-// ---------------------------------------------------------------------------
 
 pub const CAP_ADMIN_ACCESS: &str = "admin:access";
 
@@ -140,9 +138,7 @@ pub const EVENT_RESELLER_CLIENT_LINKED: &str = "reseller.client.linked";
 
 pub const EVENT_RESELLER_CLIENT_UNLINKED: &str = "reseller.client.unlinked";
 
-// ---------------------------------------------------------------------------
 // Navigation
-// ---------------------------------------------------------------------------
 
 /// One navigation item. `href` is a template: `{admin}` and `{user}`
 /// are replaced with the configured dashboard prefixes at render time.
@@ -201,9 +197,7 @@ pub(crate) const NAV_DEFS: &[NavDef] = &[
     NavDef { id: "reseller.payouts", label: "Commissions & Payouts", href: "/{user}/reseller/payouts", icon: "icon-activity", capability: CAP_RESELLER_PAYOUTS_VIEW, section: "reseller", scope: "reseller" },
 ];
 
-// ---------------------------------------------------------------------------
 // Identity and authentication
-// ---------------------------------------------------------------------------
 
 /// Claims of an Auth Manager JWT (`POST /api/v1/auth/token`).
 #[derive(Debug, Clone, Deserialize)]
@@ -260,9 +254,7 @@ pub(crate) struct CallerContext {
     pub(crate) profile: Option<User>,
 }
 
-// ---------------------------------------------------------------------------
 // Module state
-// ---------------------------------------------------------------------------
 
 /// One active admin view-as session. Keyed by the admin's user id in
 /// `DashboardsState::view_as`. The impersonated session keeps the
@@ -394,9 +386,7 @@ pub(crate) struct LinkClientInput {
     pub(crate) client_id: String,
 }
 
-// ---------------------------------------------------------------------------
 // Admin view-as handlers
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct StartViewAsInput {

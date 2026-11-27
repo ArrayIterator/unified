@@ -8,9 +8,7 @@ use uuid::Uuid;
 
 use super::types::*;
 
-// ---------------------------------------------------------------------------
 // Shared state
-// ---------------------------------------------------------------------------
 
 /// In-memory stores for webinars. The hook bus is attached in `init`
 /// (the bus lives in `AppContext`); handlers tolerate a missing bus

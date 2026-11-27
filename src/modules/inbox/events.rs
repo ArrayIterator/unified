@@ -12,7 +12,7 @@ use super::{InboxState, PRIORITIES, opt_datetime, opt_string, ticket_status_to_i
 /// the emitting module includes it. Source modules do not all
 /// emit `tenant_id` yet: when it is absent (or not a UUID) the
 /// thread is created unscoped (nil tenant id) and is never served
-/// via the API until a tenant-scoped event refreshes it — see the
+/// via the API until a tenant-scoped event refreshes it - see the
 /// module header. The company id is taken from the payload when
 /// present, otherwise `None`.
 fn payload_tenant(data: &Value) -> (Uuid, Option<String>) {
@@ -175,7 +175,7 @@ pub(crate) fn on_mail_sent(state: InboxState, ctx: &mut HookContext) {
 /// snoozed, or is snoozed until later, is left alone. When the
 /// event payload carries a `tenant_id` (the scheduler echoes the
 /// one `schedule_unsnooze` queued), it must match the thread's
-/// tenant — a mismatched or unparsable tenant id is ignored, so a
+/// tenant - a mismatched or unparsable tenant id is ignored, so a
 /// job for one tenant can never unsnooze another tenant's thread.
 /// A payload without `tenant_id` (scheduler arms that predate the
 /// tenant field) is still honoured: the scheduler is a trusted

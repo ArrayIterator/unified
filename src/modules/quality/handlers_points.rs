@@ -38,10 +38,8 @@ use super::types::QualitySettings;
 use super::types::UpdateCriterionInput;
 use super::types::UpdatePointInput;
 
-// ---------------------------------------------------------------------------
 // Pure update application (kept separate from the handlers so the
 // nullable-update semantics are unit-testable)
-// ---------------------------------------------------------------------------
 
 /// Apply a point update. Clearable fields (`target_ref`,
 /// `target_kind`) use nullable-update semantics: absent leaves
@@ -90,7 +88,7 @@ pub(crate) fn apply_point_update(
 }
 
 /// Apply a criterion update with nullable-update semantics, then
-/// re-validate the resulting shape — clearing the stale bounds is
+/// re-validate the resulting shape - clearing the stale bounds is
 /// what lets a criterion change kind (numeric to boolean, or the
 /// reverse) without failing validation against values that no
 /// longer apply.
@@ -154,9 +152,7 @@ pub(crate) fn apply_criterion_update(
     Ok(())
 }
 
-// ---------------------------------------------------------------------------
 // Quality point handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_points(
     ctx: web::Data<Arc<AppContext>>,
@@ -367,7 +363,7 @@ pub(crate) async fn delete_point(
         }
         // Alerts and CAPAs reference the point through their
         // inspection, so the inspection check above already blocks
-        // deletion while any exist — but check them directly too,
+        // deletion while any exist - but check them directly too,
         // so a point is never deleted out from under a live alert
         // or CAPA even if the inspection link is ever removed.
         let has_alerts = state
@@ -460,9 +456,7 @@ pub(crate) async fn deactivate_point(
     set_point_active(ctx, state, req, path, false, "quality.point.deactivated").await
 }
 
-// ---------------------------------------------------------------------------
 // Criterion handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_criteria(
     ctx: web::Data<Arc<AppContext>>,

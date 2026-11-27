@@ -12,9 +12,7 @@ use super::scheduler::*;
 use super::state::*;
 use super::types::*;
 
-// ---------------------------------------------------------------------------
 // Registration handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn register_for_webinar(
     state: web::Data<WebinarsState>,

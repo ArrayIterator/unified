@@ -1,4 +1,4 @@
-// clusters — Validation helpers and small pure utilities.
+// clusters - Validation helpers and small pure utilities.
 
 use super::*;
 use unified_core::error::{UnifiedError, UnifiedResult};

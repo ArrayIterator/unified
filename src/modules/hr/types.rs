@@ -17,9 +17,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Capabilities (checked through the `role.check` hook; fail closed).
-// ---------------------------------------------------------------------------
 
 /// Read HR records (own records for employees without `hr:read_all`).
 pub const PERM_HR_READ: &str = "hr:read";
@@ -47,9 +45,7 @@ pub(crate) const MAX_LEAVE_REQUEST_DAYS: f64 = 366.0;
 /// A work day cannot exceed 24 hours.
 pub(crate) const MAX_MINUTES_PER_DAY: u64 = 1440;
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// One employee. Only the linked user id is stored; names and emails
 /// live in the Users module. `manager_id` is another employee id.
@@ -299,7 +295,7 @@ pub struct CreateAttendance {
 
 /// One payroll run for one period (`YYYY-MM`). Money is computed from
 /// active contracts plus per-employee adjustments; nothing here pays
-/// anyone — finalizing only emits `hr.payroll_run_completed`.
+/// anyone - finalizing only emits `hr.payroll_run_completed`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PayrollRun {
     pub id: String,
@@ -463,7 +459,7 @@ pub struct ChecklistItem {
     pub updated_at: DateTime<Utc>,
 }
 
-/// One employee document. Metadata only — the file itself lives in
+/// One employee document. Metadata only - the file itself lives in
 /// Storage under `storage_file_id`; no file bytes are stored here.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EmployeeDocument {
@@ -475,7 +471,7 @@ pub struct EmployeeDocument {
     pub storage_file_id: String,
     /// True only when Storage explicitly answered that the file
     /// exists. False means "unknown" (no Storage handler answered)
-    /// — the metadata is kept but the file is unverified, never
+    /// - the metadata is kept but the file is unverified, never
     /// treated as confirmed to exist.
     #[serde(default)]
     pub storage_verified: bool,

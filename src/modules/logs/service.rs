@@ -1,4 +1,4 @@
-// logs — service.
+// logs - service.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -39,9 +39,7 @@ pub fn global_state() -> Arc<LogsState> {
         .clone()
 }
 
-// ---------------------------------------------------------------------------
 // Public ingestion API (used by other modules and by the tracing layer)
-// ---------------------------------------------------------------------------
 
 /// Record an application log entry in the shared ring buffer. The
 /// level is normalized; an unknown level falls back to `info`.

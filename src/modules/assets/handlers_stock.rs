@@ -16,9 +16,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Stock handlers
-// ---------------------------------------------------------------------------
 
 /// Checked stock arithmetic: `on_hand + delta`, refusing overflow
 /// with a 409 instead of panicking (debug) or wrapping (release).

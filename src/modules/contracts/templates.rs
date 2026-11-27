@@ -1,4 +1,4 @@
-// Contracts — Template handlers.
+// Contracts - Template handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -19,9 +19,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Template handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_templates(
     ctx: web::Data<Arc<AppContext>>,

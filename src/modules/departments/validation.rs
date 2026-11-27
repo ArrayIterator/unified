@@ -10,9 +10,7 @@ use serde_json::{json};
 use uuid::Uuid;
 use super::types::WorkingHours;
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 pub(crate) fn new_id() -> String {
     Uuid::new_v4().to_string()
@@ -130,9 +128,7 @@ pub(crate) fn respond_created<T: Serialize>(result: UnifiedResult<T>) -> HttpRes
     }
 }
 
-// ---------------------------------------------------------------------------
 // Handlers: routing rules
-// ---------------------------------------------------------------------------
 
 pub(crate) fn valid_match_type(match_type: &str) -> bool {
     matches!(match_type, "category" | "product" | "keyword")

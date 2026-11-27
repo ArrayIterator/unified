@@ -13,9 +13,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // BYO connections.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_byo_connections(
     state: web::Data<StorageManagerState>,
@@ -159,7 +157,7 @@ pub(crate) async fn create_byo_connection(
             }
         }
         // Tenant scoping: the connection's company is verified
-        // against the caller's scope — a scoped caller connects for
+        // against the caller's scope - a scoped caller connects for
         // their own company (an omitted company adopts it); an
         // unresolved caller may only connect personally.
         let body_company = optional_text(&input.company_id, "company_id", 128)?;

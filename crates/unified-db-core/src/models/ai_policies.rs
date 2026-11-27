@@ -11,12 +11,10 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
-// AI access allowlists (migration 000036_ai_allowlists; batch 2 notes §8).
+// AI access allowlists (migration 000036_ai_allowlists; batch 2 notes sec. 8).
 // Money structs carry no serde derives (PgNumeric has none); the notes'
 // `New*` snippets show `Deserialize` on money structs, which cannot
 // compile for PgNumeric fields, so those derives are dropped here.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable)]
 #[diesel(table_name = ai_company_policies)]
@@ -211,9 +209,7 @@ pub struct NewAuditorSessionRow {
     pub user_id: String,
 }
 
-// ---------------------------------------------------------------------------
-// AI gating (migration 000064_ai_gating; batch 5 notes §c/§d).
-// ---------------------------------------------------------------------------
+// AI gating (migration 000064_ai_gating; batch 5 notes sec. c/sec. d).
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = ai_global_settings)]

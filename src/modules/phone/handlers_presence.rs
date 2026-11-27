@@ -5,7 +5,7 @@
 //! Presence is owned by this module. No `user.presence.*`
 //! hook event exists anywhere in the tree (verified by grep
 //! over `src/modules/`), and the chat module's presence is
-//! per-room state, not a hook event — so there is nothing to
+//! per-room state, not a hook event - so there is nothing to
 //! listen to. Other modules that need a user's availability
 //! read this API or the `phone.presence.updated` event.
 
@@ -59,7 +59,7 @@ fn presence_view(entry: &PresenceEntry, now: chrono::DateTime<Utc>) -> Value {
 
 /// List presence of the tenant's users (paginated, filter by
 /// status). Users with no row read as offline and are not
-/// listed — presence only tracks users who have set it.
+/// listed - presence only tracks users who have set it.
 pub(crate) async fn list_presence(
     state: web::Data<PhoneState>,
     ctx: web::Data<Arc<AppContext>>,
@@ -133,7 +133,7 @@ pub(crate) async fn get_presence(
 }
 
 /// Set the caller's own presence. A user may only set their
-/// own row — presence is identity, not admin data.
+/// own row - presence is identity, not admin data.
 pub(crate) async fn set_presence(
     state: web::Data<PhoneState>,
     ctx: web::Data<Arc<AppContext>>,

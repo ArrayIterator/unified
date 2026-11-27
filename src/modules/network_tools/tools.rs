@@ -16,10 +16,8 @@ use tokio::time::timeout;
 use super::types::{MAX_BANNER_BYTES, MAX_PING_COUNT, MAX_TOTAL_TIMEOUT_SECS, MAX_TRACEROUTE_HOPS, ToolResult};
 use super::validation::{clamp_connect_timeout, resolve_and_guard, validate_domain, validate_target};
 
-// ---------------------------------------------------------------------------
 // Tool implementations. Each returns a `ToolResult`; handlers record
 // the run and wrap it in the standard envelope.
-// ---------------------------------------------------------------------------
 
 /// DNS lookup for one record type. SOA is resolved through hickory
 /// directly because `DnsVerifier` does not expose an SOA lookup.

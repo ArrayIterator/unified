@@ -4,7 +4,7 @@
 //! data-driven reminder schedules, hash-chained audit entries,
 //! and completion certificates.
 //!
-//! Documents are linked by id only (no foreign key — documents
+//! Documents are linked by id only (no foreign key - documents
 //! live in the documents module and this module must not assume
 //! their tables or migration order). Signature bytes are never
 //! stored or sent: the client sends only the SHA-256 hash of the
@@ -55,7 +55,7 @@ pub(crate) const MAX_ROLES_PER_TEMPLATE: usize = 50;
 /// Signing token: 48 random alphanumeric characters
 /// (~285 bits), following the contracts module pattern. The raw
 /// token is returned exactly once (at send / resend / add) and
-/// is never stored — only its SHA-256 hash.
+/// is never stored - only its SHA-256 hash.
 pub(crate) const SIGNING_TOKEN_LEN: usize = 48;
 
 /// Default signing-token lifetime in days.
@@ -121,12 +121,10 @@ pub(crate) const SIGNATURE_METHOD_TYPED: &str = "typed";
 
 pub(crate) const SIGNATURE_METHOD_UPLOADED: &str = "uploaded";
 
-// ---------------------------------------------------------------------------
 // Pure domain functions (unit-tested below)
-// ---------------------------------------------------------------------------
 
 /// SHA-256 hex digest. Used for signing-token storage, signature
-/// hashes, document hashes, and IP / user-agent hashing — the
+/// hashes, document hashes, and IP / user-agent hashing - the
 /// raw value is never stored or logged.
 pub fn hash_value(value: &str) -> String {
     let mut hasher = sha2::Sha256::new();
@@ -451,9 +449,7 @@ pub fn compute_certificate_hash(
     hash_value(&input)
 }
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// Envelope (signing request) status. Serialized snake_case.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -791,7 +787,7 @@ pub struct SignTemplate {
 /// capture methods this tenant allows (a subset of drawn /
 /// typed / uploaded); `provider` names the signing provider
 /// integration to use, as data (`internal` is the built-in
-/// hash-and-audit provider — no provider behaviour is
+/// hash-and-audit provider - no provider behaviour is
 /// hard-coded here, the name only selects configuration);
 /// `provider_settings` holds that provider's configuration as
 /// JSON. `require_view_before_sign` makes the sign page record
@@ -826,9 +822,7 @@ impl Default for SignSettings {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Request bodies
-// ---------------------------------------------------------------------------
 
 /// One signer supplied inline when creating an envelope or
 /// building one from a template.

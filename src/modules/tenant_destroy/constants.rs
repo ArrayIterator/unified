@@ -1,4 +1,4 @@
-// Tenant Destroy module — permission, event, status, and cleanup constants.
+// Tenant Destroy module - permission, event, status, and cleanup constants.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use unified_core::context::AppContext;

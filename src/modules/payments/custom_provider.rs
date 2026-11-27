@@ -10,9 +10,7 @@ use super::{events::*, card_validation::*, card_settings::*, limits::*, provider
 
 
 
-// ---------------------------------------------------------------------------
 // Custom provider.
-// ---------------------------------------------------------------------------
 impl ProviderAdapter {
     pub(crate) fn custom_config(&self) -> UnifiedResult<&CustomGatewayConfig> {
         self.custom_config.as_ref().ok_or_else(|| {

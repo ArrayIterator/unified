@@ -1,4 +1,4 @@
-// Marketing Automation — Small shared helpers: caller identity, capability checks, and HTTP responses.
+// Marketing Automation - Small shared helpers: caller identity, capability checks, and HTTP responses.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -30,9 +30,7 @@ use super::handlers_audience::*;
 use super::hooks::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Helpers.
-// ---------------------------------------------------------------------------
 
 pub(crate) fn now_string() -> String {
     Utc::now().to_rfc3339()
@@ -155,9 +153,7 @@ mod tests {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Tenant edge guard (C3 pilot 4, group C).
-// ---------------------------------------------------------------------------
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request

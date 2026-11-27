@@ -1,4 +1,4 @@
-//! Cloudflare connector module. — Handlers: status, settings, connection test.
+//! Cloudflare connector module. - Handlers: status, settings, connection test.
 //!
 //! Split from `src/modules/cloudflare.rs`; behaviour unchanged.
 

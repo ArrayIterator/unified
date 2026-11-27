@@ -9,9 +9,7 @@ use super::{events::*, card_validation::*, card_settings::*, limits::*, provider
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-// ---------------------------------------------------------------------------
 // Shared result shapes.
-// ---------------------------------------------------------------------------
 /// Normalized payment status, shared by every adapter.
 pub enum PaymentStatus {
     RequiresConfirmation,
@@ -108,9 +106,7 @@ pub struct ConnectionTestResult {
 
 
 #[derive(Debug, Clone, Default)]
-// ---------------------------------------------------------------------------
 // Requests (adapter input).
-// ---------------------------------------------------------------------------
 /// Billing details supplied by the shopper. Only 2Checkout requires
 /// them (an order cannot be placed without billing details); every
 /// other provider ignores them.
@@ -155,7 +151,6 @@ pub struct ChargeInput {
 // Batch 18: payment reference ids (END)
 
 #[derive(Debug, Clone)]
-// ---------------------------------------------------------------------------
 /// Input to an adapter refund call.
 pub struct RefundInput {
     pub provider_transaction_id: String,

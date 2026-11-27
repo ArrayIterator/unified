@@ -1,4 +1,4 @@
-// Marketing Automation — Public record, request, and view types.
+// Marketing Automation - Public record, request, and view types.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -30,9 +30,7 @@ use super::handlers_audience::*;
 use super::hooks::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Types.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct CampaignStats {

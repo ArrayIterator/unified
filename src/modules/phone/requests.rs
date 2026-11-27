@@ -8,9 +8,7 @@
 use serde::Deserialize;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Request bodies
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct InitiateCallRequest {

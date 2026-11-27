@@ -24,9 +24,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Events.
-// ---------------------------------------------------------------------------
 
 pub const EVENT_IS_HOLIDAY: &str = "holidays.is_holiday";
 pub const EVENT_NON_WORKING_DAYS: &str = "holidays.non_working_days";
@@ -45,9 +43,7 @@ pub const EVENT_OVERRIDE_CREATED: &str = "holidays.override.created";
 pub const EVENT_OVERRIDE_UPDATED: &str = "holidays.override.updated";
 pub const EVENT_OVERRIDE_DELETED: &str = "holidays.override.deleted";
 
-// ---------------------------------------------------------------------------
 // Capabilities (PERM_* const pattern, as in todos.rs).
-// ---------------------------------------------------------------------------
 
 pub const PERM_HOLIDAYS_READ: &str = "holidays:read";
 pub const PERM_HOLIDAYS_MANAGE: &str = "holidays:manage";

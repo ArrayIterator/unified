@@ -3,10 +3,8 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Entitlements (migration 000098_entitlements; tenant-schema tables);
-// batch 15 B1 notes §4. No `joinable!` entries (no FKs, per notes).
-// ---------------------------------------------------------------------------
+// batch 15 B1 notes sec. 4. No `joinable!` entries (no FKs, per notes).
 
 diesel::table! {
     entitlements (id) {

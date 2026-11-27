@@ -5,7 +5,7 @@
 // `user.create_requested`), and activities on contacts and leads.
 // Interconnection happens only through the hook bus.
 
-// crm — types.
+// crm - types.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -28,9 +28,7 @@ use super::handlers_leads::*;
 use super::handlers_activities::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// Capability required to read contacts, leads, the pipeline and
 /// activities.

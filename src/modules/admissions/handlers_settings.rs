@@ -1,4 +1,4 @@
-// admissions module — Settings handlers.
+// admissions module - Settings handlers.
 //
 // Split from the former single-file module `src/modules/admissions.rs`.
 // The module root (`admissions.rs`) re-exports the public items, so the
@@ -26,9 +26,7 @@ use super::helpers::{
     require_text, valid_currency,
 };
 
-// ---------------------------------------------------------------------------
 // Handlers: settings
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_settings(
     ctx: web::Data<Arc<AppContext>>,

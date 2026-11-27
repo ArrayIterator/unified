@@ -11,9 +11,7 @@ use super::{limits::*, types::*, hub::*, state::*, helpers::*, module::*, handle
 
 
 
-// ---------------------------------------------------------------------------
 // Direct message handlers
-// ---------------------------------------------------------------------------
 pub(crate) async fn create_dm(
     state: web::Data<ChatState>,
     req: HttpRequest,

@@ -10,9 +10,7 @@ use serde::Serialize;
 use serde_json::json;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 /// Caller identity: the server-verified caller (user id plus
 /// server-resolved role, both required for capability checks),

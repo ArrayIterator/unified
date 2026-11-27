@@ -12,9 +12,7 @@ use super::{constants::*, settings::*, types::*, module::*, helpers::*, inputs::
 
 
 
-// ---------------------------------------------------------------------------
 // Handlers: rubrics and manual grading
-// ---------------------------------------------------------------------------
 pub(crate) fn validate_rubric_criteria(
     criteria: &[RubricCriterionInput],
 ) -> UnifiedResult<Vec<RubricCriterion>> {

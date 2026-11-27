@@ -1,6 +1,4 @@
-/* ==========================================================================
-   Unified dashboard design system
-   --------------------------------------------------------------------------
+/* Unified dashboard design system
    Vanilla CSS, no build step. The theme is driven by CSS custom properties
    on `:root` (light) and `[data-theme="dark"]` (dark). The theme toggle in
    `dashboard.js` flips the `data-theme` attribute on `<html>` and persists
@@ -13,10 +11,9 @@
    - Dark tokens mirror light tokens one-to-one, so every component is
      readable in both themes.
    - Existing class names are kept working; new components reuse the same
-     token scale.
-   ========================================================================== */
+     token scale. */
 
-/* ---------- 1. Design tokens ---------- */
+/* 1. Design tokens */
 
 :root {
   color-scheme: light;
@@ -161,7 +158,7 @@
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.4);
 }
 
-/* ---------- 2. Base ---------- */
+/* 2. Base */
 
 *,
 *::before,
@@ -248,7 +245,7 @@ p {
   text-decoration: none;
 }
 
-/* ---------- 3. Icons ---------- */
+/* 3. Icons */
 
 .icon {
   flex: 0 0 auto;
@@ -274,7 +271,7 @@ p {
   to { transform: rotate(360deg); }
 }
 
-/* ---------- 4. Buttons ---------- */
+/* 4. Buttons */
 
 .button {
   display: inline-flex;
@@ -397,7 +394,7 @@ p {
   background: var(--surface-hover);
 }
 
-/* ---------- 5. Badges and pills ---------- */
+/* 5. Badges and pills */
 
 .badge {
   display: inline-flex;
@@ -470,7 +467,7 @@ p {
   color: #ffffff;
 }
 
-/* ---------- 6. Forms ---------- */
+/* 6. Forms */
 
 .field {
   margin-bottom: var(--space-4);
@@ -625,7 +622,7 @@ kbd {
   line-height: var(--leading-normal);
 }
 
-/* ---------- 7. Flash messages and toasts ---------- */
+/* 7. Flash messages and toasts */
 
 .flash {
   display: flex;
@@ -698,7 +695,7 @@ kbd {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* ---------- 8. Cards, panels, empty states, skeletons ---------- */
+/* 8. Cards, panels, empty states, skeletons */
 
 .card {
   border: 1px solid var(--border);
@@ -783,7 +780,7 @@ kbd {
   margin-bottom: 0;
 }
 
-/* ---------- 9. Tables ---------- */
+/* 9. Tables */
 
 .table-wrap {
   overflow-x: auto;
@@ -837,7 +834,7 @@ th.nowrap {
   cursor: pointer;
 }
 
-/* ---------- 10. Tabs and pagination ---------- */
+/* 10. Tabs and pagination */
 
 .tabs {
   display: flex;
@@ -922,7 +919,7 @@ th.nowrap {
   cursor: not-allowed;
 }
 
-/* ---------- 11. Modal ---------- */
+/* 11. Modal */
 
 .modal-overlay {
   position: fixed;
@@ -1003,7 +1000,7 @@ th.nowrap {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* ---------- 12. Dropdown menu (user menu) ---------- */
+/* 12. Dropdown menu (user menu) */
 
 .menu-wrap {
   position: relative;
@@ -1067,7 +1064,7 @@ th.nowrap {
   background: var(--border);
 }
 
-/* ---------- 13. Command palette ---------- */
+/* 13. Command palette */
 
 .palette-overlay {
   position: fixed;
@@ -1179,7 +1176,7 @@ th.nowrap {
   font-size: var(--text-xs);
 }
 
-/* ---------- 14. Site header / footer (public pages, layout.hbs) ---------- */
+/* 14. Site header / footer (public pages, layout.hbs) */
 
 .site-header {
   position: sticky;
@@ -1350,7 +1347,7 @@ th.nowrap {
   padding: var(--space-6) var(--space-4) var(--space-10);
 }
 
-/* ---------- 15. Home page ---------- */
+/* 15. Home page */
 
 .home-main {
   max-width: var(--content-max-width);
@@ -1434,7 +1431,7 @@ th.nowrap {
   font-variant-numeric: tabular-nums;
 }
 
-/* ---------- 16. Error page ---------- */
+/* 16. Error page */
 
 .error-main {
   display: flex;
@@ -1480,7 +1477,7 @@ th.nowrap {
   margin-top: var(--space-6);
 }
 
-/* ---------- 17. Dashboard shell ---------- */
+/* 17. Dashboard shell */
 
 .dashboard-shell {
   display: flex;
@@ -1725,7 +1722,7 @@ th.nowrap {
   flex-wrap: wrap;
 }
 
-/* ---------- 18. Stat cards, panels, module grid, activity ---------- */
+/* 18. Stat cards, panels, module grid, activity */
 
 .stat-grid {
   display: grid;
@@ -1932,7 +1929,7 @@ th.nowrap {
   overflow-wrap: break-word;
 }
 
-/* ---------- 19. Dashboard widgets ---------- */
+/* 19. Dashboard widgets */
 
 .widget-grid {
   display: grid;
@@ -2070,7 +2067,7 @@ th.nowrap {
   background: var(--danger);
 }
 
-/* ---------- 20. Responsive ---------- */
+/* 20. Responsive */
 
 @media (max-width: 1100px) {
   .widget-grid {
@@ -2192,7 +2189,7 @@ th.nowrap {
   }
 }
 
-/* ---------- 21. Motion preferences ---------- */
+/* 21. Motion preferences */
 
 @media (prefers-reduced-motion: reduce) {
   html {
@@ -2208,7 +2205,7 @@ th.nowrap {
   }
 }
 
-/* ---------- 22. Auth pages ---------- */
+/* 22. Auth pages */
 
 .auth-card {
   max-width: 28rem;
@@ -2233,7 +2230,7 @@ th.nowrap {
   text-align: center;
 }
 
-/* ---------- 23. Dashboard section panels and data tables ---------- */
+/* 23. Dashboard section panels and data tables */
 
 .section-panel {
   margin-top: var(--space-4);
@@ -2273,7 +2270,7 @@ th.nowrap {
   }
 }
 
-/* ---------- 24. Admin toolbars (settings filter, builder toolbars) ---------- */
+/* 24. Admin toolbars (settings filter, builder toolbars) */
 
 .builder-toolbar {
   display: flex;

@@ -1,4 +1,4 @@
-// Tax module — filing periods and stored-computation totals.
+// Tax module - filing periods and stored-computation totals.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use super::*;
@@ -23,9 +23,7 @@ use std::time::Duration;
 use url::Url;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Filing periods
-// ---------------------------------------------------------------------------
 
 pub(crate) fn last_day_of_month(year: i32, month: u32) -> NaiveDate {
     let (next_year, next_month) = if month == 12 {
@@ -116,9 +114,7 @@ pub(crate) fn period_tax_total(
     total
 }
 
-// ---------------------------------------------------------------------------
 // Shared compute + store
-// ---------------------------------------------------------------------------
 
 /// Compute tax for a source document and store the computation.
 /// Re-computing the same (`source_type`, `source_id`) replaces the

@@ -28,7 +28,7 @@
 // Retention pruning runs on the scheduler's `cleanup.requested` hook
 // and through the manual prune endpoint (which requires confirmation).
 
-// logs — types.
+// logs - types.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -58,9 +58,7 @@ use super::handlers::*;
 use super::hooks::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// Capability required to read log entries, counts, settings and exports.
 pub const PERM_LOGS_VIEW: &str = "logs:view";

@@ -1,4 +1,4 @@
-// affiliates module — Module definition and registration.
+// affiliates module - Module definition and registration.
 //
 // Split from the former single-file module `src/modules/affiliates.rs`.
 // The module root (`affiliates.rs`) re-exports the public items, so the
@@ -29,9 +29,7 @@ use super::handlers_affiliates::{approve_affiliate, create_affiliate, create_com
 use super::handlers_tracking::{approve_commission, approve_payout, create_conversion, get_dashboard, list_clicks, list_commissions, list_conversions, list_payouts, mark_payout_paid, my_dashboard, reject_payout, request_payout, track_click, void_commission};
 use super::ai_capabilities::AI_CAPABILITIES;
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct AffiliatesModule {
     pub(crate) state: AffiliatesState,

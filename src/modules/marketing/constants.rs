@@ -1,4 +1,4 @@
-// Marketing Automation — Event names, permission strings, limits, and other constants.
+// Marketing Automation - Event names, permission strings, limits, and other constants.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -30,9 +30,7 @@ use super::handlers_audience::*;
 use super::hooks::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Events.
-// ---------------------------------------------------------------------------
 
 pub const EVENT_MAIL_SEND_REQUESTED: &str = "mail.send_requested";
 
@@ -98,9 +96,7 @@ pub const EVENT_MARKETING_UNSUBSCRIBE: &str = "marketing.unsubscribe";
 
 pub const EVENT_MARKETING_CONTACTS_SYNC: &str = "marketing.contacts.sync";
 
-// ---------------------------------------------------------------------------
 // Permissions.
-// ---------------------------------------------------------------------------
 
 pub(crate) const PERM_MARKETING_VIEW: &str = "marketing.view";
 

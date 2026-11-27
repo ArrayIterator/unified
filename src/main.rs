@@ -1,5 +1,5 @@
 #![recursion_limit = "1024"]
-// Unified Pentagonal Project — binary entry point.
+// Unified Pentagonal Project - binary entry point.
 //
 // The binary is assembled by the CLI module: it parses arguments, loads and
 // validates the configuration, and dispatches to the server, daemon, or
@@ -11,7 +11,7 @@ mod cli;
 // module references the load balancer module, which is not declared
 // in `src/modules/mod.rs` yet, so an unconditional declaration would
 // break the default build. Once that declaration lands the gate can
-// stay — the gateway's proxy service is itself `#[cfg(feature =
+// stay - the gateway's proxy service is itself `#[cfg(feature =
 // "gateway")]` inside the module, and the default build must link no
 // Pingora code.
 #[cfg(feature = "gateway")]

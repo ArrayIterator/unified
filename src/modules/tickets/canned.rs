@@ -1,4 +1,4 @@
-// Tickets module — canned response handlers.
+// Tickets module - canned response handlers.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use unified_core::context::AppContext;
@@ -17,9 +17,7 @@ use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Canned responses
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_canned_responses(
     state: web::Data<Arc<TicketsState>>,
@@ -256,7 +254,7 @@ pub(crate) async fn apply_canned_response(
             .tickets
             .get_mut(path.as_str())
             .ok_or_else(|| UnifiedError::not_found("Ticket not found"))?;
-        // C3 task 315: a canned reply mutates the ticket (comment
+        // C3: a canned reply mutates the ticket (comment
         // plus status), so the ticket must belong to the caller's
         // company; a shared (global) ticket is platform-only.
         require_record_writable_in_company_scope(&ticket.company_id, &_scope)?;
@@ -328,10 +326,10 @@ mod tests {
     use actix_web::http::StatusCode;
     use actix_web::test::TestRequest;
 
-    /// The company the canned-reply test acts as (C3 task 315).
+    /// The company the canned-reply test acts as (C3).
     const TEST_COMPANY: &str = "company-a";
 
-    /// A request scoped to the test company (C3 task 315):
+    /// A request scoped to the test company (C3):
     /// `apply_canned_response` requires a resolved company, and
     /// the seeded ticket belongs to the same company.
     fn scoped_request(user_id: &str, role: &str) -> actix_web::HttpRequest {

@@ -11,9 +11,7 @@ use super::helpers::*;
 use super::state::*;
 use super::types::*;
 
-// ---------------------------------------------------------------------------
 // Poll handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) fn require_poll_access(
     state: &WebinarsState,

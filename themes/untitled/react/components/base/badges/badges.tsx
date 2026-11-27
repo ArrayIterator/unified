@@ -417,7 +417,7 @@ interface BadgeIconProps<T extends BadgeTypes> {
     icon: IconComponentType;
     /** The color palette used for the badge background, ring, and icon. The `modern` type only supports `gray`. */
     color?: BadgeTypeToColorMap<typeof withPillTypes>[T];
-    /** Accepted for consistency with the other badges but not rendered — this badge shows only the icon. */
+    /** Accepted for consistency with the other badges but not rendered - this badge shows only the icon. */
     children?: ReactNode;
 }
 

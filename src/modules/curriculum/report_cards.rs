@@ -1,4 +1,4 @@
-//! Curriculum module — competency-based school curricula. — Report card handlers.
+//! Curriculum module - competency-based school curricula. - Report card handlers.
 //!
 //! Split from `src/modules/curriculum.rs`; behaviour unchanged.
 

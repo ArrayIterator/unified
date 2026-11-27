@@ -85,9 +85,7 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 
 
--- ---------------------------------------------------------------------------
 -- Drivers (user references only; the users module owns user rows).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS logistics_drivers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id TEXT NOT NULL UNIQUE,
@@ -103,9 +101,7 @@ CREATE TABLE IF NOT EXISTS logistics_drivers (
 CREATE INDEX IF NOT EXISTS idx_logistics_drivers_user ON logistics_drivers (user_id);
 CREATE INDEX IF NOT EXISTS idx_logistics_drivers_status ON logistics_drivers (status);
 
--- ---------------------------------------------------------------------------
 -- Fleet vehicles.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS logistics_vehicles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     plate VARCHAR(20) NOT NULL UNIQUE,
@@ -131,9 +127,7 @@ ALTER TABLE logistics_drivers
     ADD CONSTRAINT fk_logistics_drivers_current_vehicle
     FOREIGN KEY (current_vehicle_id) REFERENCES logistics_vehicles (id) ON DELETE SET NULL;
 
--- ---------------------------------------------------------------------------
 -- Warehouses.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS logistics_warehouses (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(200) NOT NULL,
@@ -148,9 +142,7 @@ CREATE TABLE IF NOT EXISTS logistics_warehouses (
 
 CREATE INDEX IF NOT EXISTS idx_logistics_warehouses_company ON logistics_warehouses (company_id);
 
--- ---------------------------------------------------------------------------
 -- One shipment.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS logistics_shipments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tracking_number VARCHAR(20) NOT NULL UNIQUE,
@@ -197,9 +189,7 @@ CREATE INDEX IF NOT EXISTS idx_logistics_shipments_driver ON logistics_shipments
 CREATE INDEX IF NOT EXISTS idx_logistics_shipments_vehicle ON logistics_shipments (vehicle_id);
 CREATE INDEX IF NOT EXISTS idx_logistics_shipments_warehouse ON logistics_shipments (warehouse_id);
 
--- ---------------------------------------------------------------------------
 -- Shipment timeline: every transition with actor, location, note.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS logistics_shipment_events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     shipment_id UUID NOT NULL REFERENCES logistics_shipments (id) ON DELETE CASCADE,
@@ -224,9 +214,7 @@ CREATE INDEX IF NOT EXISTS idx_logistics_shipment_events_created ON logistics_sh
 
 
 
--- ---------------------------------------------------------------------------
 -- Stock movements (quantities only; assets own the item master data).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS logistics_stock_movements (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     warehouse_id UUID NOT NULL REFERENCES logistics_warehouses (id) ON DELETE CASCADE,
@@ -244,9 +232,7 @@ CREATE INDEX IF NOT EXISTS idx_logistics_stock_movements_warehouse ON logistics_
 CREATE INDEX IF NOT EXISTS idx_logistics_stock_movements_asset ON logistics_stock_movements (asset_id);
 CREATE INDEX IF NOT EXISTS idx_logistics_stock_movements_shipment ON logistics_stock_movements (shipment_id);
 
--- ---------------------------------------------------------------------------
 -- Delivery routes.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS logistics_routes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(200) NOT NULL,
@@ -266,9 +252,7 @@ CREATE INDEX IF NOT EXISTS idx_logistics_routes_status ON logistics_routes (stat
 CREATE INDEX IF NOT EXISTS idx_logistics_routes_company ON logistics_routes (company_id);
 CREATE INDEX IF NOT EXISTS idx_logistics_routes_driver ON logistics_routes (driver_id);
 
--- ---------------------------------------------------------------------------
 -- Ordered stops on a delivery route.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS logistics_route_stops (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     route_id UUID NOT NULL REFERENCES logistics_routes (id) ON DELETE CASCADE,
@@ -288,9 +272,7 @@ CREATE TABLE IF NOT EXISTS logistics_route_stops (
 CREATE INDEX IF NOT EXISTS idx_logistics_route_stops_route ON logistics_route_stops (route_id);
 CREATE INDEX IF NOT EXISTS idx_logistics_route_stops_shipment ON logistics_route_stops (shipment_id);
 
--- ---------------------------------------------------------------------------
 -- Proof of delivery (storage references + hash only).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS logistics_proofs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     shipment_id UUID NOT NULL REFERENCES logistics_shipments (id) ON DELETE CASCADE,
@@ -307,9 +289,7 @@ CREATE TABLE IF NOT EXISTS logistics_proofs (
 
 CREATE INDEX IF NOT EXISTS idx_logistics_proofs_shipment ON logistics_proofs (shipment_id);
 
--- ---------------------------------------------------------------------------
 -- Delivery exceptions.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS logistics_exceptions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     shipment_id UUID NOT NULL REFERENCES logistics_shipments (id) ON DELETE CASCADE,
@@ -330,9 +310,7 @@ CREATE TABLE IF NOT EXISTS logistics_exceptions (
 CREATE INDEX IF NOT EXISTS idx_logistics_exceptions_shipment ON logistics_exceptions (shipment_id);
 CREATE INDEX IF NOT EXISTS idx_logistics_exceptions_status ON logistics_exceptions (status);
 
--- ---------------------------------------------------------------------------
 -- Shipping rate tables.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS logistics_rate_tables (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(200) NOT NULL,

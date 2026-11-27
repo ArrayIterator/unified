@@ -8,9 +8,7 @@ use std::collections::HashMap;
 
 
 #[derive(Debug, Clone, Deserialize)]
-// ---------------------------------------------------------------------------
 // Input payloads
-// ---------------------------------------------------------------------------
 pub struct CreateBankInput {
     pub title: String,
     pub description: Option<String>,

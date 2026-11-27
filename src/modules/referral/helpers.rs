@@ -80,9 +80,7 @@ pub(crate) fn resolve_tenant(req: &HttpRequest) -> UnifiedResult<String> {
         .map(|context| context.tenant_id.to_string())
 }
 
-// ---------------------------------------------------------------------------
-// Tenant edge guard (C3 pilot 5, task 319).
-// ---------------------------------------------------------------------------
+// Tenant edge guard (C3 pilot 5).
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request
@@ -97,7 +95,7 @@ pub(crate) fn resolve_tenant(req: &HttpRequest) -> UnifiedResult<String> {
 /// filters. `caller_company` below is therefore the mismatch-only
 /// company check (pilot 4 group D idiom), not a strict
 /// `require_company` gate: a tenant/caller company mismatch is 403,
-/// but a write is never refused only because no company resolves —
+/// but a write is never refused only because no company resolves -
 /// the write is still fully tenant-partitioned by `tenant_id`.
 pub(crate) fn require_tenant(
     req: &HttpRequest,
@@ -108,12 +106,12 @@ pub(crate) fn require_tenant(
 /// The company scope the caller acts in: the tenant context's
 /// company first, the verified caller's server-resolved company
 /// otherwise. Fails closed (403) when both are present and disagree
-/// — a request must not carry one company in its tenant context and
+/// - a request must not carry one company in its tenant context and
 /// another in its verified identity. The `X-Company-Id` header is
 /// NEVER trusted here: only the verified caller (company resolved
 /// from the database at authentication time) and the
 /// middleware-resolved tenant context are sources (header trust was
-/// removed by task 317; this helper must never reintroduce it).
+/// removed; this helper must never reintroduce it).
 pub(crate) fn caller_company(
     tenant: &unified_core::tenancy::TenantContext,
     req: &HttpRequest,
@@ -189,9 +187,7 @@ pub(crate) fn paginate<T: Serialize + Clone>(
     PageResult::new(page_items, total, &pagination)
 }
 
-// ---------------------------------------------------------------------------
 // Validation
-// ---------------------------------------------------------------------------
 
 /// Validate a candidate email: well-formed and normalized to
 /// lowercase for storage and duplicate detection.
@@ -393,9 +389,7 @@ pub(crate) fn validate_gaming_rule_input(
     Ok((name, kind, enforcement))
 }
 
-// ---------------------------------------------------------------------------
 // Tenant-scoped loaders (cross-tenant reads as 404, never 403)
-// ---------------------------------------------------------------------------
 
 fn tenant_match(row_tenant_id: &str, tenant_id: &str, id: Uuid, what: &str) -> UnifiedResult<()> {
     if row_tenant_id != tenant_id {
@@ -522,9 +516,7 @@ pub(crate) fn load_gaming_rule(
     Ok(rule)
 }
 
-// ---------------------------------------------------------------------------
 // Audit
-// ---------------------------------------------------------------------------
 
 /// Append one audit row for a change. `before` / `after` are
 /// the serialized rows (or `None` for creates / deletes).
@@ -552,9 +544,7 @@ pub(crate) fn record_audit(
     state.audit.insert(row.id, row);
 }
 
-// ---------------------------------------------------------------------------
 // Links
-// ---------------------------------------------------------------------------
 
 /// Mint a fresh link row for one (employee, job) pair: a new
 /// token is generated and only its hash stored; the raw
@@ -585,9 +575,7 @@ pub(crate) fn mint_link(
     LinkCreated { link, token }
 }
 
-// ---------------------------------------------------------------------------
 // Anti-gaming evaluation
-// ---------------------------------------------------------------------------
 
 /// Outcome of evaluating the tenant's enabled anti-gaming
 /// rules for one submission: whether the submission is
@@ -595,7 +583,7 @@ pub(crate) fn mint_link(
 /// Rules that cannot be evaluated from the data this module
 /// has (self-referral without a known referrer email,
 /// active-employee without an HR existence answer) never
-/// block — they add an `unverified` note instead.
+/// block - they add an `unverified` note instead.
 pub struct GamingOutcome {
     pub blocked: bool,
     pub notes: Vec<String>,
@@ -700,16 +688,14 @@ pub(crate) fn verify_referrer(state: &ReferralState, referrer_user_id: &str) -> 
     }
 }
 
-// ---------------------------------------------------------------------------
 // Stage moves and rewards (shared by handlers and hooks)
-// ---------------------------------------------------------------------------
 
 /// Apply a pipeline move to a referral: validate the
 /// transition against the tenant's stage data, append the
 /// history row, update the referral, write the audit row,
 /// and emit `referral.stage_changed`. Hired and rejected
 /// stages have side effects handled by the caller-facing
-/// wrappers below — this function only moves the stage.
+/// wrappers below - this function only moves the stage.
 pub(crate) fn record_stage_move(
     state: &ReferralState,
     tenant_id: &str,
@@ -818,7 +804,7 @@ pub(crate) fn on_referral_hired(
 /// `eligible` immediately when the retention period has
 /// already elapsed, otherwise `pending`; reaching
 /// eligibility emits `referral.reward.payable` so billing /
-/// HR can pay it out — this module never moves money.
+/// HR can pay it out - this module never moves money.
 pub(crate) fn create_reward(
     state: &ReferralState,
     tenant_id: &str,

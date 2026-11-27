@@ -1,4 +1,4 @@
-// Webhooks — Signing.
+// Webhooks - Signing.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -23,9 +23,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Signing.
-// ---------------------------------------------------------------------------
 
 /// HMAC-SHA256 signature over `{timestamp}.{body}`, hex encoded.
 /// Returns the header value `sha256=<hex>`.

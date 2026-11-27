@@ -63,9 +63,7 @@ pub const GATEWAY_RULE_CREATED: &str = "gateway.rule.created";
 pub const GATEWAY_RULE_UPDATED: &str = "gateway.rule.updated";
 pub const GATEWAY_RULE_DELETED: &str = "gateway.rule.deleted";
 
-// ---------------------------------------------------------------------------
 // Module definition.
-// ---------------------------------------------------------------------------
 
 pub struct GatewayModule;
 
@@ -222,9 +220,7 @@ pub fn register(registry: &ModuleRegistry) {
     registry.register(Arc::new(GatewayModule::new()));
 }
 
-// ---------------------------------------------------------------------------
 // Hook handlers.
-// ---------------------------------------------------------------------------
 
 /// A load balancer backend went unhealthy: exclude it from gateway
 /// rotation. The payload carries `balancer_id`, `backend_id`, and
@@ -266,7 +262,7 @@ fn lb_backend_identity(context: &HookContext) -> Option<(Uuid, Uuid, String)> {
 }
 
 /// A certificate was swapped or renewed: TLS status is computed live
-/// from the storage, so there is nothing to invalidate — re-emit a
+/// from the storage, so there is nothing to invalidate - re-emit a
 /// gateway event so operators and the monitor can observe it.
 fn on_ssl_event(context: &mut HookContext) {
     let domain = context
@@ -280,9 +276,7 @@ fn on_ssl_event(context: &mut HookContext) {
     );
 }
 
-// ---------------------------------------------------------------------------
 // Views.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize)]
 struct GatewayStatusView {
@@ -460,10 +454,8 @@ fn upstream_pools(state: &GatewayState) -> Vec<UpstreamPoolView> {
     pools
 }
 
-// ---------------------------------------------------------------------------
 // Pagination helper (same shape as the load balancer's list helper:
 // allow-listed sort, normalized page, `PageResult` JSON).
-// ---------------------------------------------------------------------------
 
 fn paginate<T, F>(
     items: Vec<T>,
@@ -511,9 +503,7 @@ fn matches_search(haystack: &str, search: &Option<String>) -> bool {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Handlers.
-// ---------------------------------------------------------------------------
 
 async fn get_status(ctx: web::Data<Arc<AppContext>>) -> HttpResponse {
     let debug = ctx.is_debug();
@@ -854,7 +844,6 @@ fn reload_gateway_inner() -> UnifiedResult<Value> {
     ))
 }
 
-// ---------------------------------------------------------------------------
 // CLI: `unified gateway <start|stop|status|reload>`.
 //
 // The gateway lives inside the daemon process, so this command works
@@ -863,9 +852,8 @@ fn reload_gateway_inner() -> UnifiedResult<Value> {
 // `start` refuses when the daemon is already running and otherwise
 // tells the operator to start the daemon (`unified start`), and
 // `stop` cannot stop the in-process gateway from a separate process
-// — it reports the management API call to use instead. There is no
+// - it reports the management API call to use instead. There is no
 // separate gateway process to start or stop from the CLI.
-// ---------------------------------------------------------------------------
 
 fn gateway_command() -> Command {
     Command::new("gateway")

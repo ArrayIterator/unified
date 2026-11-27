@@ -583,9 +583,7 @@ pub(crate) fn deliver_report_now(
     Ok(row_count)
 }
 
-// ---------------------------------------------------------------------------
 // Source-event listeners (mirror ingestion)
-// ---------------------------------------------------------------------------
 
 
 pub(crate) fn parse_forecast_query(query: &ForecastQuery) -> UnifiedResult<(Option<String>, i64)> {

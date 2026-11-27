@@ -2,7 +2,7 @@
 //
 // The configuration file is loaded at startup and on reload. Before a reload
 // applies a new configuration, `validate()` must run and report zero errors
-// — a failing configuration never replaces the running one. The CLI exposes
+// - a failing configuration never replaces the running one. The CLI exposes
 // the same check as `unified -t` (default config) and
 // `unified -t -f /path/to/config.yaml`.
 
@@ -107,9 +107,7 @@ pub struct DocumentsConfig {
 }
 
 impl DocumentsConfig {
-    /// Minimum `max_chunk_ram_bytes` (100 MiB).
     pub const MAX_CHUNK_RAM_MIN: u64 = 100 * 1024 * 1024;
-    /// Maximum `max_chunk_ram_bytes` (8 GiB).
     pub const MAX_CHUNK_RAM_MAX: u64 = 8 * 1024 * 1024 * 1024;
     /// Default `max_chunk_ram_bytes` (100 MiB).
     pub const MAX_CHUNK_RAM_DEFAULT: u64 = Self::MAX_CHUNK_RAM_MIN;
@@ -741,7 +739,7 @@ impl AppConfig {
         // Signing keys are mandatory in every mode, not only in
         // production: an unset, short, or placeholder key makes
         // token signing fail closed at issue time, so the
-        // configuration is rejected here instead — startup and
+        // configuration is rejected here instead - startup and
         // reload refuse an invalid config outright. Development
         // gets no exception: a development server minting tokens
         // under an ephemeral or placeholder secret is a

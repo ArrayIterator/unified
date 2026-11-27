@@ -1,38 +1,38 @@
-// Logistics module — shipments, fleet, warehouses, delivery
+// Logistics module - shipments, fleet, warehouses, delivery
 // routes, delivery scheduling, proof of delivery, delivery
 // exceptions, and shipping cost quotes.
 //
 // Routes live under `/api/v1/logistics`:
 //
 //   Shipments:
-//     GET/POST /shipments — list shipments / create a shipment.
+//     GET/POST /shipments - list shipments / create a shipment.
 //     GET/PATCH/DELETE /shipments/{id}.
-//     POST /shipments/{id}/transition — move the shipment through
+//     POST /shipments/{id}/transition - move the shipment through
 //          the status state machine (reason required for terminal
 //          and exception branches).
-//     GET  /shipments/{id}/timeline — every status transition with
+//     GET  /shipments/{id}/timeline - every status transition with
 //          actor, timestamp, location, and note.
-//     POST /shipments/{id}/link-order — link an existing store
+//     POST /shipments/{id}/link-order - link an existing store
 //          order (verified through the `store.order.lookup` hook
 //          query; see the order-link note below).
-//     POST /shipments/{id}/schedule — set the delivery window.
-//     POST /shipments/{id}/reschedule — change the delivery window
+//     POST /shipments/{id}/schedule - set the delivery window.
+//     POST /shipments/{id}/reschedule - change the delivery window
 //          (audited through the timeline).
-//     POST /shipments/{id}/proof — record proof of delivery
+//     POST /shipments/{id}/proof - record proof of delivery
 //          (storage reference + hash only, never raw bytes).
-//     GET  /shipments/{id}/proof — list proofs of delivery.
-//     POST /shipments/{id}/exceptions — open a delivery exception.
-//     GET  /shipments/{id}/exceptions — list exceptions.
+//     GET  /shipments/{id}/proof - list proofs of delivery.
+//     POST /shipments/{id}/exceptions - open a delivery exception.
+//     GET  /shipments/{id}/exceptions - list exceptions.
 //   Fleet:
 //     GET/POST /vehicles, GET/PATCH/DELETE /vehicles/{id}.
-//     POST /vehicles/{id}/assign — assign a driver to a vehicle.
-//     GET/POST /vehicles/{id}/maintenance — list / create a
+//     POST /vehicles/{id}/assign - assign a driver to a vehicle.
+//     GET/POST /vehicles/{id}/maintenance - list / create a
 //          maintenance reminder (queued through the scheduler).
 //   Drivers:
 //     GET/POST /drivers, GET/PATCH/DELETE /drivers/{id}.
 //   Warehouses:
 //     GET/POST /warehouses, GET/PATCH/DELETE /warehouses/{id}.
-//     GET/POST /warehouses/{id}/stock-movements — list / record a
+//     GET/POST /warehouses/{id}/stock-movements - list / record a
 //          stock movement (quantities only; the assets / inventory
 //          module owns the item master data).
 //     GET  /warehouses/{id}/stock-movements/{movement_id}.
@@ -40,19 +40,19 @@
 //     GET/POST /routes, GET/PATCH/DELETE /routes/{id}.
 //     GET/POST /routes/{id}/stops.
 //     PATCH/DELETE /routes/{id}/stops/{stop_id}.
-//     POST /routes/{id}/assign — assign a driver + vehicle.
-//     POST /routes/{id}/reorder — nearest-neighbour stop reorder
+//     POST /routes/{id}/assign - assign a driver + vehicle.
+//     POST /routes/{id}/reorder - nearest-neighbour stop reorder
 //          (heuristic only; see the route note below).
 //   Exceptions:
 //     POST /exceptions/{exception_id}/resolve.
 //     POST /exceptions/{exception_id}/return.
 //   Pricing:
 //     GET/POST /rate-tables, GET/PATCH/DELETE /rate-tables/{id}.
-//     POST /quote — shipping cost quote from a rate table.
+//     POST /quote - shipping cost quote from a rate table.
 //   Public tracking (no auth; see the public-access note below):
 //     GET  /track/{tracking_number}?token=<verification token>.
 //
-// HONESTY — READ THIS FIRST. What is real in this module:
+// HONESTY - READ THIS FIRST. What is real in this module:
 // in-memory shipment, timeline, vehicle, driver, warehouse, stock
 // movement, route, stop, proof, exception, and rate-table
 // management; the shipment status state machine with illegal
@@ -63,13 +63,13 @@
 // configurable rate tables; and a token-gated, rate-limited public
 // tracking lookup that exposes status and location only. What is
 // NOT built here: real route optimisation (only a
-// nearest-neighbour reorder heuristic — see the route note); live
+// nearest-neighbour reorder heuristic - see the route note); live
 // carrier APIs or label printing; actual distance measurement
 // (distance comes from the caller or from the Calculator module
-// through the `calculator.distance_requested` hook query — see the
+// through the `calculator.distance_requested` hook query - see the
 // distance note); payment collection or refunds (the store /
 // billing modules own those); and actual email / push delivery
-// (the notifications module owns delivery — this module only
+// (the notifications module owns delivery - this module only
 // emits `notification.requested`).
 //
 // Tracking number format: `LG-` followed by 8 decimal digits
@@ -87,8 +87,8 @@
 // `store.order.lookup` hook query with `{"order_id": "..."}` and
 // expects a result carrying `{"found": true}` (or `false`). When
 // the store answers `found: false` the link is rejected with
-// 422. When no handler answers at all — today the store module
-// has no `store.order.lookup` answerer — the shipment is still
+// 422. When no handler answers at all - today the store module
+// has no `store.order.lookup` answerer - the shipment is still
 // created but the link is recorded as `unverified`
 // (`order_link_status: "unverified"`) and the response carries a
 // warning; the shipment is NOT treated as linked to a real order
@@ -113,8 +113,8 @@
 // endpoint applies a nearest-neighbour heuristic starting from
 // the route start point (or the first stop when no start point is
 // set): repeatedly pick the closest unvisited stop by straight-line
-// distance. It is a convenience ordering, not an optimiser — it
-// ignores roads, traffic, time windows, and vehicle capacity —
+// distance. It is a convenience ordering, not an optimiser - it
+// ignores roads, traffic, time windows, and vehicle capacity -
 // and it refuses (422) when any stop lacks coordinates instead of
 // silently ordering on incomplete data.
 //
@@ -130,7 +130,7 @@
 // per-shipment verification token (issued once at creation, stored
 // only as a SHA-256 hash), is rate-limited to 30 lookups per
 // tracking number per client address per 10 minutes (429 beyond
-// that), and returns status and location only — never the
+// that), and returns status and location only - never the
 // recipient name, addresses, phone data, cost, or order id.
 //
 // Actor identity: until the auth module provides an extractor, the
@@ -180,16 +180,16 @@
 //     "destination_latitude", "destination_longitude"}` when a
 //     quote needs a distance.
 // Events this module listens to:
-//   - `order.paid` — records the paid order id so a linked
+//   - `order.paid` - records the paid order id so a linked
 //     shipment can be matched by the caller; no shipment is
 //     auto-created (a paid order may be for digital goods).
-//   - `store.order.cancelled` — cancels linked shipments still in
+//   - `store.order.cancelled` - cancels linked shipments still in
 //     `created` status with reason "linked order cancelled" and
 //     notifies the shipment creator.
-//   - `assets.stock.low` — when the payload names a warehouse this
+//   - `assets.stock.low` - when the payload names a warehouse this
 //     module knows (`warehouse_id`), notifies that warehouse's
 //     manager and emits `logistics.stock.low`.
-//   - `logistics.maintenance.remind_requested` — the event the
+//   - `logistics.maintenance.remind_requested` - the event the
 //     scheduler emits when a `logistics.maintenance.remind` job
 //     fires, following its naming rule (`backup.run` ->
 //     `backup.run_requested`); marks the reminder due and notifies
@@ -207,7 +207,7 @@
 // `logistics.maintenance.remind_requested` with the reminder
 // payload (see the integrator snippet in the module report).
 
-//! Logistics module — shipments, fleet, warehouses, delivery — Module.
+//! Logistics module - shipments, fleet, warehouses, delivery - Module.
 //!
 //! Split from `src/modules/logistics.rs`; behaviour unchanged.
 

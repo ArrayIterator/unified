@@ -8,9 +8,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Shared state
-// ---------------------------------------------------------------------------
 
 /// In-memory stores for AI Support. The hook bus is attached in `init`
 /// (the bus lives in `AppContext`); grounding and handoff degrade honestly

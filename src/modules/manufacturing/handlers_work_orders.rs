@@ -11,9 +11,7 @@ use super::{constants::*, types::*, inputs::*, helpers::*, store::*, validation:
 
 
 
-// ---------------------------------------------------------------------------
 // Work order handlers
-// ---------------------------------------------------------------------------
 /// Build the component requirements for a work order from its
 /// pinned BOM version and planned quantity (one level; the scrap
 /// allowance is added on top of the nominal quantity).
@@ -519,7 +517,7 @@ pub(crate) async fn reserve_work_order(
             // side actually reported a level for flips to
             // `reserved`. A component with no level in the answer
             // stays `pending_confirmation` with `stock_unknown`,
-            // even when another component was answered — the old
+            // even when another component was answered - the old
             // code flipped every component once any handler
             // answered at all.
             let known = levels.contains_key(&req.component_product_id);

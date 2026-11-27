@@ -2,9 +2,7 @@
 //
 // Split from `src/modules/newsletter.rs`; the module root re-exports the public API of this module.
 
-// ---------------------------------------------------------------------------
 // Events.
-// ---------------------------------------------------------------------------
 
 pub const EVENT_NEWSLETTER_SUBSCRIBED: &str = "newsletter.subscribed";
 pub const EVENT_NEWSLETTER_CONFIRMED: &str = "newsletter.confirmed";

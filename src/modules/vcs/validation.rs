@@ -1,4 +1,4 @@
-// Third-party VCS integrations — Input validation and pure value checks.
+// Third-party VCS integrations - Input validation and pure value checks.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};

@@ -1,4 +1,4 @@
-// Tenant Destroy module — module definition and registration.
+// Tenant Destroy module - module definition and registration.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use unified_core::context::AppContext;
@@ -26,9 +26,7 @@ use std::sync::{Arc, OnceLock, RwLock};
 use uuid::Uuid;
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Module definition.
-// ---------------------------------------------------------------------------
 
 /// The Tenant Destroy module.
 pub struct TenantDestroyModule;
@@ -88,7 +86,7 @@ impl Module for TenantDestroyModule {
     }
 
     fn register_hooks(&self, bus: &HookBus) {
-        // `export.completed` — the export proof. Moves the matching
+        // `export.completed` - the export proof. Moves the matching
         // request from `export_pending` to `export_ready`. Read
         // defensively: unknown export ids and malformed payloads are
         // skipped, never an error. The event carries the export's

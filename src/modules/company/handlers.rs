@@ -1,4 +1,4 @@
-// Company module — company and site HTTP handlers.
+// Company module - company and site HTTP handlers.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use unified_core::context::AppContext;
@@ -19,9 +19,7 @@ use std::sync::{Arc, OnceLock};
 use uuid::Uuid;
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Company handlers.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_companies(
     ctx: web::Data<Arc<AppContext>>,
@@ -313,9 +311,7 @@ pub(crate) async fn delete_company(ctx: web::Data<Arc<AppContext>>, req: HttpReq
     json::respond(result, debug)
 }
 
-// ---------------------------------------------------------------------------
 // Site handlers.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_sites(
     ctx: web::Data<Arc<AppContext>>,

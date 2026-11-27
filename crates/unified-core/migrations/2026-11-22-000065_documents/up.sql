@@ -59,10 +59,8 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One document: the current version plus its access scope.
 -- `scope` is `owner`, `company`, or `module`.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS documents (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
@@ -96,9 +94,7 @@ CREATE INDEX IF NOT EXISTS idx_documents_checksum
 CREATE INDEX IF NOT EXISTS idx_documents_scan_status
     ON documents (scan_status);
 
--- ---------------------------------------------------------------------------
 -- One version of a document. History is append-only.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS document_versions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     document_id UUID NOT NULL REFERENCES documents (id)
@@ -122,10 +118,8 @@ CREATE INDEX IF NOT EXISTS idx_document_versions_document_id_version
 CREATE INDEX IF NOT EXISTS idx_document_versions_checksum
     ON document_versions (checksum);
 
--- ---------------------------------------------------------------------------
 -- One resumable upload session. `document_id` is set only when the
 -- session is a re-upload of an existing document.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS document_upload_sessions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     document_id UUID REFERENCES documents (id)
@@ -153,10 +147,8 @@ CREATE INDEX IF NOT EXISTS idx_document_upload_sessions_expires_at
 CREATE INDEX IF NOT EXISTS idx_document_upload_sessions_document_id
     ON document_upload_sessions (document_id);
 
--- ---------------------------------------------------------------------------
 -- One received chunk part (metadata only; the bytes live in memory
 -- until the session completes or aborts).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS document_upload_parts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     session_id UUID NOT NULL REFERENCES document_upload_sessions (id)
@@ -173,9 +165,7 @@ CREATE TABLE IF NOT EXISTS document_upload_parts (
 CREATE INDEX IF NOT EXISTS idx_document_upload_parts_session_id_part_index
     ON document_upload_parts (session_id, part_index);
 
--- ---------------------------------------------------------------------------
 -- One per-module allowlist rule (admin-managed).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS document_allowlist_rules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     module_id TEXT NOT NULL,
@@ -190,9 +180,7 @@ CREATE TABLE IF NOT EXISTS document_allowlist_rules (
 CREATE INDEX IF NOT EXISTS idx_document_allowlist_rules_module_id
     ON document_allowlist_rules (module_id);
 
--- ---------------------------------------------------------------------------
 -- One download record: the audit trail, one row per download.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS document_downloads (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     document_id UUID REFERENCES documents (id)
@@ -214,10 +202,8 @@ CREATE INDEX IF NOT EXISTS idx_document_downloads_document_id_downloaded_at
 CREATE INDEX IF NOT EXISTS idx_document_downloads_user_id_downloaded_at
     ON document_downloads (user_id, downloaded_at);
 
--- ---------------------------------------------------------------------------
 -- One local quota row (per-company or per-user). Used only when the
 -- Storage Management module does not answer the quota event.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS document_quotas (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     scope TEXT NOT NULL CHECK (scope IN ('company', 'user')),

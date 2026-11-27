@@ -11,10 +11,8 @@ use super::{events::*, card_validation::*, card_settings::*, limits::*, provider
 
 
 
-// ---------------------------------------------------------------------------
 // Hook handlers (synchronous, like every other module's listeners).
-// ---------------------------------------------------------------------------
-/// A capture completed — through a gateway charge, an intent capture,
+/// A capture completed - through a gateway charge, an intent capture,
 /// or a bank-transfer administrator approval. When the payload
 /// carries `split_id` and `part_id`, mark that split part paid (the
 /// single place where parts move to `paid`, so gateway and manual

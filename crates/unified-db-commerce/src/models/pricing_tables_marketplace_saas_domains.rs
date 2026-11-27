@@ -10,12 +10,10 @@ use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Pricing Tables + Marketplace Builder (2026-11-22-000041_pricing_marketplace).
 // Money structs carry no serde derives (PgNumeric has none); the
-// notes' snippets show Serialize / Deserialize on money structs —
+// notes' snippets show Serialize / Deserialize on money structs -
 // dropped here per the repo money convention.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable)]
 #[diesel(table_name = pricing_tables)]
@@ -230,11 +228,9 @@ pub struct NewMarketplacePayout {
     pub requested_by: String,
 }
 
-// ---------------------------------------------------------------------------
 // SaaS domains / domain verification / cert modes / Cloudflare
-// (batch 8 notes §4; struct names as suggested there, `New*`
+// (batch 8 notes sec. 4; struct names as suggested there, `New*`
 // structs added per the file convention).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = saas_domain_reservations)]
@@ -313,15 +309,13 @@ pub struct NewSaasSubdomainAllocation {
     pub approved_by: Option<String>,
 }
 
-// ---------------------------------------------------------------------------
-// SaaS product subdomains (batch 15 B2 notes §2). The notes give
+// SaaS product subdomains (batch 15 B2 notes sec. 2). The notes give
 // `ProductSubdomainRow` / `NewProductSubdomainRow` ("same fields
 // minus id/timestamps" for `New*`) with `check_for_backend` and the
 // `crate::db::schema::` table_name form, both normalised to the
 // file convention; the events table has no models in the notes, so
 // `SaasProductSubdomainEvent` / `NewSaasProductSubdomainEvent`
 // follow the file convention.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = saas_product_subdomains)]

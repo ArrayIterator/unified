@@ -42,9 +42,7 @@ use super::validation::validate_policy_features;
 use super::validation::validate_policy_models;
 use super::validation::validate_token_cap;
 
-// ---------------------------------------------------------------------------
 // Usage handlers.
-// ---------------------------------------------------------------------------
 
 pub(crate) fn usage_matches(record: &AiUsageRecord, params: &PaginationParams) -> bool {
     if let Some(provider_id) = params.filters.get("provider_id") {
@@ -216,7 +214,6 @@ pub(crate) async fn usage_summary(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Access allowlist handlers.
 //
 // Admin endpoints (`/access/...`) require `ai:manage_providers`.
@@ -226,7 +223,6 @@ pub(crate) async fn usage_summary(
 // (`/my-key`, `/my-mcp`) derive the owner from the `X-User-Id`
 // header only: a caller can never see or touch another user's key
 // or servers, and keys / tokens are never returned, only metadata.
-// ---------------------------------------------------------------------------
 
 /// Find a company policy by its policy id (the store is keyed by
 /// `company_id`, so this scans).

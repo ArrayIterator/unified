@@ -13,9 +13,7 @@ use uuid::Uuid;
 use super::types::{SOFTWARE_KINDS, TaxonomyNode, TaxonomyTreeNode, VersionRequirements};
 use super::state::SoftwareState;
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 pub(crate) fn new_id() -> String {
     Uuid::new_v4().to_string()

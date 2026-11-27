@@ -1,7 +1,7 @@
 //! Loading TypeScript modules from disk.
 //!
 //! Layout (one directory per module, under the modules directory
-//! — `modules/` by default, configurable via
+//! - `modules/` by default, configurable via
 //! `scripting.modules_dir`):
 //!
 //! ```text
@@ -14,7 +14,7 @@
 //! The module id is the directory name; a manifest `id` that
 //! differs from it is an error. Sources are size-capped
 //! (`unified_ts::MAX_SCRIPT_SIZE`, 5 MiB) and transpiled in
-//! memory by `unified-ts` (OXC) — no `.js` file is ever written.
+//! memory by `unified-ts` (OXC) - no `.js` file is ever written.
 //! A module that fails to transpile or evaluate is reported and
 //! skipped; it never blocks the other modules or the server start.
 

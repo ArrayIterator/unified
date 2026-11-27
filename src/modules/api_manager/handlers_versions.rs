@@ -69,9 +69,7 @@ pub(crate) async fn list_versions(
     api_json::success_response(PageResult::new(page_items, total, &pagination).to_json(), 200)
 }
 
-// ---------------------------------------------------------------------------
 // Version registry handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_api_versions(
     state: web::Data<ApiManagerState>,
@@ -438,9 +436,7 @@ pub(crate) async fn delete_api_version(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Global prefix handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn get_prefix(
     state: web::Data<ApiManagerState>,
@@ -524,9 +520,7 @@ pub(crate) async fn update_prefix(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Version choices, endpoint registry, resolver
-// ---------------------------------------------------------------------------
 
 /// `GET /version-choices`: the shape the admin UI creation form
 /// consumes when an admin picks which versions a custom endpoint

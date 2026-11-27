@@ -1,4 +1,4 @@
-//! Presets + Setup Wizard module. — Events emitted by this module. Every payload is audit-shaped: `actor_id`, `action`, `target_type`, `target_id`, optional `company_id`, and `details`, plus `recorded_at`, so the audit module can record them once it subscribes to these names.
+//! Presets + Setup Wizard module. - Events emitted by this module. Every payload is audit-shaped: `actor_id`, `action`, `target_type`, `target_id`, optional `company_id`, and `details`, plus `recorded_at`, so the audit module can record them once it subscribes to these names.
 //!
 //! Split from `src/modules/presets.rs`; behaviour unchanged.
 

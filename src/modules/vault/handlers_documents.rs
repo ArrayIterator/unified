@@ -46,9 +46,7 @@ use super::validation::valid_checksum;
 use super::validation::validate_client_ids;
 use super::validation::validate_storage_ref;
 
-// ---------------------------------------------------------------------------
 // Document handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_documents(
     ctx: web::Data<Arc<AppContext>>,
@@ -98,7 +96,7 @@ pub(crate) async fn list_documents(
                 // Documents carry only the resolved company of the
                 // tenant that created them, so a company filter for
                 // any other company matches nothing by construction
-                // — the client-supplied value can never widen scope.
+                // - the client-supplied value can never widen scope.
                 if let Some(company) = &company_filter {
                     if document.company_id.as_deref() != Some(company.as_str()) {
                         return false;
@@ -369,9 +367,7 @@ pub(crate) async fn delete_document(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Version handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn upload_version(
     ctx: web::Data<Arc<AppContext>>,
@@ -526,9 +522,7 @@ pub(crate) async fn restore_version(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Download + access-log handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn download_document(
     ctx: web::Data<Arc<AppContext>>,

@@ -10,9 +10,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Business Intelligence (migration 000042_bi).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = bi_reports)]
@@ -94,9 +92,7 @@ pub struct NewBiKpiDashboard {
     pub description: Option<String>,
 }
 
-// ---------------------------------------------------------------------------
 // Client portals (migration 000046_portals).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = portals)]

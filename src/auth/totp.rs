@@ -133,7 +133,7 @@ pub fn is_encrypted(stored: &str) -> bool {
 /// internals of `encrypt_secret` / `decrypt_secret` for
 /// AES-256-GCM behind these same signatures, with two rules:
 /// (1) mint a NEW format version (`enc:v2:`, 12-byte random nonce,
-/// AAD binding the purpose string `"unified-totp-enc-v1"`) — never
+/// AAD binding the purpose string `"unified-totp-enc-v1"`) - never
 /// reuse the `enc:v1:` prefix for a different construction, or old
 /// rows would decrypt under the wrong algorithm; (2) keep
 /// `decrypt_secret` dispatching on the prefix, so `enc:v1:` rows

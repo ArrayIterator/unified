@@ -1,4 +1,4 @@
-// pricing — types.
+// pricing - types.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -31,9 +31,7 @@ use super::handlers_bundles::*;
 use super::handlers_reconciliation::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Stored types.
-// ---------------------------------------------------------------------------
 
 /// Admin-editable module settings. Every value is a configurable
 /// default: the code never hard-codes a threshold, a basis, or a
@@ -766,9 +764,7 @@ pub struct AiDraftResponse {
     pub numbers: Value,
 }
 
-// ---------------------------------------------------------------------------
 // State.
-// ---------------------------------------------------------------------------
 
 pub struct PricingState {
     pub(crate) hooks: RwLock<Arc<HookBus>>,

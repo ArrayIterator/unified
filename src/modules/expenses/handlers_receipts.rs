@@ -10,7 +10,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// --- Handlers: receipts ------------------------------------------------------
+// Handlers: receipts
 
 pub(crate) async fn attach_receipt(
     ctx: web::Data<Arc<AppContext>>,
@@ -47,7 +47,7 @@ pub(crate) async fn attach_receipt(
         // storage side emits `storage.object.stored` for its
         // key (see the listener in hooks.rs), and only a
         // verified receipt clears the `receipt_missing`
-        // violation — a fabricated key can never unblock a
+        // violation - a fabricated key can never unblock a
         // submission.
         let receipt = ExpenseReceipt {
             id: Uuid::now_v7(),

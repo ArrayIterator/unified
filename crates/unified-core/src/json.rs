@@ -4,7 +4,7 @@
 //
 //   - Success: exactly one top-level key, `data`.
 //   - Error: exactly one top-level key, `error`, whose object has exactly
-//     three keys — `message`, `code`, `metadata` — plus an optional
+//     three keys - `message`, `code`, `metadata` - plus an optional
 //     `trace` that is only rendered in debug / development mode.
 //
 // No handler may return any other envelope.
@@ -20,7 +20,7 @@
 //     `src/modules/logs/handlers.rs`, `src/modules/bi/handlers.rs`):
 //     an export served as an attachment (`Content-Disposition:
 //     attachment`) carries the raw file bytes (CSV / JSON / NDJSON),
-//     not an envelope — the download IS the payload. Errors before
+//     not an envelope - the download IS the payload. Errors before
 //     the download starts still use the standard error envelope.
 //
 // The Pingora gateway used to be a third exception (bare Pingora

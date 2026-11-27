@@ -1,4 +1,4 @@
-// Properties — Shared state.
+// Properties - Shared state.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -19,9 +19,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Shared state
-// ---------------------------------------------------------------------------
 
 /// In-memory stores for properties. The hook bus is attached in
 /// `init` (the bus lives in `AppContext`); handlers tolerate a

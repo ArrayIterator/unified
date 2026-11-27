@@ -12,9 +12,7 @@ use uuid::Uuid;
 
 use super::{CallerIdentity, DashboardsState, EVENT_VIEW_AS_EXPIRED, extract_token, verify_jwt};
 
-// ---------------------------------------------------------------------------
-// Layer 1 — middleware (authentication + view-as expiry on dashboard paths)
-// ---------------------------------------------------------------------------
+// Layer 1 - middleware (authentication + view-as expiry on dashboard paths)
 
 /// Authenticates every request under a dashboard prefix and stores
 /// the caller in the request extensions. Unauthenticated requests get

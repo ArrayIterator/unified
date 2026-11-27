@@ -1,4 +1,4 @@
-// Map & Tagging — module definition: routes and registration.
+// Map & Tagging - module definition: routes and registration.
 //!
 //! The maps module is a CORE module and the single shared
 //! geospatial foundation: it is always active (`is_core`
@@ -13,11 +13,11 @@
 //! `requires() -> &["maps"]` (see docs/integration/MAP_TAGGING.md
 //! for the dependency contract: enabling a consumer
 //! auto-activates this module, and disabling it is blocked
-//! while an enabled consumer still needs it — on top of the
+//! while an enabled consumer still needs it - on top of the
 //! core rule that already forbids disabling it at all).
 //!
 //! Routes (all authenticated; see `handlers.rs` for the C3
-//! guard order — tenant first, then caller, then capability):
+//! guard order - tenant first, then caller, then capability):
 //!
 //!   Locations:
 //!     GET    /api/v1/maps/locations[?kind&layer_id&page&per_page]
@@ -26,7 +26,7 @@
 //!     PUT    /api/v1/maps/locations/{id}
 //!     DELETE /api/v1/maps/locations/{id}
 //!     GET    /api/v1/maps/nearby?latitude&longitude&radius_km&kind
-//!   Links (the generic join — any module's records):
+//!   Links (the generic join - any module's records):
 //!     POST   /api/v1/maps/links
 //!     DELETE /api/v1/maps/links
 //!     GET    /api/v1/maps/entities/{entity_type}/{entity_id}/locations
@@ -66,11 +66,11 @@
 //! calling this module):
 //!
 //!   `maps.location_created` / `maps.location_updated` /
-//!   `maps.location_deleted` — a pin changed.
-//!   `maps.location_attached` / `maps.location_detached` — a
+//!   `maps.location_deleted` - a pin changed.
+//!   `maps.location_attached` / `maps.location_detached` - a
 //!     location was attached to / detached from a record.
-//!   `maps.position_recorded` — a GPS position was stored.
-//!   `maps.geofence_entered` / `maps.geofence_exited` — an
+//!   `maps.position_recorded` - a GPS position was stored.
+//!   `maps.geofence_entered` / `maps.geofence_exited` - an
 //!     entity crossed a zone boundary between its previous and
 //!     its new position.
 
@@ -126,7 +126,7 @@ impl Module for MapsModule {
     fn init(&self, ctx: &AppContext) -> UnifiedResult<()> {
         // Capture app.secret_key for provider API key encryption
         // (crypto.rs): no secret at boot means None, not a fallback
-        // — storing a provider key is refused and resolving a
+        // - storing a provider key is refused and resolving a
         // provider that needs one fails closed.
         let secret = ctx
             .config

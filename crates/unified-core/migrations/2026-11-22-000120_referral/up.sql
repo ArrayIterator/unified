@@ -50,7 +50,7 @@
 --     rule kinds (`block_self_referral`,
 --     `same_candidate_cooldown`, `max_referrals_per_period`,
 --     `require_active_employee`), and the two enforcement
---     modes (`block`, `flag`) — those are the shape of the
+--     modes (`block`, `flag`) - those are the shape of the
 --     module, not its content.
 --   - Money is integer minor units: `amount_minor` is a
 --     BIGINT count of the smallest currency unit (e.g.
@@ -74,7 +74,7 @@
 --   - Rewards snapshot their rule at creation (`rule_name`,
 --     `amount_minor`, `currency`): editing or deleting a
 --     reward rule never rewrites a reward already owed.
---     Payout is never done here — `referral.reward.payable`
+--     Payout is never done here - `referral.reward.payable`
 --     is the handoff to billing / HR, and `mark-paid` only
 --     records that a payout happened elsewhere.
 --   - The known-employee registry (`referral_employees`)
@@ -104,14 +104,12 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- Job eligibility: one row per recruitment job a tenant has
 -- explicitly marked. A job with no row is eligible by
 -- default; a row with `eligible` false blocks new referrals
 -- for it. `reward_rule_id` is an optional per-job override
 -- of the tenant default reward rule (plain reference, no
--- foreign key — deleting the rule clears the override).
--- ---------------------------------------------------------------------------
+-- foreign key - deleting the rule clears the override).
 CREATE TABLE IF NOT EXISTS referral_job_eligibility (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -125,15 +123,13 @@ CREATE TABLE IF NOT EXISTS referral_job_eligibility (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_referral_eligibility_tenant_job ON referral_job_eligibility (tenant_id, job_id);
 CREATE INDEX IF NOT EXISTS idx_referral_eligibility_tenant_eligible ON referral_job_eligibility (tenant_id, eligible, created_at DESC);
 
--- ---------------------------------------------------------------------------
 -- Referral links: one shareable link per (employee, job).
 -- Only the SHA-256 hash of the token is stored
 -- (`token_hash`, 64 hex characters); the raw token is
 -- returned exactly once at creation / rotation. Clicks are
--- counted only — no IP address, user agent, or fingerprint
+-- counted only - no IP address, user agent, or fingerprint
 -- is stored. `active` false is a revoked link: the token
 -- stops working, the row and its click count are kept.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS referral_links (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -151,7 +147,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_referral_links_tenant_employee_job ON refe
 CREATE UNIQUE INDEX IF NOT EXISTS idx_referral_links_token_hash ON referral_links (token_hash);
 CREATE INDEX IF NOT EXISTS idx_referral_links_tenant_job ON referral_links (tenant_id, job_id, created_at DESC);
 
--- ---------------------------------------------------------------------------
 -- Pipeline stages: one admin-defined stage of the referral
 -- pipeline. `slug` is unique per tenant and is the stable
 -- handle transitions use; `sort_order` is the pipeline
@@ -160,9 +155,8 @@ CREATE INDEX IF NOT EXISTS idx_referral_links_tenant_job ON referral_links (tena
 -- reward; `is_rejected_stage` marks the stage whose entry
 -- voids open rewards. `allowed_next_stage_ids` is a JSON
 -- array of stage ids this stage may move to (plain
--- references, no foreign key — deleting a stage prunes it
+-- references, no foreign key - deleting a stage prunes it
 -- from other stages' lists).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS referral_pipeline_stages (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -182,7 +176,6 @@ CREATE TABLE IF NOT EXISTS referral_pipeline_stages (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_referral_stages_tenant_slug ON referral_pipeline_stages (tenant_id, slug);
 CREATE INDEX IF NOT EXISTS idx_referral_stages_tenant_order ON referral_pipeline_stages (tenant_id, sort_order ASC);
 
--- ---------------------------------------------------------------------------
 -- Reward rules: one admin-defined payout rule. `amount_minor`
 -- is the payout in integer minor units with its three-letter
 -- ISO currency code; `trigger_stage_id` is the pipeline
@@ -191,10 +184,9 @@ CREATE INDEX IF NOT EXISTS idx_referral_stages_tenant_order ON referral_pipeline
 -- the trigger stage the reward becomes payable (`0` means
 -- payable at once); `eligibility_conditions` is a JSON array
 -- of free-text conditions; `is_default` marks the tenant's
--- default rule (at most one per tenant — enforced by the
+-- default rule (at most one per tenant - enforced by the
 -- application, not the database, so a tenant can briefly
 -- hold none while switching defaults).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS referral_reward_rules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -214,7 +206,6 @@ CREATE TABLE IF NOT EXISTS referral_reward_rules (
 CREATE INDEX IF NOT EXISTS idx_referral_rules_tenant_active ON referral_reward_rules (tenant_id, active, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_referral_rules_tenant_default ON referral_reward_rules (tenant_id, is_default, created_at DESC);
 
--- ---------------------------------------------------------------------------
 -- Referrals: one referral of one candidate for one job.
 -- `candidate_email` is stored normalized (lowercase); one
 -- referral per (tenant, candidate email, job) is enforced
@@ -228,7 +219,6 @@ CREATE INDEX IF NOT EXISTS idx_referral_rules_tenant_default ON referral_reward_
 -- when a stage is renamed); `link_id` is the referral link
 -- used, when one was used; `source` names how the referral
 -- arrived (`link` or `manual`).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS referral_referrals (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -253,12 +243,10 @@ CREATE INDEX IF NOT EXISTS idx_referral_referrals_tenant_job ON referral_referra
 CREATE INDEX IF NOT EXISTS idx_referral_referrals_tenant_referrer ON referral_referrals (tenant_id, referrer_user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_referral_referrals_tenant_stage ON referral_referrals (tenant_id, stage_id, created_at DESC);
 
--- ---------------------------------------------------------------------------
 -- Stage history: one row per referral creation and every
 -- stage move. `from_stage_id` / `from_stage_slug` are NULL
 -- on creation (the referral starts in its initial stage).
 -- History rows are never updated or deleted.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS referral_stage_history (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -275,7 +263,6 @@ CREATE TABLE IF NOT EXISTS referral_stage_history (
 CREATE INDEX IF NOT EXISTS idx_referral_history_referral ON referral_stage_history (referral_id, created_at ASC);
 CREATE INDEX IF NOT EXISTS idx_referral_history_tenant_job ON referral_stage_history (tenant_id, job_id, created_at DESC);
 
--- ---------------------------------------------------------------------------
 -- Rewards: one reward owed for a referral under one rule.
 -- `rule_name`, `amount_minor`, and `currency` are snapshotted
 -- from the rule at creation, so editing or deleting the rule
@@ -285,7 +272,6 @@ CREATE INDEX IF NOT EXISTS idx_referral_history_tenant_job ON referral_stage_his
 -- `paid_by` record a payout made elsewhere (this module
 -- never moves money); `void_reason` records why an open
 -- reward was voided. One reward per (referral, rule).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS referral_rewards (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -310,7 +296,6 @@ CREATE INDEX IF NOT EXISTS idx_referral_rewards_tenant_status ON referral_reward
 CREATE INDEX IF NOT EXISTS idx_referral_rewards_tenant_referrer ON referral_rewards (tenant_id, referrer_user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_referral_rewards_tenant_job ON referral_rewards (tenant_id, job_id, created_at DESC);
 
--- ---------------------------------------------------------------------------
 -- Anti-gaming rules: one admin-defined check. `rule_kind`
 -- is `block_self_referral`, `same_candidate_cooldown`,
 -- `max_referrals_per_period`, or `require_active_employee`;
@@ -319,9 +304,8 @@ CREATE INDEX IF NOT EXISTS idx_referral_rewards_tenant_job ON referral_rewards (
 -- cooldown; `enforcement` is `block` (reject the submission
 -- with 409) or `flag` (record the violation on the referral
 -- row and let it through for review). Checks that cannot be
--- evaluated from the data this module has never block — they
+-- evaluated from the data this module has never block - they
 -- are recorded as `unverified` on the referral row.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS referral_anti_gaming_rules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -338,7 +322,6 @@ CREATE TABLE IF NOT EXISTS referral_anti_gaming_rules (
 );
 CREATE INDEX IF NOT EXISTS idx_referral_gaming_tenant_kind ON referral_anti_gaming_rules (tenant_id, rule_kind, created_at DESC);
 
--- ---------------------------------------------------------------------------
 -- Known employees: a cache built from `hr.employee_created`
 -- events (`{employee_id, user_id, department_id}`), used
 -- only for the active-employee check. The event carries no
@@ -346,7 +329,6 @@ CREATE INDEX IF NOT EXISTS idx_referral_gaming_tenant_kind ON referral_anti_gami
 -- lookup is by user id. One row per user id; deleting the
 -- user removes the row. Absence means unknown, never "not
 -- an employee".
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS referral_employees (
     user_id TEXT PRIMARY KEY CHECK (char_length(user_id) BETWEEN 1 AND 200),
     employee_id TEXT NOT NULL CHECK (char_length(employee_id) BETWEEN 1 AND 200),
@@ -355,7 +337,6 @@ CREATE TABLE IF NOT EXISTS referral_employees (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- ---------------------------------------------------------------------------
 -- Audit trail: one row per change to an eligibility row, a
 -- link, a stage, a reward rule, a referral, a reward, or an
 -- anti-gaming rule (creates, updates, deletes, stage moves,
@@ -364,7 +345,6 @@ CREATE TABLE IF NOT EXISTS referral_employees (
 -- `action` names the change; `before` / `after` are the
 -- serialized rows (or NULL for creates / deletes). Audit rows
 -- are never updated or deleted through the API.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS referral_audit (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),

@@ -1,10 +1,8 @@
-//! WhatsApp external module (split from lib.rs; moved verbatim).
+//! WhatsApp external module.
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Module implementation
-// ---------------------------------------------------------------------------
 
 /// The WhatsApp Business connector module.
 pub struct WhatsAppModule {
@@ -200,8 +198,8 @@ impl Module for WhatsAppModule {
     fn route_info(&self) -> Vec<RouteInfo> {
         // Auth notes: every route requires a valid token, except the
         // two webhook routes. Meta calls those without a token, and
-        // they verify their own credential instead — the verify token
-        // (GET) and the HMAC-SHA256 signature (POST) — which is
+        // they verify their own credential instead - the verify token
+        // (GET) and the HMAC-SHA256 signature (POST) - which is
         // exactly what `RouteAuth::Public` is reserved for.
         vec![
             RouteInfo {

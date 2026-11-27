@@ -8,9 +8,7 @@ use super::{limits::*, types::*, hub::*, state::*, helpers::*, module::*, handle
 
 
 
-// ---------------------------------------------------------------------------
 // Presence handlers
-// ---------------------------------------------------------------------------
 pub(crate) async fn set_presence(
     state: web::Data<ChatState>,
     req: HttpRequest,

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Settings — Unified Demo</title>
+  <title>Settings - Unified Demo</title>
   <meta name="description" content="Unified demo settings: general, theme, mail and security.">
   <script>try{var t=localStorage.getItem('unified-demo-theme');if(t==='editorial'){document.documentElement.classList.add('theme-dark');}}catch(e){}</script>
   <link rel="stylesheet" href="assets/demo.css">
@@ -12,7 +12,7 @@
   <main class="main" id="demo-main">
     <div class="page-head">
       <h1>Settings</h1>
-      <p class="page-intro">General, theme, mail and security. Everything here is demo state — nothing is saved.</p>
+      <p class="page-intro">General, theme, mail and security. Everything here is demo state - nothing is saved.</p>
     </div>
 
     <div class="tabs" role="tablist" aria-label="Settings sections">
@@ -92,7 +92,7 @@
           <select id="settings-timezone" name="timezone">
             <option value="UTC" selected>UTC</option>
           </select>
-          <p class="field-help">Full IANA list (420 zones) — populated from the same data as the real settings API.</p>
+          <p class="field-help">Full IANA list (420 zones) - populated from the same data as the real settings API.</p>
         </div>
         <div class="field-row">
           <div class="field">
@@ -133,7 +133,7 @@
 
     <section class="card" data-tab-panel="theme" hidden>
       <h2>Theme</h2>
-      <p>Pick a theme. The same switcher lives in the header on every page — it is demo-only and persists in this browser.</p>
+      <p>Pick a theme. The same switcher lives in the header on every page - it is demo-only and persists in this browser.</p>
       <div class="grid grid-two">
         <div class="card">
           <h3>Default</h3>
@@ -142,7 +142,7 @@
         </div>
         <div class="card">
           <h3>Editorial Dark</h3>
-          <p class="muted">Dark canvas, serif headlines, gold accents — the newspaper-style variant of the default theme.</p>
+          <p class="muted">Dark canvas, serif headlines, gold accents - the newspaper-style variant of the default theme.</p>
           <p><button type="button" class="button button-secondary" data-theme-pick="editorial" aria-pressed="false">Use Editorial Dark</button></p>
         </div>
       </div>
@@ -150,14 +150,14 @@
 
     <section class="card" data-tab-panel="mail" hidden>
       <h2>Mail</h2>
-      <p class="muted">Pick a provider — the form below renders its own fields (dynamic, from the same provider definitions as the real catalog). OAuth providers link the account instead of taking a password.</p>
+      <p class="muted">Pick a provider - the form below renders its own fields (dynamic, from the same provider definitions as the real catalog). OAuth providers link the account instead of taking a password.</p>
       <div class="provider-grid" id="mail-provider-grid" role="radiogroup" aria-label="Mail provider"></div>
       <form data-demo-form>
         <div id="mail-provider-fields"></div>
         <p>
           <button class="button" type="submit">Save mail settings</button>
           <button type="button" class="button button-secondary" data-mail-test-connection>Test connection</button>
-          <button type="button" class="button button-secondary" data-toast="Test email sent (demo) — check the demo outbox.">Send test email</button>
+          <button type="button" class="button button-secondary" data-toast="Test email sent (demo) - check the demo outbox.">Send test email</button>
         </p>
       </form>
     </section>

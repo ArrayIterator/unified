@@ -21,9 +21,7 @@ use super::state::{
 };
 use super::types::{Campaign, CampaignStats};
 
-// ---------------------------------------------------------------------------
 // Campaign handlers.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct CampaignInput {

@@ -1,4 +1,4 @@
-// crm — store.
+// crm - store.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -21,9 +21,7 @@ use super::handlers_leads::*;
 use super::handlers_activities::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // State
-// ---------------------------------------------------------------------------
 
 pub struct CrmState {
     pub(crate) hooks: RwLock<Arc<HookBus>>,

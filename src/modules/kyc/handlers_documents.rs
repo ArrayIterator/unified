@@ -1,7 +1,7 @@
 //! HTTP handlers for KYC case documents: linking a
 //! documents-module document by reference, listing, reading,
-//! and unlinking. Documents are metadata only — a document
-//! reference, its SHA-256, and file metadata — never bytes.
+//! and unlinking. Documents are metadata only - a document
+//! reference, its SHA-256, and file metadata - never bytes.
 //!
 //! Changing the documents of a case that already carries an
 //! AI verdict invalidates that verdict: the verdict and risk

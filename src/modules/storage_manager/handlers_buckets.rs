@@ -13,9 +13,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Buckets.
-// ---------------------------------------------------------------------------
 
 /// Encrypt a credential map (plain JSON object) for storage. Only
 /// string values are kept; anything else is rejected so a caller
@@ -194,7 +192,7 @@ pub(crate) async fn create_bucket(
             )?;
         }
         // Tenant scoping: the bucket's company is verified against
-        // the caller's scope — a scoped caller creates a bucket for
+        // the caller's scope - a scoped caller creates a bucket for
         // their own company (an omitted company adopts it); an
         // unresolved caller may only create a shared bucket.
         let body_company = optional_text(&input.company_id, "company_id", 128)?;

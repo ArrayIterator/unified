@@ -1,4 +1,4 @@
-//! Documents folders (migration 000132, task 355): the in-memory
+//! Documents folders (migration 000132): the in-memory
 //! folder tree and the document move / rename operations.
 //!
 //! Folders are a grouping only: they never change a document's
@@ -6,7 +6,7 @@
 //! id is never trusted from a client without an existence +
 //! company-scope check (`load_folder_in_scope`), and a delete
 //! refuses (409) while the folder still holds documents or
-//! subfolders — the caller moves or deletes the contents first, so
+//! subfolders - the caller moves or deletes the contents first, so
 //! a delete can never orphan or silently drop files.
 
 use super::super::types::DocumentFolder;
@@ -37,7 +37,7 @@ impl DocumentsState {
     /// scope. The root (`""`) passes for every caller: it holds
     /// only documents already visible through the list filter.
     /// Fails closed (403) when the folder belongs to another
-    /// company, 404 when it does not exist — so a caller can never
+    /// company, 404 when it does not exist - so a caller can never
     /// probe another company's folder ids through the error code.
     pub(crate) fn load_folder_in_scope(
         &self,
@@ -155,7 +155,7 @@ impl DocumentsState {
             }
         }
         // Walked past every folder without reaching the root: the
-        // stored tree is corrupt — treat the candidate as a
+        // stored tree is corrupt - treat the candidate as a
         // descendant (fail closed, refuse the move).
         true
     }

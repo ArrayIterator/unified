@@ -122,12 +122,10 @@ impl SaasState {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Caller authentication, mirroring the bi and supervision modules:
 // identity comes from the server-verified caller, and the
 // roles module answers `role.check` on the hook bus. Fails closed:
 // no answer means not allowed.
-// ---------------------------------------------------------------------------
 
 /// Caller identity: the server-verified caller.
 pub(crate) struct Caller {

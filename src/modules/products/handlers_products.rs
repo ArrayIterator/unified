@@ -17,9 +17,7 @@ use super::types::{CreateProduct, CreateSupportTicket, EntitlementCheckRequest, 
 use super::state::ProductsState;
 use super::validation::{matches_search, new_id, now, paginate, resolve_subscription_settings, respond_created, slugify, validate_billing_period, validate_bundle_discount_bps, validate_bundle_rule, validate_kind, validate_license_template, validate_pricing_model, validate_product_refs, validate_region, validate_status_transition};
 
-// ---------------------------------------------------------------------------
 // Product handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_products(
     ctx: web::Data<Arc<AppContext>>,
@@ -334,7 +332,7 @@ pub(crate) async fn update_product(
         require_record_writable_in_company_scope(&existing.vendor_company_id, &_scope)?;
         // A newly-named vendor must match the caller scope; omitting
         // it keeps the stored vendor (the returned value is
-        // discarded — only the check matters here).
+        // discarded - only the check matters here).
         require_company_match_for(&_scope, &input.vendor_company_id)?;
         if let Some(kind) = &input.kind {
             if *kind != "bundle" && existing.kind == "bundle" {

@@ -12,9 +12,7 @@ use unified_core::provider_registry::{
 };
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Provider kinds.
-// ---------------------------------------------------------------------------
 
 /// Every AI provider this module can talk to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -116,9 +114,7 @@ pub fn catalog() -> Vec<Arc<ProviderDefinition>> {
     provider_registry().list_family_enabled("ai")
 }
 
-// ---------------------------------------------------------------------------
-// Registry-backed attributes (C12, task 269).
-// ---------------------------------------------------------------------------
+// Registry-backed attributes (C12).
 /// The `&'static` view of one provider's registry definition; see the
 /// same bridge in the payments module.
 struct AiAttrs {
@@ -157,9 +153,7 @@ fn attrs(kind: &AiProviderKind) -> &'static AiAttrs {
         .expect("every AiProviderKind has a registry definition")
 }
 
-// ---------------------------------------------------------------------------
 // Provider connections (stored; credentials write-only).
-// ---------------------------------------------------------------------------
 
 /// One stored provider connection. `api_key_encrypted` holds the
 /// ciphertext from `encrypt_api_key`; the plaintext key is never
@@ -243,9 +237,7 @@ pub struct AiProviderCatalogEntry {
     pub key_required: bool,
 }
 
-// ---------------------------------------------------------------------------
 // Drafts.
-// ---------------------------------------------------------------------------
 
 /// What a draft is for. The kind decides which owning module may
 /// deliver it after a human approves it; this module delivers none.
@@ -358,9 +350,7 @@ pub struct AiDraft {
     pub updated_at: DateTime<Utc>,
 }
 
-// ---------------------------------------------------------------------------
 // Usage tracking.
-// ---------------------------------------------------------------------------
 
 /// One provider call, recorded whether it succeeded or failed, so
 /// cost and rate-limit questions have an audit trail.
@@ -425,7 +415,6 @@ pub struct AiUsageSummary {
     pub estimated_cost_usd: Option<f64>,
 }
 
-// ---------------------------------------------------------------------------
 // Access allowlists (company + user policies), personal keys, personal
 // MCP servers.
 //
@@ -434,7 +423,6 @@ pub struct AiUsageSummary {
 // "unrestricted" for that dimension; `Some(vec![])` means "allow
 // nothing". A cap of `None` means "no cap"; a user cap of `None` or
 // `0` means "inherit the company cap" (see `effective_user_cap`).
-// ---------------------------------------------------------------------------
 
 /// One company's AI access policy. Keyed by `company_id` in the
 /// state store (one policy per company).
@@ -729,7 +717,6 @@ pub(crate) struct CapReservation {
     pub(crate) created_at: DateTime<Utc>,
 }
 
-// ---------------------------------------------------------------------------
 // Shared context.
 //
 // THE merge point with the public server module (`mcp.rs`, built in
@@ -746,7 +733,6 @@ pub(crate) struct CapReservation {
 // second context assembler. `mcp.rs` did not exist yet when this file
 // was written; the merge is the function name and the event name
 // above, both public.
-// ---------------------------------------------------------------------------
 
 /// Caller-supplied site facts. Explicit caller values win over
 /// hook-contributed ones when both are present.
@@ -845,7 +831,7 @@ mod tests {
         // variant exists for it and no match arm was added. (Building
         // an adapter for it needs the string-keyed factory in
         // `providers.rs`; the connection model still keys on the enum
-        // — see INTEGRATION_NOTES_C12.)
+        // - see INTEGRATION_NOTES_C12.)
         let mut def = unified_core::provider_registry::ProviderDefinition::new(
             "ai",
             "acme_ai",

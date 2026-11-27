@@ -1,5 +1,5 @@
 {{!-- Media picker view (module:documents/picker).
-  The shared media picker over the documents store — never a
+  The shared media picker over the documents store - never a
   per-module upload silo. The list shows PUBLIC files only
   (`GET /api/v1/documents/picker` filters `visibility = 'public'`
   server-side); a private file is invisible here until a manager or
@@ -10,7 +10,7 @@
   form (posts, pages, digital products, courses, ...) can open the
   same picker as a dialog. On attach, the caller stores the picked
   document's `/files/public/{key}` URL on the record's attachment
-  reference — the description lives with that reference, never on
+  reference - the description lives with that reference, never on
   the document row (documents metadata is a separate task). --}}
 <section class="admin-section section-panel" data-section="documents-picker" aria-labelledby="media-picker-heading">
   <h1 id="media-picker-heading">{{#if title}}{{title}}{{else}}Media picker{{/if}}</h1>
@@ -54,7 +54,7 @@
     </nav>
     {{/if}}
     {{else}}
-    <p class="empty-state"><span class="empty-state-title">No public files yet.</span> Upload one below — it starts private and only appears here once it is public.</p>
+    <p class="empty-state"><span class="empty-state-title">No public files yet.</span> Upload one below - it starts private and only appears here once it is public.</p>
     {{/if}}
   </div>
   <nav data-picker-pager aria-label="Pagination"></nav>

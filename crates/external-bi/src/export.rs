@@ -1,11 +1,9 @@
-//! BI external module (split from lib.rs; moved verbatim).
+//! BI external module.
 
 use super::*;
 
 
-// ---------------------------------------------------------------------------
 // CSV output (proper quoting, no extra dependency)
-// ---------------------------------------------------------------------------
 
 /// Quote one CSV cell: quote when it contains a comma, quote,
 /// newline, or leading/trailing space; double any inner quotes.
@@ -69,9 +67,7 @@ pub fn rows_to_jsonl(rows: &[Value]) -> String {
     out
 }
 
-// ---------------------------------------------------------------------------
 // SSRF-safe URL validation
-// ---------------------------------------------------------------------------
 
 /// True when the IP is public: not loopback, private, link-local,
 /// multicast, unspecified, reserved, documentation, or CGNAT space.
@@ -176,9 +172,7 @@ pub async fn validate_webhook_url(raw: &str) -> Result<url::Url, UnifiedError> {
     Ok(parsed)
 }
 
-// ---------------------------------------------------------------------------
 // File-destination path safety
-// ---------------------------------------------------------------------------
 
 /// Base directory for `file` destinations.
 pub fn export_base_dir() -> PathBuf {

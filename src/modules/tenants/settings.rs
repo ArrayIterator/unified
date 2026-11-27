@@ -7,10 +7,8 @@ use super::{constants::*, vocabulary::*, events::*, records::*, state::*, auth::
 
 
 
-// ---------------------------------------------------------------------------
-// Settings (configurable defaults, stored as settings — nothing
+// Settings (configurable defaults, stored as settings - nothing
 // behavioural is hard-coded outside this struct's defaults).
-// ---------------------------------------------------------------------------
 /// Default reserved subdomain labels. These are CONFIGURABLE
 /// DEFAULTS, not a fixed rule: an administrator edits them through
 /// `PUT /api/v1/tenants/settings`, and provisioning reads the live

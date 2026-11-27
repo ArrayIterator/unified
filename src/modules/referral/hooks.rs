@@ -17,7 +17,7 @@ use unified_core::hooks::HookContext;
 /// `deleted-user`. Candidate rows submitted by the deleted
 /// user are anonymized too (name and email replaced with
 /// markers) when the payload names the candidate email;
-/// otherwise the candidate data is untouched — the deleted
+/// otherwise the candidate data is untouched - the deleted
 /// user is the referrer, not necessarily the candidate.
 /// Rows are never deleted: a referral history must stay on
 /// record. Known-employee registry entries for the user are
@@ -214,7 +214,7 @@ pub(crate) fn on_hr_employee_created(state: ReferralState, ctx: &mut HookContext
 
 /// `recruitment.applicant.moved` carries `{applicant_id,
 /// job_id, from_stage, to_stage, actor}` (verified from the
-/// recruitment module's source) — it carries no referral
+/// recruitment module's source) - it carries no referral
 /// id, so there is nothing to sync unless a future
 /// recruitment version adds one. When the payload does carry
 /// `referral_id`, the referral is moved to the stage with
@@ -253,7 +253,7 @@ pub(crate) fn on_recruitment_applicant_moved(state: ReferralState, ctx: &mut Hoo
 
 /// `recruitment.hired` carries `{applicant_id, job_id,
 /// offer_id, actor}` (verified from the recruitment
-/// module's source) — it carries no referral id either, so
+/// module's source) - it carries no referral id either, so
 /// the same rule applies: sync only when `referral_id` is
 /// present, moving the referral to the tenant's hired stage.
 pub(crate) fn on_recruitment_hired(state: ReferralState, ctx: &mut HookContext) {
@@ -291,7 +291,7 @@ pub(crate) fn on_recruitment_hired(state: ReferralState, ctx: &mut HookContext) 
 /// Shared sync: move one referral to the named stage when
 /// the transition is allowed, with the hired / rejected
 /// side effects. A disallowed transition is reported, not
-/// forced — the recruitment pipeline and the referral
+/// forced - the recruitment pipeline and the referral
 /// pipeline are separate data, and their stage names may
 /// legitimately differ.
 fn sync_referral_stage(

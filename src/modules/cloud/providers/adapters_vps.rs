@@ -10,9 +10,7 @@ use url::Url;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // DigitalOcean adapter.
-// ---------------------------------------------------------------------------
 
 /// DigitalOcean API (`api.digitalocean.com`), bearer token auth.
 /// Droplets list (paginated, up to 5 pages of 200) / status /
@@ -275,9 +273,7 @@ impl CloudProvider for DigitalOceanAdapter {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Linode adapter.
-// ---------------------------------------------------------------------------
 
 /// Linode API (`api.linode.com`), bearer token auth. Instances list
 /// (paginated, up to 5 pages of 200) / status / create / resize /

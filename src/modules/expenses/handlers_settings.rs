@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use super::*;
 
-// --- Handlers: settings ------------------------------------------------------
+// Handlers: settings
 
 pub(crate) async fn get_settings(
     ctx: web::Data<Arc<AppContext>>,

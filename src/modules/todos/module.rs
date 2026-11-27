@@ -1,4 +1,4 @@
-// todos — module.
+// todos - module.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -27,9 +27,7 @@ use super::handlers_todos::*;
 use super::handlers_subtasks::*;
 use super::handlers_ai::*;
 
-// ---------------------------------------------------------------------------
 // Module.
-// ---------------------------------------------------------------------------
 
 pub struct TodosModule {
     pub(crate) state: TodosState,

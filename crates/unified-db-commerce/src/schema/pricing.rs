@@ -3,13 +3,11 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
-// Pricing engine (migration 000103_pricing); batch 15 B3 notes §6.2.
+// Pricing engine (migration 000103_pricing); batch 15 B3 notes sec. 6.2.
 // The volume-quantity tiers live in `pricing_volume_tiers` below:
 // the 000041 shape (pricing-table feature tiers) already owns the
 // `pricing_tiers` name, and the 000103 table was renamed during
 // the final inspection to resolve the collision.
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     pricing_settings (id) {

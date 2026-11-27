@@ -40,7 +40,7 @@ use super::types::CreateCapaInput;
 use super::types::TransitionCapaInput;
 use super::types::UpdateCapaInput;
 
-/// A CAPA due date, when given, must be in the future — the same
+/// A CAPA due date, when given, must be in the future - the same
 /// rule on create and on update, so an update cannot smuggle in a
 /// past date that create would have rejected.
 pub(crate) fn validate_due_date(due_date: Option<DateTime<Utc>>) -> UnifiedResult<()> {
@@ -53,7 +53,7 @@ pub(crate) fn validate_due_date(due_date: Option<DateTime<Utc>>) -> UnifiedResul
 }
 
 /// Separation of duties for CAPA verification: the owner of a
-/// CAPA must never verify their own fix — effectiveness has to be
+/// CAPA must never verify their own fix - effectiveness has to be
 /// confirmed by someone else. A CAPA carries no separate assignee
 /// field; the owner is the accountable person, so the check is
 /// `verified_by != owner_id`.
@@ -66,9 +66,7 @@ pub(crate) fn check_verify_separation(capa: &Capa, actor: &str) -> UnifiedResult
     Ok(())
 }
 
-// ---------------------------------------------------------------------------
 // CAPA handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_capas(
     ctx: web::Data<Arc<AppContext>>,

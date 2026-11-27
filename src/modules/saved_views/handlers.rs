@@ -27,9 +27,7 @@ use super::{
     require_view_owner, require_view_visible,
 };
 
-// ---------------------------------------------------------------------------
 // Handlers.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_views(
     ctx: web::Data<Arc<AppContext>>,

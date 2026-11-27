@@ -1,4 +1,4 @@
-// Map & Tagging — Diesel-backed store and the public contract
+// Map & Tagging - Diesel-backed store and the public contract
 // other modules call.
 //
 // The database is the ONLY authority for stored map data. Reads
@@ -52,9 +52,7 @@ use super::validation::{
     validate_slug, validate_text, validate_tile_template,
 };
 
-// ---------------------------------------------------------------------------
 // Database plumbing.
-// ---------------------------------------------------------------------------
 
 /// The database pool, or 503 when no database is configured.
 pub(crate) fn db_pool(ctx: &AppContext) -> UnifiedResult<DbPool> {
@@ -87,9 +85,7 @@ where
     .map_err(|error| UnifiedError::internal(format!("Database task failed: {error}")))?
 }
 
-// ---------------------------------------------------------------------------
 // Rows (Diesel) and their public shapes.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Insertable, Selectable)]
 #[diesel(table_name = map_locations)]
@@ -515,9 +511,7 @@ async fn role_is_usable(ctx: &Arc<AppContext>, tenant_id: Uuid, slug: &str) -> U
     })
 }
 
-// ---------------------------------------------------------------------------
 // Locations.
-// ---------------------------------------------------------------------------
 
 /// Map a Diesel error to an API error: a unique-violation is a
 /// 409 naming the conflicting value; anything else is a 500.
@@ -863,9 +857,7 @@ pub async fn nearby(
     Ok(found)
 }
 
-// ---------------------------------------------------------------------------
-// Location links — the generic join and the public contract.
-// ---------------------------------------------------------------------------
+// Location links - the generic join and the public contract.
 
 /// Attach a location to another module's record (public
 /// contract). The location must belong to this tenant and the
@@ -1058,9 +1050,7 @@ pub async fn locations_for_entity(
     Ok(found)
 }
 
-// ---------------------------------------------------------------------------
 // Layers.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_layers(
     ctx: &Arc<AppContext>,
@@ -1184,9 +1174,7 @@ pub(crate) async fn delete_layer(
     Ok(MapLayer::from(current))
 }
 
-// ---------------------------------------------------------------------------
 // Geofences.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_geofences(
     ctx: &Arc<AppContext>,
@@ -1349,9 +1337,7 @@ pub async fn geofences_containing(
         .collect())
 }
 
-// ---------------------------------------------------------------------------
 // Positions (tracking history).
-// ---------------------------------------------------------------------------
 
 /// Record one GPS position (public contract). The position is
 /// stored, `maps.position_recorded` is emitted, and every
@@ -1549,9 +1535,7 @@ pub(crate) async fn list_positions(
     ))
 }
 
-// ---------------------------------------------------------------------------
 // Location kinds (admin-definable definitions).
-// ---------------------------------------------------------------------------
 
 /// All kinds for the tenant: the built-ins first, overlaid by
 /// the tenant's own rows (a tenant row with the same slug wins
@@ -1709,9 +1693,7 @@ pub(crate) async fn delete_kind(
     Ok(LocationKind::from(current))
 }
 
-// ---------------------------------------------------------------------------
 // Link roles (admin-definable definitions).
-// ---------------------------------------------------------------------------
 
 /// All roles for the tenant: built-ins overlaid by the
 /// tenant's own rows, same shape as `list_kinds`.
@@ -1829,9 +1811,7 @@ pub(crate) async fn delete_role(
     Ok(LinkRole::from(current))
 }
 
-// ---------------------------------------------------------------------------
 // Providers (registry) and settings.
-// ---------------------------------------------------------------------------
 
 /// All providers visible to the tenant: the built-ins, overlaid
 /// by the platform rows, overlaid by the tenant's own rows (a

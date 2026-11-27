@@ -9,7 +9,7 @@
 // through the `crate::http::cert_swap::CertStoreSwap` holder, so
 // per-certificate swaps (`ssl.swap`) take effect on new handshakes
 // while a whole-store swap only reaches ServerConfigs built after
-// it (the running listener keeps its captured store — see the wiring
+// it (the running listener keeps its captured store - see the wiring
 // comment at the TLS branch).
 // The server runs until Ctrl-C or SIGTERM, then shuts down gracefully.
 
@@ -106,7 +106,7 @@ pub async fn run_server(ctx: Arc<AppContext>) -> UnifiedResult<()> {
         // whole-store swap takes effect for every ServerConfig
         // built after it. Honest limit: the running listener keeps
         // the store Arc its config captured at bind time, so a
-        // whole-store swap alone does NOT change live traffic —
+        // whole-store swap alone does NOT change live traffic -
         // there is no listener rebuild. Per-certificate swaps
         // (`swap_certificate`) are the live path; a whole-store
         // swap needs a restart (or a future rebuild that calls
@@ -135,15 +135,15 @@ pub async fn run_server(ctx: Arc<AppContext>) -> UnifiedResult<()> {
     }
 
     // Asset minification (see `crate::themes::assets::minify`):
-    // the config decides once at startup — an explicit
+    // the config decides once at startup - an explicit
     // `assets.minify` wins, otherwise minify unless the
-    // application runs in development mode — and the decision
+    // application runs in development mode - and the decision
     // applies to the whole startup compilation below. Minification
     // is synchronous here, in the same step that already
     // transpiles the TypeScript sources: the asset set is tiny
     // (six scripts, ~130 KiB, plus three stylesheets, ~52 KiB),
     // so the step costs milliseconds, and a synchronous step keeps
-    // one atomic served map — the bytes served for a URL never
+    // one atomic served map - the bytes served for a URL never
     // change during the process lifetime, which is what makes the
     // fingerprint (a hash of the served bytes) correct.
     let minify_assets = {
@@ -154,7 +154,7 @@ pub async fn run_server(ctx: Arc<AppContext>) -> UnifiedResult<()> {
 
     // Dashboard scripts are TypeScript sources under `assets/js/`;
     // the server transpiles them to JavaScript once at startup (OXC,
-    // via the `unified-ts` crate — transpile-only, no JS engine) and
+    // via the `unified-ts` crate - transpile-only, no JS engine) and
     // holds the compiled scripts in RAM, served from memory by
     // `serve_asset`. In release builds the JavaScript is minified
     // before it is stored; debug builds serve the transpiled
@@ -194,7 +194,7 @@ pub async fn run_server(ctx: Arc<AppContext>) -> UnifiedResult<()> {
 
     // Stylesheets under `assets/css/` are compiled the same way:
     // read once at startup, held in RAM, served from memory by
-    // `serve_asset` — minified in release builds, as written in
+    // `serve_asset` - minified in release builds, as written in
     // debug builds. A stylesheet that fails to compile is logged
     // and skipped; the file is then served from disk instead, so
     // the page still gets its styles.
@@ -294,7 +294,7 @@ pub async fn run_server(ctx: Arc<AppContext>) -> UnifiedResult<()> {
         // the tenant context, and blocks control-plane paths on tenant
         // hosts. Its config (main host, blocked paths, tenant header,
         // fallback policies) is built from the environment mapped to
-        // the `saas.*` config keys — see `TenantResolutionConfig` —
+        // the `saas.*` config keys - see `TenantResolutionConfig` -
         // and this is the single construction site: when the typed
         // `[saas]` config section lands, it plugs in here.
         // The React track is a dashboard surface, so on tenant hosts
@@ -435,7 +435,7 @@ pub async fn run_server(ctx: Arc<AppContext>) -> UnifiedResult<()> {
                 );
                 // React track: the Vite build output under `/react/`,
                 // served from disk by `crate::http::react` (already
-                // minified by esbuild — it bypasses the startup
+                // minified by esbuild - it bypasses the startup
                 // minification pipeline). Auth is the global
                 // `AuthMiddleware`, exactly as for `/dashboard`:
                 // `/react` is not a public route, so anonymous

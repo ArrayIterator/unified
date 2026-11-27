@@ -1,4 +1,4 @@
-// cloud module — hook contracts for "cloud panel" external modules.
+// cloud module - hook contracts for "cloud panel" external modules.
 //
 // The "cloud panel" grouping is the category for external
 // panel/provider connector modules (SolusVM, Virtualizor, cPanel,
@@ -13,7 +13,7 @@
 //
 // A contributed provider definition is descriptive only: it still
 // needs a registered adapter factory
-// (`ProviderRegistry::register_factory`) to work — the factory
+// (`ProviderRegistry::register_factory`) to work - the factory
 // registry is keyed by the `ProviderKind` enum today, so a future
 // external kind needs a string-keyed factory or an enum addition.
 
@@ -34,7 +34,7 @@ pub const EVENT_CLOUD_PROVIDER_DEFINITIONS: &str = "cloud.provider.definitions";
 
 /// Hook event: a module contributes cloud panel connector
 /// definitions. Answer shape: `{id (kebab), display_name,
-/// kinds?: [...]}` — the provider kinds this panel manages, if any.
+/// kinds?: [...]}` - the provider kinds this panel manages, if any.
 pub const EVENT_CLOUD_PANEL_DEFINITIONS: &str = "cloud.panel.definitions";
 
 /// Hook event: a module contributes SSL provider definitions.

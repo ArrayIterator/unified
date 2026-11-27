@@ -7,7 +7,7 @@
 //! numeric entry or target value is stored as its canonical
 //! decimal string (`12.50` is stored as `12.5`), and progress
 //! math runs on [`Decimal`], an integer mantissa plus a scale
-//! — `f64` is never used for a stored or returned number
+//! - `f64` is never used for a stored or returned number
 //! anywhere in this module. Progress is reported in basis
 //! points (10000 = 100%) as `i64`, so it stays exact.
 //!
@@ -18,7 +18,7 @@
 //! an administrator enters. The only fixed vocabulary is the
 //! ESG taxonomy itself (environmental / social / governance),
 //! the three value data types (number / text / boolean), and
-//! the two target directions (increase / decrease) — those
+//! the two target directions (increase / decrease) - those
 //! are the shape of the module, not its content.
 
 use chrono::{DateTime, NaiveDate, Utc};
@@ -88,15 +88,13 @@ pub(crate) const ACHIEVED_BPS: i64 = 10_000;
 /// counts as on track.
 pub(crate) const ON_TRACK_BPS: i64 = 7_500;
 
-// ---------------------------------------------------------------------------
 // Decimal: integer mantissa + scale, no floating point
-// ---------------------------------------------------------------------------
 
 /// A decimal number as an integer mantissa plus a scale: the
 /// value is `mantissa / 10^scale`. `12.50` is mantissa `1250`,
 /// scale `2`; parsing keeps the written scale, arithmetic
 /// normalizes trailing zeroes away. All operations are
-/// checked — overflow is an error, never a silent wrap or a
+/// checked - overflow is an error, never a silent wrap or a
 /// float. This is the same approach as the spreadsheets
 /// module's decimal type, kept local so this module does not
 /// depend on another module's internals.
@@ -311,14 +309,12 @@ impl std::fmt::Display for Decimal {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Pure progress math (unit-tested below)
-// ---------------------------------------------------------------------------
 
 /// Target attainment in basis points (10000 = 100%), or
 /// `None` when it is undefined: an `increase` target of zero
 /// with a non-zero actual has no finite ratio. Attainment is
-/// deliberately not capped at 10000 — beating a target is
+/// deliberately not capped at 10000 - beating a target is
 /// real, and the summary caps per-metric attainment when it
 /// averages. `direction` is `increase` (higher is better) or
 /// `decrease` (lower is better, e.g. emissions).
@@ -441,9 +437,7 @@ pub fn validate_period_range(
     Ok((start, end))
 }
 
-// ---------------------------------------------------------------------------
-// Enumerations (fixed vocabulary — the shape, not the content)
-// ---------------------------------------------------------------------------
+// Enumerations (fixed vocabulary - the shape, not the content)
 
 /// ESG category: the taxonomy itself. Metric names, units,
 /// and framework tags are data; the three categories are not.
@@ -556,12 +550,10 @@ impl PeriodStatus {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Stored types
-// ---------------------------------------------------------------------------
 
 /// One reporting framework definition, entered by an
-/// administrator as data — for example a standard the tenant
+/// administrator as data - for example a standard the tenant
 /// reports against, with its own version. Frameworks are
 /// never a hard-coded list: a tenant with no framework rows
 /// simply has no framework tags to attach.
@@ -631,12 +623,12 @@ pub struct Period {
 /// One recorded metric value for a metric in a period at a
 /// scope. `scope_type` / `scope_id` are plain reference ids
 /// (a company or a site from the company module, or any other
-/// scope the tenant uses) — this module never assumes the
+/// scope the tenant uses) - this module never assumes the
 /// company module's tables. Numeric values are canonical
 /// decimal strings; booleans are `true` / `false`; text is
 /// stored as written. `document_ids` are references into the
 /// documents module by id only (no document data is copied
-/// here). One entry per (metric, period, scope) — a second
+/// here). One entry per (metric, period, scope) - a second
 /// value for the same combination updates the entry and
 /// appends a history row instead of creating a duplicate.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -717,15 +709,13 @@ pub struct AuditRecord {
     pub created_at: DateTime<Utc>,
 }
 
-// ---------------------------------------------------------------------------
 // Report views (computed, not stored)
-// ---------------------------------------------------------------------------
 
 /// Progress of one metric in a period summary: the latest
 /// recorded value (when any), the target (when any), the
 /// attainment in basis points (when computable), and its
 /// label. One row per (metric, scope) combination that has an
-/// entry or a target — values are never summed across scopes,
+/// entry or a target - values are never summed across scopes,
 /// because scopes (sites, companies) report independently.
 /// `attainment_bps` is absent for text metrics, for metrics
 /// with no target, and for the undefined increase-from-zero
@@ -779,9 +769,7 @@ pub struct PeriodSummary {
     pub metrics: Vec<MetricProgress>,
 }
 
-// ---------------------------------------------------------------------------
 // Request bodies
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct CreateFrameworkRequest {

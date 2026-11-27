@@ -29,9 +29,7 @@ pub(crate) fn encryption_secret(ctx: &AppContext) -> UnifiedResult<String> {
     Ok(secret)
 }
 
-// ---------------------------------------------------------------------------
 // Credential encryption (write-only storage).
-// ---------------------------------------------------------------------------
 
 pub(crate) type HmacSha256 = Hmac<Sha256>;
 

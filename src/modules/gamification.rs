@@ -1,8 +1,8 @@
-// Gamification module — staff recognition: points, badges,
+// Gamification module - staff recognition: points, badges,
 // seasons, team leaderboards, personal progress, and staff
 // reward redemption.
 //
-// STAFF LEDGER SEPARATION — READ THIS FIRST. The points in this
+// STAFF LEDGER SEPARATION - READ THIS FIRST. The points in this
 // module are STAFF recognition points (tickets closed, sales
 // made, reviews received, community help). They live in a
 // SEPARATE ledger from customer loyalty points (the loyalty
@@ -16,50 +16,50 @@
 // Routes live under `/api/v1/gamification`:
 //
 //   Rules (the rules engine):
-//     GET/POST /rules — list / create a rule.
+//     GET/POST /rules - list / create a rule.
 //     GET/PATCH/DELETE /rules/{id}.
 //   Points ledger:
-//     GET  /ledger — ledger entries (own only unless manager).
+//     GET  /ledger - ledger entries (own only unless manager).
 //     GET  /ledger/{id}.
-//     GET  /balance — the caller's balances.
-//     GET  /balance/{user_id} — one user's balances (own or
+//     GET  /balance - the caller's balances.
+//     GET  /balance/{user_id} - one user's balances (own or
 //          manager).
-//     POST /points/award — run the rules engine for an action
+//     POST /points/award - run the rules engine for an action
 //          (manager).
-//     POST /points/adjust — direct ledger adjustment, positive or
+//     POST /points/adjust - direct ledger adjustment, positive or
 //          negative (manager; balance may never go below zero).
 //   Badges and awards:
-//     GET/POST /badges — list / define a badge.
+//     GET/POST /badges - list / define a badge.
 //     GET/PATCH/DELETE /badges/{id}.
-//     GET  /awards — award records (own only unless manager).
+//     GET  /awards - award records (own only unless manager).
 //     GET  /awards/{id}.
 //   Seasons:
-//     GET/POST /seasons — list / create a season.
+//     GET/POST /seasons - list / create a season.
 //     GET/PATCH /seasons/{id}.
-//     POST /seasons/{id}/start — start it (ends any other active
+//     POST /seasons/{id}/start - start it (ends any other active
 //          season of the same company first; one active at a
 //          time per company).
-//     POST /seasons/{id}/end — end it.
+//     POST /seasons/{id}/end - end it.
 //   Leaderboards and progress:
-//     GET  /leaderboard — ranked points per user, optionally per
+//     GET  /leaderboard - ranked points per user, optionally per
 //          season, company, or department.
-//     GET  /progress — the caller's points, badges, and progress
+//     GET  /progress - the caller's points, badges, and progress
 //          toward the next badges.
-//     GET  /progress/{user_id} — one user's progress (own or
+//     GET  /progress/{user_id} - one user's progress (own or
 //          manager).
 //   Rewards (staff redemption, explicit approval flow):
-//     GET/POST /rewards — list / define a reward.
+//     GET/POST /rewards - list / define a reward.
 //     GET/PATCH/DELETE /rewards/{id}.
-//     POST /rewards/{id}/request — request a reward.
-//     GET  /reward-requests — requests (own only unless manager).
+//     POST /rewards/{id}/request - request a reward.
+//     GET  /reward-requests - requests (own only unless manager).
 //     GET  /reward-requests/{id}.
-//     POST /reward-requests/{id}/approve — approve and deduct the
+//     POST /reward-requests/{id}/approve - approve and deduct the
 //          points once (manager).
-//     POST /reward-requests/{id}/reject — reject (manager).
-//     POST /reward-requests/{id}/fulfill — mark fulfilled
+//     POST /reward-requests/{id}/reject - reject (manager).
+//     POST /reward-requests/{id}/fulfill - mark fulfilled
 //          (manager).
 //
-// HONESTY — READ THIS FIRST. What is real in this module:
+// HONESTY - READ THIS FIRST. What is real in this module:
 // in-memory rule, ledger, badge, award, season, reward, and
 // reward-request management; a rules engine (which action earns
 // how many points, per company, configurable, with a per-day cap
@@ -67,15 +67,15 @@
 // company; badges awarded automatically when a rule's action
 // count reaches a badge's threshold, recorded as audited award
 // rows (never silent); leaderboards computed on read from the
-// ledger (balances are always sums of ledger entries — no
+// ledger (balances are always sums of ledger entries - no
 // separate balance column exists anywhere); personal progress
 // with progress toward the next badges; and the staff reward
 // flow (request -> approve with a single points deduction ->
 // fulfill). What is NOT built here: customer loyalty points
-// (the loyalty module owns them — see the separation note
+// (the loyalty module owns them - see the separation note
 // above); automatic discounts or any automatic spending of
 // points; push / email delivery of award notices (the
-// notifications module owns delivery — this module only emits
+// notifications module owns delivery - this module only emits
 // `notification.requested` when a badge is awarded); and durable
 // storage (the DashMap stores are authoritative; migration
 // `2026-11-22-000058_gamification` is the persistence target).
@@ -93,7 +93,7 @@
 //     positive points: `{"entry_id", "user_id", "action",
 //     "points", "balance_after", "rule_id", "season_id"}`)
 //   - `gamification.points.deducted` (per ledger entry with
-//     negative points, same payload — deductions never emit
+//     negative points, same payload - deductions never emit
 //     `earned`)
 //   - `gamification.badge.created`, `gamification.badge.awarded`
 //     (the community module listens to the awarded event to keep
@@ -107,27 +107,27 @@
 //     `gamification.reward.fulfilled`
 //   - `notification.requested` (badge awarded, in the
 //     notifications module's payload shape).
-// Events this module listens to (all read defensively — a missing
+// Events this module listens to (all read defensively - a missing
 // user id or an unknown action is skipped, never an error):
-//   - `ticket.updated` — a ticket moving to `resolved` or
+//   - `ticket.updated` - a ticket moving to `resolved` or
 //     `closed` awards the `ticket_closed` action to its assignee
 //     (`assigned_to`, falling back to `user_id`). A transition is
 //     required (an update that carries a `previous_status` of
 //     `resolved`/`closed` awards nothing), and one ticket awards
 //     at most once per day.
-//   - `store.order.completed`, `order.paid` — a completed order
+//   - `store.order.completed`, `order.paid` - a completed order
 //     awards the `sale_completed` action to its buyer
 //     (`user_id`, falling back to `customer_id`). Both events fire
 //     for one order; the order id is recorded on the ledger entry
 //     (`source_ref`) and a repeat event for the same order awards
 //     nothing.
-//   - `surveys.response.received` — a submitted survey response
+//   - `surveys.response.received` - a submitted survey response
 //     awards the `review_received` action to its recipient
 //     (`recipient_id`).
-//   - `community.post.replied` — a reply awards the
+//   - `community.post.replied` - a reply awards the
 //     `community_help` action to its author (`author_id`,
 //     falling back to `user_id`).
-//   - `community.topic.created` — a new topic awards the
+//   - `community.topic.created` - a new topic awards the
 //     `topic_created` action to its author.
 
 // Split into one file per concern under `src/modules/gamification/`.

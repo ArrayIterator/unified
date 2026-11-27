@@ -4,7 +4,7 @@
 //!
 //! XLSX is deliberately NOT offered: no XLSX crate is in the
 //! workspace `Cargo.toml` / `Cargo.lock` (checked before
-//! writing this module — only the transitive `zip` crate is
+//! writing this module - only the transitive `zip` crate is
 //! present, which is not an XLSX writer), and the brief
 //! forbids adding heavy new dependencies. CSV + JSON only.
 

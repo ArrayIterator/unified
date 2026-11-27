@@ -1,4 +1,4 @@
-// todos — access.
+// todos - access.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -26,10 +26,8 @@ use super::handlers_subtasks::*;
 use super::handlers_ai::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
-// Helpers: access control (fail closed, 404 — never 403 — for objects
+// Helpers: access control (fail closed, 404 - never 403 - for objects
 // the caller does not own and has no share for).
-// ---------------------------------------------------------------------------
 
 pub(crate) fn share_key(list_id: Uuid, user_id: &str) -> String {
     format!("{list_id}:{user_id}")

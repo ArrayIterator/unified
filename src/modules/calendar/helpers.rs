@@ -23,13 +23,11 @@ pub(crate) fn constant_time_eq(expected: &str, actual: &str) -> bool {
         == 0
 }
 
-// ---------------------------------------------------------------------------
 // Helpers: caller, capabilities, validation.
-// ---------------------------------------------------------------------------
 
 /// The tenant context for one request, resolved ONLY through
 /// `unified_core::tenancy::TenantContext::from_http_request`
-/// (aliased `TenancyContext` — the batch-17 tenancy plumbing,
+/// (aliased `TenancyContext` - the batch-17 tenancy plumbing,
 /// parsed uuidv7 tenant id plus the `schema_name` derived ONLY by
 /// `tenancy::schema_name()`). This is the single convergence point:
 /// nothing else in this file derives a schema name, and no other
@@ -38,7 +36,7 @@ pub(crate) fn constant_time_eq(expected: &str, actual: &str) -> bool {
 /// resolve to a tenant and 403 when the resolved tenant id is not
 /// a valid UUID; no resolved tenant means no calendar access at
 /// all, never a silent fall back to `public`. OPEN: control-plane
-/// requests with no tenant get 403 here — serving the calendar on
+/// requests with no tenant get 403 here - serving the calendar on
 /// the control plane needs an explicit policy decision, never a
 /// silent `public` fallback.
 pub(crate) fn resolve_tenant(req: &HttpRequest) -> UnifiedResult<TenancyContext> {

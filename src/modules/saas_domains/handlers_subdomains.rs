@@ -41,9 +41,7 @@ use super::store::settings;
 use super::types::SubdomainAllocation;
 use super::validation::validate_label;
 
-// ---------------------------------------------------------------------------
 // Subdomain allocation handlers.
-// ---------------------------------------------------------------------------
 
 /// Count live subdomain allocations for a tenant. Live means
 /// `active`, `pending_approval`, or `suspended`: a suspended

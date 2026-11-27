@@ -68,9 +68,7 @@ use super::rendering::*;
 use super::handlers::*;
 use super::ai_capabilities::AI_CAPABILITIES;
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct SiteBuilderModule {
     state: Arc<SiteBuilderState>,

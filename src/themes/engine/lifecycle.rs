@@ -1,7 +1,6 @@
-// engine — lifecycle.
+// engine - lifecycle.
 // Engine construction, theme discovery, loading, validation.
 //
-// Split from `src/themes/engine.rs`; moved verbatim, no behaviour changes.
 
 use super::manifest::EmbeddedTemplates;
 use super::manifest::embedded_default_meta;
@@ -34,7 +33,7 @@ use unified_core::routes::RouteRegistry;
 impl ThemeEngine {
     /// Build a new engine: register the embedded default theme and
     /// discover themes from `themes_dir` on disk. Discovery never fails
-    /// construction — an unreadable or invalid disk theme is skipped and
+    /// construction - an unreadable or invalid disk theme is skipped and
     /// reported through the log; it can still be retried later with
     /// `load_theme`, which returns the validation error.
     pub fn new(themes_dir: impl Into<PathBuf>) -> Self {
@@ -523,7 +522,7 @@ impl ThemeEngine {
 
     /// Apply a `theme.activated` hook event to this engine: switch
     /// rendering to the event's `theme_id`. This is how activation
-    /// reaches rendering — the theme module persists the active id
+    /// reaches rendering - the theme module persists the active id
     /// and emits the event, and every engine subscribed to it calls
     /// this handler. Activation is validated by `set_active_theme`,
     /// so an unknown, invalid, or broken theme is logged and ignored

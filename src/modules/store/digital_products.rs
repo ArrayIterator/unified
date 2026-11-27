@@ -20,9 +20,7 @@ use super::pricing::{valid_product_status};
 use super::state::{StoreState, new_id, now};
 use super::types::{CreateDigitalFile, CreateDigitalPreview, CreateDigitalProduct, CreateDigitalProductType, DEFAULT_ROYALTY_PERCENT_BP, DigitalProduct, DigitalProductFile, DigitalProductPreview, DigitalProductType, UpdateDigitalProduct, UpdateDigitalProductType, default_product_status, default_royalty_kind};
 
-// ---------------------------------------------------------------------------
 // Digital products: types, products, files, previews, samples
-// ---------------------------------------------------------------------------
 
 /// Load a digital product for a read that may come from the public
 /// storefront: drafts are invisible to anyone without the manage
@@ -331,7 +329,7 @@ pub(crate) async fn create_digital_product(
         let royalty_payee_company_id = require_company_match_for(&scope, &payee_company)?;
         // The cover is a reference into the shared documents store
         // (document id or `/files/{public,private}/{key}` URL from
-        // the media picker) — never file bytes, never a foreign URL.
+        // the media picker) - never file bytes, never a foreign URL.
         let cover_storage_id = match input
             .cover_storage_id
             .filter(|value| !value.trim().is_empty())

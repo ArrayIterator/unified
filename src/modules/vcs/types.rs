@@ -1,4 +1,4 @@
-// Third-party VCS integrations — Public record, request, and view types.
+// Third-party VCS integrations - Public record, request, and view types.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -49,9 +49,7 @@ pub struct UpdateProviderSettings {
     pub gitlab_hosts: Option<Vec<String>>,
 }
 
-// ---------------------------------------------------------------------------
 // Records.
-// ---------------------------------------------------------------------------
 
 /// A repository connected to a software record.
 #[derive(Debug, Clone, Serialize)]
@@ -135,9 +133,7 @@ pub struct RateLimitInfo {
     pub retry_after_seconds: Option<u64>,
 }
 
-// ---------------------------------------------------------------------------
 // Request types.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct CreateConnection {

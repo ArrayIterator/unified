@@ -40,10 +40,8 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- A maintenance window: a scheduled period of degraded or
 -- unavailable service.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS maintenance_windows (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title VARCHAR NOT NULL,
@@ -64,9 +62,7 @@ CREATE INDEX IF NOT EXISTS idx_maintenance_windows_status
 CREATE INDEX IF NOT EXISTS idx_maintenance_windows_starts_at
     ON maintenance_windows (starts_at);
 
--- ---------------------------------------------------------------------------
 -- One maintenance history entry: a window lifecycle event.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS maintenance_history (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     window_id UUID NOT NULL REFERENCES maintenance_windows (id) ON DELETE CASCADE ON UPDATE NO ACTION,
@@ -79,9 +75,7 @@ CREATE TABLE IF NOT EXISTS maintenance_history (
 CREATE INDEX IF NOT EXISTS idx_maintenance_history_window_id
     ON maintenance_history (window_id);
 
--- ---------------------------------------------------------------------------
 -- One status-page component.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS status_components (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR NOT NULL,
@@ -96,9 +90,7 @@ CREATE TABLE IF NOT EXISTS status_components (
 CREATE INDEX IF NOT EXISTS idx_status_components_status
     ON status_components (status);
 
--- ---------------------------------------------------------------------------
 -- Daily uptime for one component: one row per component per day.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS status_daily_uptime (
     component_id UUID NOT NULL REFERENCES status_components (id) ON DELETE CASCADE ON UPDATE NO ACTION,
     date VARCHAR NOT NULL CHECK (date ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'),
@@ -110,9 +102,7 @@ CREATE TABLE IF NOT EXISTS status_daily_uptime (
     PRIMARY KEY (component_id, date)
 );
 
--- ---------------------------------------------------------------------------
 -- One status incident.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS status_incidents (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title VARCHAR NOT NULL,
@@ -130,9 +120,7 @@ CREATE INDEX IF NOT EXISTS idx_status_incidents_status
 CREATE INDEX IF NOT EXISTS idx_status_incidents_severity
     ON status_incidents (severity);
 
--- ---------------------------------------------------------------------------
 -- One update posted to an incident.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS status_incident_updates (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     incident_id UUID NOT NULL REFERENCES status_incidents (id) ON DELETE CASCADE ON UPDATE NO ACTION,
@@ -145,9 +133,7 @@ CREATE TABLE IF NOT EXISTS status_incident_updates (
 CREATE INDEX IF NOT EXISTS idx_status_incident_updates_incident_id
     ON status_incident_updates (incident_id);
 
--- ---------------------------------------------------------------------------
 -- One announcement.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS announcements (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title VARCHAR NOT NULL,
@@ -167,9 +153,7 @@ CREATE INDEX IF NOT EXISTS idx_announcements_status
 CREATE INDEX IF NOT EXISTS idx_announcements_audience
     ON announcements (audience);
 
--- ---------------------------------------------------------------------------
 -- One changelog entry.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS changelog_entries (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     version VARCHAR NOT NULL,
@@ -185,9 +169,7 @@ CREATE TABLE IF NOT EXISTS changelog_entries (
 CREATE INDEX IF NOT EXISTS idx_changelog_entries_version
     ON changelog_entries (version);
 
--- ---------------------------------------------------------------------------
 -- One announcement read receipt: one row per (announcement, user).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS announcement_read_receipts (
     announcement_id UUID NOT NULL REFERENCES announcements (id) ON DELETE CASCADE ON UPDATE NO ACTION,
     user_id VARCHAR NOT NULL,
@@ -197,10 +179,8 @@ CREATE TABLE IF NOT EXISTS announcement_read_receipts (
     PRIMARY KEY (announcement_id, user_id)
 );
 
--- ---------------------------------------------------------------------------
 -- 2FA recovery codes: hash only, never the plaintext. One row per
 -- code; a set holds ten codes.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS auth_recovery_codes (
     user_id VARCHAR NOT NULL,
     code_hash VARCHAR NOT NULL,
@@ -214,10 +194,8 @@ CREATE TABLE IF NOT EXISTS auth_recovery_codes (
 CREATE INDEX IF NOT EXISTS idx_auth_recovery_codes_user_id
     ON auth_recovery_codes (user_id);
 
--- ---------------------------------------------------------------------------
 -- A linked Google account's tokens. Never serialized: only the
 -- account metadata view leaves the module.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS google_accounts (
     account_id VARCHAR PRIMARY KEY,
     email VARCHAR NOT NULL,
@@ -234,9 +212,7 @@ CREATE TABLE IF NOT EXISTS google_accounts (
 CREATE INDEX IF NOT EXISTS idx_google_accounts_email
     ON google_accounts (email);
 
--- ---------------------------------------------------------------------------
 -- A Google Drive folder linked as a named storage target.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS google_drive_links (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR NOT NULL,

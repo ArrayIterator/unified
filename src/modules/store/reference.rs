@@ -16,9 +16,7 @@ use super::helpers::{caller_company, require_caller_company, require_tenant};
 use super::state::{StoreState};
 use super::types::{OrderItem};
 
-// ---------------------------------------------------------------------------
-// Batch 18: payment reference ids (BEGIN — append-only section)
-// ---------------------------------------------------------------------------
+// Batch 18: payment reference ids (BEGIN - append-only section)
 //
 // Every order issued by this module carries one public payment
 // reference in the single shared format (`PREFIX-12hex-12hex`, 30

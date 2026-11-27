@@ -38,9 +38,7 @@ use unified_core::error::UnifiedResult;
 use unified_core::hooks::{HookBus, HookContext};
 use unified_core::modules::{Module, ModuleRegistry, RouteInfo, RouteVersionSupport};
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct SmsMarketingModule {
     pub(crate) state: SmsMarketingState,
@@ -248,7 +246,7 @@ impl Module for SmsMarketingModule {
                 method: "GET",
                 path: "/api/v1/sms-marketing/providers",
                 owner: "sms_marketing",
-                description: "List SMS providers (paginated, filter by kind, auth type, enabled; search by name/sender id; masked view — no credential).",
+                description: "List SMS providers (paginated, filter by kind, auth type, enabled; search by name/sender id; masked view - no credential).",
                 auth,
             },
             RouteInfo {
@@ -262,7 +260,7 @@ impl Module for SmsMarketingModule {
                 method: "GET",
                 path: "/api/v1/sms-marketing/providers/{provider_id}",
                 owner: "sms_marketing",
-                description: "Get one SMS provider (masked view — the credential and webhook secret never appear).",
+                description: "Get one SMS provider (masked view - the credential and webhook secret never appear).",
                 auth,
             },
             RouteInfo {
@@ -542,14 +540,14 @@ impl Module for SmsMarketingModule {
                 method: "POST",
                 path: "/api/v1/sms-marketing/webhooks/delivery/{provider_id}",
                 owner: "sms_marketing",
-                description: "PUBLIC (shared-secret gated): provider delivery-status callback — updates one message to sent / delivered / failed / undelivered.",
+                description: "PUBLIC (shared-secret gated): provider delivery-status callback - updates one message to sent / delivered / failed / undelivered.",
                 auth: public,
             },
             RouteInfo {
                 method: "POST",
                 path: "/api/v1/sms-marketing/webhooks/inbound/{provider_id}",
                 owner: "sms_marketing",
-                description: "PUBLIC (shared-secret gated): provider inbound-message callback — matches the body against the keyword rows and opts the sender out or back in.",
+                description: "PUBLIC (shared-secret gated): provider inbound-message callback - matches the body against the keyword rows and opts the sender out or back in.",
                 auth: public,
             },
             RouteInfo {

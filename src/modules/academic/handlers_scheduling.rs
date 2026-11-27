@@ -58,9 +58,7 @@ use super::types::UpdateRoom;
 use super::types::UpdateSchedule;
 use super::types::UpdateSemester;
 
-// ---------------------------------------------------------------------------
 // Handlers: grade components
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_grade_components(
     ctx: web::Data<Arc<AppContext>>,
@@ -212,9 +210,7 @@ pub(crate) async fn delete_grade_component(
     json::respond(result, debug)
 }
 
-// ---------------------------------------------------------------------------
 // Handlers: rooms
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_rooms(
     ctx: web::Data<Arc<AppContext>>,
@@ -401,9 +397,7 @@ pub(crate) async fn delete_room(
     json::respond(result, debug)
 }
 
-// ---------------------------------------------------------------------------
 // Handlers: semesters
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_semesters(
     ctx: web::Data<Arc<AppContext>>,
@@ -632,9 +626,7 @@ pub(crate) async fn activate_semester(
     json::respond(result, debug)
 }
 
-// ---------------------------------------------------------------------------
 // Handlers: academic calendar
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_calendar_events(
     ctx: web::Data<Arc<AppContext>>,
@@ -813,9 +805,7 @@ pub(crate) async fn delete_calendar_event(
     json::respond(result, debug)
 }
 
-// ---------------------------------------------------------------------------
 // Handlers: schedules
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_schedules(
     ctx: web::Data<Arc<AppContext>>,

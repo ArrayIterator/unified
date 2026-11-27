@@ -1,4 +1,4 @@
-//! Cloudflare connector module. — Module definition.
+//! Cloudflare connector module. - Module definition.
 //!
 //! Split from `src/modules/cloudflare.rs`; behaviour unchanged.
 

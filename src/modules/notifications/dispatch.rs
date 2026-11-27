@@ -636,7 +636,6 @@ pub(crate) fn resolve_recipients(
     Err("A notification.requested payload needs user_id, user_ids or audience".to_string())
 }
 
-// ---------------------------------------------------------------------------
 // Failure-event listeners.
 //
 // The centre subscribes to the verified failure events so alerts land

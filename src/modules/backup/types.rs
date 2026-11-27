@@ -8,9 +8,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::BTreeMap;
 
-// ---------------------------------------------------------------------------
 // Types.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -160,7 +158,7 @@ pub struct BackupRun {
     #[serde(default)]
     pub drill_verified: Option<bool>,
     /// Encryption mode recorded at run time. Archives are stored
-    /// unencrypted (at-rest encryption is not supported — see the
+    /// unencrypted (at-rest encryption is not supported - see the
     /// module header), so the recorded value is always `none`.
     /// The field stays so a future encrypted format can be told
     /// apart from today's plain archives.

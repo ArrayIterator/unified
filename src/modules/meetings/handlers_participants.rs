@@ -21,9 +21,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Join / leave
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn join_room(
     state: web::Data<MeetingsState>,
@@ -112,7 +110,7 @@ pub(crate) async fn join_room(
             ));
         }
         // Paid rooms check the product entitlement before anyone is
-        // admitted — including before they are parked in the waiting
+        // admitted - including before they are parked in the waiting
         // room. The host and callers holding the verified
         // `meetings.host` permission skip the check; a role claimed
         // in a header never skips it on its own.
@@ -253,9 +251,7 @@ pub(crate) async fn leave_room(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Participants, waiting room, presence, screen share
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_participants(
     state: web::Data<MeetingsState>,

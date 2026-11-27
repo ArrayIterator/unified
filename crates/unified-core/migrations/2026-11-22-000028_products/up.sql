@@ -59,11 +59,9 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- Product taxonomy: groups and categories (cycle-safe tree), in this
 -- module's own namespace. Created before `products` because
 -- `products.group_id` / `category_id` reference it.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS product_taxonomy (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     kind VARCHAR NOT NULL CHECK (kind IN ('group', 'category')),
@@ -90,9 +88,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_product_taxonomy_kind_parent_slug
         slug
     );
 
--- ---------------------------------------------------------------------------
 -- One product: the single source of truth for what is sold.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS products (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     slug VARCHAR NOT NULL,
@@ -155,10 +151,8 @@ CREATE INDEX IF NOT EXISTS idx_products_listed
     ON products (listed);
 
 
--- ---------------------------------------------------------------------------
 -- One configurable option of a product (for example `plan`, `size`)
 -- with its allowed values.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS product_options (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     product_id UUID NOT NULL REFERENCES products (id)
@@ -174,11 +168,9 @@ CREATE TABLE IF NOT EXISTS product_options (
 CREATE INDEX IF NOT EXISTS idx_product_options_product_id
     ON product_options (product_id);
 
--- ---------------------------------------------------------------------------
 -- One sellable variant: a combination of option values with its own
 -- SKU and a price delta (minor units, may be negative) on top of
 -- the product base price.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS product_variants (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     product_id UUID NOT NULL REFERENCES products (id)
@@ -197,11 +189,9 @@ CREATE TABLE IF NOT EXISTS product_variants (
 CREATE INDEX IF NOT EXISTS idx_product_variants_product_id
     ON product_variants (product_id);
 
--- ---------------------------------------------------------------------------
 -- One product contained in a bundle, with its quantity and an
 -- optional per-item price override (minor units) that replaces the
 -- child product's base price inside this bundle.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS product_bundle_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     bundle_product_id UUID NOT NULL REFERENCES products (id)
@@ -220,10 +210,8 @@ CREATE INDEX IF NOT EXISTS idx_product_bundle_items_bundle_product_id
 CREATE INDEX IF NOT EXISTS idx_product_bundle_items_child_product_id
     ON product_bundle_items (child_product_id);
 
--- ---------------------------------------------------------------------------
 -- One pricing tier / edition of a product, with its own price, seat
 -- count, trial, renewal terms, and feature list.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS product_price_tiers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     product_id UUID NOT NULL REFERENCES products (id)
@@ -253,10 +241,8 @@ CREATE TABLE IF NOT EXISTS product_price_tiers (
 CREATE INDEX IF NOT EXISTS idx_product_price_tiers_product_id
     ON product_price_tiers (product_id);
 
--- ---------------------------------------------------------------------------
 -- A regional price override: the price of a product in one country
 -- (ISO 3166-1 alpha-2 code) or `GLOBAL` as the fallback.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS product_regional_prices (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     product_id UUID NOT NULL REFERENCES products (id)
@@ -274,10 +260,8 @@ CREATE TABLE IF NOT EXISTS product_regional_prices (
 CREATE INDEX IF NOT EXISTS idx_product_regional_prices_product_id
     ON product_regional_prices (product_id);
 
--- ---------------------------------------------------------------------------
 -- A usage-based price: a metered metric charged per unit after the
 -- included allowance, on top of the product base price.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS product_usage_prices (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     product_id UUID NOT NULL REFERENCES products (id)
@@ -295,10 +279,8 @@ CREATE TABLE IF NOT EXISTS product_usage_prices (
 CREATE INDEX IF NOT EXISTS idx_product_usage_prices_product_id
     ON product_usage_prices (product_id);
 
--- ---------------------------------------------------------------------------
 -- A tax rule: a rate in basis points (100 = 1%) for one country
 -- (ISO 3166-1 alpha-2) or `GLOBAL` as the fallback rate.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS product_tax_rules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     country VARCHAR NOT NULL
@@ -312,11 +294,9 @@ CREATE TABLE IF NOT EXISTS product_tax_rules (
 CREATE UNIQUE INDEX IF NOT EXISTS uq_product_tax_rules_country
     ON product_tax_rules (country);
 
--- ---------------------------------------------------------------------------
 -- Stock for a physical product (or one of its variants).
 -- `reserved` never exceeds `quantity`; available is always
 -- `quantity - reserved`.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS product_inventory (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     product_id UUID NOT NULL REFERENCES products (id)
@@ -343,11 +323,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_product_inventory_product
 CREATE UNIQUE INDEX IF NOT EXISTS uq_product_inventory_product_variant
     ON product_inventory (product_id, variant_id) WHERE variant_id IS NOT NULL;
 
--- ---------------------------------------------------------------------------
 -- A file attached to a product version. This record only references
 -- a software release / file owned by the Software Manager; this
 -- module never stores, serves, or verifies file bytes.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS product_files (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     product_id UUID NOT NULL REFERENCES products (id)
@@ -365,10 +343,8 @@ CREATE TABLE IF NOT EXISTS product_files (
 CREATE INDEX IF NOT EXISTS idx_product_files_product_id
     ON product_files (product_id);
 
--- ---------------------------------------------------------------------------
 -- One released version of a product, referencing a software version
 -- / release when the product sells software.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS product_versions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     product_id UUID NOT NULL REFERENCES products (id)
@@ -385,9 +361,7 @@ CREATE TABLE IF NOT EXISTS product_versions (
 CREATE INDEX IF NOT EXISTS idx_product_versions_product_id
     ON product_versions (product_id);
 
--- ---------------------------------------------------------------------------
 -- One product tag.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS product_tags (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     slug VARCHAR NOT NULL,
@@ -399,9 +373,7 @@ CREATE TABLE IF NOT EXISTS product_tags (
 CREATE UNIQUE INDEX IF NOT EXISTS uq_product_tags_slug
     ON product_tags (slug);
 
--- ---------------------------------------------------------------------------
 -- Tag assignments to products (many-to-many).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS product_tag_assignments (
     product_id UUID NOT NULL REFERENCES products (id)
         ON DELETE CASCADE ON UPDATE NO ACTION,

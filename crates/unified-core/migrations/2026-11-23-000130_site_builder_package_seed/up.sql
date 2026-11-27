@@ -1,4 +1,4 @@
--- Seed: the example "Site Builder SaaS" package (task 353).
+-- Seed: the example "Site Builder SaaS" package.
 --
 -- The site builder is a PACKAGE, not a forced tenant feature: a
 -- tenant gets the builder (and its own site on its own domain) only

@@ -6,14 +6,12 @@ use chrono::{Utc};
 use serde_json::{json};
 use super::state::CommunityState;
 
-// ---------------------------------------------------------------------------
 // Badge listener (gamification owns badges)
-// ---------------------------------------------------------------------------
 
 /// `gamification.badge.awarded` carries `user_id` (and `badge_id`).
 /// The member's badge count is incremented when the member exists;
 /// a non-member is ignored (joining the community later starts
-/// from zero — badge history itself lives in gamification).
+/// from zero - badge history itself lives in gamification).
 pub(crate) fn on_badge_awarded(state: CommunityState, ctx: &mut HookContext) {
     let Some(user_id) = ctx
         .get("user_id")

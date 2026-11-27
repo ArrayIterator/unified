@@ -17,7 +17,7 @@ One <symbol id="<prefix><stem>" viewBox="0 0 24 24"> per logo, where
 `email-gmail`, `payment-paypal`, `brand-google`). Logos are fill-only
 (flat solid fills, no stroke, at most two colours:
 var(--icon-primary, #brand) + var(--icon-secondary, #fff)), so each
-<symbol> carries only fill="none" — a shape without an explicit fill
+<symbol> carries only fill="none" - a shape without an explicit fill
 renders invisible instead of a black blob (same rule as
 scripts/build-module-icons-sprite.py).
 

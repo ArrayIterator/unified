@@ -1,4 +1,4 @@
-//! Logistics module — shipments, fleet, warehouses, delivery — Shipment handlers.
+//! Logistics module - shipments, fleet, warehouses, delivery - Shipment handlers.
 //!
 //! Split from `src/modules/logistics.rs`; behaviour unchanged.
 
@@ -495,7 +495,7 @@ pub(super) fn exception_is_open(status: &str) -> bool {
 
 /// Move a shipment through the state machine. The transition is
 /// rejected with 409 when the target is not in
-/// `allowed_transitions(from)` — the check is the single gate for
+/// `allowed_transitions(from)` - the check is the single gate for
 /// every status change, including the exception and proof paths,
 /// which call the same table through their own endpoints.
 pub(super) fn apply_transition(
@@ -540,7 +540,7 @@ pub(super) fn apply_transition(
     if let Some(reason) = reason {
         if !reason.trim().is_empty() {
             timeline_note = Some(match timeline_note {
-                Some(existing) => format!("{reason} — {existing}"),
+                Some(existing) => format!("{reason} - {existing}"),
                 None => reason.to_string(),
             });
         }

@@ -1,7 +1,7 @@
 // Sign-in page (/react/login).
 //
-// Posts to POST /api/v1/auth-manager/jwt/issue — the same endpoint
-// assets/js/auth.ts uses — then stores the issued token in the
+// Posts to POST /api/v1/auth-manager/jwt/issue - the same endpoint
+// assets/js/auth.ts uses - then stores the issued token in the
 // session cookie and returns to the dashboard. TOTP and recovery-code
 // fields mirror the classic login form: they are only sent when the
 // user opens that section and fills one in.
@@ -131,7 +131,7 @@ export default function LoginPage() {
             isDisabled={submitting}
             className="w-full"
           >
-            {submitting ? "Signing in…" : "Sign in"}
+            {submitting ? "Signing in..." : "Sign in"}
           </Button>
         </form>
 

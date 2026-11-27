@@ -2,9 +2,7 @@
 //
 // Split from `src/modules/whitelabel.rs`; the module root re-exports the public API of this module.
 
-// ---------------------------------------------------------------------------
 // Constants
-// ---------------------------------------------------------------------------
 
 /// Capability: manage the global allowance, per-company overrides,
 /// and the global defaults record (admin only).

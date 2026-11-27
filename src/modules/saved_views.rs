@@ -1,4 +1,4 @@
-//! Saved Views module — Saved Filters / Views module.
+//! Saved Views module - Saved Filters / Views module.
 //!
 //! Split into submodules by concern; the public API is
 //! re-exported below. The full route map and module notes

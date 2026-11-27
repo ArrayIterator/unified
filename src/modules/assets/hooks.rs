@@ -16,7 +16,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// --- Stock hook answerers -------------------------------------------------
+// Stock hook answerers
 //
 // Manufacturing asks for levels (`manufacturing.stock.requested`)
 // and POS / manufacturing / field service ask for movements
@@ -55,7 +55,7 @@ fn hook_quantity(ctx: &HookContext, key: &str) -> Option<i64> {
 
 /// Resolve the id of the stock row a stock event names: an
 /// explicit `stock_id` wins; otherwise the single stock row of the
-/// named asset (`asset_id`, falling back to `product_id` — POS and
+/// named asset (`asset_id`, falling back to `product_id` - POS and
 /// manufacturing send the product id as the asset id). Stock is
 /// one row per asset (creation refuses a second row), so the asset
 /// lookup is unambiguous. Returns `None` when the payload names
@@ -211,7 +211,7 @@ pub(crate) fn on_stock_adjust_requested(state: AssetsState, ctx: &mut HookContex
 /// for the requested products this module holds a stock row for.
 /// Products with no stock row are omitted, never invented, and
 /// when no requested product has a row no answer is given at all
-/// — the requester then keeps its `unknown` /
+/// - the requester then keeps its `unknown` /
 /// `pending_confirmation` behaviour instead of treating an empty
 /// answer as a level. `reserved` is always 0 (this module holds
 /// no reservations) and `unit` is null (stock rows carry no unit).

@@ -11,7 +11,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Store models.
 //
 // Money note: Diesel's built-in NUMERIC type is
@@ -22,7 +21,6 @@ use uuid::Uuid;
 // explicitly. If the project later allows a decimal crate (bigdecimal
 // or rust_decimal, both with serde support), these fields can switch
 // to that type and regain the serde derives. See docs/SCHEMA.md.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable)]
 #[diesel(table_name = store_products)]
@@ -72,9 +70,7 @@ pub struct NewStoreProduct {
     pub updates_years: Option<i32>,
 }
 
-// ---------------------------------------------------------------------------
 // Pricing tiers / editions per product.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable)]
 #[diesel(table_name = store_pricing_tiers)]
@@ -112,9 +108,7 @@ pub struct NewStorePricingTier {
     pub status: String,
 }
 
-// ---------------------------------------------------------------------------
 // Orders with validated lifecycle and coupon totals.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable)]
 #[diesel(table_name = store_orders)]
@@ -152,9 +146,7 @@ pub struct NewStoreOrder {
     pub reference: String,
 }
 
-// ---------------------------------------------------------------------------
 // Order line items.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable)]
 #[diesel(table_name = store_order_items)]
@@ -206,9 +198,7 @@ pub struct NewStoreOrderItem {
     pub download_limit: i32,
 }
 
-// ---------------------------------------------------------------------------
 // Download entitlements and download history.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = store_entitlements)]
@@ -274,9 +264,7 @@ pub struct NewStoreDownload {
     pub downloaded_at: DateTime<Utc>,
 }
 
-// ---------------------------------------------------------------------------
 // Update-API catalog: latest known version per software slug.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = store_catalog)]
@@ -316,9 +304,7 @@ pub struct NewStoreCatalog {
     pub license_required: bool,
 }
 
-// ---------------------------------------------------------------------------
 // Store mirror of licenses issued through `order.created`.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = store_issued_licenses)]

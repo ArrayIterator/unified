@@ -23,9 +23,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Retry handling.
-// ---------------------------------------------------------------------------
 
 /// Failure of one download attempt. `retryable` failures (connection
 /// errors, timeouts, HTTP 408 / 429 / 5xx, checksum mismatch) may be

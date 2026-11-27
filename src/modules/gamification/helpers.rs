@@ -1,4 +1,4 @@
-// Gamification — Helpers.
+// Gamification - Helpers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -17,9 +17,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 /// Caller identity: the server-verified caller (user id plus
 /// server-resolved role, both required for capability checks),
@@ -53,7 +51,7 @@ pub(crate) fn require_tenant(
 /// The company scope the caller acts in: the tenant context's
 /// company first, the verified caller's server-resolved company
 /// otherwise. Fails closed (403) when both are present and disagree
-/// — a request must not carry one company in its tenant context and
+/// - a request must not carry one company in its tenant context and
 /// another in its verified identity. The `X-Company-Id` header is
 /// NEVER trusted here: only the verified caller (company resolved
 /// from the database at authentication time) and the
@@ -78,7 +76,7 @@ pub(crate) fn caller_company(
     }
 }
 
-/// Resolve the caller's company for a WRITE (C3 task 315, strict by
+/// Resolve the caller's company for a WRITE (C3, strict by
 /// default): a write requires a resolved company scope, so an
 /// unresolved caller is refused with 403 instead of silently
 /// writing a global (unscoped) record. Mutation handlers call
@@ -107,7 +105,7 @@ pub(crate) fn require_company_for_write(
 /// When no caller scope is known (neither the tenant context nor
 /// the verified caller carries a company), a body company is refused:
 /// an unresolved caller may not claim a company (the shared
-/// `CallerScope::Unresolved` rule); omitting the company is refused (C3 task 315):
+/// `CallerScope::Unresolved` rule); omitting the company is refused (C3):
 /// a write requires a resolved company scope.
 pub(crate) fn require_company_match(
     tenant: &unified_core::tenancy::TenantContext,
@@ -145,7 +143,7 @@ pub(crate) fn require_company_match_for(
 /// company-owned record is denied (the shared
 /// `CallerScope::Unresolved` rule). With a scope, only records carrying
 /// exactly that company match, plus unscoped (global/legacy) records
-/// (C3 task 320, rule A); an unresolved caller still sees global rows only.
+/// (C3, rule A); an unresolved caller still sees global rows only.
 pub(crate) fn in_company_scope(
     record_company_id: &Option<String>,
     caller_company: &Option<String>,
@@ -175,11 +173,11 @@ pub(crate) fn require_record_in_company_scope(
 }
 
 /// Fail closed (403) when a stored record is outside the caller's
-/// company scope FOR A WRITE (C3 task 315, strict by default).
+/// company scope FOR A WRITE (C3, strict by default).
 /// Unlike the read check above (rule A), a write requires an exact
 /// company match: a company caller may write only their own
-/// company's records — global (unscoped) records are platform-only
-/// — and an unresolved caller may write nothing. Mutation handlers
+/// company's records - global (unscoped) records are platform-only
+/// - and an unresolved caller may write nothing. Mutation handlers
 /// call this right after loading the record they mutate; handlers
 /// that only read the record, or load a parent to scope a child
 /// write, keep the read check.
@@ -582,7 +580,7 @@ pub struct AwardOutcome {
 /// action (a company-specific rule wins over a global one), apply
 /// its daily cap, append the ledger entry, and check badges.
 /// Returns `awarded: false` with a reason when no rule matches
-/// or the daily cap is already reached — never an error, so hook
+/// or the daily cap is already reached - never an error, so hook
 /// listeners stay safe. `source_ref` records the external id of
 /// the thing being awarded for (order id, ticket id); it is stored
 /// on the ledger entry so listeners can dedup repeat events.

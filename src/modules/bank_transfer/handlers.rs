@@ -1,4 +1,4 @@
-// bank_transfer — HTTP handlers.
+// bank_transfer - HTTP handlers.
 
 use super::service::{
     caller_company, can_manage, require_admin, require_tenant, require_verification_owner,
@@ -15,9 +15,7 @@ use serde_json::{Value, json};
 use std::sync::Arc;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Handlers: status, settings.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn get_status(
     ctx: web::Data<Arc<AppContext>>,
@@ -111,9 +109,7 @@ pub(crate) async fn update_settings(
     json::respond(result, debug)
 }
 
-// ---------------------------------------------------------------------------
 // Handlers: bank accounts.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_accounts(
     ctx: web::Data<Arc<AppContext>>,
@@ -154,7 +150,7 @@ pub(crate) async fn list_accounts(
     json::respond(result, debug)
 }
 
-/// Active accounts for one currency, masked — the list a shopper
+/// Active accounts for one currency, masked - the list a shopper
 /// picks from at checkout.
 pub(crate) async fn list_accounts_for_currency(
     ctx: web::Data<Arc<AppContext>>,
@@ -347,9 +343,7 @@ pub(crate) async fn delete_account(
     json::respond(result, debug)
 }
 
-// ---------------------------------------------------------------------------
 // Handlers: transfer verifications.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_verifications(
     ctx: web::Data<Arc<AppContext>>,
@@ -481,7 +475,7 @@ pub(crate) async fn get_verification(
         let _company = caller_company(&_tenant, &req)?;
         let verification = find_verification(id.into_inner())?;
         // The detail of one verification is visible to its owner
-        // and to an administrator holding the manage permission —
+        // and to an administrator holding the manage permission -
         // never to any other caller.
         if !can_manage(&ctx, &req) {
             require_verification_owner(&req, &verification)?;
@@ -913,7 +907,7 @@ pub(crate) async fn list_audit(
         let verification = find_verification(id)?;
         // The audit trail of one verification is visible to its
         // owner and to an administrator holding the manage
-        // permission — never to any other caller.
+        // permission - never to any other caller.
         if !can_manage(&ctx, &req) {
             require_verification_owner(&req, &verification)?;
         }

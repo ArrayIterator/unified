@@ -23,9 +23,7 @@ use super::types::Attendance;
 use super::types::Schedule;
 use super::types::Student;
 
-// ---------------------------------------------------------------------------
 // Hook handlers
-// ---------------------------------------------------------------------------
 
 /// Accept both TimeTracker event names and both payload shapes (see
 /// the module header): `timetracker.entry_logged` with `{user_id,
@@ -257,7 +255,7 @@ fn enrollment_year_for(supplied: Option<i64>, academic_year: Option<&str>) -> i3
     Utc::now().date_naive().year()
 }
 
-/// Handle `academic.student.create_requested` (admissions →
+/// Handle `academic.student.create_requested` (admissions ->
 /// academic handoff). Creates the student record from the admitted
 /// application and answers with `academic.student.created`
 /// carrying the same `application_id`, so admissions can link the
@@ -265,7 +263,7 @@ fn enrollment_year_for(supplied: Option<i64>, academic_year: Option<&str>) -> i3
 ///
 /// Idempotent: when a student already exists for the applicant
 /// user (redelivery, or an earlier manual creation), the existing
-/// record is reused and the answer is still emitted — never a
+/// record is reused and the answer is still emitted - never a
 /// duplicate student. Skipped silently, with no student and no
 /// answer, only when the payload names no user, names no program,
 /// or names a program this module does not know: a student record
@@ -347,7 +345,7 @@ pub(crate) fn on_admissions_student_create_requested(
 }
 
 /// Answer the `academic.student.lookup` hook query. The reference
-/// may be a student id, a linked user id, or a student number —
+/// may be a student id, a linked user id, or a student number -
 /// curriculum's `student_ref` is opaque, so all three are accepted.
 /// Answers with one result `{exists, student_id?, user_id?,
 /// program_id?}` (the tree's hook-query convention) and also sets

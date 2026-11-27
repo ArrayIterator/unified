@@ -12,9 +12,7 @@ use unified_core::error::{UnifiedError, UnifiedResult};
 use unified_core::hooks::HookContext;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Hook handlers.
-// ---------------------------------------------------------------------------
 pub(crate) fn on_email_send_requested(ctx: &mut HookContext) {
     let data = ctx.data.clone();
     let to = data
@@ -89,7 +87,7 @@ pub(crate) fn on_email_send_requested(ctx: &mut HookContext) {
         template_id: template_id.clone(),
         variables,
         metadata,
-        // Deliverability flags (task 354): a hook caller can mark a
+        // Deliverability flags: a hook caller can mark a
         // send as bulk or opt out of deliverability headers; the
         // defaults keep transactional sends header-free.
         bulk: data

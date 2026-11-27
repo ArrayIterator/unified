@@ -24,12 +24,10 @@
 -- the resolver never deletes for it (owners delete their own orphans
 -- after answering the hook).
 
--- ---------------------------------------------------------------------------
 -- One retention rule per cleanup target. `target` is the stable
 -- machine name (see `TARGETS` in `src/modules/data_tools/types.rs`).
 -- `scope` is `platform` for the v1 rules; per-tenant rules are
 -- follow-up work (the column is here so the shape does not change).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS cleanup_rules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     target TEXT NOT NULL UNIQUE,
@@ -65,13 +63,11 @@ VALUES
     ('cross_check', 0, TRUE, TRUE, 'platform', 'Files on disk with no DB row / DB rows with no file. Report-only: never deletes.')
 ON CONFLICT (target) DO NOTHING;
 
--- ---------------------------------------------------------------------------
 -- One cleanup run: started/finished timestamps, the dry-run flag, the
 -- per-target removed counts and any errors as JSON. This table IS the
 -- audit record for a run (the `data_tools.run.completed` hook event
 -- carries the same payload for the Audit module to subscribe to).
 -- Audit events themselves are NEVER deleted by the cleaner.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS cleanup_runs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -92,13 +88,11 @@ CREATE INDEX IF NOT EXISTS idx_cleanup_runs_started_at
 CREATE INDEX IF NOT EXISTS idx_cleanup_runs_status
     ON cleanup_runs (status);
 
--- ---------------------------------------------------------------------------
 -- Minimal document share row (see the header note): a share grants
 -- access to one document until `expires_at` (NULL = no expiry) and
--- can be revoked. The cleaner deletes only the share row — never
--- the document, never any audit event — once the share is expired
+-- can be revoked. The cleaner deletes only the share row - never
+-- the document, never any audit event - once the share is expired
 -- or revoked beyond the `document_shares` rule grace period.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS document_shares (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     document_id UUID NOT NULL REFERENCES documents (id)

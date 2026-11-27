@@ -10,9 +10,7 @@ use std::sync::Arc;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Status + defaults.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn get_status(
     state: web::Data<StorageManagerState>,

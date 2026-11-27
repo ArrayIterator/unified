@@ -14,7 +14,7 @@
 -- authoritative; see TODO.md):
 --   - `whitelabel_global_settings` holds exactly one row
 --     (`id = 'global'`): the global default allowance
---     (`allow_whitelabel`, default FALSE — fail closed).
+--     (`allow_whitelabel`, default FALSE - fail closed).
 --   - `whitelabel_company_settings.mode` is `allowed`, `denied`, or
 --     `inherit` (inherit follows the global default). `company_id`
 --     is a plain VARCHAR reference: the module identifies callers
@@ -62,9 +62,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- Global default allowance: exactly one row (id = 'global').
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS whitelabel_global_settings (
     id VARCHAR(64) PRIMARY KEY,
     allow_whitelabel BOOLEAN NOT NULL DEFAULT FALSE,
@@ -74,9 +72,7 @@ CREATE TABLE IF NOT EXISTS whitelabel_global_settings (
     CHECK (id = 'global')
 );
 
--- ---------------------------------------------------------------------------
 -- Per-company allowance override: allowed / denied / inherit.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS whitelabel_company_settings (
     company_id VARCHAR(128) PRIMARY KEY,
     mode VARCHAR(16) NOT NULL DEFAULT 'inherit',
@@ -86,10 +82,8 @@ CREATE TABLE IF NOT EXISTS whitelabel_company_settings (
     CHECK (mode IN ('allowed', 'denied', 'inherit'))
 );
 
--- ---------------------------------------------------------------------------
 -- Admin-editable platform defaults record: exactly one row
 -- (id = 'global'). Source of truth for every default brand value.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS whitelabel_global_defaults (
     id VARCHAR(64) PRIMARY KEY,
     display_name VARCHAR(200) NOT NULL DEFAULT 'Unified',
@@ -119,10 +113,8 @@ CREATE TABLE IF NOT EXISTS whitelabel_global_defaults (
     CHECK ((login_background_storage_target IS NULL) = (login_background_storage_key IS NULL))
 );
 
--- ---------------------------------------------------------------------------
 -- One tenant branding profile per (company_id, tenant_id). NULL
 -- tenant_id is the company default profile.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS whitelabel_profiles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id VARCHAR(128) NOT NULL,
@@ -171,9 +163,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS whitelabel_profiles_custom_domain_idx
 CREATE INDEX IF NOT EXISTS whitelabel_profiles_company_idx
     ON whitelabel_profiles (company_id);
 
--- ---------------------------------------------------------------------------
 -- Branding change history, including denied attempts (allowed=false).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS whitelabel_history (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id VARCHAR(128) NOT NULL,

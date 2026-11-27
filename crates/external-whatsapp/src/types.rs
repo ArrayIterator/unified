@@ -1,4 +1,4 @@
-//! WhatsApp external module (split from lib.rs; moved verbatim).
+//! WhatsApp external module.
 
 use super::*;
 

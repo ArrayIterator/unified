@@ -10,10 +10,8 @@ use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
-// TimeTracker (migration 000032_timetracker; batch 2 notes §4).
+// TimeTracker (migration 000032_timetracker; batch 2 notes sec. 4).
 // Field names/types mirror the in-module structs in timetracker.rs.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = timetracker_timers)]

@@ -1,4 +1,4 @@
-// routes module — Module definition.
+// routes module - Module definition.
 //
 // Split from the former single-file module `src/modules/routes.rs`.
 // The module root (`routes.rs`) re-exports the public items, so the
@@ -21,9 +21,7 @@ use std::sync::{Arc, RwLock};
 
 use super::handlers::{clear_route_override, get_route, list_redirects, list_routes, set_route_override};
 
-// ---------------------------------------------------------------------------
 // Module definition.
-// ---------------------------------------------------------------------------
 
 pub struct RoutesModule {
     /// The registry this module serves. A lock (not a plain field)
@@ -90,8 +88,8 @@ impl Module for RoutesModule {
         // same instance `AppContext::new` seeded from the `routes:`
         // config section, the server redirect handler resolves
         // through, and the theme engine is attached to. The registry
-        // this module was constructed with held no overrides yet —
-        // nothing writes to it before `init` — so replacing it loses
+        // this module was constructed with held no overrides yet -
+        // nothing writes to it before `init` - so replacing it loses
         // nothing, and `routes:` overrides now reach this module's
         // admin API as well as the server and the theme engine.
         // The legacy `app.dashboard_path` fallback was already

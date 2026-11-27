@@ -1,4 +1,4 @@
-//! Cloudflare connector module. — Helpers.
+//! Cloudflare connector module. - Helpers.
 //!
 //! Split from `src/modules/cloudflare.rs`; behaviour unchanged.
 
@@ -22,7 +22,7 @@ use serde_json::{json, Value};
 
 pub(super) fn mask_token(token: &str) -> String {
     let tail: String = token.chars().rev().take(4).collect::<String>().chars().rev().collect();
-    format!("••••{tail}")
+    format!("****{tail}")
 }
 
 /// Caller identity: the server-verified caller (user id plus
@@ -73,7 +73,7 @@ pub(super) fn require_permission(
 /// Caller identity plus capability check in one call: anonymous
 /// callers are refused with 401, and roles without the permission
 /// are refused with 403. Every handler in this module starts with
-/// this guard — read-only routes pass `PERM_CLOUDFLARE_VIEW`,
+/// this guard - read-only routes pass `PERM_CLOUDFLARE_VIEW`,
 /// state-changing routes pass `PERM_CLOUDFLARE_MANAGE`.
 pub(super) fn authorize(
     ctx: &AppContext,

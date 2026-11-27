@@ -8,9 +8,7 @@ use serde::Deserialize;
 use serde::Serialize;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Records.
-// ---------------------------------------------------------------------------
 
 /// Reservation statuses: `reserved`, `active`, `released`, `expired`.
 #[derive(Debug, Clone, Serialize, Deserialize)]

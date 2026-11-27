@@ -3,12 +3,10 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Digital products (migration 000078_digital_products).
 // `DigitalProduct`, `DigitalPayoutRequest` and `DigitalRoyalty`
 // carry NUMERIC columns, so they skip ALL serde derives per the
 // repo header rule.
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     digital_product_types (id) {

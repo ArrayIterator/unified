@@ -13,14 +13,12 @@ use uuid::Uuid;
 use super::{store::*, types::*, module::*, capabilities::*, seeds::*, validation::*};
 
 
-// ---------------------------------------------------------------------------
 // Caller identity and capability checks (same trusted-header pattern
 // as the other modules: X-User-Id plus X-Role headers, `role.check`
 // hook, fail closed). Role administration is admin-only: without
 // this gate anyone could mint a `{"*": ["*"]}` role or rewrite the
 // admin role's permissions, which would undermine every other
 // module's `role.check`.
-// ---------------------------------------------------------------------------
 /// Caller identity: `X-Role` carries the role slug the capability
 /// check runs against; `X-User-Id` must also be present, so an
 /// anonymous caller is rejected before any capability is consulted.

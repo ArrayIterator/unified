@@ -41,9 +41,7 @@ use super::types::PortalMenu;
 use super::types::ReorderMenusRequest;
 use super::types::UpdateMenuRequest;
 
-// ---------------------------------------------------------------------------
 // Menu handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_menus(
     ctx: web::Data<Arc<AppContext>>,

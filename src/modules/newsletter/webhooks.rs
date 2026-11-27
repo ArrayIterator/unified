@@ -18,9 +18,7 @@ use super::state::{
 use super::tracking::{record_tracking};
 use super::types::{Subscriber};
 
-// ---------------------------------------------------------------------------
 // Provider webhooks.
-// ---------------------------------------------------------------------------
 
 /// One normalized webhook event, mapped honestly from what each
 /// provider actually delivers.
@@ -636,9 +634,7 @@ pub(crate) async fn provider_webhook(
     )
 }
 
-// ---------------------------------------------------------------------------
 // Overall stats.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn overall_stats(
     req: HttpRequest,

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""C3 pilot 5 group B verification (task 319): esg, exams, forums, inbox.
+"""C3 pilot 5 group B verification: esg, exams, forums, inbox.
 
 For each module, per routed handler (same routed-set rule as
 /tmp/c3_verify.py: names appearing in `.to(name)` in the module):
@@ -13,9 +13,9 @@ For each module, per routed handler (same routed-set rule as
 Kind rules (adaptations, documented in group-b-results.md):
   - esg, forums: gate-only (group-C model). Records carry no
     `company_id` field, so no `caller_company` / scope check is
-    expected; guard + order only. Under task 315 carve-out 3
+expected; guard + order only. Under carve-out 3
     their writes stay tenant-gate-only until C11 lands.
-  - exams: scoped, strict under task 315 (2026-11-23). GET
+- exams: scoped, strict under (2026-11-23). GET
     handlers resolve `caller_company` (read gate); mutations
     resolve the strict write gate `require_company_for_write`
     AND apply the scope (a `require_*_in_scope` load,

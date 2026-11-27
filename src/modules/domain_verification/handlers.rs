@@ -1,4 +1,4 @@
-// Domain Verification — Handlers.
+// Domain Verification - Handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -20,9 +20,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Handlers.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn get_settings(ctx: web::Data<Arc<AppContext>>, req: HttpRequest) -> HttpResponse {
     let debug = ctx.is_debug();
@@ -442,7 +440,7 @@ pub(crate) async fn verify_domain_alias(
             })?;
         require_record_writable_in_company_scope(&token.company_id, &scope)?;
         // Ownership guard: when both the caller and the token name a
-        // tenant/company, they must agree — a tenant may not drive
+        // tenant/company, they must agree - a tenant may not drive
         // verification for another tenant's alias.
         if let (Some(want), Some(have)) = (body.tenant_id, token.tenant_id) {
             if want != have {
@@ -507,7 +505,7 @@ pub(crate) async fn verify_domain_alias(
         // One DNS check per request. The old retry loop performed up
         // to max_attempts checks with retry_delay between them inside
         // this request, blocking an Actix worker for up to
-        // max_attempts * (verify_timeout + retry_delay) — about 90s
+        // max_attempts * (verify_timeout + retry_delay) - about 90s
         // at the defaults. A verify call now performs exactly one
         // check and returns a pending outcome when the record is
         // not there yet; retries happen out of band through the

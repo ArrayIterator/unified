@@ -1,4 +1,4 @@
-// clusters — In-memory state and its methods.
+// clusters - In-memory state and its methods.
 
 use super::*;
 use unified_core::hooks::HookBus;

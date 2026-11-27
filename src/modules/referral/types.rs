@@ -13,7 +13,7 @@
 //! enters. The only fixed vocabulary is the reward status
 //! (`pending`, `eligible`, `paid`, `voided`), the four
 //! anti-gaming rule kinds, and the two link/reward
-//! enforcement outcomes — those are the shape of the
+//! enforcement outcomes - those are the shape of the
 //! module, not its content.
 //!
 //! Money is integer minor units (`amount_minor`, e.g. cents)
@@ -93,7 +93,7 @@ pub(crate) const DELETED_USER_ID: &str = "deleted-user";
 /// is anonymized through `user.deleted` (the payload names a
 /// user id; when that id is the referrer, the candidate rows
 /// that referrer submitted are anonymized too only when the
-/// payload also names the candidate email — see `hooks.rs`).
+/// payload also names the candidate email - see `hooks.rs`).
 pub(crate) const DELETED_CANDIDATE_NAME: &str = "Deleted candidate";
 
 /// Marker written into a candidate's email on anonymization.
@@ -103,7 +103,7 @@ pub(crate) const DELETED_CANDIDATE_EMAIL: &str = "deleted-candidate";
 /// Verification outcome recorded on a referral when the
 /// referrer's active-employee status could not be confirmed:
 /// no HR existence hook exists in this tree (verified from
-/// source — the HR module answers only `user.manager.query`
+/// source - the HR module answers only `user.manager.query`
 /// and emits `hr.employee_created` with no tenant), so
 /// absence from the local registry proves nothing and the
 /// referral is flagged, never silently treated as verified.
@@ -111,9 +111,7 @@ pub(crate) const VERIFICATION_UNVERIFIED: &str = "unverified";
 
 pub(crate) const VERIFICATION_VERIFIED: &str = "verified";
 
-// ---------------------------------------------------------------------------
 // Pure helpers: tokens, email, slugs, currency
-// ---------------------------------------------------------------------------
 
 /// SHA-256 hex digest. Used for referral-link token storage:
 /// the raw token is returned exactly once at creation /
@@ -195,9 +193,7 @@ pub fn valid_currency(value: &str) -> bool {
     value.len() == MAX_CURRENCY_LEN && value.bytes().all(|b| b.is_ascii_uppercase())
 }
 
-// ---------------------------------------------------------------------------
 // Pure domain math (unit-tested below)
-// ---------------------------------------------------------------------------
 
 /// True when a stage transition is allowed: the current
 /// stage must exist, must not be terminal, must be active,
@@ -229,7 +225,7 @@ pub fn transition_allowed(
 
 /// The initial pipeline stage for a new referral: the
 /// active, non-terminal stage with the lowest sort order.
-/// `None` when the tenant has defined no usable stage yet —
+/// `None` when the tenant has defined no usable stage yet -
 /// callers refuse the submission with 409 instead of
 /// inventing a stage.
 pub fn initial_stage(stages: &[PipelineStage]) -> Option<&PipelineStage> {
@@ -282,7 +278,7 @@ pub fn max_referrals_violated(count_in_window: i64, limit: i64) -> bool {
 /// candidate email equals the referrer's email. `None` for
 /// the referrer email means the referrer's email is unknown
 /// (no user-email lookup hook exists in this tree), so the
-/// check cannot run and never blocks — callers record that
+/// check cannot run and never blocks - callers record that
 /// outcome as `unverified` instead of pretending the check
 /// passed.
 pub fn is_self_referral(referrer_email: Option<&str>, candidate_email: &str) -> bool {
@@ -335,15 +331,13 @@ pub fn counts_by_stage(stages: &[PipelineStage], referrals: &[Referral]) -> Vec<
         .collect()
 }
 
-// ---------------------------------------------------------------------------
-// Enumerations (fixed vocabulary — the shape, not the content)
-// ---------------------------------------------------------------------------
+// Enumerations (fixed vocabulary - the shape, not the content)
 
 /// Reward payout status. A reward is created `pending` when
 /// its referral reaches the rule's trigger stage, becomes
 /// `eligible` once the retention period has elapsed, is
 /// `paid` by an explicit mark-paid call (billing / HR act on
-/// the `referral.reward.payable` event — this module never
+/// the `referral.reward.payable` event - this module never
 /// moves money itself), and is `voided` when the referral is
 /// rejected after the reward was created.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -437,12 +431,10 @@ impl Enforcement {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Stored types
-// ---------------------------------------------------------------------------
 
 /// Referral eligibility of one recruitment job (referenced
-/// by id only — the recruitment module owns the job, there
+/// by id only - the recruitment module owns the job, there
 /// is no foreign key and no existence check here). A job
 /// with no row is eligible by default; a row with
 /// `eligible: false` blocks new referrals for it. A row may
@@ -464,7 +456,7 @@ pub struct JobEligibility {
 /// One shareable referral link for one (employee, job)
 /// pair. Only the SHA-256 hash of the token is stored; the
 /// raw token is returned exactly once at creation and on
-/// rotation. Clicks are counted only — no IP address, user
+/// rotation. Clicks are counted only - no IP address, user
 /// agent, or fingerprint is stored. One active link per
 /// (employee, job); creating another returns 409 and the
 /// existing link must be rotated for a fresh token.
@@ -494,7 +486,7 @@ fn default_active() -> bool {
 /// One pipeline stage, defined as data by an administrator:
 /// its name, slug, order, terminal / hired / rejected
 /// flags, and the stages it may move to. The pipeline
-/// itself is never hard-coded — a tenant with no stage rows
+/// itself is never hard-coded - a tenant with no stage rows
 /// simply cannot accept referrals yet.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PipelineStage {
@@ -612,7 +604,7 @@ pub struct ReferralStageHistory {
 /// referral reaches the rule's trigger stage, with the
 /// amount and currency snapshotted from the rule (a later
 /// rule edit never rewrites an owed reward). Payout is
-/// never done here — reaching eligibility emits
+/// never done here - reaching eligibility emits
 /// `referral.reward.payable` for billing / HR to act on,
 /// and `mark-paid` records that the payout happened
 /// elsewhere.
@@ -649,7 +641,7 @@ pub struct Reward {
 /// The self-referral and active-employee kinds depend on
 /// data this module may not have (no user-email lookup hook
 /// exists; the HR registry only knows employees created
-/// after this module was installed) — when the check cannot
+/// after this module was installed) - when the check cannot
 /// run, the referral records `unverified` instead of a
 /// false pass.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -673,7 +665,7 @@ pub struct AntiGamingRule {
 }
 
 /// One known employee, learned from `hr.employee_created`
-/// events (`{employee_id, user_id, department_id}` — the
+/// events (`{employee_id, user_id, department_id}` - the
 /// event carries no tenant, so the registry is keyed by
 /// user id and `tenant_id` is empty until an event carries
 /// one). Used only for the active-employee check: presence
@@ -709,9 +701,7 @@ pub struct AuditRecord {
     pub created_at: DateTime<Utc>,
 }
 
-// ---------------------------------------------------------------------------
 // Response views (computed, not stored)
-// ---------------------------------------------------------------------------
 
 /// The create / rotate link response: the link row plus the
 /// raw token, returned exactly once. The token hash is
@@ -743,9 +733,7 @@ pub struct StageCount {
     pub count: i64,
 }
 
-// ---------------------------------------------------------------------------
 // Request bodies
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct SetEligibilityRequest {

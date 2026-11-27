@@ -10,9 +10,7 @@ use super::{constants::*, types::*, inputs::*, helpers::*, store::*, validation:
 
 
 
-// ---------------------------------------------------------------------------
 // Unit handlers (admin definitions)
-// ---------------------------------------------------------------------------
 pub(crate) async fn list_units(
     ctx: web::Data<Arc<AppContext>>,
     state: web::Data<ManufacturingState>,

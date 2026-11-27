@@ -119,9 +119,7 @@ pub(crate) use types::{AggSpec, CreateDatasetRequest, CreateDestinationRequest, 
 #[allow(unused_imports)] // Re-exported for the unit tests in this file.
 pub(crate) use validate::{resolve_tenant, validate_field_defs, validate_tenant_id};
 
-// ---------------------------------------------------------------------------
 // Unit tests
-// ---------------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {

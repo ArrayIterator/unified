@@ -1,4 +1,4 @@
-// SaaS Domain Management module — preregister reservations, custom
+// SaaS Domain Management module - preregister reservations, custom
 // domain aliases, tenant subdomain allocation, and tenant resolution.
 //
 // This module extends the Domains (`domains`) and SaaS (`saas`)
@@ -104,27 +104,27 @@
 //     `.suspended`, `.release_started`, `.released`,
 //     `.resolve_scoped`
 // Events this module answers for product subdomains:
-//   - `saas_packages.purchase.completed` — claim intent carrying an
+//   - `saas_packages.purchase.completed` - claim intent carrying an
 //     explicit entitlement attestation (see the handler note)
-//   - `saas_packages.cancelled` — starts release (grace) for the
+//   - `saas_packages.cancelled` - starts release (grace) for the
 //     package's product subdomains
-//   - `license.revoked` / `module.entitlement.denied` — suspends the
+//   - `license.revoked` / `module.entitlement.denied` - suspends the
 //     affected product subdomains
-//   - `domain.verification.completed` — flips a matching product
+//   - `domain.verification.completed` - flips a matching product
 //     subdomain to verified (same event as the alias path)
-//   - `site.provision_requested` — claim intent from the packages
+//   - `site.provision_requested` - claim intent from the packages
 //     provisioning flow (the packages module validates entitlements
 //     before emitting it; see the handler note) and from the
 //     tenants provisioning flow (source `tenants`: a generic
 //     tenant-level allocation, no product id; see the handler note)
-//   - `saas_domains.subdomain.release_requested` — tenant destroy
+//   - `saas_domains.subdomain.release_requested` - tenant destroy
 //     revokes every subdomain of the tenant (generic allocations
 //     immediately, product subdomains into release grace)
-//   - `whitelabel.domain.verified` — attaches a verified custom
+//   - `whitelabel.domain.verified` - attaches a verified custom
 //     domain to the product subdomain, inheriting its product scope
-//   - `saas_domains.ai.suggest_subdomain_requested` — AI capability
+//   - `saas_domains.ai.suggest_subdomain_requested` - AI capability
 //     hook, answered with availability-checked label suggestions
-//   - `saas.product_subdomain.expire_grace` — scheduler sweep that
+//   - `saas.product_subdomain.expire_grace` - scheduler sweep that
 //     finalizes releases whose grace period ended
 //
 // Events emitted on the hook bus:
@@ -138,13 +138,13 @@
 //     `.suspended`, `.released`
 //   - `saas_domains.settings.updated`
 // Events this module answers:
-//   - `tenant.resolve_requested` — `{"host": ...}`; see `resolve_host`
-//   - `saas_domains.alias.lookup` — `{"domain": ...}` or
+//   - `tenant.resolve_requested` - `{"host": ...}`; see `resolve_host`
+//   - `saas_domains.alias.lookup` - `{"domain": ...}` or
 //     `{"alias_id": ...}`; returns the alias record or no result
-//   - `saas_domains.reservations.expire` — scheduler sweep; returns
+//   - `saas_domains.reservations.expire` - scheduler sweep; returns
 //     `{"expired": n, "ids": [...]}` and releases past-due
 //     reservations
-//   - `domain.verification.completed` — flips a matching alias to
+//   - `domain.verification.completed` - flips a matching alias to
 //     `verified` (only the verification module may do this; there is
 //     deliberately no API endpoint that sets an alias to verified)
 

@@ -1,7 +1,6 @@
-// engine — tests.
+// engine - tests.
 // Unit tests for the theme engine.
 //
-// Split from `src/themes/engine.rs`; moved verbatim, no behaviour changes.
 
 use super::*;
 use crate::themes::assets::resolve_asset_url;

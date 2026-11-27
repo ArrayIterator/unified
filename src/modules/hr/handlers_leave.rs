@@ -17,9 +17,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Handlers: leave types
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_leave_types(
     ctx: web::Data<Arc<AppContext>>,
@@ -189,9 +187,7 @@ pub(crate) async fn delete_leave_type(
     json::respond(result, debug)
 }
 
-// ---------------------------------------------------------------------------
 // Handlers: leave balances
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_leave_balances(
     ctx: web::Data<Arc<AppContext>>,
@@ -371,9 +367,7 @@ pub(crate) async fn update_leave_balance(
     json::respond(result, debug)
 }
 
-// ---------------------------------------------------------------------------
 // Handlers: leave requests
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_leave_requests(
     ctx: web::Data<Arc<AppContext>>,
@@ -746,7 +740,7 @@ pub(crate) async fn cancel_leave_request(
         // Refund under the employee's leave lock, re-checking the
         // status there: a concurrent approval may have approved a
         // pending request meanwhile. A failed refund fails the
-        // cancellation outright — the days must never be silently
+        // cancellation outright - the days must never be silently
         // lost while the request is still cancelled.
         let cancelled = {
             let lock = state.leave_lock(&request.employee_id);

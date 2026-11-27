@@ -84,7 +84,7 @@ pub(crate) const SECRET_SEGMENTS: [&str; 10] = [
 ];
 
 /// (module, field) pairs the `update_record` action may write.
-/// Anything else is rejected at save time — never an arbitrary
+/// Anything else is rejected at save time - never an arbitrary
 /// table write. The owning module must consume the
 /// `{module}.update_requested` event; today no module does (see
 /// the honesty note), so the step records `skipped` until one

@@ -23,9 +23,7 @@ use super::{CAP_ADMIN_ACCESS, CAP_RESELLER_ACCESS, CAP_RESELLER_CLIENTS_MANAGE,
     linked_client_ids, paginate_vec, require_capability, require_capability_write,
     require_real_capability, require_real_capability_write, reseller_overview_data, run_blocking};
 
-// ---------------------------------------------------------------------------
 // Reseller handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn get_reseller_overview(
     req: HttpRequest,
@@ -276,7 +274,7 @@ pub(crate) async fn start_view_as(
     // Checked against the REAL admin identity (see
     // `require_real_capability`): while impersonating, the effective
     // identity is the target user, who must never be able to start a
-    // view-as session of their own — only the admin can, and the
+    // view-as session of their own - only the admin can, and the
     // session is keyed by the admin's real id (see `view_as_key`).
     let caller = match require_real_capability_write(&req, &ctx, &state, CAP_VIEW_AS_USER).await {
         Ok(caller) => caller,
@@ -501,9 +499,7 @@ pub(crate) async fn stop_view_as(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Admin dashboard settings (runtime settings owned by this module)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn get_dashboard_settings(
     req: HttpRequest,
@@ -608,8 +604,8 @@ mod tests {
         state.view_as.insert(admin_id, session(admin_id, target_id));
         // Looked up by the target id (the effective id while
         // impersonating) there is no session; looked up by the real
-        // admin id — the id `authenticate` passes in from the JWT
-        // subject — the session is found.
+        // admin id - the id `authenticate` passes in from the JWT
+        // subject - the session is found.
         assert!(state.view_as.get(&target_id).is_none());
         assert!(state.view_as.get(&admin_id).is_some());
         assert!(state.take_expired_or_active_view_as(target_id, &ctx).is_none());

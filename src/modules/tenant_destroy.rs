@@ -1,4 +1,4 @@
-// Tenant Destroy module — the irreversible end of a tenant lifecycle.
+// Tenant Destroy module - the irreversible end of a tenant lifecycle.
 //
 // Destroy is NEVER one click. A tenant is destroyed only through the
 // full flow below, and every step is reversible until the final schema

@@ -730,7 +730,6 @@ impl DnsVerifier {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Hook support: answer `dns.verify` (from the SaaS module) with the
 // module's full DNS check. Hook handlers are synchronous but the
 // verifier is async, so the check runs on a dedicated worker thread
@@ -745,7 +744,6 @@ impl DnsVerifier {
 // finishes on its own; only the caller stops waiting.
 // `valid` uses the same bar as the Domains module's own verification:
 // the syntax must be valid and the domain must resolve (A or AAAA).
-// ---------------------------------------------------------------------------
 
 /// Wait for a worker-thread result with an overall timeout. A timeout
 /// or a dead worker is an internal error; the worker itself is not

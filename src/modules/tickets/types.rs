@@ -1,4 +1,4 @@
-// Tickets module — ticket types and shared state.
+// Tickets module - ticket types and shared state.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use unified_core::context::AppContext;
@@ -17,9 +17,7 @@ use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 pub(crate) fn default_comment_kind() -> String {
     "comment".to_string()
@@ -346,9 +344,7 @@ pub struct SlaScanReport {
     pub escalated: u64,
 }
 
-// ---------------------------------------------------------------------------
 // State
-// ---------------------------------------------------------------------------
 
 pub struct TicketsState {
     pub(crate) hooks: RwLock<Arc<HookBus>>,

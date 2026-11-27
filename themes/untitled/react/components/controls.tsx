@@ -2,7 +2,7 @@
 // UI React (free tier) primitives. This is the theme's control
 // library: pages import from `@theme/components/controls`, never from
 // the vendored primitives directly. Props are plain React props
-// (onClick, string onChange, ISO date strings) — the React Aria
+// (onClick, string onChange, ISO date strings) - the React Aria
 // conventions (onPress, DateValue) are adapted inside, so page code
 // stays simple.
 //
@@ -33,9 +33,7 @@ import { TextArea as UntitledTextArea } from "./base/textarea/textarea";
 import { Toggle as UntitledToggle } from "./base/toggle/toggle";
 import { Tooltip as UntitledTooltip } from "./base/tooltip/tooltip";
 
-// ---------------------------------------------------------------------------
 // Button
-// ---------------------------------------------------------------------------
 
 const buttonColors = {
   primary: "primary",
@@ -94,9 +92,7 @@ export function Button({
   );
 }
 
-// ---------------------------------------------------------------------------
 // Input / TextArea
-// ---------------------------------------------------------------------------
 
 export function Input({
   label,
@@ -207,9 +203,7 @@ export function TextArea({
   );
 }
 
-// ---------------------------------------------------------------------------
 // Select
-// ---------------------------------------------------------------------------
 
 export type SelectOption = {
   id: string;
@@ -270,9 +264,7 @@ export function Select({
   );
 }
 
-// ---------------------------------------------------------------------------
 // Checkbox / Switch
-// ---------------------------------------------------------------------------
 
 export function Checkbox({
   label,
@@ -343,9 +335,7 @@ export function Switch({
   );
 }
 
-// ---------------------------------------------------------------------------
 // Tabs
-// ---------------------------------------------------------------------------
 
 export type TabItem = {
   id: string;
@@ -388,16 +378,12 @@ export function Tabs({
 
 export const TabPanel = UntitledTabPanel;
 
-// ---------------------------------------------------------------------------
 // Table
-// ---------------------------------------------------------------------------
 
 export const Table = UntitledTable;
 export const TableCard = UntitledTableCard;
 
-// ---------------------------------------------------------------------------
 // Pagination
-// ---------------------------------------------------------------------------
 
 export function Pagination({
   page,
@@ -420,9 +406,7 @@ export function Pagination({
   );
 }
 
-// ---------------------------------------------------------------------------
 // Dialog
-// ---------------------------------------------------------------------------
 
 export function Dialog({
   isOpen,
@@ -476,9 +460,7 @@ export function Dialog({
 
 export const DialogTrigger = UntitledDialogTrigger;
 
-// ---------------------------------------------------------------------------
 // DatePicker (ISO date strings in, ISO date strings out)
-// ---------------------------------------------------------------------------
 
 export function DatePicker({
   label,
@@ -510,9 +492,7 @@ export function DatePicker({
   );
 }
 
-// ---------------------------------------------------------------------------
 // Tooltip
-// ---------------------------------------------------------------------------
 
 export function Tooltip({
   title,
@@ -530,10 +510,8 @@ export function Tooltip({
   );
 }
 
-// ---------------------------------------------------------------------------
 // Toast (sonner). Mount <Toaster /> once near the app root; call
 // toast.success / toast.error / toast.info from anywhere.
-// ---------------------------------------------------------------------------
 
 export const toast = sonnerToast;
 

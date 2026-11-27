@@ -67,7 +67,7 @@ pub(crate) fn start_run(executor: &BackupExecutor, job_id: &str) -> UnifiedResul
         last_drill_at: None,
         drill_verified: None,
         // Archives are stored unencrypted (at-rest encryption is
-        // not supported — see the module header); the recorded mode
+        // not supported - see the module header); the recorded mode
         // is always `none`.
         encryption: Some("none".to_string()),
         started_at,
@@ -297,7 +297,7 @@ pub(crate) async fn execute_run_inner(
         last_drill_at: None,
         drill_verified: None,
         // Archives are stored unencrypted (at-rest encryption is
-        // not supported — see the module header); the recorded mode
+        // not supported - see the module header); the recorded mode
         // is always `none`.
         encryption: Some("none".to_string()),
         started_at: job.started_at.unwrap_or(now()),
@@ -585,9 +585,7 @@ pub(crate) async fn verify_run_archive(
     })
 }
 
-// ---------------------------------------------------------------------------
 // Restore drill (blocking parts).
-// ---------------------------------------------------------------------------
 
 /// Extract an archive into a throwaway sandbox directory, check the
 /// payload is usable (dump non-empty, config parses), then delete

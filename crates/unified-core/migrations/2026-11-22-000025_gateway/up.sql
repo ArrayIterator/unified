@@ -33,9 +33,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One gateway routing rule.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS gateway_routing_rules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR NOT NULL,
@@ -61,9 +59,7 @@ CREATE INDEX IF NOT EXISTS idx_gateway_routing_rules_enabled
 CREATE INDEX IF NOT EXISTS idx_gateway_routing_rules_priority
     ON gateway_routing_rules (priority);
 
--- ---------------------------------------------------------------------------
 -- One proxied request, as logged by the gateway.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS gateway_request_log (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     request_id VARCHAR NOT NULL,

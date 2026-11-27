@@ -59,9 +59,7 @@ use super::types::AiProviderConnectionView;
 use super::types::AiProviderKind;
 use super::validation::estimate_prompt_tokens;
 
-// ---------------------------------------------------------------------------
 // Provider connection handlers.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_providers(req: HttpRequest) -> HttpResponse {
     let result: UnifiedResult<Vec<AiProviderCatalogEntry>> = (|| {
@@ -586,9 +584,7 @@ pub(crate) async fn test_provider_connection(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Completion and draft handlers.
-// ---------------------------------------------------------------------------
 
 /// Resolve the provider connection and run the allowlist gate for
 /// one draft / completion call, after the prompt is built and before

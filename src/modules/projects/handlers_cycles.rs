@@ -1,4 +1,4 @@
-// Projects module — Shape Up cycle handlers.
+// Projects module - Shape Up cycle handlers.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use super::*;
@@ -9,9 +9,7 @@ use actix_web::{HttpRequest, HttpResponse, web};
 use serde_json::{Value, json};
 use std::sync::Arc;
 
-// ---------------------------------------------------------------------------
 // Shape Up cycles
-// ---------------------------------------------------------------------------
 
 /// Decision stored on the cycle for a bet: the decision itself. A
 /// pass records "pass", never the pitch text.

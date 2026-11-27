@@ -8,9 +8,7 @@ use super::{constants::*, types::*, state::*, helpers::*, handlers_incidents::*,
 
 
 #[derive(Debug, Deserialize)]
-// ---------------------------------------------------------------------------
 // Request bodies
-// ---------------------------------------------------------------------------
 pub struct CreateIncidentRequest {
     pub title: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]

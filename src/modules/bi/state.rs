@@ -14,9 +14,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Shared state
-// ---------------------------------------------------------------------------
 
 /// In-memory stores for Business Intelligence. The hook bus is
 /// attached in `init` (the bus lives in `AppContext`); handlers
@@ -75,9 +73,7 @@ impl BiState {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 /// Caller identity: the server-verified caller (user id plus
 /// server-resolved role, both required for capability checks),
@@ -134,7 +130,7 @@ pub(crate) fn require_tenant(
 /// The company scope the caller acts in: the tenant context's
 /// company first, the verified caller's server-resolved company
 /// otherwise. Fails closed (403) when both are present and disagree
-/// — a request must not carry one company in its tenant context and
+/// - a request must not carry one company in its tenant context and
 /// another in its verified identity. The `X-Company-Id` header is
 /// NEVER trusted here: only the verified caller (company resolved
 /// from the database at authentication time) and the
@@ -167,7 +163,7 @@ pub(crate) fn caller_company(
 /// so the record is never stored unscoped under a scoped caller.
 /// When no caller scope is known, a body company is refused: an
 /// unresolved caller may not claim a company (the shared
-/// `CallerScope::Unresolved` rule); omitting the company is refused (C3 task 315):
+/// `CallerScope::Unresolved` rule); omitting the company is refused (C3):
 /// a write requires a resolved company scope.
 pub(crate) fn require_company_match(
     tenant: &unified_core::tenancy::TenantContext,
@@ -206,7 +202,7 @@ pub(crate) fn require_company_match_for(
 /// (the shared `CallerScope::Unresolved` rule). With a scope,
 /// records carrying exactly that company match, plus global rows,
 /// which are shared content visible to any resolved scope
-/// (C3 task 320, rule A).
+/// (C3, rule A).
 pub(crate) fn in_company_scope_str(
     record_company_id: &str,
     caller_company: &Option<String>,
@@ -235,11 +231,11 @@ pub(crate) fn require_record_in_company_scope_str(
 }
 
 /// Fail closed (403) when a stored record is outside the caller's
-/// company scope FOR A WRITE (C3 task 315, strict by default).
+/// company scope FOR A WRITE (C3, strict by default).
 /// Unlike the read check above (rule A), a write requires an exact
 /// company match: a company caller may write only their own
-/// company's records — global (unscoped) records are platform-only
-/// — and an unresolved caller may write nothing. Mutation handlers
+/// company's records - global (unscoped) records are platform-only
+/// - and an unresolved caller may write nothing. Mutation handlers
 /// call this right after loading the record they mutate; handlers
 /// that only read the record, or load a parent to scope a child
 /// write, keep the read check.
@@ -264,7 +260,7 @@ pub(crate) fn require_record_writable_in_company_scope_str(
 /// Manage-capable callers (server-verified capability) may access
 /// any company; a company caller may only access records of their
 /// own company; a caller with no resolvable company may access
-/// global (empty-`company_id`) records only — platform access is
+/// global (empty-`company_id`) records only - platform access is
 /// never the default for a missing company (the shared
 /// `CallerScope::Unresolved` rule).
 pub(crate) fn can_access_company(

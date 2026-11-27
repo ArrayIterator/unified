@@ -11,7 +11,6 @@ use std::sync::{LazyLock, Mutex};
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // External library checks.
 //
 // Every module may declare the system libraries / binaries it needs
@@ -32,7 +31,6 @@ use super::*;
 //   - Results are cached in memory. The status endpoint and the
 //     Extensions Manager read the same cache, so the library data has
 //     exactly one shape everywhere it appears.
-// ---------------------------------------------------------------------------
 
 /// Event emitted once per library that a check found missing or
 /// outdated. Payload: `{"library", "required_version",

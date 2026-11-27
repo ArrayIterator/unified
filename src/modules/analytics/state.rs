@@ -9,9 +9,7 @@ use super::{events::*, helpers::*, types::*, views::*, inputs::*, hooks::*, repo
 
 
 
-// ---------------------------------------------------------------------------
 // State.
-// ---------------------------------------------------------------------------
 pub struct AnalyticsState {
     /// Hook bus, replaced with the global bus in `init` (same pattern
     /// as the store and scheduler modules) so hook listeners can emit

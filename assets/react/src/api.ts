@@ -73,7 +73,7 @@ async function readBody(response: Response): Promise<unknown> {
   }
 }
 
-/* ---------- CSRF ---------- */
+/* CSRF */
 // Cookie-authenticated mutations require a valid `X-CSRF-Token`
 // header. The token is bound to the session, fetched from
 // GET /api/v1/security/csrf-token (src/modules/security/module.rs:275),
@@ -119,7 +119,7 @@ async function isCsrfForbidden(response: Response): Promise<boolean> {
   }
 }
 
-/* ---------- Core request ---------- */
+/* Core request */
 
 interface RequestOptions {
   method?: string;
@@ -175,7 +175,7 @@ export function apiPut<T>(url: string, body?: unknown): Promise<T> {
   return request<T>(url, { method: "PUT", body: body ?? {}, withCsrf: true });
 }
 
-/* ---------- Content: tags + custom post types (task 356) ---------- */
+/* Content: tags + custom post types  */
 // Shapes follow the Rust serializers in src/modules/content/types.rs.
 // The generic custom-entry screens are driven entirely by the
 // definition: no per-type client code exists.
@@ -384,7 +384,7 @@ export function getCsrfToken(): Promise<string | null> {
   return fetchCsrfToken();
 }
 
-/* ---------- Response shapes ---------- */
+/* Response shapes */
 // Field names follow the Rust serializers; optional fields stay
 // optional here because the server omits them when unknown.
 
@@ -503,10 +503,10 @@ export interface AdminUserItem {
   roles?: string[];
 }
 
-/* ---------- Endpoint wrappers ---------- */
+/* Endpoint wrappers */
 // Route registrations (src/modules/*/module.rs) are cited per call.
 
-/** GET /api/v1/extensions — every page (per_page clamps to 100). */
+/** GET /api/v1/extensions - every page (per_page clamps to 100). */
 export async function fetchAllExtensions(): Promise<ExtensionInfo[]> {
   const all: ExtensionInfo[] = [];
   let page = 1;
@@ -588,7 +588,7 @@ export function fetchAdminUsers(): Promise<AdminUserItem[]> {
   );
 }
 
-/* ---------- Documents / media library (src/modules/documents/module.rs) ---------- */
+/* Documents / media library (src/modules/documents/module.rs) */
 // Field names follow the Rust serializers (`DocumentRecord`,
 // `DocumentFolder`, `DocumentFolderTree` in
 // src/modules/documents/types.rs). `folder_id` is "" at the library
@@ -673,7 +673,7 @@ function documentsQuery(params: DocumentListParams): string {
   return query.toString();
 }
 
-/** GET /api/v1/documents — paginated, filtered document list. */
+/** GET /api/v1/documents - paginated, filtered document list. */
 export function fetchDocuments(
   params: DocumentListParams = {},
 ): Promise<PageEnvelope<DocumentItem>> {
@@ -682,13 +682,13 @@ export function fetchDocuments(
   );
 }
 
-/** GET /api/v1/documents/folders — the folder tree (nested, with
+/** GET /api/v1/documents/folders - the folder tree (nested, with
  * direct document counts). Returned whole, not paginated. */
 export function fetchFolderTree(): Promise<DocumentFolderTree[]> {
   return apiGet<DocumentFolderTree[]>("/api/v1/documents/folders");
 }
 
-/** POST /api/v1/documents/folders — create a folder. */
+/** POST /api/v1/documents/folders - create a folder. */
 export function createFolder(
   name: string,
   parentId = "",
@@ -699,7 +699,7 @@ export function createFolder(
   });
 }
 
-/** PATCH /api/v1/documents/folders/{id} — rename a folder. */
+/** PATCH /api/v1/documents/folders/{id} - rename a folder. */
 export function renameFolder(id: string, name: string): Promise<DocumentFolder> {
   return apiPatch<DocumentFolder>(
     `/api/v1/documents/folders/${encodeURIComponent(id)}`,
@@ -707,7 +707,7 @@ export function renameFolder(id: string, name: string): Promise<DocumentFolder> 
   );
 }
 
-/** POST /api/v1/documents/folders/{id}/move — move a folder. */
+/** POST /api/v1/documents/folders/{id}/move - move a folder. */
 export function moveFolder(id: string, parentId: string): Promise<DocumentFolder> {
   return apiPost<DocumentFolder>(
     `/api/v1/documents/folders/${encodeURIComponent(id)}/move`,
@@ -715,7 +715,7 @@ export function moveFolder(id: string, parentId: string): Promise<DocumentFolder
   );
 }
 
-/** DELETE /api/v1/documents/folders/{id} — delete an empty folder.
+/** DELETE /api/v1/documents/folders/{id} - delete an empty folder.
  * The server refuses (409) while the folder holds files or
  * subfolders; callers confirm first and surface that error. */
 export function deleteFolder(id: string): Promise<{ deleted: boolean; id: string }> {
@@ -724,7 +724,7 @@ export function deleteFolder(id: string): Promise<{ deleted: boolean; id: string
   );
 }
 
-/** POST /api/v1/documents/{id}/move — move a document between
+/** POST /api/v1/documents/{id}/move - move a document between
  * folders ("" = library root). */
 export function moveDocument(id: string, folderId: string): Promise<DocumentItem> {
   return apiPost<DocumentItem>(
@@ -733,7 +733,7 @@ export function moveDocument(id: string, folderId: string): Promise<DocumentItem
   );
 }
 
-/** POST /api/v1/documents/{id}/rename — rename a document. */
+/** POST /api/v1/documents/{id}/rename - rename a document. */
 export function renameDocument(id: string, name: string): Promise<DocumentItem> {
   return apiPost<DocumentItem>(
     `/api/v1/documents/${encodeURIComponent(id)}/rename`,
@@ -741,7 +741,7 @@ export function renameDocument(id: string, name: string): Promise<DocumentItem> 
   );
 }
 
-/** POST /api/v1/documents/{id}/flip — flip public/private. */
+/** POST /api/v1/documents/{id}/flip - flip public/private. */
 export function flipDocumentVisibility(
   id: string,
   visibility: "public" | "private",
@@ -752,7 +752,7 @@ export function flipDocumentVisibility(
   );
 }
 
-/** DELETE /api/v1/documents/{id} — delete a document and all its
+/** DELETE /api/v1/documents/{id} - delete a document and all its
  * versions. Callers confirm first; the server enforces the
  * owner-or-admin rule. */
 export function deleteDocument(id: string): Promise<{ deleted: boolean; id: string }> {
@@ -771,7 +771,7 @@ export function documentUrl(document: DocumentItem): string {
     : `/files/private/${document.storage_key}`;
 }
 
-/** GET /api/v1/documents/picker — public-only picker list. */
+/** GET /api/v1/documents/picker - public-only picker list. */
 export function fetchPickerItems(
   params: {
     search?: string;
@@ -806,7 +806,7 @@ export interface UploadProgress {
   total: number;
 }
 
-/** POST /api/v1/documents/upload — multipart multi-file upload
+/** POST /api/v1/documents/upload - multipart multi-file upload
  * with real per-file progress. Files upload one at a time (each
  * its own request) so `onProgress` reports the file actually in
  * flight; a failed file does not lose the rest of the batch.
@@ -899,7 +899,7 @@ function uploadOneFile(
   });
 }
 
-/* ---------- Widgets (src/modules/widgets/module.rs) ---------- */
+/* Widgets (src/modules/widgets/module.rs) */
 
 export interface WidgetItem {
   widget_id: string;
@@ -915,13 +915,13 @@ export interface WidgetLayout {
   is_default: boolean;
 }
 
-/** GET /api/v1/widgets/layouts/{context} — the caller's layout for
+/** GET /api/v1/widgets/layouts/{context} - the caller's layout for
  * that context, or the built-in default when none is saved. */
 export function fetchWidgetLayout(context: string): Promise<WidgetLayout> {
   return apiGet<WidgetLayout>(`/api/v1/widgets/layouts/${encodeURIComponent(context)}`);
 }
 
-/** PUT /api/v1/widgets/layouts/{context} — save a layout (pin, add,
+/** PUT /api/v1/widgets/layouts/{context} - save a layout (pin, add,
  * remove, reorder). The server validates ids against the catalogue
  * for that zone. Pass `shared: true` to save the zone's shared
  * (team) default instead of the caller's own layout. */
@@ -941,7 +941,7 @@ export function saveWidgetLayout(
  * the layout does not mention, in their fixed order. A failed or
  * missing layout leaves the fixed order untouched. Sections whose
  * id has no widget in the catalogue (tasks, notifications, the
- * admin users table) are never reordered away — they always render,
+ * admin users table) are never reordered away - they always render,
  * after the mapped widgets. */
 export function orderWidgetSections<T extends { id: string }>(
   sections: T[],
@@ -965,8 +965,8 @@ export function orderWidgetSections<T extends { id: string }>(
   return ordered;
 }
 
-/* ---------- Auth ---------- */
-// POST /api/v1/auth-manager/jwt/issue — the same endpoint
+/* Auth */
+// POST /api/v1/auth-manager/jwt/issue - the same endpoint
 // assets/js/auth.ts posts to (src/modules/auth_manager/module.rs:69).
 // The session cookie name defaults to `vault`
 // (crates/unified-core/src/config.rs:220); a deployment that renames
@@ -996,7 +996,7 @@ export async function login(input: LoginInput): Promise<void> {
     `${SESSION_COOKIE_NAME}=${token}; Path=/; SameSite=Lax${secure}`;
 }
 
-/* ---------- Formatting (same rules as assets/js/dashboard.ts) ---------- */
+/* Formatting (same rules as assets/js/dashboard.ts) */
 
 export function formatBytes(bytes: unknown): string {
   let value = Number(bytes) || 0;
@@ -1053,7 +1053,7 @@ export function formatDateTime(isoValue: unknown): string {
   });
 }
 
-/* ---------- Map & Tagging (task 358, src/modules/maps) ---------- */
+/* Map & Tagging (src/modules/maps) */
 // Shapes follow the Rust serializers in src/modules/maps/types.rs.
 // The map renders from GET /api/v1/maps/settings (the resolved
 // tile URL); every other call is plain CRUD over the same
@@ -1194,7 +1194,7 @@ export interface MapSettingsView {
   default_zoom: number;
 }
 
-/** GET /api/v1/maps/locations — page 1 by default; pass
+/** GET /api/v1/maps/locations - page 1 by default; pass
  * `page`/`per_page` and optional `kind` / `layer_id`. */
 export function fetchMapLocations(
   query = "per_page=100",
@@ -1218,7 +1218,7 @@ export function deleteMapLocation(id: string): Promise<MapLocation> {
   return apiDelete<MapLocation>(`/api/v1/maps/locations/${encodeURIComponent(id)}`);
 }
 
-/** GET /api/v1/maps/nearby — locations within `radiusKm` of
+/** GET /api/v1/maps/nearby - locations within `radiusKm` of
  * the point, nearest first. */
 export function fetchNearbyLocations(
   latitude: number,
@@ -1387,14 +1387,14 @@ export function deleteMapProvider(id: string): Promise<MapProvider> {
   return apiDelete<MapProvider>(`/api/v1/maps/providers/${encodeURIComponent(id)}`);
 }
 
-/** GET /api/v1/maps/settings — the resolved tile URL for the
+/** GET /api/v1/maps/settings - the resolved tile URL for the
  * active provider (null when the provider needs a key and none
  * is stored). The key itself is never returned. */
 export function fetchMapSettings(): Promise<ResolvedMapSettings> {
   return apiGet<ResolvedMapSettings>("/api/v1/maps/settings");
 }
 
-/** PUT /api/v1/maps/settings — `api_key` is write-only: omit
+/** PUT /api/v1/maps/settings - `api_key` is write-only: omit
  * it to keep the stored key, send "" to clear it. */
 export function saveMapSettings(input: {
   active_provider?: string;

@@ -139,9 +139,7 @@ pub(crate) const PERM_PROCUREMENT_VIEW: &str = "procurement.view";
 
 pub(crate) const PERM_PROCUREMENT_MANAGE: &str = "procurement.manage";
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// Vendor status: `active` vendors can receive new purchase
 /// orders; `inactive` vendors are kept for history; `suspended`
@@ -368,9 +366,7 @@ pub struct ProcurementBudget {
     pub updated_at: DateTime<Utc>,
 }
 
-// ---------------------------------------------------------------------------
 // Request bodies
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct CreateVendorRequest {

@@ -3,9 +3,7 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Dashboards and reseller links (2026-11-22-000006_dashboards_reseller).
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     reseller_links (reseller_id, client_id) {
@@ -40,9 +38,7 @@ diesel::table! {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Hosting (2026-11-22-000007_hosting).
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     hosting_plans (id) {

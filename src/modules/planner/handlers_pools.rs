@@ -15,9 +15,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 use super::{constants::*, helpers::*, types::*, state::*, forecast::*, handlers_plans::*, events::*, module::*};
 
-// ---------------------------------------------------------------------------
 // Pool handlers.
-// ---------------------------------------------------------------------------
 
 /// List capacity pools. Requires `planner.view`.
 pub(crate) async fn list_pools(
@@ -206,9 +204,7 @@ pub(crate) async fn delete_pool(
     json::respond(result, ctx.is_debug())
 }
 
-// ---------------------------------------------------------------------------
 // Utilisation handlers.
-// ---------------------------------------------------------------------------
 
 /// List recorded utilisation samples for a pool. Requires `planner.view`.
 pub(crate) async fn list_utilisation(

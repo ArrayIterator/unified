@@ -1,4 +1,4 @@
-// Delivery notes module — delivery notes: DO documents
+// Delivery notes module - delivery notes: DO documents
 // generated from logistics shipments, with the
 // shipment's items, sender, receiver, and addresses
 // snapshotted at creation time, data-driven DO numbering,
@@ -10,36 +10,36 @@
 // Routes live under `/api/v1/delivery-notes`:
 //
 //   Delivery notes:
-//     GET/POST / — list DOs / create a draft DO.
-//     GET  /by-shipment/{shipment_id} — DOs of one shipment.
-//     POST /from-shipment/{shipment_id} — create a draft DO
+//     GET/POST / - list DOs / create a draft DO.
+//     GET  /by-shipment/{shipment_id} - DOs of one shipment.
+//     POST /from-shipment/{shipment_id} - create a draft DO
 //          from a logistics shipment id.
-//     GET/PATCH/DELETE /{note_id} — one DO (update/delete
+//     GET/PATCH/DELETE /{note_id} - one DO (update/delete
 //          draft only).
-//     POST /{note_id}/issue — draft -> issued.
-//     POST /{note_id}/advance — next status, or a named target
+//     POST /{note_id}/issue - draft -> issued.
+//     POST /{note_id}/advance - next status, or a named target
 //          when the machine allows it.
-//     POST /{note_id}/deliver — link a proof of delivery and
+//     POST /{note_id}/deliver - link a proof of delivery and
 //          record the recipient signature metadata
 //          (in_transit -> delivered).
-//     POST /{note_id}/return — partial or full return, with
+//     POST /{note_id}/return - partial or full return, with
 //          per-item returned quantities and a reason.
-//     POST /{note_id}/cancel — cancel (not delivered/returned).
-//     POST /{note_id}/print — queue a print job through the
+//     POST /{note_id}/cancel - cancel (not delivered/returned).
+//     POST /{note_id}/print - queue a print job through the
 //          printing module, document returned inline.
-//     GET  /{note_id}/print-preview — the print-ready document
+//     GET  /{note_id}/print-preview - the print-ready document
 //          without queueing a job.
 //   Items:
-//     GET/POST /{note_id}/items — list / add a line (draft only).
-//     GET/PATCH/DELETE /{note_id}/items/{item_id} — one line
+//     GET/POST /{note_id}/items - list / add a line (draft only).
+//     GET/PATCH/DELETE /{note_id}/items/{item_id} - one line
 //          (draft only; returned moves only via return).
 //   Settings and AI:
-//     GET/PATCH /settings — per-tenant number format, print
+//     GET/PATCH /settings - per-tenant number format, print
 //          defaults, and delivery gates.
-//     POST /ai/{capability} — run a registered delivery notes
+//     POST /ai/{capability} - run a registered delivery notes
 //          AI capability through the AI module's gated runner.
 //
-// HONESTY — READ THIS FIRST. What is real in this module:
+// HONESTY - READ THIS FIRST. What is real in this module:
 // in-memory DO, item, and settings management; the DO status
 // machine (draft -> issued -> in_transit -> delivered ->
 // returned, plus cancelled, enforced by a single pure
@@ -57,16 +57,16 @@
 // What is NOT built here: durable storage until the migration
 // runs (the DashMap stores are authoritative; migration
 // `2026-11-22-000117_delivery_notes` is the persistence
-// target); a live shipment lookup — the from-shipment create
+// target); a live shipment lookup - the from-shipment create
 // asks the logistics module through the
 // `logistics.shipment.lookup` hook query, and no handler
 // answers that query today, so the link is recorded as
 // `unverified` (the same convention the logistics module
 // itself uses for unverified store order links) and the
-// response carries a warning — the snapshot in the request
+// response carries a warning - the snapshot in the request
 // body is the document's source of truth, not the lookup,
 // and the follow-up is for the logistics module to answer
-// `logistics.shipment.lookup`; a company header lookup — the
+// `logistics.shipment.lookup`; a company header lookup - the
 // company module answers no header-lookup hook today (only
 // `company.exists`, a boolean), so the printed header is the
 // DO's snapshotted sender block plus the `company_id`
@@ -75,7 +75,7 @@
 // stream, and dispatch to hardware, and converting the HTML
 // to PDF bytes is a deployment step, as in printing's own
 // honesty note); and actual email / push delivery (the
-// notifications module owns delivery — this module only emits
+// notifications module owns delivery - this module only emits
 // `notification.requested`).
 //
 // Shipment-link note: a DO may link a logistics shipment id,
@@ -86,8 +86,8 @@
 // result carrying `{"found": true}` (or `false`). When the
 // logistics module denies it the link is recorded as
 // `unverified` with a warning. When no handler answers at all
-// — today the logistics module has no
-// `logistics.shipment.lookup` answerer — the DO is still
+// - today the logistics module has no
+// `logistics.shipment.lookup` answerer - the DO is still
 // created but the link is recorded as `unverified` and the
 // response carries a warning; the DO is NOT treated as linked
 // to a real shipment until logistics confirms it. The
@@ -117,28 +117,28 @@
 //   - `printing.job.requested` (query) with the print job
 //     payload when printing a DO.
 // Events this module listens to:
-//   - `user.deleted` — anonymizes the user's DOs to
+//   - `user.deleted` - anonymizes the user's DOs to
 //     `deleted-user`; DOs are never deleted.
-//   - `logistics.shipment.status_changed` — a shipment moving
+//   - `logistics.shipment.status_changed` - a shipment moving
 //     out (picked up, in transit, out for delivery) moves an
 //     issued DO to in transit (draft DOs are left alone).
-//   - `logistics.shipment.delivered` — advances an in-transit
+//   - `logistics.shipment.delivered` - advances an in-transit
 //     DO with a linked proof to delivered; a DO without a
 //     proof stays in transit until the proof event arrives.
-//   - `logistics.proof.created` — links the proof (id,
+//   - `logistics.proof.created` - links the proof (id,
 //     recipient name, signed-at) to the DOs of the shipment
 //     and advances in-transit DOs to delivered.
-//   - `logistics.shipment.returned` — returns the in-transit
+//   - `logistics.shipment.returned` - returns the in-transit
 //     and delivered DOs of the shipment (full scope).
-//   - `logistics.shipment.cancelled` — cancels DOs that have
+//   - `logistics.shipment.cancelled` - cancels DOs that have
 //     not been delivered or returned.
-//   - `rental.order.returned` — returns the in-transit and
+//   - `rental.order.returned` - returns the in-transit and
 //     delivered DOs linked to that rental order (full scope).
 //   - `delivery_notes.ai.summarize_delivery_note_requested`
-//     — grounds the summary capability with the DO's stored
+//     - grounds the summary capability with the DO's stored
 //     facts.
 //   - `delivery_notes.ai.check_delivery_readiness_requested`
-//     — grounds the readiness capability with the DO's
+//     - grounds the readiness capability with the DO's
 //     stored-facts checklist.
 //
 // Actor identity: the caller is the server-verified caller

@@ -3,9 +3,7 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Search, notifications, and saved views (2026-11-22-000023_search_notifications_saved_views).
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     search_documents (kind, id) {

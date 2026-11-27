@@ -1,4 +1,4 @@
-// timetracker — HTTP handlers: desktop-agent endpoints.
+// timetracker - HTTP handlers: desktop-agent endpoints.
 
 use super::*;
 use unified_core::context::AppContext;
@@ -10,7 +10,6 @@ use serde_json::{Value, json};
 use std::sync::Arc;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Handlers: desktop-agent API (API-key authenticated)
 //
 // These endpoints are the server side the future desktop / mobile
@@ -18,7 +17,6 @@ use uuid::Uuid;
 // HTTP client holding a key scoped to `timetracker:write` (or
 // `timetracker:read` for status) can exercise them today, which is
 // exactly the contract the future agent will use.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn agent_heartbeat(
     state: web::Data<TimeTrackerState>,

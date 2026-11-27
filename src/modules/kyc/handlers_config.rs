@@ -1,7 +1,7 @@
 //! HTTP handlers for KYC configuration (manager): document
 //! types, subject types, verification contexts (the default
 //! context), extra instructions, risk levels, and per-tenant
-//! settings. Everything here is data — the module never
+//! settings. Everything here is data - the module never
 //! hard-codes a document kind, a check, an instruction, or a
 //! risk band.
 
@@ -57,9 +57,7 @@ fn to_values<T: serde::Serialize>(rows: &[T]) -> Vec<Value> {
         .collect()
 }
 
-// ---------------------------------------------------------------------------
 // Document types
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_document_types(
     state: web::Data<KycState>,
@@ -281,9 +279,7 @@ pub(crate) async fn delete_document_type(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Subject types
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_subject_types(
     state: web::Data<KycState>,
@@ -505,9 +501,7 @@ pub(crate) async fn delete_subject_type(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Verification contexts (the default context)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_contexts(
     state: web::Data<KycState>,
@@ -780,9 +774,7 @@ pub(crate) async fn get_resolved_context(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Instructions (versioned extra instructions)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_instructions(
     state: web::Data<KycState>,
@@ -978,9 +970,7 @@ pub(crate) async fn delete_instruction(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Risk levels
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_risk_levels(
     state: web::Data<KycState>,
@@ -1172,9 +1162,7 @@ pub(crate) async fn delete_risk_level(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Settings
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn get_settings(
     state: web::Data<KycState>,

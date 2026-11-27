@@ -1,6 +1,6 @@
 // React media picker dialog for post / custom-post editors: the
 // shared documents picker as a React component over
-// `GET /api/v1/documents/picker` (public-only for every role —
+// `GET /api/v1/documents/picker` (public-only for every role -
 // content embeds a public URL, and a private file would 404 for
 // readers, so it never appears here until it is flipped public).
 // A private upload made from this picker surfaces in the
@@ -41,7 +41,7 @@ export default function MediaPicker({ multiple = false, onAttach, onClose }: Med
           <div>
             <h2 className="text-lg font-semibold">Media picker</h2>
             <p className="mt-1 text-sm text-muted">
-              Public files only — a private file appears here once it is
+              Public files only - a private file appears here once it is
               marked public. Uploads default to public here; switch to
               private in the upload box if a file is not ready to embed yet.
             </p>
@@ -52,7 +52,7 @@ export default function MediaPicker({ multiple = false, onAttach, onClose }: Med
             onClick={onClose}
             ariaLabel="Close media picker"
           >
-            ✕
+            x
           </Button>
         </div>
         <FileExplorer

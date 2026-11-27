@@ -472,9 +472,7 @@ pub(crate) async fn uptime_check_handler(
     .await
 }
 
-// ---------------------------------------------------------------------------
 // Run history.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_history(
     req: HttpRequest,

@@ -9,9 +9,7 @@ use serde::Serialize;
 use serde_json::json;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 pub(crate) fn new_id() -> String {
     Uuid::new_v4().to_string()
@@ -80,9 +78,7 @@ pub(crate) fn require_permission(ctx: &AppContext, role: &str, permission: &str)
         )))
     }
 }
-// ---------------------------------------------------------------------------
 // Tenant edge guard (C3 pilot 4, gate-only).
-// ---------------------------------------------------------------------------
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request

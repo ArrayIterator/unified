@@ -1,4 +1,4 @@
-// Field Service / Equipment Maintenance module — equipment
+// Field Service / Equipment Maintenance module - equipment
 // registry, recurring maintenance plans, work orders with a
 // validated status machine, technician dispatch, parts
 // consumption requests, time logging, customer sign-off, and

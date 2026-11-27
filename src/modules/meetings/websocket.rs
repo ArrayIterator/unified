@@ -21,9 +21,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Meetings WebSocket endpoint
-// ---------------------------------------------------------------------------
 
 /// `GET /api/v1/meetings/ws?room={id}`: a room-scoped view over the
 /// shared hub. The session subscribes with `global_hub().subscribe()`

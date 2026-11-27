@@ -1,4 +1,4 @@
-// Gamification — Leaderboard / progress handlers.
+// Gamification - Leaderboard / progress handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -16,9 +16,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Leaderboard / progress handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn get_leaderboard(
     ctx: web::Data<Arc<AppContext>>,

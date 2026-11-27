@@ -10,9 +10,7 @@ use super::{limits::*, types::*, hub::*, state::*, helpers::*, module::*, handle
 
 
 
-// ---------------------------------------------------------------------------
 // Live support: agents
-// ---------------------------------------------------------------------------
 pub(crate) async fn list_agents(
     state: web::Data<ChatState>,
     req: HttpRequest,

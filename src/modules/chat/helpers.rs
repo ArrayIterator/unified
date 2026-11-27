@@ -15,9 +15,7 @@ use super::{limits::*, types::*, hub::*, state::*, module::*, handlers_channels:
 
 
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 pub(crate) fn actor_id(req: &HttpRequest) -> UnifiedResult<String> {
     Ok(unified_core::caller::require_caller(req)?.user_id)
 }
@@ -27,7 +25,7 @@ pub(crate) fn actor_id(req: &HttpRequest) -> UnifiedResult<String> {
 /// middleware (never a header). A role-restricted public channel is
 /// still a convenience filter only, never access control for
 /// sensitive content: sensitive conversations belong in private or DM
-/// channels, where membership — not a role — decides visibility. See
+/// channels, where membership - not a role - decides visibility. See
 /// also the module docs in `module.rs`.
 pub(crate) fn caller_roles(req: &HttpRequest) -> Vec<String> {
     unified_core::caller::caller_from(req).roles
@@ -51,7 +49,7 @@ pub(crate) fn require_tenant(
 /// The company scope the caller acts in: the tenant context's
 /// company first, the verified caller's server-resolved company
 /// otherwise. Fails closed (403) when both are present and disagree
-/// — a request must not carry one company in its tenant context and
+/// - a request must not carry one company in its tenant context and
 /// another in its verified identity. The `X-Company-Id` header is
 /// NEVER trusted here: only the verified caller (company resolved
 /// from the database at authentication time) and the
@@ -76,7 +74,7 @@ pub(crate) fn caller_company(
     }
 }
 
-/// Resolve the caller's company for a WRITE (C3 task 315, strict by
+/// Resolve the caller's company for a WRITE (C3, strict by
 /// default): a write requires a resolved company scope, so an
 /// unresolved caller is refused with 403 instead of silently
 /// writing a global (unscoped) record. Mutation handlers call
@@ -105,7 +103,7 @@ pub(crate) fn require_company_for_write(
 /// When no caller scope is known (neither the tenant context nor
 /// the verified caller carries a company), a body company is refused:
 /// an unresolved caller may not claim a company (the shared
-/// `CallerScope::Unresolved` rule); omitting the company is refused (C3 task 315):
+/// `CallerScope::Unresolved` rule); omitting the company is refused (C3):
 /// a write requires a resolved company scope.
 pub(crate) fn require_company_match(
     tenant: &unified_core::tenancy::TenantContext,
@@ -134,7 +132,7 @@ pub(crate) fn require_company_match(
 /// company-owned record is denied (the shared
 /// `CallerScope::Unresolved` rule). With a scope, only records carrying
 /// exactly that company match, plus unscoped (global/legacy) records
-/// (C3 task 320, rule A); an unresolved caller still sees global rows only.
+/// (C3, rule A); an unresolved caller still sees global rows only.
 pub(crate) fn in_company_scope(
     record_company_id: &Option<String>,
     caller_company: &Option<String>,
@@ -164,11 +162,11 @@ pub(crate) fn require_record_in_company_scope(
 }
 
 /// Fail closed (403) when a stored record is outside the caller's
-/// company scope FOR A WRITE (C3 task 315, strict by default).
+/// company scope FOR A WRITE (C3, strict by default).
 /// Unlike the read check above (rule A), a write requires an exact
 /// company match: a company caller may write only their own
-/// company's records — global (unscoped) records are platform-only
-/// — and an unresolved caller may write nothing. Mutation handlers
+/// company's records - global (unscoped) records are platform-only
+/// - and an unresolved caller may write nothing. Mutation handlers
 /// call this right after loading the record they mutate; handlers
 /// that only read the record, or load a parent to scope a child
 /// write, keep the read check.
@@ -272,7 +270,7 @@ pub(crate) fn paginate<T: Serialize + Clone>(items: Vec<T>, params: &PaginationP
 ///
 /// The role arm trusts `caller_roles` (the self-asserted
 /// `X-User-Roles` header): role-restricted public channels are
-/// not a security boundary — see `caller_roles`.
+/// not a security boundary - see `caller_roles`.
 pub(crate) fn can_view(channel: &Channel, user: &str, roles: &[String]) -> bool {
     if channel.members.iter().any(|member| member == user) {
         return true;
@@ -484,8 +482,8 @@ pub(crate) fn department_agent_ids(state: &ChatState, department_id: &str) -> Ve
 /// The best agent for a department: first the agents the Departments
 /// module reports for it (roster record supplies the availability
 /// toggle and concurrent-chat limit; agents without a chat roster
-/// record count as available with the default limit), then — when the
-/// Departments module does not answer — chat's own roster for the
+/// record count as available with the default limit), then - when the
+/// Departments module does not answer - chat's own roster for the
 /// department. `department_id` of `None` matches any roster agent.
 /// Fewest active chats first, then best presence rank.
 pub(crate) fn best_available_agent(state: &ChatState, department_id: Option<&str>) -> Option<String> {

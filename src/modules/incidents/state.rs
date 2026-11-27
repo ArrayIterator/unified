@@ -11,9 +11,7 @@ use super::{constants::*, types::*, inputs::*, helpers::*, handlers_incidents::*
 
 
 #[derive(Clone)]
-// ---------------------------------------------------------------------------
 // Shared state
-// ---------------------------------------------------------------------------
 /// In-memory stores for incidents. The hook bus is attached in
 /// `init` (the bus lives in `AppContext`); handlers tolerate a
 /// missing bus by skipping event emission. Durable rows for these

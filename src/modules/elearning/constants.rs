@@ -1,4 +1,4 @@
-// Elearning — shared constants.
+// Elearning - shared constants.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};

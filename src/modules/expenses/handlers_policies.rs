@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// --- Handlers: policies -----------------------------------------------------
+// Handlers: policies
 
 pub(crate) async fn list_policies(
     ctx: web::Data<Arc<AppContext>>,

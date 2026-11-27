@@ -1,4 +1,4 @@
-//! Curriculum module — competency-based school curricula. — Assessment domain handlers.
+//! Curriculum module - competency-based school curricula. - Assessment domain handlers.
 //!
 //! Split from `src/modules/curriculum.rs`; behaviour unchanged.
 

@@ -2,7 +2,7 @@
 //
 // A small, adapter-based cache shared by every module through `AppContext`.
 // Callers work with typed `CacheValue`s and TTLs through the `Cache`
-// facade; the storage backend is chosen by configuration — the filesystem
+// facade; the storage backend is chosen by configuration - the filesystem
 // adapter by default, or Redis when `redis.enabled` is true. When Redis
 // is enabled and `cache.failover_enabled` is true (the default), the
 // Redis adapter is wrapped in `FailoverCache`: a Redis failure at
@@ -19,8 +19,8 @@
 //
 // Key rules: a key is an opaque string of at most 512 characters, without
 // control characters or surrounding whitespace. The filesystem adapter
-// never uses the raw key as a path component — entries live under
-// `sha256(key)`, sharded by the first two hex digits — so keys are safe
+// never uses the raw key as a path component - entries live under
+// `sha256(key)`, sharded by the first two hex digits - so keys are safe
 // against path traversal by construction. Redis keys are namespaced with
 // a `unified:cache:` prefix, and `clear` only removes keys under that
 // prefix (never `FLUSHDB`).
@@ -55,7 +55,7 @@
 // `Cache::get_json`, `Cache::set_json`, `Cache::get_value_tenant`)
 // and the value predicates (`CacheValue::is_text`,
 // `CacheValue::is_bytes`, `CacheValue::as_number`) have no callers
-// inside this tree today — they are public API of the `unified-core`
+// inside this tree today - they are public API of the `unified-core`
 // library for external modules, which reach the cache through the
 // same facade. Keep them: deleting them would remove the ergonomic
 // typed access external modules are expected to use. The sibling
@@ -134,7 +134,7 @@ pub fn validate_tenant_id(tenant_id: &str) -> UnifiedResult<()> {
 /// The storage key for one tenant's entry: `tenant:{id}:{key}`.
 /// Tenant entries are only reachable through the tenant-scoped
 /// facade methods, so a tenant can never read another tenant's
-/// entry — even with the same unscoped key.
+/// entry - even with the same unscoped key.
 pub fn tenant_key(tenant_id: &str, key: &str) -> UnifiedResult<String> {
     validate_tenant_id(tenant_id)?;
     validate_key(key)?;
@@ -389,9 +389,7 @@ fn decode_envelope(raw: &str, key: &str) -> UnifiedResult<CacheEntry> {
     envelope.into_entry(key)
 }
 
-// ---------------------------------------------------------------------------
 // Adapter trait.
-// ---------------------------------------------------------------------------
 
 /// A cache storage backend. Adapters are deliberately small: `get`, `set`,
 /// `delete`, `clear`, and `has`. Expiry is enforced by the adapter on
@@ -449,9 +447,7 @@ pub trait CacheAdapter: Send + Sync + std::fmt::Debug {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Filesystem adapter.
-// ---------------------------------------------------------------------------
 
 /// Filesystem cache adapter.
 ///
@@ -737,9 +733,7 @@ impl CacheAdapter for FilesystemCache {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Redis adapter.
-// ---------------------------------------------------------------------------
 
 /// Redis cache adapter.
 ///
@@ -966,9 +960,7 @@ impl CacheAdapter for RedisCache {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Failover adapter (Redis primary, filesystem fallback).
-// ---------------------------------------------------------------------------
 
 /// A cache adapter that serves from a fallback adapter when its
 /// primary adapter fails at runtime. Reads fall back on a primary
@@ -1126,9 +1118,7 @@ impl CacheAdapter for FailoverCache {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Facade.
-// ---------------------------------------------------------------------------
 
 /// The cache facade every module uses. It validates keys, applies the
 /// configured default TTL when the caller passes none, and delegates

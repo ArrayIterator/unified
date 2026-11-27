@@ -1,7 +1,6 @@
-// storage — validation.
+// storage - validation.
 // Endpoint and host allowlist validation for provider URLs.
 //
-// Split from `crates/unified-core/src/storage.rs`; moved verbatim, no behaviour changes.
 
 use super::*;
 use crate::error::{UnifiedError, UnifiedResult};
@@ -19,9 +18,7 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::{Arc, RwLock};
 
-// ---------------------------------------------------------------------------
 // Host allowlist (URL safety).
-// ---------------------------------------------------------------------------
 
 /// Exact hosts a storage provider may be contacted on without any
 /// extra configuration.

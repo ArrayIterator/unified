@@ -13,7 +13,7 @@
 //   - "Give me the listener TLS configuration." (`build_server_config`)
 //
 // When no `SslStorage` handle is attached yet (the HTTP server has
-// not wired it in — see the integrator snippet for
+// not wired it in - see the integrator snippet for
 // `src/http/server.rs`), status falls back to the configured
 // certificates in `app.ssl.domains`, exactly like the load balancer's
 // config-only TLS status. Presence is then "configured", never

@@ -1,4 +1,4 @@
-//! Presets + Setup Wizard module. — Stored records.
+//! Presets + Setup Wizard module. - Stored records.
 //!
 //! Split from `src/modules/presets.rs`; behaviour unchanged.
 

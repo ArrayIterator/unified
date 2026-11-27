@@ -11,8 +11,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
-// Pricing engine (batch 15 B3 notes §6.3). Money structs carry
+// Pricing engine (batch 15 B3 notes sec. 6.3). Money structs carry
 // `PgNumeric` fields, so per the repo header rule they skip ALL
 // serde derives (Queryable: no Serialize; New*: no Deserialize).
 // `PricingTier` / `NewPricingTier` already exist for the 000041
@@ -20,7 +19,6 @@ use uuid::Uuid;
 // `PricingVolumeTier` / `NewPricingVolumeTier` below (the 000103
 // table was renamed to `pricing_volume_tiers` during the final
 // inspection to resolve the name collision).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = pricing_settings)]

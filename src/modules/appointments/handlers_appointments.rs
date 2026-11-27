@@ -1,4 +1,4 @@
-// appointments — handlers appointments.
+// appointments - handlers appointments.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -27,9 +27,7 @@ use super::handlers_staff::*;
 use super::handlers_reminders::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Handlers: appointments
-// ---------------------------------------------------------------------------
 
 /// Shared booking creation for the staff and guest flows. The end
 /// time is always computed from the service duration; the caller
@@ -787,7 +785,7 @@ pub(crate) async fn appointment_ics(
         let service = load_service_by_id(&state, appointment.service_id)?;
         require_record_in_company_scope(&service.company_id, &_scope)?;
         let block = ics_appointment_block(&appointment, &service);
-        Ok(build_ics(&[block], &format!("Appointment — {}", service.name)))
+        Ok(build_ics(&[block], &format!("Appointment - {}", service.name)))
     })();
     match result {
         Ok(body) => ics_response(body),
@@ -795,9 +793,7 @@ pub(crate) async fn appointment_ics(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Handlers: public booking
-// ---------------------------------------------------------------------------
 
 /// True when a guest booking must be rejected before any
 /// rate-limit quota is spent: guest booking is disabled, or the

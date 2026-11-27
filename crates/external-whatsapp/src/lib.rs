@@ -20,7 +20,7 @@
 // Secrets are never hard-coded, never logged, and never returned in any
 // response. Every record carries a `tenant_id`: it is required on every
 // write and is a mandatory filter on every read. There is no global
-// view — a request without `tenant_id` is rejected.
+// view - a request without `tenant_id` is rejected.
 //
 // The crate depends only on `unified-core` (plus actix-web, reqwest,
 // hmac/sha2, serde, chrono, uuid, tokio for its own handlers). It never
@@ -75,9 +75,7 @@ pub use types::{
     WhatsAppState,
 };
 
-// ---------------------------------------------------------------------------
 // Records and in-memory store
-// ---------------------------------------------------------------------------
 
 /// Message statuses used by this module.
 ///
@@ -105,9 +103,7 @@ pub mod statuses {
     ];
 }
 
-// ---------------------------------------------------------------------------
 // Unit tests
-// ---------------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {

@@ -10,13 +10,11 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // E-learning (migration 000079_elearning). Course certificates
 // are `ElearningCertificate` / `NewElearningCertificate` below
 // (table `elearning_certificates`, renamed from `certificates`
 // during the final inspection: migration 000005 already owns
 // that name for SSL certificates).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = courses)]

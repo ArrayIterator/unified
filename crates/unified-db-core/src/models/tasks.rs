@@ -10,9 +10,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Tasks and system records (2026-11-22-000011_tasks_records).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 // NOTE: the path must stay fully qualified to the TABLE module.
@@ -126,9 +124,7 @@ pub struct NewSystemRecord {
     pub ip: Option<String>,
 }
 
-// ---------------------------------------------------------------------------
 // Logs and billing (2026-11-22-000012_logs_billing).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = app_logs)]

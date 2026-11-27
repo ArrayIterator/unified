@@ -8,9 +8,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Types.
-// ---------------------------------------------------------------------------
 
 /// One entitlement row: one module granted to one tenant from one
 /// source. The effective entitlement for a module is the union of
@@ -227,7 +225,7 @@ pub struct MyModuleView {
 
 /// The upgrade path for a locked module: the sellable products or
 /// packages that unlock it, resolved from product/licensing data
-/// through the hook bus — never a hard-coded map. When no provider
+/// through the hook bus - never a hard-coded map. When no provider
 /// answers, the path is null with a clear reason, never a
 /// fabricated product.
 #[derive(Debug, Clone, Serialize)]

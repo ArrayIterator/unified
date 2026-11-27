@@ -1,4 +1,4 @@
-// appointments — handlers services.
+// appointments - handlers services.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -313,9 +313,7 @@ pub(crate) async fn delete_service(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Handlers: slots (staff + public share the generator)
-// ---------------------------------------------------------------------------
 
 pub(crate) fn slots_for_service(
     state: &AppointmentsState,

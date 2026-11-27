@@ -48,7 +48,7 @@
 --     `ended`. At most one season is `active` per company
 --     (enforced in the module on start); the partial unique
 --     index below enforces it in the database for non-NULL
---     companies only — a NULL company is the global scope, and
+--     companies only - a NULL company is the global scope, and
 --     NULLs are distinct in a unique index, so the one-active
 --     rule for global seasons is enforced by the module alone.
 --   - `gamification_reward_requests.status` is `requested`,

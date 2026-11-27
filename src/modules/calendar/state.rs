@@ -14,9 +14,7 @@ use super::types::CalendarFeed;
 use super::types::CalendarSettings;
 use super::types::CalendarSource;
 
-// ---------------------------------------------------------------------------
 // Shared state.
-// ---------------------------------------------------------------------------
 
 /// In-memory stores for the calendar. The hook bus is attached in
 /// `init` (the bus lives in `AppContext`); handlers use
@@ -36,7 +34,7 @@ pub struct CalendarState {
     pub sources: Arc<DashMap<String, CalendarSource>>,
     pub hooks: Arc<RwLock<Option<Arc<HookBus>>>>,
     /// HMAC signing key for feed tokens. Starts as a per-process
-    /// random key (two random UUIDs, 32 bytes — same approach as
+    /// random key (two random UUIDs, 32 bytes - same approach as
     /// the library module); `init` replaces it with the key
     /// derived from the configured app secret
     /// (`use_derived_signing_key`), so the same configuration

@@ -9,9 +9,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Plan helpers: loaders, entitlement, usage, metering.
-// ---------------------------------------------------------------------------
 
 pub(crate) fn load_plan(state: &StorageManagerState, raw_id: &str) -> UnifiedResult<StoragePlan> {
     let id = parse_uuid(raw_id, "storage plan")?;
@@ -41,7 +39,7 @@ pub(crate) fn load_assignment(
 
 /// The buyer's ACTIVE assignment, if any: the most recently
 /// assigned active row for the buyer key. Cancelled (or expired)
-/// rows are skipped, never overwritten — re-assigning a buyer whose
+/// rows are skipped, never overwritten - re-assigning a buyer whose
 /// only row is cancelled inserts a fresh row with a new id and the
 /// cancelled row stays resolvable via `load_assignment`.
 pub(crate) fn active_assignment_for_buyer(
@@ -66,9 +64,9 @@ pub(crate) fn active_assignment_for_buyer(
 }
 
 /// Resolve the company for `get_my_plan`. Platform admins (see
-/// `is_platform_admin`, C3 task 315 decision (a)) may ask about
+/// `is_platform_admin`, C3 decision (a)) may ask about
 /// any buyer via `?company_id=`; a non-admin's company comes ONLY
-/// from the verified caller scope — the query parameter is ignored
+/// from the verified caller scope - the query parameter is ignored
 /// for them, so a non-admin cannot read another company's plan,
 /// assignment status or live usage.
 pub(crate) fn resolve_my_plan_company(
@@ -91,7 +89,7 @@ pub(crate) fn resolve_my_plan_company(
 /// report therefore states that period's usage, not today's.
 /// BYO objects are not in the daily rollup (their usage lives on
 /// the connection row), so past-period reports cover hub objects
-/// only — the current period instead uses live `buyer_usage`,
+/// only - the current period instead uses live `buyer_usage`,
 /// which includes BYO.
 pub(crate) fn period_usage_from_daily(
     state: &StorageManagerState,
@@ -175,7 +173,7 @@ pub(crate) fn buyer_usage(
 
 /// Emit one metering report event for billing. The caller also
 /// stores the report row; the event is the billing handoff (hook
-/// bus only — this module never calls billing directly).
+/// bus only - this module never calls billing directly).
 pub(crate) fn emit_metering(
     state: &StorageManagerState,
     report: &MeteringReport,
@@ -226,7 +224,7 @@ pub(crate) fn require_storage_module_entitlement(
 }
 
 /// Gate on one plan's billing product entitlement, through the
-/// `product.entitlement.check` hook — the same contract the
+/// `product.entitlement.check` hook - the same contract the
 /// meetings module uses for paid rooms: the first hook result must
 /// carry `{"entitled": true}`. No answer fails closed with 503;
 /// an explicit error answers 502; anything else answers 403.

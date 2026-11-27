@@ -12,9 +12,7 @@ use std::sync::{OnceLock, RwLock};
 use unified_core::error::{UnifiedError, UnifiedResult};
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // In-memory stores (same pattern as the cloud provider connections).
-// ---------------------------------------------------------------------------
 pub(crate) static CONNECTIONS: OnceLock<DashMap<Uuid, EmailConnection>> = OnceLock::new();
 
 pub(crate) fn connections_store() -> &'static DashMap<Uuid, EmailConnection> {
@@ -68,15 +66,13 @@ pub(crate) fn first_enabled_connection(kind: EmailProviderKind) -> Option<EmailC
 }
 
 #[derive(Debug, Clone)]
-// ---------------------------------------------------------------------------
 // Messages, results, and the send log.
-// ---------------------------------------------------------------------------
 /// One outgoing email. `metadata` carries caller context (for example
 /// `campaign_id` / `subscriber_id`); adapters map it to the provider's
 /// custom-args / tags / metadata field where the provider supports one,
 /// so webhooks can be matched back to the campaign.
 ///
-/// Deliverability (task 354, `deliverability.rs`): `bulk` marks a
+/// Deliverability (`deliverability.rs`): `bulk` marks a
 /// bulk/marketing send (deliverability headers on by default);
 /// `include_unsubscribe` adds List-Unsubscribe to a transactional
 /// send; `deliverability_opt_out` suppresses all deliverability

@@ -1,4 +1,4 @@
-// Tax module — credential encryption (HMAC keystream, tags, fingerprints).
+// Tax module - credential encryption (HMAC keystream, tags, fingerprints).
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use super::*;
@@ -23,9 +23,7 @@ use std::time::Duration;
 use url::Url;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Credential encryption (write-only storage)
-// ---------------------------------------------------------------------------
 
 pub(crate) type HmacSha256 = Hmac<Sha256>;
 

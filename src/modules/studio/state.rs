@@ -14,9 +14,7 @@ use super::{CreateRecordType, CreateSystemField, DEFAULT_RECORD_TYPES, DEFAULT_S
     RecordType, STATUS_ACTIVE, SystemField, VISIBILITY_SHARED, require_text, validate_field_type,
     validate_module_id, validate_record_type, validate_system_field_key};
 
-// ---------------------------------------------------------------------------
 // State.
-// ---------------------------------------------------------------------------
 
 #[derive(Clone)]
 pub struct StudioState {

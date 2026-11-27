@@ -1,8 +1,8 @@
--- 000135: Cloud package + apps (task 377).
+-- 000135: Cloud package + apps.
 --
 -- Three things, one migration:
 --
---   1. `cloud_apps` — the deployed-application records (in-memory
+--   1. `cloud_apps` - the deployed-application records (in-memory
 --      DashMap is authoritative in this round; the table exists for
 --      future persistence). `plan_id` / `connection_id` carry NO
 --      foreign keys on purpose: plans and connections are
@@ -10,14 +10,14 @@
 --      references to rows that only exist in memory.
 --   2. The seeded "Cloud SaaS" package (`cloud-saas`,
 --      `20000000-0000-4000-8000-000000000003`): the cloud module as a
---      sellable product (site-builder pattern — see migration
+--      sellable product (site-builder pattern - see migration
 --      000130). Modules: `cloud` (required) + `domains` (required).
 --      No pricing is invented (product_id stays NULL).
 --   3. Capability updates for the stored registry rows: Docker
 --      gains `create`, Kubernetes gains `create` / `scale` /
 --      `delete`, and the new WHMCS-alignment flags (`suspend`,
 --      `renew`, `change_password`, `usage`) are set per kind from
---      the updated seed JSON. The 000127 INSERT block is generated —
+--      the updated seed JSON. The 000127 INSERT block is generated -
 --      never hand-edit it; capability changes on stored rows go here.
 --      Unknown capability keys read as false at runtime, so rows
 --      this UPDATE misses stay valid (just without the new flags).

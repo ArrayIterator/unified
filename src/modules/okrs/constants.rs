@@ -1,4 +1,4 @@
-// OKR / Goals — Event names, permission strings, limits, and other constants.
+// OKR / Goals - Event names, permission strings, limits, and other constants.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};

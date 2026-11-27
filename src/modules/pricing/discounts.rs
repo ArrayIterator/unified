@@ -1,4 +1,4 @@
-// pricing — discounts.
+// pricing - discounts.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -31,9 +31,7 @@ use super::handlers_bundles::*;
 use super::handlers_reconciliation::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Discount engine (pure).
-// ---------------------------------------------------------------------------
 
 /// One order line the discount engine evaluates. Prices are scaled
 /// minor units; the engine never sees float money.

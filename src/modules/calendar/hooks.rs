@@ -9,15 +9,13 @@ use super::constants::MAX_AI_ITEMS;
 use super::helpers::ok;
 use super::state::CalendarState;
 
-// ---------------------------------------------------------------------------
 // Hook listeners.
-// ---------------------------------------------------------------------------
 
-/// `calendar.feeds.prune_requested` — expire/revoke-stale-feed
+/// `calendar.feeds.prune_requested` - expire/revoke-stale-feed
 /// pruning: delete expired tokens and revoked tokens older than
 /// the retention window. The scheduler kind `calendar.feeds.prune`
 /// is a known kind (listed in the scheduler's `KNOWN_KINDS`) and
-/// its dispatcher emits this event, so this listener is live —
+/// its dispatcher emits this event, so this listener is live -
 /// the scheduler runs it, it is not waiting on registration.
 pub(crate) fn on_feeds_prune_requested(state: CalendarState, ctx: &mut HookContext) {
     let now = Utc::now();
@@ -44,7 +42,7 @@ pub(crate) fn on_feeds_prune_requested(state: CalendarState, ctx: &mut HookConte
 /// for the requested date. The runner's payload carries the
 /// tenant id (`tenant_id`) and the caller (`caller` as a user id,
 /// or `user_id`); when either is missing the listener answers
-/// with an empty grounding instead of guessing a tenant — fail
+/// with an empty grounding instead of guessing a tenant - fail
 /// closed, never aggregate across tenants.
 pub(crate) fn on_ai_grounding_requested(
     state: CalendarState,
@@ -120,7 +118,7 @@ pub(crate) fn on_ai_grounding_requested(
         // Keep only items the subject may see: private items only
         // for their owner, and only items of this tenant. A
         // tenant-less item passes only when it is explicitly
-        // marked system/global — the same rule `aggregate_items`
+        // marked system/global - the same rule `aggregate_items`
         // applies, so an unmarked unscoped item never leaks in
         // through grounding either.
         let visibility = item

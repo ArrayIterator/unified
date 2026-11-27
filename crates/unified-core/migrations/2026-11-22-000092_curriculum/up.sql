@@ -22,7 +22,7 @@
 --   - `curriculum_frameworks` is the framework registry. The seeded
 --     row is the "curriculum 2013" framework (`is_built_in` true).
 --     A newer national curriculum is added as another row here plus
---     its levels, subjects, competencies, and structures — no code
+--     its levels, subjects, competencies, and structures - no code
 --     change. The module refuses to delete a built-in framework.
 --   - `curriculum_levels` rows are data, not an enum: the seeded
 --     rows are elementary (6 grades), junior-high (3 grades), and
@@ -67,9 +67,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One curriculum framework (the registry).
--- ---------------------------------------------------------------------------
 CREATE TABLE curriculum_frameworks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     code VARCHAR(64) NOT NULL UNIQUE,
@@ -82,9 +80,7 @@ CREATE TABLE curriculum_frameworks (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- ---------------------------------------------------------------------------
 -- One school level (elementary, junior-high, senior-high, ...).
--- ---------------------------------------------------------------------------
 CREATE TABLE curriculum_levels (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     framework_id UUID NOT NULL REFERENCES curriculum_frameworks (id) ON DELETE CASCADE,
@@ -97,9 +93,7 @@ CREATE TABLE curriculum_levels (
     UNIQUE (framework_id, code)
 );
 
--- ---------------------------------------------------------------------------
 -- One subject taught under a framework at a level.
--- ---------------------------------------------------------------------------
 CREATE TABLE curriculum_subjects (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     framework_id UUID NOT NULL REFERENCES curriculum_frameworks (id) ON DELETE CASCADE,
@@ -112,9 +106,7 @@ CREATE TABLE curriculum_subjects (
     UNIQUE (framework_id, level_id, code)
 );
 
--- ---------------------------------------------------------------------------
 -- One core competency (top of the competency hierarchy).
--- ---------------------------------------------------------------------------
 CREATE TABLE curriculum_core_competencies (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     framework_id UUID NOT NULL REFERENCES curriculum_frameworks (id) ON DELETE CASCADE,
@@ -130,9 +122,7 @@ CREATE TABLE curriculum_core_competencies (
     UNIQUE (subject_id, code, version)
 );
 
--- ---------------------------------------------------------------------------
 -- One basic competency (child of one core competency).
--- ---------------------------------------------------------------------------
 CREATE TABLE curriculum_basic_competencies (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     framework_id UUID NOT NULL REFERENCES curriculum_frameworks (id) ON DELETE CASCADE,
@@ -147,10 +137,8 @@ CREATE TABLE curriculum_basic_competencies (
     UNIQUE (core_competency_id, code, version)
 );
 
--- ---------------------------------------------------------------------------
 -- Curriculum structure: subjects per level and grade year, with
 -- weekly hours allocation.
--- ---------------------------------------------------------------------------
 CREATE TABLE curriculum_structures (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     framework_id UUID NOT NULL REFERENCES curriculum_frameworks (id) ON DELETE CASCADE,
@@ -164,10 +152,8 @@ CREATE TABLE curriculum_structures (
     UNIQUE (framework_id, level_id, grade_year, subject_id)
 );
 
--- ---------------------------------------------------------------------------
 -- One assessment domain from the configurable registry. Sub-domains
 -- point at their parent domain through parent_domain_id.
--- ---------------------------------------------------------------------------
 CREATE TABLE curriculum_assessment_domains (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     code VARCHAR(64) NOT NULL UNIQUE,
@@ -181,10 +167,8 @@ CREATE TABLE curriculum_assessment_domains (
     CHECK (parent_domain_id IS NULL OR parent_domain_id <> id)
 );
 
--- ---------------------------------------------------------------------------
 -- Descriptor text for one grade band, optionally scoped to one
 -- assessment domain (NULL domain_id = applies to every domain).
--- ---------------------------------------------------------------------------
 CREATE TABLE curriculum_grade_descriptors (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     framework_id UUID NOT NULL REFERENCES curriculum_frameworks (id) ON DELETE CASCADE,
@@ -198,9 +182,7 @@ CREATE TABLE curriculum_grade_descriptors (
     CHECK (min_score <= max_score)
 );
 
--- ---------------------------------------------------------------------------
 -- One structured lesson plan, tied to competencies.
--- ---------------------------------------------------------------------------
 CREATE TABLE curriculum_lesson_plans (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     framework_id UUID NOT NULL REFERENCES curriculum_frameworks (id) ON DELETE CASCADE,
@@ -221,9 +203,7 @@ CREATE TABLE curriculum_lesson_plans (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- ---------------------------------------------------------------------------
 -- One per-semester report card for one student.
--- ---------------------------------------------------------------------------
 CREATE TABLE curriculum_report_cards (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     student_ref VARCHAR(128) NOT NULL,
@@ -242,9 +222,7 @@ CREATE TABLE curriculum_report_cards (
 
 CREATE INDEX curriculum_report_cards_student_ref_idx ON curriculum_report_cards (student_ref);
 
--- ---------------------------------------------------------------------------
 -- One subject/domain line on a report card.
--- ---------------------------------------------------------------------------
 CREATE TABLE curriculum_report_card_entries (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     report_card_id UUID NOT NULL REFERENCES curriculum_report_cards (id) ON DELETE CASCADE,
@@ -260,10 +238,8 @@ CREATE TABLE curriculum_report_card_entries (
     UNIQUE (report_card_id, subject_id, domain_id)
 );
 
--- ---------------------------------------------------------------------------
 -- One remedial or enrichment intervention for one student and one
 -- basic competency.
--- ---------------------------------------------------------------------------
 CREATE TABLE curriculum_interventions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     student_ref VARCHAR(128) NOT NULL,
@@ -280,21 +256,17 @@ CREATE TABLE curriculum_interventions (
 
 CREATE INDEX curriculum_interventions_student_ref_idx ON curriculum_interventions (student_ref);
 
--- ---------------------------------------------------------------------------
 -- Module settings (key/value, JSONB values).
--- ---------------------------------------------------------------------------
 CREATE TABLE curriculum_settings (
     key TEXT PRIMARY KEY,
     value JSONB NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- ---------------------------------------------------------------------------
 -- Seed data: the "curriculum 2013" framework, its three school
 -- levels, the assessment-domain registry (knowledge, skills,
 -- attitudes with spiritual and social sub-domains), and the
 -- configurable-default settings rows.
--- ---------------------------------------------------------------------------
 INSERT INTO curriculum_frameworks (code, name, description, country, is_active, is_built_in)
 VALUES (
     'curriculum-2013',

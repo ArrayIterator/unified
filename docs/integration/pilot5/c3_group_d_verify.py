@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""C3 pilot 5 group D verification (task 319): plm, referral, rental, sign.
+"""C3 pilot 5 group D verification: plm, referral, rental, sign.
 
 For each module, per routed handler (same routed-set rule as
 /tmp/c3_verify.py: names appearing in `.to(name)` in the module):
@@ -7,7 +7,7 @@ For each module, per routed handler (same routed-set rule as
   - order: the guard precedes the first identity/capability call
     (`caller(&req)`, `require_permission(`, `authorize(`,
     `check_capability(`, `resolve_identity(`)
-  - kind (ADAPTED — documented in group-d-results.md): every guarded
+  - kind (ADAPTED - documented in group-d-results.md): every guarded
     handler, GET and mutation alike, resolves
     `caller_company(&_tenant, &req)` (mismatch-only company check);
     `require_company` must NOT appear. These four modules' records
@@ -16,7 +16,7 @@ For each module, per routed handler (same routed-set rule as
     "every write must resolve a company" rule would 403 legitimate
     tenant writes whose tenant context / verified caller carries no
     company. The template's GET-vs-mutation kind split therefore
-    does not apply here. This is task 315 carve-out 3 (tenant-gate-
+does not apply here. This is carve-out 3 (tenant-gate-
     only until C11 lands, 2026-11-23); the C.3 rename briefly
     applied the strict gate here and was reverted.
   - delegation: sign `cancel_envelope` / `void_envelope` delegate to

@@ -1,11 +1,11 @@
-// Curriculum module — competency-based school curricula.
+// Curriculum module - competency-based school curricula.
 //
 // Routes live under `/api/v1/curriculum`:
 //
 //   Frameworks (the curriculum registry):
-//     GET/POST /frameworks — list frameworks / create a framework.
+//     GET/POST /frameworks - list frameworks / create a framework.
 //     GET/PATCH/DELETE /frameworks/{id}.
-//     POST /frameworks/{id}/set-default — make a framework the default.
+//     POST /frameworks/{id}/set-default - make a framework the default.
 //   School levels (data, admin-editable):
 //     GET/POST /levels, GET/PATCH/DELETE /levels/{id}.
 //   Subjects per framework and level:
@@ -27,8 +27,8 @@
 //     GET/POST /report-cards, GET/PATCH/DELETE /report-cards/{id}.
 //     GET/POST /report-cards/{id}/entries,
 //     PATCH/DELETE /report-cards/entries/{entry_id}.
-//     POST /report-cards/{id}/issue — mark a report card issued.
-//     POST /report-cards/{id}/print-request — emit a print event for
+//     POST /report-cards/{id}/issue - mark a report card issued.
+//     POST /report-cards/{id}/print-request - emit a print event for
 //       the printing module (this module never calls it directly).
 //   Remedial and enrichment interventions:
 //     GET/POST /interventions, GET/PATCH/DELETE /interventions/{id},
@@ -36,20 +36,20 @@
 //   Settings (configurable defaults and vocabularies):
 //     GET/PATCH /settings.
 //
-// HONESTY — READ THIS FIRST. What is real in this module:
+// HONESTY - READ THIS FIRST. What is real in this module:
 // in-memory stores (DashMap) for every record above, backed by the
 // migration tables in `migrations/2026-11-22-000087_curriculum`
 // (the tables are the durable shape; the DashMap store is still
 // authoritative at runtime, exactly like the other modules built in
-// this project — no Diesel queries are issued from this file yet).
+// this project - no Diesel queries are issued from this file yet).
 // What is NOT built here: no PDF rendering and no direct call into
-// any printing module — printing is requested only through events
+// any printing module - printing is requested only through events
 // (see below). Student, course, and grade records are NOT duplicated
 // here: a student is referenced by an opaque `student_ref` string
 // and a grade by an opaque `academic_grade_id` string, exactly like
 // `webinars.host_id` / `store_orders.user_id` elsewhere.
 //
-// MODULARITY — READ THIS FIRST. Nothing business-specific is
+// MODULARITY - READ THIS FIRST. Nothing business-specific is
 // hard-coded in this file except standard constants (score range
 // 0..=100, UUIDs, HTTP status codes). Every list, rule, and status
 // vocabulary is data or admin-editable settings:
@@ -59,7 +59,7 @@
 //     domains, and grade descriptors are all admin-editable rows;
 //   - the assessment domain list (knowledge, skills, attitudes, and
 //     the spiritual / social sub-domains of attitudes) is a registry
-//     table, seeded in the migration — new domains or sub-domains are
+//     table, seeded in the migration - new domains or sub-domains are
 //     added as rows, never as code;
 //   - status vocabularies (lesson-plan, report-card, intervention)
 //     and grade bands live in `CurriculumSettings` and are editable
@@ -73,8 +73,8 @@
 // CURRICULUM FRAMEWORK EXTENSION POINT. A framework is a row in
 // `curriculum_frameworks` plus the rows that reference it (levels,
 // subjects, competencies, structures, descriptors). Adding another
-// national curriculum framework later — for example a newer national
-// curriculum — needs NO code change: create a framework row through
+// national curriculum framework later - for example a newer national
+// curriculum - needs NO code change: create a framework row through
 // `POST /frameworks`, then add its levels, subjects, competencies,
 // and structures through the same endpoints, and set it as the
 // default with `POST /frameworks/{id}/set-default` when it should
@@ -120,7 +120,7 @@
 //   - `curriculum.report_card.entry.added`,
 //     `curriculum.report_card.entry.updated`,
 //     `curriculum.report_card.entry.removed`
-//   - `curriculum.report_card.print_requested` — the print request
+//   - `curriculum.report_card.print_requested` - the print request
 //     for the printing module, carrying `{"report_card_id",
 //     "student_ref", "academic_year", "semester", "paper_size",
 //     "document_type": "report_card"}`. The same payload is also
@@ -133,31 +133,31 @@
 //     `curriculum.intervention.completed`,
 //     `curriculum.intervention.cancelled`
 //   - `curriculum.grade_component_mapping.created`,
-//     `curriculum.grade_component_mapping.deleted` —
+//     `curriculum.grade_component_mapping.deleted` -
 //     admin-managed rows linking one academic grade component to
 //     one basic competency (see the grade-mapping note below).
 //   - `curriculum.settings.updated`
-// Events this module listens to (canonical academic shapes —
+// Events this module listens to (canonical academic shapes -
 // the academic module is the owner of students, enrollments, and
 // grades; this module only caches references, never duplicates the
 // records):
 //   - `academic.student.created` with `{"student_id", "user_id",
-//     "program_id", "application_id"}` — records the student
+//     "program_id", "application_id"}` - records the student
 //     reference (`student_ref` IS the academic `student_id`) in a
 //     local lookup cache. The legacy `{"student_ref", "level_id"}`
 //     shape is still accepted.
 //   - `academic.enrollment.approved` with `{"enrollment_id",
-//     "student_id", "subject_id", "semester_id"}` — records the
+//     "student_id", "subject_id", "semester_id"}` - records the
 //     enrollment-to-student link the grade handler needs to resolve
 //     a grade's student.
 //   - `academic.grade.recorded` with `{"grade_id",
-//     "enrollment_id", "component_id", "score"}` — the grade is
+//     "enrollment_id", "component_id", "score"}` - the grade is
 //     resolved to a student through the cached enrollment link and
 //     to a basic competency through the admin-managed
 //     grade-component mapping table (see
 //     `ComponentCompetencyMapping`); a grade with no enrollment
 //     link or no component mapping is still recorded, marked
-//     `unmapped` with a reason — never dropped silently, never
+//     `unmapped` with a reason - never dropped silently, never
 //     given a fabricated mapping. The legacy
 //     `{"academic_grade_id", "student_ref", "basic_competency_id",
 //     "score"}` shape is still accepted.
@@ -169,16 +169,16 @@
 //     keeps the module usable standalone while still validating
 //     against the academic module when it is present.
 //
-// GRADE-COMPONENT MAPPING (the grade → competency bridge). An
+// GRADE-COMPONENT MAPPING (the grade -> competency bridge). An
 // academic grade names a grade component (`component_id`), not a
 // curriculum competency. The link between the two is DATA, not
 // code: administrators create rows through
-// `POST /grade-component-mappings` (`academic_component_id` →
+// `POST /grade-component-mappings` (`academic_component_id` ->
 // `basic_competency_id`). There is no automatic or guessed mapping:
 // a component with no row is unmapped, and the grade is recorded
 // that way (see `on_academic_grade_recorded`).
 
-//! Curriculum module — competency-based school curricula. — Module.
+//! Curriculum module - competency-based school curricula. - Module.
 //!
 //! Split from `src/modules/curriculum.rs`; behaviour unchanged.
 

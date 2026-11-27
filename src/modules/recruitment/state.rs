@@ -15,9 +15,7 @@ use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 use super::{constants::*, types::*, helpers::*, module::*, handlers_jobs::*, handlers_applicants::*, handlers_interviews::*, handlers_evaluations::*, handlers_offers::*};
 
-// ---------------------------------------------------------------------------
 // Shared state
-// ---------------------------------------------------------------------------
 
 /// In-memory stores for recruitment. The hook bus is attached in
 /// `init` (the bus lives in `AppContext`); handlers tolerate a

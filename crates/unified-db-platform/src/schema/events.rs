@@ -3,9 +3,7 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
-// Events (migration 000034_events; batch 2 notes §6).
-// ---------------------------------------------------------------------------
+// Events (migration 000034_events; batch 2 notes sec. 6).
 
 diesel::table! {
     events (id) {
@@ -140,9 +138,7 @@ diesel::table! {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Sharing / auditors (migration 000068_sharing_auditor; batch 5 notes §c).
-// ---------------------------------------------------------------------------
+// Sharing / auditors (migration 000068_sharing_auditor; batch 5 notes sec. c).
 
 diesel::table! {
     public_links (id) {

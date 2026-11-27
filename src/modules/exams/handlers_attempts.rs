@@ -15,9 +15,7 @@ use super::{constants::*, settings::*, types::*, module::*, helpers::*, inputs::
 
 
 
-// ---------------------------------------------------------------------------
 // Handlers: attempts (taking an exam)
-// ---------------------------------------------------------------------------
 pub(crate) fn exam_window_open(exam: &Exam, at: DateTime<Utc>) -> UnifiedResult<()> {
     if exam.status != EXAM_PUBLISHED {
         return Err(UnifiedError::conflict(

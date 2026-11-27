@@ -11,9 +11,7 @@ use super::{events::*, card_validation::*, card_settings::*, limits::*, provider
 
 
 
-// ---------------------------------------------------------------------------
 // Handlers: store checkout through the gateway.
-// ---------------------------------------------------------------------------
 /// Pay for a store order through the gateway: charge once, record the
 /// transaction, and emit `payment.captured` so the store can mark the
 /// order paid / completed and billing can record the payment. The

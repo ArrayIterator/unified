@@ -13,7 +13,7 @@
 (function () {
   "use strict";
 
-  /* ---------- Types (compile-time only; erased by the transpiler) ---------- */
+  /* Types (compile-time only; erased by the transpiler) */
 
   interface ApiErrorBody {
     error?: {
@@ -21,7 +21,7 @@
     };
   }
 
-  /* ---------- CSRF protection ---------- */
+  /* CSRF protection */
   // Cookie-authenticated mutations require a valid `X-CSRF-Token`
   // header: the server answers 403 without one. The token is bound
   // to the session, fetched from `GET /api/v1/security/csrf-token`,
@@ -122,7 +122,7 @@
     });
   }
 
-  /* ---------- Navigation active state ---------- */
+  /* Navigation active state */
   // Server-rendered links already carry `is-active` / `aria-current`;
   // this only keeps the state correct when the browser moves between
   // admin sections without a full reload (same-document navigation).
@@ -141,7 +141,7 @@
     });
   }
 
-  /* ---------- View-as: stop the active session ---------- */
+  /* View-as: stop the active session */
   function stopViewAs(button: HTMLButtonElement): void {
     button.disabled = true;
     fetchWithCsrf("/api/v1/dashboards/admin/view-as", "DELETE")

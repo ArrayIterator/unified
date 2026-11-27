@@ -10,9 +10,7 @@ use std::sync::Arc;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Handlers: right-to-erasure requests
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn create_erasure_request(
     ctx: web::Data<Arc<AppContext>>,

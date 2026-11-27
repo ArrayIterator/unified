@@ -24,12 +24,10 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
-// SSRF guard — follows `src/modules/downloader.rs` exactly, except
+// SSRF guard - follows `src/modules/downloader.rs` exactly, except
 // provider fetches are https ONLY (the downloader also allows http;
 // no holiday provider serves plain http, so the stricter rule
 // applies here).
-// ---------------------------------------------------------------------------
 
 fn is_loopback(ip: IpAddr) -> bool {
     match ip {
@@ -181,9 +179,7 @@ pub(crate) fn build_fetch_client(allowed_hosts: Arc<Vec<String>>) -> UnifiedResu
         .map_err(|error| UnifiedError::internal(format!("Cannot build HTTP client: {error}")))
 }
 
-// ---------------------------------------------------------------------------
 // Validation helpers.
-// ---------------------------------------------------------------------------
 
 /// Normalize an ISO 3166-1 alpha-2 code: trim, upper-case, exactly
 /// two ASCII letters.

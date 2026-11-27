@@ -1,4 +1,4 @@
-//! eSignature external module (split from lib.rs; moved verbatim).
+//! eSignature external module.
 
 use super::*;
 
@@ -150,9 +150,7 @@ pub struct CertificateVerification {
     pub certificate: Option<Certificate>,
 }
 
-// ---------------------------------------------------------------------------
 // Input DTOs
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct SignerInput {

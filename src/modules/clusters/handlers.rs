@@ -1,4 +1,4 @@
-// clusters — HTTP handlers.
+// clusters - HTTP handlers.
 
 use super::*;
 use unified_core::context::AppContext;
@@ -13,9 +13,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Request types.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 struct CreateClusterRequest {
@@ -50,9 +48,7 @@ fn default_node_role() -> String {
     "member".to_string()
 }
 
-// ---------------------------------------------------------------------------
 // Cluster handlers.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_clusters(
     ctx: web::Data<Arc<AppContext>>,
@@ -426,9 +422,7 @@ pub(crate) async fn cluster_sync_status(
     json::respond(result, debug)
 }
 
-// ---------------------------------------------------------------------------
 // Node handlers.
-// ---------------------------------------------------------------------------
 
 /// Idempotency scope for registering a node: the scope embeds a hash
 /// of the canonical request body (display name, base URL, role), so

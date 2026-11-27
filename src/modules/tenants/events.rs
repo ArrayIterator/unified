@@ -4,9 +4,7 @@ use super::{constants::*, vocabulary::*, settings::*, records::*, state::*, auth
 
 
 
-// ---------------------------------------------------------------------------
 // Events.
-// ---------------------------------------------------------------------------
 /// Hook event names this module emits. Add each one to
 /// `AUDITED_EVENTS` in `audit.rs` (see the module header).
 pub const EVENT_TENANT_CREATED: &str = "tenant.created";

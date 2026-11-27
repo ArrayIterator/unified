@@ -1,7 +1,6 @@
-// storage — keys.
+// storage - keys.
 // Storage key validation and key helpers (hashing, encoding).
 //
-// Split from `crates/unified-core/src/storage.rs`; moved verbatim, no behaviour changes.
 
 use super::*;
 use crate::error::{UnifiedError, UnifiedResult};
@@ -19,9 +18,7 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::{Arc, RwLock};
 
-// ---------------------------------------------------------------------------
 // Key validation (shared by all providers).
-// ---------------------------------------------------------------------------
 
 /// Maximum storage key length in bytes.
 pub const MAX_KEY_LEN: usize = 1024;
@@ -74,13 +71,13 @@ pub fn validate_key(key: &str) -> UnifiedResult<()> {
 ///
 /// * a documents document id (a UUID), resolved to a `/files/` URL
 ///   by the caller through the documents module; or
-/// * a `/files/public/{key}` or `/files/private/{key}` URL — the
+/// * a `/files/public/{key}` or `/files/private/{key}` URL - the
 ///   exact URL the media picker returns (a query string is allowed,
 ///   e.g. a signed `?token=` or `?download=1`).
 ///
-/// Returns the trimmed reference unchanged. Anything else — an
+/// Returns the trimmed reference unchanged. Anything else - an
 /// absolute URL to another host, a bare storage key, a path with
-/// `..` segments — is rejected, so a media field can never point
+/// `..` segments - is rejected, so a media field can never point
 /// outside the shared store.
 pub fn validate_media_reference(value: &str) -> UnifiedResult<String> {
     let trimmed = value.trim();
@@ -137,9 +134,7 @@ pub fn validate_target_name(name: &str) -> UnifiedResult<()> {
     Ok(())
 }
 
-// ---------------------------------------------------------------------------
 // Small helpers.
-// ---------------------------------------------------------------------------
 
 pub(crate) fn hex_encode(bytes: &[u8]) -> String {
     const HEX: &[u8; 16] = b"0123456789abcdef";

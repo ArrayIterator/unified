@@ -19,9 +19,7 @@ use super::{
     validate_layout, validate_order, validate_sort_field, validate_visibility,
 };
 
-// ---------------------------------------------------------------------------
 // Handlers: list views.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_views(
     ctx: web::Data<Arc<AppContext>>,
@@ -343,9 +341,7 @@ pub(crate) async fn set_default_view(
     json::respond(result, debug)
 }
 
-// ---------------------------------------------------------------------------
 // Handlers: form layouts.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_layouts(
     ctx: web::Data<Arc<AppContext>>,

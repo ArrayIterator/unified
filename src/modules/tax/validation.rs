@@ -1,4 +1,4 @@
-// Tax module — caller, capability, and input validation helpers.
+// Tax module - caller, capability, and input validation helpers.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use super::*;
@@ -23,9 +23,7 @@ use std::time::Duration;
 use url::Url;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 pub(crate) fn new_id() -> String {
     Uuid::new_v4().to_string()
@@ -173,11 +171,11 @@ pub(crate) fn require_record_in_company_scope(
 }
 
 /// Fail closed (403) when a stored record is outside the caller's
-/// company scope FOR A WRITE (C3 task 315, strict by default).
+/// company scope FOR A WRITE (C3, strict by default).
 /// Unlike the read check above (rule A), a write requires an exact
 /// company match: a company caller may write only their own
-/// company's records — global (unscoped) records are platform-only
-/// — and an unresolved caller may write nothing. Mutation handlers
+/// company's records - global (unscoped) records are platform-only
+/// - and an unresolved caller may write nothing. Mutation handlers
 /// call this right after loading the record they mutate; handlers
 /// that only read the record, or load a parent to scope a child
 /// write, keep the read check.

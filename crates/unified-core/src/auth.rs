@@ -8,8 +8,8 @@
 //
 // This type is deliberately the ONLY source of caller identity for
 // handlers. The `X-User-Id` / `X-Role` request headers are
-// self-asserted — any unauthenticated caller could send
-// `X-Role: admin` and pass every capability check — so no code in
+// self-asserted - any unauthenticated caller could send
+// `X-Role: admin` and pass every capability check - so no code in
 // this crate, or in any handler, may derive identity from headers.
 // `caller_from` never reads a header. The per-module `caller()`
 // helpers that still read headers are being migrated to this type
@@ -99,7 +99,7 @@ pub struct Caller {
     /// Role slugs resolved server-side for this user, from the
     /// `user_roles` / `roles` tables at authentication time (see
     /// `with_roles`). Empty for an anonymous caller, and empty when
-    /// the lookup could not run or failed — an empty list grants
+    /// the lookup could not run or failed - an empty list grants
     /// nothing, so a failed lookup fails closed. Never populated
     /// from the token or a request header: a token carries
     /// capabilities, not role slugs.
@@ -111,7 +111,7 @@ pub struct Caller {
     /// Company the verified caller acts for, resolved server-side
     /// from the `users` table at authentication time (see
     /// `with_company`). `None` when the user has no company, or
-    /// when the lookup could not run or failed — `None` grants no
+    /// when the lookup could not run or failed - `None` grants no
     /// company, so a failed lookup fails closed. Never populated
     /// from the token or a request header: a token carries
     /// capabilities, not a company id.
@@ -223,8 +223,8 @@ impl Caller {
 ///
 /// Reads the server-verified `Caller` the auth middleware attached
 /// to the request extensions. When the middleware attached nothing
-/// — a public route, or a request that never passed the middleware
-/// — returns an unauthenticated (anonymous) `Caller`.
+/// - a public route, or a request that never passed the middleware
+/// - returns an unauthenticated (anonymous) `Caller`.
 ///
 /// This function NEVER reads request headers. Any identity derived
 /// from `X-User-Id` / `X-Role` / `X-Session-Id` headers is

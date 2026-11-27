@@ -72,9 +72,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One storage plan: a sellable tier.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS storage_plans (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR NOT NULL,
@@ -103,9 +101,7 @@ CREATE INDEX IF NOT EXISTS ix_storage_plans_enabled
 CREATE INDEX IF NOT EXISTS ix_storage_plans_product_id
     ON storage_plans (product_id);
 
--- ---------------------------------------------------------------------------
 -- One buyer plan assignment (company and/or user).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS storage_plan_assignments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     plan_id UUID NOT NULL,
@@ -134,9 +130,7 @@ CREATE INDEX IF NOT EXISTS ix_storage_plan_assignments_user_id
 CREATE INDEX IF NOT EXISTS ix_storage_plan_assignments_status
     ON storage_plan_assignments (status);
 
--- ---------------------------------------------------------------------------
 -- One metering report for billing (buyer + period).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS storage_usage_metering (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id VARCHAR,
@@ -163,9 +157,7 @@ CREATE INDEX IF NOT EXISTS ix_storage_usage_metering_plan_id
 CREATE INDEX IF NOT EXISTS ix_storage_usage_metering_period
     ON storage_usage_metering (period);
 
--- ---------------------------------------------------------------------------
 -- One bring-your-own storage connection.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS storage_byo_connections (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR NOT NULL,
@@ -225,9 +217,7 @@ CREATE INDEX IF NOT EXISTS ix_storage_byo_connections_status
 CREATE INDEX IF NOT EXISTS ix_storage_byo_connections_provider_kind
     ON storage_byo_connections (provider_kind);
 
--- ---------------------------------------------------------------------------
 -- One version of the BYO terms of use.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS storage_byo_terms (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     version VARCHAR NOT NULL,
@@ -248,9 +238,7 @@ CREATE INDEX IF NOT EXISTS ix_storage_byo_terms_is_current
 CREATE INDEX IF NOT EXISTS ix_storage_byo_terms_enabled
     ON storage_byo_terms (enabled);
 
--- ---------------------------------------------------------------------------
 -- One recorded acceptance of a BYO terms version by one user.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS storage_byo_terms_acceptances (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     terms_id UUID NOT NULL,
@@ -272,9 +260,7 @@ CREATE INDEX IF NOT EXISTS ix_storage_byo_terms_acceptances_user_id
 CREATE INDEX IF NOT EXISTS ix_storage_byo_terms_acceptances_connection_id
     ON storage_byo_terms_acceptances (connection_id);
 
--- ---------------------------------------------------------------------------
 -- One object recorded through a BYO connection.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS storage_byo_objects (
     connection_id UUID NOT NULL,
     key VARCHAR NOT NULL,
@@ -293,9 +279,7 @@ CREATE INDEX IF NOT EXISTS ix_storage_byo_objects_owner_user
 CREATE INDEX IF NOT EXISTS ix_storage_byo_objects_company_id
     ON storage_byo_objects (company_id);
 
--- ---------------------------------------------------------------------------
 -- BYO health-check runs (append-only audit).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS storage_byo_health_checks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     connection_id UUID NOT NULL,

@@ -10,10 +10,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
-// ---------------------------------------------------------------------------
 // Tenant edge guard (C3 pilot 4, group B).
-// ---------------------------------------------------------------------------
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request
@@ -61,7 +58,6 @@ pub(crate) fn caller_company(
 }
 
 // Projects-module hook queries
-// ---------------------------------------------------------------------------
 
 /// Minimal project data returned by the `project.get_requested`
 /// query. Only the fields this module needs: identity, name,

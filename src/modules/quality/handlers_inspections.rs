@@ -48,9 +48,7 @@ use super::types::QualityAlert;
 use super::types::QualityPoint;
 use super::types::SubmitInspectionInput;
 
-// ---------------------------------------------------------------------------
 // Inspection handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_inspections(
     ctx: web::Data<Arc<AppContext>>,
@@ -318,7 +316,7 @@ pub(crate) async fn submit_inspection(
             }
         }
         // Measurements naming a criterion that does not belong to
-        // this point are rejected — they cannot be evaluated.
+        // this point are rejected - they cannot be evaluated.
         for item in &input.measurements {
             let criterion_id = parse_uuid(&item.criterion_id, "criterion")?;
             if !criteria.iter().any(|row| row.id == criterion_id) {
@@ -428,7 +426,7 @@ pub(crate) async fn submit_inspection(
         // Commit under the entry lock: re-check the status (and
         // the assignment) against the live record, then swap it in
         // place. Two concurrent submits can no longer both pass
-        // the check — the second finds the record already
+        // the check - the second finds the record already
         // completed and fails instead of completing twice and
         // raising a duplicate alert. The lock is released before
         // any event is emitted, so a listener reading the store

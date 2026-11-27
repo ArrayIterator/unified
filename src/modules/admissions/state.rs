@@ -1,4 +1,4 @@
-// admissions module — Shared state.
+// admissions module - Shared state.
 //
 // Split from the former single-file module `src/modules/admissions.rs`.
 // The module root (`admissions.rs`) re-exports the public items, so the
@@ -22,9 +22,7 @@ use super::constants::{KEY_APPLICATION_STATUSES, KEY_CHECKLIST_STATUSES, KEY_DEC
 use super::types::{AdmissionPeriod, AdmissionResult, AdmissionSetting, Application, ApplicationScore, ChecklistItem, PeriodQuota, RequiredDocument, ScoreBreakdown, ScoreTotal, StageDefinition, WaitlistEntry};
 use super::helpers::{caller, new_id, now, round4, today};
 
-// ---------------------------------------------------------------------------
 // State
-// ---------------------------------------------------------------------------
 
 pub struct AdmissionsState {
     pub(crate) hooks: RwLock<Arc<HookBus>>,
@@ -273,8 +271,8 @@ impl AdmissionsState {
     }
 
     /// Waiting waitlist entries of one period, in promotion order:
-    /// by the configured policy — highest weighted total first, then
-    /// earliest submission — or by submission time only.
+    /// by the configured policy - highest weighted total first, then
+    /// earliest submission - or by submission time only.
     pub(crate) fn waiting_entries(&self, period_id: &str) -> Vec<WaitlistEntry> {
         let mut entries: Vec<WaitlistEntry> = self
             .waitlist
@@ -645,7 +643,7 @@ impl AdmissionsState {
         let (title, body) = match decision {
             "accepted" => (
                 "Your application was accepted",
-                "Congratulations — your application was accepted. Follow the enrolment instructions to complete your registration.",
+                "Congratulations - your application was accepted. Follow the enrolment instructions to complete your registration.",
             ),
             "rejected" => (
                 "Your application result is available",

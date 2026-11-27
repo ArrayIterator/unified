@@ -3,9 +3,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// Working hours for one department. `days` uses 0 = Sunday through
 /// 6 = Saturday. `timezone` is a display name; `utc_offset_minutes`

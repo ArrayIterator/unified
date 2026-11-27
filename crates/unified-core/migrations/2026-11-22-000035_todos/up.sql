@@ -1,4 +1,4 @@
--- Todos tables (`src/modules/todos.rs`): personal, per-user todos — lists
+-- Todos tables (`src/modules/todos.rs`): personal, per-user todos - lists
 -- (including a default Inbox), todos with due dates, priorities,
 -- tags, one-level subtasks, storage-key attachments (metadata only),
 -- list sharing (read/edit, ownership never transfers), recurring
@@ -25,7 +25,7 @@
 --     (`TodoPriority`; note there is no `medium` here, unlike the
 --     tasks module). `todos.status` is `open` or `done`
 --     (`TodoStatus`): there is no in-progress / review / blocked
---     workflow — that is the tasks module's job.
+--     workflow - that is the tasks module's job.
 --   - `todos.attachments` is JSONB: an array of
 --     `TodoAttachment` records (`id`, `storage_target`,
 --     `storage_key`, `file_name`, `size_bytes`, `created_at`).
@@ -59,7 +59,7 @@
 --     `status` is `pending`, `sent`, or `cancelled`;
 --     `scheduler_status` is `not_scheduled`, `queued`, or
 --     `declined` (the `todos.reminders.send` scheduler kind does
---     not exist yet — see the module header).
+--     not exist yet - see the module header).
 --   - `todo_lists`, `todos`, `todo_subtasks`,
 --     `todo_completion_log`, and `todo_reminders` carry
 --     `updated_at` although some of the structs are append-only or
@@ -70,9 +70,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One todo list. Exactly one owner; sharing lives in `todo_shares`.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS todo_lists (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     owner_id VARCHAR NOT NULL,
@@ -95,10 +93,8 @@ CREATE INDEX IF NOT EXISTS idx_todo_lists_archived
 CREATE INDEX IF NOT EXISTS idx_todo_lists_created_at
     ON todo_lists (created_at);
 
--- ---------------------------------------------------------------------------
 -- One todo. Exactly one owner; a shared-list viewer never becomes
 -- an owner. `overdue` is computed, never stored.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS todos (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     list_id UUID NOT NULL REFERENCES todo_lists (id) ON DELETE CASCADE,
@@ -154,11 +150,9 @@ CREATE INDEX IF NOT EXISTS idx_todos_completed_at
 CREATE INDEX IF NOT EXISTS idx_todos_recurrence_group_id
     ON todos (recurrence_group_id);
 
--- ---------------------------------------------------------------------------
 -- One checkable subtask. Exactly one level: a subtask has no
 -- children of its own. (The in-memory store embeds subtasks in the
 -- todo; this table is the normalized persistence target.)
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS todo_subtasks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     todo_id UUID NOT NULL REFERENCES todos (id) ON DELETE CASCADE,
@@ -175,10 +169,8 @@ CREATE TABLE IF NOT EXISTS todo_subtasks (
 CREATE INDEX IF NOT EXISTS idx_todo_subtasks_todo_id
     ON todo_subtasks (todo_id);
 
--- ---------------------------------------------------------------------------
 -- One share grant: `shared_with_user_id` may read (or read + edit)
 -- the list. Ownership stays with `todo_lists.owner_id`.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS todo_shares (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     list_id UUID NOT NULL REFERENCES todo_lists (id) ON DELETE CASCADE,
@@ -196,10 +188,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_todo_shares_list_user
 CREATE INDEX IF NOT EXISTS idx_todo_shares_shared_with_user_id
     ON todo_shares (shared_with_user_id);
 
--- ---------------------------------------------------------------------------
 -- Completion log (append-only): who completed or reopened a todo,
 -- and when. Streaks are computed from this table.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS todo_completion_log (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     todo_id UUID NOT NULL REFERENCES todos (id) ON DELETE CASCADE,
@@ -217,10 +207,8 @@ CREATE INDEX IF NOT EXISTS idx_todo_completion_log_user_id
 CREATE INDEX IF NOT EXISTS idx_todo_completion_log_created_at
     ON todo_completion_log (created_at);
 
--- ---------------------------------------------------------------------------
 -- One due-date reminder. `due_at` is denormalized (see the header):
 -- a reminder always carries a due date.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS todo_reminders (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     todo_id UUID NOT NULL REFERENCES todos (id) ON DELETE CASCADE,

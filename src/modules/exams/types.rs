@@ -13,9 +13,7 @@ use super::{constants::*, settings::*, module::*, helpers::*, inputs::*, handler
 
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-// ---------------------------------------------------------------------------
 // Records
-// ---------------------------------------------------------------------------
 pub struct QuestionBank {
     pub id: String,
     pub title: String,

@@ -16,7 +16,7 @@
 // order, but it cannot restore entries lost to a restart. Full
 // durability needs the entries persisted to the `audit_entries`
 // table (which has no hash columns yet, so that also needs a
-// migration) — out of scope for this pass.
+// migration) - out of scope for this pass.
 
 use chrono::{DateTime, Utc};
 use dashmap::DashMap;
@@ -254,7 +254,7 @@ impl AuditState {
     /// entry must link to the previous entry's hash with consecutive
     /// sequence numbers. A tampered, deleted, or reordered entry
     /// fails here. Note this only covers entries still held in
-    /// memory — entries lost to a restart are not verifiable until
+    /// memory - entries lost to a restart are not verifiable until
     /// full database persistence lands (see the module note above).
     pub(crate) fn verify_chain(&self) -> ChainVerification {
         let mut items: Vec<AuditEntry> = self

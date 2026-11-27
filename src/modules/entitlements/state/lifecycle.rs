@@ -1,4 +1,4 @@
-//! Entitlements state (split from state.rs; moved verbatim).
+//! Entitlements state.
 
 use super::*;
 
@@ -386,7 +386,7 @@ impl EntitlementsState {
     /// Revoke every active stored row for one tenant and module
     /// except explicit manual grants. Called when the tenants
     /// module revokes its grant for the module: the grant is gone,
-    /// so the module lapses into grace (or disable) — but a manual
+    /// so the module lapses into grace (or disable) - but a manual
     /// grant made here is a separate entitlement the tenants
     /// revoke did not address, so it survives and only an admin
     /// revoke here removes it. Tenant data is never touched.
@@ -498,7 +498,7 @@ impl EntitlementsState {
 
 
     /// Top denied modules for a tenant in the lookback window, most
-    /// denied first. Only counts are returned — never buyer
+    /// denied first. Only counts are returned - never buyer
     /// personal data.
     pub(crate) fn top_denied_modules(&self, company_id: &str, limit: usize) -> Vec<(String, u64)> {
         let since = Utc::now() - Duration::days(DENIED_LOOKBACK_DAYS);

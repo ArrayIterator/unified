@@ -1,7 +1,6 @@
-// hardening — state.
+// hardening - state.
 // Shared hardening state: construction, shared instance, overview.
 //
-// Split from `crates/unified-core/src/hardening.rs`; moved verbatim, no behaviour changes.
 
 use super::*;
 use crate::error::UnifiedError;
@@ -121,9 +120,7 @@ impl Default for HardeningState {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Shared instance
-// ---------------------------------------------------------------------------
 
 static SHARED_STATE: RwLock<Option<Arc<HardeningState>>> = RwLock::new(None);
 

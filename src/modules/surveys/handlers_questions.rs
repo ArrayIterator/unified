@@ -1,4 +1,4 @@
-// surveys module — Question handlers.
+// surveys module - Question handlers.
 //
 // Split from the former single-file module `src/modules/surveys.rs`.
 // The module root (`surveys.rs`) re-exports the public items, so the
@@ -30,9 +30,7 @@ use super::helpers::{
     valid_question_type,
 };
 
-// ---------------------------------------------------------------------------
 // Question handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) fn validate_options(question_type: &str, options: &[String]) -> UnifiedResult<Vec<String>> {
     if question_type == "multiple_choice" {

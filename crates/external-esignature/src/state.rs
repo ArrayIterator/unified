@@ -1,11 +1,9 @@
-//! eSignature external module (split from lib.rs; moved verbatim).
+//! eSignature external module.
 
 use super::*;
 
 
-// ---------------------------------------------------------------------------
 // In-memory state and workflow operations
-// ---------------------------------------------------------------------------
 
 /// In-memory store for the module. The `DashMap` store is
 /// authoritative for the running process; a database migration is

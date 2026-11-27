@@ -3,10 +3,8 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Assets (migration 000050_assets). `Asset` carries NUMERIC columns,
 // so it skips ALL serde derives per the repo header rule.
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     assets (id) {

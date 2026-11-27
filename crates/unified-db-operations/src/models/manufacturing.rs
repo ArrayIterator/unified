@@ -10,11 +10,9 @@ use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Manufacturing / MRP (migration 000086_manufacturing).
 // Structs carrying NUMERIC columns skip serde derives (PgNumeric
 // has no serde implementation), per the repo header rule.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = mfg_boms)]

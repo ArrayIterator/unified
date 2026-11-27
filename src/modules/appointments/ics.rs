@@ -1,4 +1,4 @@
-// appointments — ics.
+// appointments - ics.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -27,9 +27,7 @@ use super::handlers_appointments::*;
 use super::handlers_reminders::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
-// iCalendar (RFC 5545, hand-built — no calendar crate in Cargo.toml)
-// ---------------------------------------------------------------------------
+// iCalendar (RFC 5545, hand-built - no calendar crate in Cargo.toml)
 
 /// Escape a TEXT value per RFC 5545 section 3.3.11: backslash,
 /// semicolon, comma, and newlines. Folding is applied at 75
@@ -84,7 +82,7 @@ pub(crate) fn ics_appointment_block(
         format!("DTEND:{}", ics_datetime(appointment.ends_at)),
         format!(
             "SUMMARY:{}",
-            ics_escape(&format!("{} — {}", service.name, appointment.customer_name))
+            ics_escape(&format!("{} - {}", service.name, appointment.customer_name))
         ),
     ];
     let description = format!(

@@ -1,11 +1,9 @@
-// bank_transfer — Validation helpers and small pure utilities.
+// bank_transfer - Validation helpers and small pure utilities.
 
 use unified_core::error::{UnifiedError, UnifiedResult};
 use chrono::{NaiveDate, Utc};
 
-// ---------------------------------------------------------------------------
 // Validation helpers.
-// ---------------------------------------------------------------------------
 
 /// Validate an ISO 4217 currency code (three uppercase letters).
 pub(crate) fn validate_currency(currency: &str) -> UnifiedResult<String> {

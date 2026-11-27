@@ -12,9 +12,7 @@ use super::providers::*;
 use super::types::*;
 use super::validation::*;
 
-// ---------------------------------------------------------------------------
 // EVM provider (generic JSON-RPC + Etherscan-style indexer)
-// ---------------------------------------------------------------------------
 
 /// Generic JSON-RPC provider for any EVM chain. Address history comes
 /// from an optional Etherscan-compatible indexer endpoint, because

@@ -1,4 +1,4 @@
-//! Curriculum module — competency-based school curricula. — Report card entry handlers.
+//! Curriculum module - competency-based school curricula. - Report card entry handlers.
 //!
 //! Split from `src/modules/curriculum.rs`; behaviour unchanged.
 
@@ -119,7 +119,7 @@ pub(super) async fn add_report_card_entry(
             }),
         };
         // The academic module may not have announced this grade
-        // yet; the link is still accepted — the grade record stays
+        // yet; the link is still accepted - the grade record stays
         // owned by the academic module either way.
         let academic_grade_id = optional_text(&input.academic_grade_id, "academic_grade_id", MAX_REF_LEN)?;
         let entry = ReportCardEntry {

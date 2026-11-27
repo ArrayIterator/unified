@@ -1,11 +1,11 @@
-// Admissions module — new-student registration.
+// Admissions module - new-student registration.
 //
 // Admission periods per academic year and term, online registration
 // through the Forms module, selection stages with weighted scoring,
 // result announcement, registration fees through Billing, a document
 // checklist through the Documents module, an ordered waitlist, and
 // enrolment handoff to the academic system. Interconnection happens
-// only through the hook bus — no module calls another module directly.
+// only through the hook bus - no module calls another module directly.
 //
 // The full module documentation (roles, status vocabularies, events)
 // lives in `admissions/module.rs`.

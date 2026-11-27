@@ -16,9 +16,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Stock-take handlers
-// ---------------------------------------------------------------------------
 
 /// Checked stock-take totals: sums of expected / counted
 /// quantities and their difference, refusing overflow with a 409

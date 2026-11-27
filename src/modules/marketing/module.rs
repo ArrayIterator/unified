@@ -181,9 +181,7 @@ use super::handlers_audience::*;
 use super::hooks::*;
 use super::ai_capabilities::AI_CAPABILITIES;
 
-// ---------------------------------------------------------------------------
 // Module.
-// ---------------------------------------------------------------------------
 
 pub struct MarketingModule {
     state: Arc<MarketingState>,

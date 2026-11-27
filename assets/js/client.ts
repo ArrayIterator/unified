@@ -17,7 +17,7 @@
     error?: { message?: string };
   }
 
-  /* ---------- CSRF protection ---------- */
+  /* CSRF protection */
   // Cookie-authenticated mutations require a valid `X-CSRF-Token`
   // header: the server answers 403 without one. The token is bound
   // to the session, fetched from `GET /api/v1/security/csrf-token`,
@@ -123,7 +123,7 @@
     body: unknown;
   }
 
-  /* ---------- Navigation active state ---------- */
+  /* Navigation active state */
   // Server-rendered links already carry `is-active` / `aria-current`;
   // this only keeps the state correct when the browser moves between
   // dashboard sections without a full reload (same-document navigation).
@@ -142,7 +142,7 @@
     });
   }
 
-  /* ---------- View-as: stop the session an admin started ---------- */
+  /* View-as: stop the session an admin started */
   // The banner is shown to the impersonated user. The request carries
   // the admin's session cookie (set by the page response), and the
   // server checks the REAL admin identity, so this button only works

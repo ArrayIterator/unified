@@ -1,7 +1,6 @@
-// hardening — helpers.
+// hardening - helpers.
 // Request helpers: client IP, paths, responses, headers.
 //
-// Split from `crates/unified-core/src/hardening.rs`; moved verbatim, no behaviour changes.
 
 use super::*;
 use crate::error::UnifiedError;
@@ -49,9 +48,7 @@ impl HardeningState {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Request helpers shared by the middleware
-// ---------------------------------------------------------------------------
 
 /// Client IP for a request: the first forwarded address reported by
 /// Actix `ConnectionInfo` when present, otherwise the peer address.

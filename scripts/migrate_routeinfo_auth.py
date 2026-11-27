@@ -38,7 +38,7 @@ Usage:
   With no FILE arguments, walks <root>/src and <root>/crates for
   *.rs files. Files modified in the last 60 minutes are skipped
   (another agent may be editing them) and reported; re-run later
-  for those — until they are migrated the tree does not compile
+  for those - until they are migrated the tree does not compile
   (E0063: missing field `auth`), so the skip list is the follow-up.
 
 The scanner is string-aware (path params like `{id}` sit inside

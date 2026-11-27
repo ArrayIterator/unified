@@ -42,7 +42,6 @@ use super::types::RevokeRequest;
 use super::types::SwapRequest;
 use super::types::UpdateSettingsRequest;
 
-// ---------------------------------------------------------------------------
 // Authorization.
 //
 // There is NO global admin gate in front of `/api/v1/certificates`
@@ -56,7 +55,6 @@ use super::types::UpdateSettingsRequest;
 //     MANAGE for writes).
 // `check_capability` fails closed through the `role.check` hook: no
 // answer means not allowed.
-// ---------------------------------------------------------------------------
 
 /// Authorize a global (non-domain-scoped) call: the caller must hold
 /// `permission`. Also reports whether the caller holds MANAGE
@@ -82,9 +80,7 @@ fn auth_response<T>(result: UnifiedResult<T>) -> Result<T, HttpResponse> {
     result.map_err(|error| json::respond(Err::<Value, UnifiedError>(error), false))
 }
 
-// ---------------------------------------------------------------------------
 // Handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_certificates(
     ctx: web::Data<Arc<AppContext>>,

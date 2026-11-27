@@ -2,12 +2,12 @@
 //
 // Every list endpoint accepts the same query parameters:
 //
-//   - `page` — 1-based page number, default 1.
-//   - `per_page` — items per page, default 20, clamped to 1..=100.
-//   - `sort` — field name to sort by; validated against an allow-list by
+//   - `page` - 1-based page number, default 1.
+//   - `per_page` - items per page, default 20, clamped to 1..=100.
+//   - `sort` - field name to sort by; validated against an allow-list by
 //     the caller.
-//   - `order` — `asc` or `desc`, default `asc`.
-//   - `search` — free-text search applied by the caller.
+//   - `order` - `asc` or `desc`, default `asc`.
+//   - `search` - free-text search applied by the caller.
 //   - any other query parameter is treated as an exact-match filter
 //     (`field=value`).
 //
@@ -51,8 +51,8 @@ pub struct Pagination {
 /// `p` is `(p - 1) * per_page`, so an unbounded `page: u32` overflows
 /// that multiplication (`?page=4294967295` panics in debug builds
 /// and wraps in release). Clamping the page keeps every offset
-/// inside `i64` — `MAX_PAGE * MAX_PER_PAGE` is far below
-/// `i64::MAX` — and a page past the end of the data simply returns
+/// inside `i64` - `MAX_PAGE * MAX_PER_PAGE` is far below
+/// `i64::MAX` - and a page past the end of the data simply returns
 /// an empty page, which is the correct answer for it.
 pub const MAX_PAGE: u32 = 1_000_000;
 

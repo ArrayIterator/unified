@@ -314,7 +314,7 @@ pub(crate) async fn update_stage(
 }
 
 /// Delete a pipeline stage (manager). A stage that still
-/// holds referrals cannot be deleted — move the referrals
+/// holds referrals cannot be deleted - move the referrals
 /// first. References to the deleted stage are pruned from
 /// other stages' allowed-next lists, and reward rules that
 /// triggered on it lose their trigger stage.

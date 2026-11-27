@@ -241,9 +241,7 @@ fn parse_bool_filter(raw: Option<&String>) -> Option<bool> {
     })
 }
 
-// ---------------------------------------------------------------------------
 // Thread handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_forum_threads(
     state: web::Data<ForumState>,

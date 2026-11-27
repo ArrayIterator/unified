@@ -1,4 +1,4 @@
-// Elearning — Course handlers.
+// Elearning - Course handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -20,9 +20,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Course handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_courses(
     ctx: web::Data<Arc<AppContext>>,

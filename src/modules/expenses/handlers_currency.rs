@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use super::*;
 
-// --- Handlers: currency rates -------------------------------------------------
+// Handlers: currency rates
 
 pub(crate) async fn list_currency_rates(
     ctx: web::Data<Arc<AppContext>>,

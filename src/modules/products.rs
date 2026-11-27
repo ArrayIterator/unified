@@ -1,4 +1,4 @@
-// Product Management module — the single source of truth for "what
+// Product Management module - the single source of truth for "what
 // we sell".
 //
 // This module owns the full product lifecycle (draft -> active ->
@@ -8,7 +8,7 @@
 // pricing rules, pricing (tiers, per-seat, usage-based, one-time /
 // subscription, regional pricing, taxes), subscription plan fields
 // on subscription products (trial, proration policy, grace period,
-// dunning settings — read back through
+// dunning settings - read back through
 // `GET /api/v1/products/{id}/subscription-plan` and snapshotted
 // into subscriptions by the store at checkout), inventory for physical
 // goods with low-stock alerts, product files and versions that only

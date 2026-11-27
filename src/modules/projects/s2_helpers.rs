@@ -1,4 +1,4 @@
-// Projects module — project validation and lookup helpers.
+// Projects module - project validation and lookup helpers.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use super::*;
@@ -7,9 +7,7 @@ use unified_core::json;
 use serde::Serialize;
 use serde_json::{Value, json};
 
-// ---------------------------------------------------------------------------
 // Private helpers (all prefixed `s2_`)
-// ---------------------------------------------------------------------------
 
 /// Normalize a column name (or supplied key) into a status key:
 /// trimmed, lowercased, spaces and dashes become underscores.
@@ -146,7 +144,7 @@ pub struct S2ProjectOverview {
     pub progress_percent: f64,
 }
 
-/// Resolve the caller's company for a WRITE (C3 task 315, strict by
+/// Resolve the caller's company for a WRITE (C3, strict by
 /// default): a write requires a resolved company scope, so an
 /// unresolved caller is refused with 403 instead of silently
 /// writing a global (unscoped) record. Mutation handlers call

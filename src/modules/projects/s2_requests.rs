@@ -1,4 +1,4 @@
-// Projects module — project, member, template, board, and milestone inputs.
+// Projects module - project, member, template, board, and milestone inputs.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use super::*;
@@ -18,9 +18,7 @@ use serde_json::Value;
 // headers (`X-User-Id` / `X-Role`) through the s1 helper
 // `viewer_of`, so handlers take an `HttpRequest` extractor.
 
-// ---------------------------------------------------------------------------
 // Input structs
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct CreateProject {

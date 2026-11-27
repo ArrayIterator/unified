@@ -17,10 +17,8 @@ use super::types::DomainReservation;
 use super::types::ProductSubdomain;
 use super::types::SubdomainAllocation;
 
-// ---------------------------------------------------------------------------
 // Stores (authoritative at runtime; migration tables are the
 // persistence targets for the integrator's Diesel layer).
-// ---------------------------------------------------------------------------
 
 static RESERVATIONS: OnceLock<DashMap<Uuid, DomainReservation>> = OnceLock::new();
 

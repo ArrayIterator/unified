@@ -1,7 +1,7 @@
 // Cloudflare connector module.
 //
 // API-token authenticated access to the Cloudflare v4 API
-// (https://api.cloudflare.com only — the module never calls any other
+// (https://api.cloudflare.com only - the module never calls any other
 // host): account and zone listing, DNS record CRUD with strict
 // validation, cache purge / development mode / cache level, and
 // rate-limit handling that honours `Retry-After` on HTTP 429.

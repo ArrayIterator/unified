@@ -136,9 +136,7 @@ pub(crate) fn transition_order(
     Ok(updated)
 }
 
-// ---------------------------------------------------------------------------
 // Payment hook listeners
-// ---------------------------------------------------------------------------
 
 /// Event names this module listens to (the payments module owns the
 /// canonical constants; the literals are repeated here so the store
@@ -150,8 +148,8 @@ pub(crate) const BANK_TRANSFER_REJECTED: &str = "bank_transfer.rejected";
 
 /// An approved payment (`payment.captured`, gateway or bank transfer)
 /// moves the matching order to `paid`. Only `pending`,
-/// `payment_pending`, and `pending_verification` may move to paid —
-/// never `refunded`, `cancelled`, or `completed` — and an order that
+/// `payment_pending`, and `pending_verification` may move to paid -
+/// never `refunded`, `cancelled`, or `completed` - and an order that
 /// is already paid is left alone, so redelivered captures are safe.
 /// The payment reference (provider transaction id) is recorded on the
 /// order, and the same downstream events the manual pay path emits
@@ -657,12 +655,12 @@ pub(crate) const STORE_ENTITLEMENT_CHECK: &str = "store.entitlement.check";
 ///
 /// Assumptions, recorded because the payload cannot supply them:
 /// tier data is NOT in the payload (only `tier_count`), so tiers
-/// are never mirrored here — a new listing starts with none and
+/// are never mirrored here - a new listing starts with none and
 /// sells at its base price. The store kind is kept verbatim from
 /// the catalog: the store's own create/update validation only
 /// knows `theme`/`plugin`/`software`, but checkout does not
 /// depend on kind, and the catalog vocabulary (`digital`,
-/// `meeting`, `hosting`, ...) is wider — the listing stays
+/// `meeting`, `hosting`, ...) is wider - the listing stays
 /// truthful to its source. `pricing_model` values with no store
 /// equivalent (`usage`, `per_seat`) fall back to `one_time`.
 pub(crate) fn on_product_listed(state: Arc<StoreState>, ctx: &mut HookContext) {
@@ -855,7 +853,7 @@ pub(crate) fn on_product_listed(state: Arc<StoreState>, ctx: &mut HookContext) {
 /// Retire a catalog listing from the store (`product.delisted`).
 ///
 /// The listing moves to `draft` so it can no longer be bought,
-/// while the record — and its order history — is kept. A later
+/// while the record - and its order history - is kept. A later
 /// `product.listed` republishes it. Nothing is deleted: deleting
 /// would orphan the orders and entitlements that reference the
 /// product id.
@@ -903,7 +901,7 @@ pub(crate) fn on_product_delisted(state: Arc<StoreState>, ctx: &mut HookContext)
 /// (`properties.block.purchase_requested`
 /// `{purchase_id, property_id, plan_id, block_id, buyer_id, price,
 /// currency}`): one line item for the block at the payload's price,
-/// buyer as the order owner, status `pending` — the block is NOT
+/// buyer as the order owner, status `pending` - the block is NOT
 /// marked sold here; the properties module owns that transition on
 /// `payment.captured`. Emits `properties.order.created`
 /// `{purchase_id, order_id, block_id, property_id, buyer_id,
@@ -977,7 +975,7 @@ pub(crate) fn on_properties_purchase_requested(state: Arc<StoreState>, ctx: &mut
         return;
     }
     // Idempotency: orders carry no purchase-link field, so a
-    // repeat request is detected by the block line — a pending
+    // repeat request is detected by the block line - a pending
     // order owned by this buyer with this block as its only line.
     // That is the same purchase by construction (one block sells
     // once), so the existing order is returned instead of a
@@ -1085,9 +1083,9 @@ pub(crate) fn on_properties_purchase_requested(state: Arc<StoreState>, ctx: &mut
 /// `{"product_id", "user_id"}`.
 ///
 /// Entitled when the user holds an active entitlement for the
-/// product — the same `DownloadEntitlement` records the store
+/// product - the same `DownloadEntitlement` records the store
 /// entitlements list endpoint reads (status `active` and not past
-/// `expires_at`) — or an active issued license for it. Issued
+/// `expires_at`) - or an active issued license for it. Issued
 /// licenses carry the product NAME, not its id, so the license
 /// fallback resolves the name through the store product. The
 /// answer carries both `"entitled": bool` and an `entitlements`

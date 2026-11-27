@@ -20,9 +20,7 @@ use super::cert_events;
 use super::types::DEFAULT_CF_RANGES_V4_URL;
 use super::types::DEFAULT_CF_RANGES_V6_URL;
 
-// ---------------------------------------------------------------------------
 // Certificate modes (data-driven registry) and Cloudflare detection.
-// ---------------------------------------------------------------------------
 
 /// One certificate-mode definition in the admin-extensible registry.
 /// The built-in modes are seed data only (see

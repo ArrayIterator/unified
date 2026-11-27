@@ -8,14 +8,14 @@
 --
 -- Migration number note: written as 000092 when
 -- `2026-11-22-000091_library` appeared on disk; renumbered to
--- 000098 by the integration renumber (gapless 000001–000108).
+-- 000098 by the integration renumber (gapless 000001-000108).
 -- Do not renumber.
 --
 -- TENANT-SCHEMA TABLES (standing rule: tenant-scoped data
 -- access). These tables hold per-tenant business data, so they are
 -- created PER TENANT SCHEMA by the migration runner with the
 -- search_path set to that tenant's schema (derived from the tenant
--- namespace id, uuidv7, by the batch-17 schema_name helper) —
+-- namespace id, uuidv7, by the batch-17 schema_name helper) -
 -- never in the `public` schema. Control-plane tables (tenants,
 -- subscriptions, domains, billing, licensing) stay in `public`.
 -- Every table carries `tenant_id` (the uuidv7 namespace id)

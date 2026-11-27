@@ -9,9 +9,7 @@ use serde_json::json;
 use super::constants::{DOMAIN_REJECTED, DOMAIN_REQUESTED, DOMAIN_VERIFIED, EVENT_DOMAIN_REJECTED, EVENT_DOMAIN_VERIFIED};
 use super::state::{WhitelabelState};
 
-// ---------------------------------------------------------------------------
 // Hook handlers
-// ---------------------------------------------------------------------------
 
 /// Answer `whitelabel.branding.resolve` with the server-resolved
 /// branding for `{"company_id", "tenant_id"?}`. This is the hook

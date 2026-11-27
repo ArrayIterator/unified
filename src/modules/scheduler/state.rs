@@ -17,9 +17,7 @@ use unified_core::tls::SslStorage;
 
 use super::{Job, JobRun, QueueItem};
 
-// ---------------------------------------------------------------------------
 // Context handles
-// ---------------------------------------------------------------------------
 
 /// The shareable handles of an `AppContext`, cloned by
 /// `Module::init` into `SchedulerState::context`.
@@ -48,9 +46,7 @@ pub(crate) struct ContextHandles {
     pub(crate) tls: Arc<RwLock<Option<Arc<SslStorage>>>>,
 }
 
-// ---------------------------------------------------------------------------
 // State
-// ---------------------------------------------------------------------------
 
 pub struct SchedulerState {
     pub(crate) hooks: RwLock<Arc<HookBus>>,

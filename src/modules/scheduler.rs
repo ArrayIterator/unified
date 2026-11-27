@@ -1,4 +1,4 @@
-//! Scheduler module — Scheduler / Queue module.
+//! Scheduler module - Scheduler / Queue module.
 //!
 //! Split into submodules by concern; the public API is
 //! re-exported below. The full route map and module notes

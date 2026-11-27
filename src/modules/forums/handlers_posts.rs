@@ -168,9 +168,7 @@ fn count_open_reports(state: &ForumState, target_type: &str, target_id: Uuid) ->
         .count() as i64
 }
 
-// ---------------------------------------------------------------------------
 // Post handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_thread_posts(
     state: web::Data<ForumState>,

@@ -1,4 +1,4 @@
-// Maps page (/react/maps) — Map & Tagging administration.
+// Maps page (/react/maps) - Map & Tagging administration.
 //
 // Everything here is ajaxified: locations, layers, geofences,
 // kinds, roles, providers, and settings all load through the
@@ -238,9 +238,9 @@ export default function MapsPage() {
         <p className="mt-1 text-sm text-muted">
           Shared locations, layers, geofences, and tile providers. Click
           the map to fill a new location&apos;s coordinates; click a pin to
-          select it. Provider: {settings?.display_name ?? "—"}
+          select it. Provider: {settings?.display_name ?? "-"}
           {settings && settings.requires_api_key && !settings.key_configured
-            ? " (needs an API key — see provider settings below)"
+            ? " (needs an API key - see provider settings below)"
             : ""}
         </p>
       </div>
@@ -263,8 +263,8 @@ export default function MapsPage() {
       {selected && (
         <Card title={selected.label}>
           <p className="text-sm text-muted">
-            {selected.kind} · {selected.latitude.toFixed(6)}, {selected.longitude.toFixed(6)}
-            {selected.address ? ` · ${selected.address}` : ""}
+            {selected.kind} - {selected.latitude.toFixed(6)}, {selected.longitude.toFixed(6)}
+            {selected.address ? ` - ${selected.address}` : ""}
           </p>
           <div className="mt-3">
             <Button
@@ -336,7 +336,7 @@ export default function MapsPage() {
       <Card title={`Locations (${locations.length})`}>
         {locations.length === 0 ? (
           <EmptyState>
-            No locations yet — save one above, or click the map to fill its coordinates first.
+            No locations yet - save one above, or click the map to fill its coordinates first.
           </EmptyState>
         ) : (
           <ul className="divide-y divide-border">
@@ -349,7 +349,7 @@ export default function MapsPage() {
                 >
                   <span className="block truncate text-sm font-medium">{location.label}</span>
                   <span className="block truncate text-xs text-muted">
-                    {location.kind} · {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
+                    {location.kind} - {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
                   </span>
                 </button>
                 <Badge>{location.kind}</Badge>
@@ -401,7 +401,7 @@ export default function MapsPage() {
             )}
             {nearbyResults.map((found) => (
               <li key={found.id} className="py-2 text-sm">
-                {found.label} · {found.distance_km.toFixed(2)} km
+                {found.label} - {found.distance_km.toFixed(2)} km
               </li>
             ))}
           </ul>
@@ -411,7 +411,7 @@ export default function MapsPage() {
       <Card title="Locations of one record">
         <p className="mb-3 text-sm text-muted">
           Look up every location attached to another module&apos;s record
-          (a shipment, warehouse, customer, ODP, …) through the generic
+          (a shipment, warehouse, customer, ODP, ...) through the generic
           location link.
         </p>
         <div className="grid gap-3 sm:grid-cols-4">
@@ -439,7 +439,7 @@ export default function MapsPage() {
             )}
             {entityLocations.map((found) => (
               <li key={found.id} className="py-2 text-sm">
-                {found.label} · role: {found.role}
+                {found.label} - role: {found.role}
               </li>
             ))}
           </ul>
@@ -506,7 +506,7 @@ export default function MapsPage() {
           </Button>
         </div>
         {layers.length === 0 ? (
-          <EmptyState>No layers — layers group pins on the map.</EmptyState>
+          <EmptyState>No layers - layers group pins on the map.</EmptyState>
         ) : (
           <ul className="divide-y divide-border">
             {layers.map((layer) => (
@@ -565,7 +565,7 @@ export default function MapsPage() {
           Add geofence
         </Button>
         {geofences.length === 0 ? (
-          <EmptyState>No geofences — a geofence is a named GeoJSON Polygon zone.</EmptyState>
+          <EmptyState>No geofences - a geofence is a named GeoJSON Polygon zone.</EmptyState>
         ) : (
           <ul className="mt-3 divide-y divide-border">
             {geofences.map((fence) => (
@@ -726,7 +726,7 @@ export default function MapsPage() {
         <p className="mb-3 text-sm text-muted">
           The map tiles come from the active provider. OpenStreetMap is
           the free default (no key). Mapbox and Google Maps need a
-          browser key — store only a referrer-restricted key; it is
+          browser key - store only a referrer-restricted key; it is
           encrypted at rest and never shown again. Any other tile
           server is a custom provider below.
         </p>
@@ -734,7 +734,7 @@ export default function MapsPage() {
           <Select
             label="Active provider"
             items={[
-              { id: "", label: `Keep current (${settings?.display_name ?? "—"})` },
+              { id: "", label: `Keep current (${settings?.display_name ?? "-"})` },
               ...providers
                 .filter((provider) => provider.enabled)
                 .map((provider) => ({
@@ -746,7 +746,7 @@ export default function MapsPage() {
             onSelectionChange={setActiveProvider}
           />
           <Input
-            label={`Browser API key ${settings?.key_configured ? "(stored — leave blank to keep)" : "(not stored)"}`}
+            label={`Browser API key ${settings?.key_configured ? "(stored - leave blank to keep)" : "(not stored)"}`}
             type="password"
             autoComplete="off"
             value={apiKey}
@@ -835,7 +835,7 @@ export default function MapsPage() {
           <Input
             value={providerAttribution}
             onChange={setProviderAttribution}
-            placeholder="Attribution, e.g. © Example Tiles"
+            placeholder="Attribution, e.g. (c) Example Tiles"
           />
         </div>
         <div className="mt-3">

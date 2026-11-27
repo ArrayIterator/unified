@@ -23,10 +23,8 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- A cluster: another Unified instance group (`unified`) or a
 -- provider pool (`provider_pool`).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS clusters (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR NOT NULL,
@@ -40,11 +38,9 @@ CREATE TABLE IF NOT EXISTS clusters (
 CREATE INDEX IF NOT EXISTS idx_clusters_status
     ON clusters (status);
 
--- ---------------------------------------------------------------------------
 -- One node of a cluster. `role` is `primary`, `member`, or `edge`;
 -- `status` is `active` or `revoked`; `health` is `healthy`,
 -- `degraded`, `unhealthy`, or `unknown`.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS cluster_nodes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     cluster_id UUID NOT NULL REFERENCES clusters (id) ON DELETE CASCADE ON UPDATE NO ACTION,
@@ -67,10 +63,8 @@ CREATE INDEX IF NOT EXISTS idx_cluster_nodes_cluster_id
 CREATE INDEX IF NOT EXISTS idx_cluster_nodes_health
     ON cluster_nodes (health);
 
--- ---------------------------------------------------------------------------
 -- A sync plan: the peer node this plan syncs with, the direction,
 -- the synced domains, and the schedule.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS cluster_sync_plans (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     cluster_id UUID NOT NULL REFERENCES clusters (id) ON DELETE CASCADE ON UPDATE NO ACTION,
@@ -93,9 +87,7 @@ CREATE INDEX IF NOT EXISTS idx_cluster_sync_plans_cluster_id
 CREATE INDEX IF NOT EXISTS idx_cluster_sync_plans_target_node_id
     ON cluster_sync_plans (target_node_id);
 
--- ---------------------------------------------------------------------------
 -- One versioned item of local domain state, the unit sync moves.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS cluster_sync_items (
     domain VARCHAR NOT NULL,
     key VARCHAR NOT NULL,
@@ -108,9 +100,7 @@ CREATE TABLE IF NOT EXISTS cluster_sync_items (
 CREATE INDEX IF NOT EXISTS idx_cluster_sync_items_domain
     ON cluster_sync_items (domain);
 
--- ---------------------------------------------------------------------------
 -- One sync run log entry, with its conflicts and errors.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS cluster_sync_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     plan_id UUID REFERENCES cluster_sync_plans (id) ON DELETE SET NULL ON UPDATE NO ACTION,
@@ -141,9 +131,7 @@ CREATE INDEX IF NOT EXISTS idx_cluster_sync_logs_node_id
 CREATE INDEX IF NOT EXISTS idx_cluster_sync_logs_status
     ON cluster_sync_logs (status);
 
--- ---------------------------------------------------------------------------
 -- One node health-check observation.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS cluster_health_checks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     node_id UUID NOT NULL REFERENCES cluster_nodes (id) ON DELETE CASCADE ON UPDATE NO ACTION,

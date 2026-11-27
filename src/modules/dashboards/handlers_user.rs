@@ -331,7 +331,7 @@ pub(crate) async fn user_page_inner(
         current_path
     };
     let scope = if section == "reseller" { "reseller" } else { "user" };
-    let mut data = page_data(&ctx, &state, &caller, scope, &format!("Dashboard — {section}"), &current_path);
+    let mut data = page_data(&ctx, &state, &caller, scope, &format!("Dashboard - {section}"), &current_path);
     let overview = match user_overview_data(&ctx, &caller).await {
         Ok(data) => data,
         Err(error) => return error_response(&error, debug),

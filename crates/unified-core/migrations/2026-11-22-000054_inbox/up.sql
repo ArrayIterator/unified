@@ -1,7 +1,7 @@
 -- Smart Inbox tables for the Unified Pentagonal Project
 -- (`src/modules/inbox.rs`): one unified queue over email, chat,
 -- tickets, and social mentions. The inbox stores only thread
--- references — the owning modules keep the message stores — plus
+-- references - the owning modules keep the message stores - plus
 -- assignment history, canned replies, and per-agent read receipts.
 -- Matches src/db/schema.rs conventions. PostgreSQL only.
 -- Run with diesel_migrations (embedded via src/db/mod.rs).

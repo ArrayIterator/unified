@@ -1,4 +1,4 @@
-// KYC module — Know Your Customer: identity verification
+// KYC module - Know Your Customer: identity verification
 // cases with linked identity documents (references only),
 // an AI verification pipeline under a stored default
 // verification context plus versioned extra instructions,
@@ -8,28 +8,28 @@
 // Routes live under `/api/v1/kyc`:
 //
 //   Cases:
-//     GET/POST /cases — list cases / open a draft case.
+//     GET/POST /cases - list cases / open a draft case.
 //     GET/PATCH/DELETE /cases/{case_id}.
-//     POST /cases/{case_id}/submit — draft -> submitted (or
+//     POST /cases/{case_id}/submit - draft -> submitted (or
 //       more_info_requested -> submitted on re-submission).
-//     GET  /cases/{case_id}/status — lightweight status read.
-//     GET  /cases/{case_id}/audit — hash-chained audit trail.
-//   Documents (metadata only — references and hashes, never
+//     GET  /cases/{case_id}/status - lightweight status read.
+//     GET  /cases/{case_id}/audit - hash-chained audit trail.
+//   Documents (metadata only - references and hashes, never
 //   file bytes):
-//     GET/POST /cases/{case_id}/documents — list / link.
+//     GET/POST /cases/{case_id}/documents - list / link.
 //     GET/DELETE /cases/{case_id}/documents/{document_id}.
 //   Verification and review (manager):
-//     POST /cases/{case_id}/verify — run the AI pipeline.
-//     POST /cases/{case_id}/approve — human approval.
-//     POST /cases/{case_id}/reject — human rejection (reason
+//     POST /cases/{case_id}/verify - run the AI pipeline.
+//     POST /cases/{case_id}/approve - human approval.
+//     POST /cases/{case_id}/reject - human rejection (reason
 //       required).
-//     POST /cases/{case_id}/request-more-info — reason
+//     POST /cases/{case_id}/request-more-info - reason
 //       required, subject notified.
 //     POST /cases/{case_id}/escalate.
 //     POST /cases/{case_id}/expire.
-//     GET  /admin/queue — review queue with counts by status.
+//     GET  /admin/queue - review queue with counts by status.
 //   AI:
-//     POST /ai/{capability} — run a registered KYC AI
+//     POST /ai/{capability} - run a registered KYC AI
 //       capability through the AI module's gated runner.
 //   Configuration (manager):
 //     GET/POST /document-types, GET/PATCH/DELETE
@@ -38,7 +38,7 @@
 //       /subject-types/{row_id}.
 //     GET/POST /contexts, GET/PATCH/DELETE
 //       /contexts/{row_id}.
-//     GET  /contexts/resolved — the active default context
+//     GET  /contexts/resolved - the active default context
 //       merged with its active extra instructions.
 //     GET/POST /instructions, GET/PATCH/DELETE
 //       /instructions/{row_id}.
@@ -46,7 +46,7 @@
 //       /risk-levels/{row_id}.
 //     GET  /settings, PATCH /settings.
 //
-// HONESTY — READ THIS FIRST. What is real in this module:
+// HONESTY - READ THIS FIRST. What is real in this module:
 // in-memory case, document, document-type, subject-type,
 // verification-context, instruction, risk-level, audit, and
 // settings management; the case status machine (draft ->
@@ -77,17 +77,17 @@
 // the migration runs (the DashMap stores are authoritative;
 // migration `2026-11-22-000115_kyc` is the persistence
 // target); the AI provider itself (the ai module owns
-// providers, gating, and usage — this module only declares
+// providers, gating, and usage - this module only declares
 // capabilities and calls the runner); the MCP server itself
 // (the mcp module owns servers, tools, and the JSON-RPC
-// endpoint — this module only answers the `mcp.context.kyc`
+// endpoint - this module only answers the `mcp.context.kyc`
 // source through the MCP module's existing hook contract);
-// document storage (the documents module owns files — this
+// document storage (the documents module owns files - this
 // module stores references and hashes only); and email /
-// push delivery (the notifications module owns delivery —
+// push delivery (the notifications module owns delivery -
 // this module only emits `notification.requested`).
 //
-// Default context + declared instructions — HOW IT WORKS.
+// Default context + declared instructions - HOW IT WORKS.
 // The MCP module has no per-module default-context
 // declaration mechanism: it exposes servers, tools,
 // resources, prompts, and `mcp.context.<source>` hook
@@ -98,12 +98,12 @@
 //   - `KycVerificationContext` rows are the DEFAULT CONTEXT:
 //     one active row per tenant, naming which fields and
 //     document metadata the AI may see (`visible_fields`)
-//     and which checks it must run (`checks` — values are
+//     and which checks it must run (`checks` - values are
 //     data). Content changes bump `version`.
 //   - `KycInstruction` rows are ADDITIONAL INSTRUCTIONS
 //     declared on top: admin-editable text, optionally
 //     scoped to one context (NULL means tenant-global),
-//     ordered by `priority`, and versioned — changing the
+//     ordered by `priority`, and versioned - changing the
 //     text creates a new row (version + 1) and deactivates
 //     the old one, so history is never rewritten.
 //   - `resolve_verification_context` (pure, in `types.rs`)
@@ -139,16 +139,16 @@
 //     `kyc.case.escalated`, `kyc.case.expired`,
 //     `kyc.case.deleted`
 //   - `notification.requested` (case submitted, decision,
-//     auto-approval, more information requested, expiry — in
+//     auto-approval, more information requested, expiry - in
 //     the notifications module's payload shape).
 // Events this module listens to:
-//   - `user.deleted` — anonymizes the user's cases, linked
+//   - `user.deleted` - anonymizes the user's cases, linked
 //     documents, and audit entries to `deleted-user`.
-//   - `kyc.ai.verify_identity_documents_requested` —
+//   - `kyc.ai.verify_identity_documents_requested` -
 //     grounds the AI verification run with the resolved
 //     default context, the active extra instructions, and the
 //     case's document metadata.
-//   - `mcp.context.kyc` — serves per-tenant case summaries
+//   - `mcp.context.kyc` - serves per-tenant case summaries
 //     to MCP servers (requires `tenant_id` in the payload;
 //     without one it contributes nothing, so the MCP module
 //     reports the gap honestly).

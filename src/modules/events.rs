@@ -1,4 +1,4 @@
-// Events Manager module — conferences, workshops, meetups, and
+// Events Manager module - conferences, workshops, meetups, and
 // other scheduled gatherings, with recurring events, ticket types,
 // registrations, waitlists, attendee check-in, reminders, and
 // calendar feeds.

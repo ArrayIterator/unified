@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""C3 pilot 4 group C verification (task 316): hr, marketing, webinars,
+"""C3 pilot 4 group C verification: hr, marketing, webinars,
 meetings, assets, site_builder, panels, seo.
 
 For each module, per routed handler (same routed-set rule as
@@ -12,7 +12,7 @@ For each module, per routed handler (same routed-set rule as
     `authorize_manage(`, `require_permission(`)
   - scope-checked: body mentions a scope marker; otherwise gate-only
     (all group-C modules are gate-only: their records carry no
-    company field, so no scope marker is expected; under task 315
+company field, so no scope marker is expected; under
     carve-out 3 their writes stay tenant-gate-only until C11 lands)
   - excluded: names passed on the command line after the module
 
@@ -34,7 +34,7 @@ SCOPE_MARKERS = (
     "require_record_in_company_scope",
     "require_company_match",
     "caller_company",
-    # Task 315/320 (2026-11-23): the strict write gate and the
+    # The strict write gate and the
     # writable record checks count as scope markers too.
     "require_company_for_write",
     "require_record_writable_in_company_scope",

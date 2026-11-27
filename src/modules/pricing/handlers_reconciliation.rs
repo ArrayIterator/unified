@@ -1,4 +1,4 @@
-// pricing — handlers reconciliation.
+// pricing - handlers reconciliation.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -31,9 +31,7 @@ use super::handlers_prices::*;
 use super::handlers_bundles::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // HTTP handlers: invoice preview, reconciliation, credit notes.
-// ---------------------------------------------------------------------------
 
 /// Resolve an invoice preview/reconcile request into engine inputs.
 pub(crate) fn reconcile_inputs_from_request(
@@ -442,9 +440,7 @@ pub(crate) async fn reconcile_credit_note_endpoint(
     }
 }
 
-// ---------------------------------------------------------------------------
 // HTTP handlers: settings, currencies, conversion.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn get_settings(
     ctx: web::Data<Arc<AppContext>>,

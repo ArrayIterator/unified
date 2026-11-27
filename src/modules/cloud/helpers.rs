@@ -1,4 +1,4 @@
-// cloud module — shared helpers: the package entitlement gate and
+// cloud module - shared helpers: the package entitlement gate and
 // the cloud permission names.
 //
 // The gate mirrors `site_builder::helpers::require_site_builder_entitlement`:

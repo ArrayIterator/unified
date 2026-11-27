@@ -7,9 +7,7 @@ use std::collections::HashMap;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Notification {

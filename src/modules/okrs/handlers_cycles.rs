@@ -1,4 +1,4 @@
-// OKR / Goals — Cycle handlers.
+// OKR / Goals - Cycle handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -25,9 +25,7 @@ use super::handlers_key_results::*;
 use super::hooks::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Cycle handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_cycles(
     ctx: web::Data<Arc<AppContext>>,

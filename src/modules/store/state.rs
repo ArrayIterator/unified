@@ -31,9 +31,7 @@ use super::types::{
     Subscription, WatermarkFormat,
 };
 
-// ---------------------------------------------------------------------------
 // State
-// ---------------------------------------------------------------------------
 
 pub struct StoreState {
     pub(crate) hooks: RwLock<Arc<HookBus>>,
@@ -125,15 +123,15 @@ impl StoreState {
     }
 
     /// Hydrate the in-memory store maps from the database (C11,
-    /// task 271): products, pricing tiers, orders (with their
+    /// products, pricing tiers, orders (with their
     /// items), download entitlements, download records, the
     /// update-API catalog, and issued licenses are loaded from
     /// the `store_*` tables and replace the map contents, so a
     /// restart restores the catalogue and the order history
-    /// instead of losing them. Rows that cannot be converted —
+    /// instead of losing them. Rows that cannot be converted -
     /// an amount that does not fit in minor units, an order
     /// item / entitlement / download whose required id is NULL
-    /// in the database — are skipped, never fatal: hydration
+    /// in the database - are skipped, never fatal: hydration
     /// must not fail startup on one bad row. Fields the
     /// database does not carry take their runtime defaults:
     /// product / order-item dunning and proration policy,
@@ -491,9 +489,7 @@ impl StoreState {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 pub(crate) fn new_id() -> String {
     Uuid::new_v4().to_string()

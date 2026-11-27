@@ -8,9 +8,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Hook listeners
-// ---------------------------------------------------------------------------
 
 /// Answer `auditors.scope.check` from the stored scope. Payload:
 /// `{"user_id", "module", "resource_kind", "resource_id",

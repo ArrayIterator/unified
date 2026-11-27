@@ -13,9 +13,7 @@ use super::selection::*;
 use super::store::*;
 use super::types::*;
 
-// ---------------------------------------------------------------------------
 // Health probing.
-// ---------------------------------------------------------------------------
 
 pub(crate) fn http_client() -> &'static reqwest::Client {
     static CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
@@ -164,9 +162,7 @@ pub(crate) fn apply_probe_result(backend_id: Uuid, outcome: ProbeOutcome) {
     refresh_balancer_status(balancer_id);
 }
 
-// ---------------------------------------------------------------------------
 // Background health sweeper.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn sweep_once() {
     let now = Utc::now();

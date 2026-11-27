@@ -909,7 +909,7 @@ pub(crate) async fn list_invoice_print_jobs(
             .cloned()
             .unwrap_or_default();
         // The hook answers with the FULL jobs list, so the page is
-        // sliced here and the total is the list length — a hook
+        // sliced here and the total is the list length - a hook
         // `total` would describe jobs this handler does not hold, so
         // it is not trusted for pagination.
         let page = paginate(all_jobs, &params);

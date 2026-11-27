@@ -13,7 +13,6 @@ use uuid::Uuid;
 use super::types::{NetworkToolRun, network_tool_events};
 use super::store::{db_insert_run, db_pool, rate_limits_store, runs_store};
 
-// ---------------------------------------------------------------------------
 // Viewer identity and capability checks.
 //
 // Identity comes from the request headers (`X-User-Id` / `X-Role`),
@@ -25,7 +24,6 @@ use super::store::{db_insert_run, db_pool, rate_limits_store, runs_store};
 // attribution read through `company_filter`, and every read is
 // already scoped to the caller's own records unless they hold the
 // manage capability.
-// ---------------------------------------------------------------------------
 
 /// Viewer identity from the request headers (`X-User-Id` /
 /// `X-Role`). Returns (viewer id, viewer role); either side may be
@@ -145,9 +143,7 @@ pub(crate) fn require_capability(role: Option<&str>, capability: &str) -> Unifie
     }
 }
 
-// ---------------------------------------------------------------------------
 // Rate limiting (in-memory, per actor, fixed 60-second windows).
-// ---------------------------------------------------------------------------
 
 pub(crate) fn check_rate_limit(actor: &str, scope: &str, limit: u64) -> UnifiedResult<()> {
     let key = format!("{actor}:{scope}");
@@ -167,10 +163,8 @@ pub(crate) fn check_rate_limit(actor: &str, scope: &str, limit: u64) -> UnifiedR
     Ok(())
 }
 
-// ---------------------------------------------------------------------------
 // Run recording: every tool run is stored and a hook event is emitted.
 // The stored summary never contains a response body.
-// ---------------------------------------------------------------------------
 
 pub(crate) fn record_run(
     ctx: &AppContext,
@@ -227,9 +221,7 @@ pub(crate) fn notify(ctx: &AppContext, user_id: &str, title: String, body: Strin
     );
 }
 
-// ---------------------------------------------------------------------------
 // Pagination helper (same shape as the licensing module's `paginate`).
-// ---------------------------------------------------------------------------
 
 pub(crate) fn paginate<T: Serialize + Clone>(items: Vec<T>, params: &PaginationParams) -> PageResult<T> {
     let pagination: Pagination = params.normalized();

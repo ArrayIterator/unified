@@ -7,9 +7,7 @@ use std::collections::HashMap;
 
 
 #[derive(Debug, Deserialize)]
-// ---------------------------------------------------------------------------
 // Request DTOs
-// ---------------------------------------------------------------------------
 pub struct CreateBomRequest {
     pub product_id: String,
     pub name: String,

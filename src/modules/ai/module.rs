@@ -23,9 +23,7 @@ use super::handlers_personal::{create_my_mcp, delete_my_key, delete_my_mcp, get_
 use super::handlers_providers::{create_provider_connection, delete_provider_connection, get_provider_connection, list_provider_connections, list_providers, test_provider_connection, update_provider_connection};
 use super::handlers_usage::{create_company_policy, create_user_policy, delete_company_policy, delete_user_policy, get_company_policy, get_usage, get_user_policy, list_company_policies, list_usage, list_user_policies, update_company_policy, update_user_policy, usage_summary};
 
-// ---------------------------------------------------------------------------
 // Module.
-// ---------------------------------------------------------------------------
 
 pub struct AiModule {
     pub(crate) state: AiState,

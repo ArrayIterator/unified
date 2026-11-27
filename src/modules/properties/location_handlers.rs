@@ -1,4 +1,4 @@
-// Properties — Location handlers.
+// Properties - Location handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -19,9 +19,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Location handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn search_location(
     ctx: web::Data<Arc<AppContext>>,

@@ -1,4 +1,4 @@
-// todos — service.
+// todos - service.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -82,9 +82,7 @@ pub(crate) fn compute_streaks(state: &TodosState, user_id: &str) -> StreaksView 
     }
 }
 
-// ---------------------------------------------------------------------------
 // Helpers: notifications and scheduler linkage.
-// ---------------------------------------------------------------------------
 
 /// Ask the notifications module for one notification, using the exact
 /// payload shape `on_notification_requested` reads in

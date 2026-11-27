@@ -31,9 +31,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One IP list record: a CIDR on the allowlist or the blocklist.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS security_ip_lists (
     list VARCHAR NOT NULL CHECK (list IN ('allow', 'block')),
     cidr VARCHAR NOT NULL,
@@ -48,9 +46,7 @@ CREATE TABLE IF NOT EXISTS security_ip_lists (
 CREATE INDEX IF NOT EXISTS idx_security_ip_lists_list
     ON security_ip_lists (list);
 
--- ---------------------------------------------------------------------------
 -- One IP reputation record: a score, a manual flag, and a reason.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS security_reputation (
     ip VARCHAR PRIMARY KEY,
     score INTEGER NOT NULL DEFAULT 0,
@@ -65,10 +61,8 @@ CREATE INDEX IF NOT EXISTS idx_security_reputation_flagged
 CREATE INDEX IF NOT EXISTS idx_security_reputation_score
     ON security_reputation (score);
 
--- ---------------------------------------------------------------------------
 -- One failed-auth cluster: repeated failures grouped by IP and
 -- account.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS security_failed_auth_clusters (
     key VARCHAR PRIMARY KEY,
     ip VARCHAR,

@@ -16,9 +16,7 @@ use super::state::{WhitelabelState};
 use super::types::{AllowanceMode, BrandingProfile, CompanyAllowance, GlobalDefaults, HistoryEntry, PutCompanyAllowanceInput, PutDefaultsInput, PutGlobalAllowanceInput};
 use super::validation::{apply_storage_pair, require_email, require_hex_color, require_storage_pair, require_text};
 
-// ---------------------------------------------------------------------------
 // Admin handlers: allowance
-// ---------------------------------------------------------------------------
 
 /// List the global allowance plus every per-company override
 /// (paginated, filter by `company_id` or `mode`, search by
@@ -214,9 +212,7 @@ pub(crate) async fn put_company_allowance(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Admin handlers: global defaults record
-// ---------------------------------------------------------------------------
 
 /// Read the admin-editable global defaults record. Admin only.
 pub(crate) async fn get_admin_defaults(
@@ -416,9 +412,7 @@ pub(crate) async fn put_admin_defaults(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Admin handlers: profiles + history
-// ---------------------------------------------------------------------------
 
 /// List all branding profiles (admin). Paginated, filter by
 /// `company_id`, `tenant_id`, or `domain_status`, search by company

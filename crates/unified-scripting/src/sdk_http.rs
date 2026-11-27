@@ -5,7 +5,7 @@
 //! so the JavaScript call blocks until the response arrives. There
 //! is no `Promise`-based fetch in v1.
 //!
-//! SSRF rules — the same pattern the downloader and webhook
+//! SSRF rules - the same pattern the downloader and webhook
 //! validators use, not a weaker copy:
 //!
 //! * `http`/`https` only, no embedded credentials, host required.
@@ -29,11 +29,8 @@ use std::time::Duration;
 use unified_core::error::{UnifiedError, UnifiedResult};
 use unified_core::net::ip_is_global;
 
-/// Default fetch timeout (10 s).
 pub const DEFAULT_FETCH_TIMEOUT: Duration = Duration::from_secs(10);
-/// Maximum fetch timeout a module may request (30 s).
 pub const MAX_FETCH_TIMEOUT: Duration = Duration::from_secs(30);
-/// Maximum response body a fetch may return (5 MiB).
 pub const MAX_FETCH_BODY_BYTES: u64 = 5 * 1024 * 1024;
 /// Maximum URL length.
 pub const MAX_FETCH_URL_LEN: usize = 2048;
@@ -104,8 +101,8 @@ pub fn parse_fetch_options(url: &str, options: &Value) -> UnifiedResult<FetchReq
 /// Validate a fetch URL against the SSRF rules and return the
 /// parsed URL. The DNS lookup happens here, on the worker thread;
 /// the address set is checked again by the caller at fetch time
-/// when the client resolves (a DNS change between the two checks —
-/// rebinding — is a recorded open limitation, as in the
+/// when the client resolves (a DNS change between the two checks -
+/// rebinding - is a recorded open limitation, as in the
 /// downloader).
 pub fn validate_fetch_url(
     raw: &str,

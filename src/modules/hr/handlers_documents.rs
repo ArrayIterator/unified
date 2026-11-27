@@ -17,9 +17,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Handlers: employee documents (metadata only)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_documents_for_employee(
     ctx: web::Data<Arc<AppContext>>,
@@ -101,7 +99,7 @@ pub(crate) async fn create_document(
         let storage_file_id = require_text(&input.storage_file_id, "storage_file_id", 255)?;
         // The file itself lives in Storage. Ask Storage whether the
         // file exists; a definite "no" rejects the metadata, while
-        // no answer is "unknown" — the metadata is kept but flagged
+        // no answer is "unknown" - the metadata is kept but flagged
         // unverified (`storage_verified: false`), never treated as
         // confirmed to exist.
         let storage_verified = match state.storage_file_status(&storage_file_id) {

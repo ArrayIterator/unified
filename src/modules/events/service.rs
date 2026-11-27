@@ -1,4 +1,4 @@
-// Events Manager — Business logic shared by handlers and hooks.
+// Events Manager - Business logic shared by handlers and hooks.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -166,9 +166,7 @@ pub(crate) fn slug_in_use(state: &EventsState, slug: &str, except: Option<Uuid>)
     })
 }
 
-// ---------------------------------------------------------------------------
 // Recurrence expansion
-// ---------------------------------------------------------------------------
 
 pub(crate) fn add_months(date: DateTime<Utc>, months: i32) -> DateTime<Utc> {
     let naive = date.naive_utc();
@@ -288,9 +286,7 @@ pub(crate) fn occurrences_for(state: &EventsState, event_id: Uuid) -> Vec<EventO
     items
 }
 
-// ---------------------------------------------------------------------------
-// iCalendar (RFC 5545, hand-built — no calendar crate in Cargo.toml)
-// ---------------------------------------------------------------------------
+// iCalendar (RFC 5545, hand-built - no calendar crate in Cargo.toml)
 
 /// Escape a TEXT value per RFC 5545 section 3.3.11: backslash,
 /// semicolon, comma, and newlines. Folding is applied at 75
@@ -416,10 +412,8 @@ pub(crate) fn build_ics(events: &[(Event, Option<EventOccurrence>)], calendar_na
     out
 }
 
-// ---------------------------------------------------------------------------
 // CSV export (hand-rolled: no csv crate is available, same as the
 // import/export module)
-// ---------------------------------------------------------------------------
 
 pub(crate) fn escape_csv_field(field: &str) -> String {
     if field.contains(',') || field.contains('"') || field.contains('\n') || field.contains('\r') {
@@ -449,9 +443,7 @@ pub(crate) fn attendees_csv(attendees: &[Attendee]) -> String {
     out
 }
 
-// ---------------------------------------------------------------------------
 // Reminders (via the scheduler + notifications)
-// ---------------------------------------------------------------------------
 
 /// Queue one reminder through `scheduler.enqueue` with kind
 /// `events.reminders.send`. Mirrors the meetings module's
@@ -564,9 +556,7 @@ pub(crate) fn send_reminder(state: &EventsState, reminder: &EventReminder) -> Un
     Ok(sent)
 }
 
-// ---------------------------------------------------------------------------
 // Waitlist promotion + cancellation internals
-// ---------------------------------------------------------------------------
 
 /// Cancel a registration (shared by the HTTP handler and the
 /// bank-transfer rejection listener): mark it cancelled, release

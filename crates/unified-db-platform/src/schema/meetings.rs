@@ -3,9 +3,7 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Meetings (2026-11-22-000027_meetings).
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     meeting_rooms (id) {

@@ -9,9 +9,7 @@ use std::sync::Arc;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // BYO settings (admin-managed provider allowlist).
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn get_byo_settings(
     state: web::Data<StorageManagerState>,

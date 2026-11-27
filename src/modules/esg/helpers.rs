@@ -77,9 +77,7 @@ pub(crate) fn resolve_tenant(req: &HttpRequest) -> UnifiedResult<String> {
         .map(|context| context.tenant_id.to_string())
 }
 
-// ---------------------------------------------------------------------------
-// Tenant edge guard (C3 pilot 5, task 319, group B).
-// ---------------------------------------------------------------------------
+// Tenant edge guard (C3 pilot 5, group B).
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request
@@ -160,14 +158,12 @@ pub(crate) fn paginate<T: Serialize + Clone>(
     PageResult::new(page_items, total, &pagination)
 }
 
-// ---------------------------------------------------------------------------
 // Validation
-// ---------------------------------------------------------------------------
 
 /// Validate a scope reference: both parts are plain
 /// reference ids (a company or a site from the company
 /// module, or any other scope the tenant uses). No existence
-/// check is done here — the owning module answers existence
+/// check is done here - the owning module answers existence
 /// through the `company.exists` hook, and this module must
 /// not assume another module's tables.
 pub(crate) fn validate_scope(scope_type: &str, scope_id: &str) -> UnifiedResult<(String, String)> {
@@ -200,7 +196,7 @@ pub(crate) fn validate_document_ids(ids: &[String]) -> UnifiedResult<Vec<String>
 
 /// Validate framework tags on a metric: plain framework ids,
 /// at most the module bound, no repeats, no empties. The ids
-/// need not exist yet — a metric may tag a framework that is
+/// need not exist yet - a metric may tag a framework that is
 /// created later, and deleting a framework never deletes the
 /// metrics that tagged it.
 pub(crate) fn validate_framework_ids(ids: &[String]) -> UnifiedResult<Vec<String>> {
@@ -360,9 +356,7 @@ pub(crate) fn validate_deadline(raw: &str) -> UnifiedResult<NaiveDate> {
     })
 }
 
-// ---------------------------------------------------------------------------
 // Tenant-scoped loaders (cross-tenant reads as 404, never 403)
-// ---------------------------------------------------------------------------
 
 fn tenant_match(row_tenant_id: &str, tenant_id: &str, id: Uuid, what: &str) -> UnifiedResult<()> {
     if row_tenant_id != tenant_id {
@@ -454,9 +448,7 @@ pub(crate) fn require_period_open(period: &Period) -> UnifiedResult<()> {
     Ok(())
 }
 
-// ---------------------------------------------------------------------------
 // Audit
-// ---------------------------------------------------------------------------
 
 /// Append one audit row for a change. `before` / `after` are
 /// the serialized rows (or `None` for creates / deletes).
@@ -484,9 +476,7 @@ pub(crate) fn record_audit(
     state.audit.insert(row.id, row);
 }
 
-// ---------------------------------------------------------------------------
 // CSV (pure functions, unit-tested below)
-// ---------------------------------------------------------------------------
 
 /// Quote one CSV field: quote when it contains a comma, a
 /// quote, or a newline; double any quotes inside.

@@ -1,4 +1,4 @@
-// Generic Approvals — In-memory state and its constructors.
+// Generic Approvals - In-memory state and its constructors.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -27,9 +27,7 @@ use super::handlers_dashboards::*;
 use super::hooks::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // State
-// ---------------------------------------------------------------------------
 
 #[derive(Clone)]
 pub struct ApprovalsState {

@@ -17,9 +17,7 @@ use super::constants::{BACKUP_RUN_KIND, CONFIG_NAME, DUMP_NAME, MANIFEST_NAME, M
 use super::types::{BackupJob, BackupKind, BackupSettings, DbSnapshot, SchedulingOutcome};
 use super::validation::{valid_config_key, valid_database_name, valid_schedule, valid_storage_name};
 
-// ---------------------------------------------------------------------------
 // Restore (blocking parts).
-// ---------------------------------------------------------------------------
 
 /// Outcome of restoring files: the restored relative paths plus the
 /// previous contents of each destination (`None` when the file did
@@ -303,9 +301,7 @@ pub(crate) fn restore_database_blocking(
     ))
 }
 
-// ---------------------------------------------------------------------------
 // Scheduling bridge.
-// ---------------------------------------------------------------------------
 
 /// Tell the scheduler about a job with a cron schedule. Returns whether
 /// the scheduler accepted the job; a refusal is recorded on the job
@@ -352,9 +348,7 @@ pub(crate) fn notify_scheduler(hooks: &HookBus, job: &BackupJob) -> SchedulingOu
     }
 }
 
-// ---------------------------------------------------------------------------
 // Validation of job input.
-// ---------------------------------------------------------------------------
 
 pub(crate) fn validate_job_fields(
     kind: BackupKind,

@@ -1,4 +1,4 @@
-// surveys module — Trigger listeners.
+// surveys module - Trigger listeners.
 //
 // Split from the former single-file module `src/modules/surveys.rs`.
 // The module root (`surveys.rs`) re-exports the public items, so the
@@ -26,9 +26,7 @@ use super::state::SurveysState;
 use super::helpers::opt_string;
 use super::service::{invite_recipient, send_distribution_invitations};
 
-// ---------------------------------------------------------------------------
 // Trigger listeners
-// ---------------------------------------------------------------------------
 
 /// Invite a recipient to every published survey version that has
 /// an active trigger distribution matching the given trigger and

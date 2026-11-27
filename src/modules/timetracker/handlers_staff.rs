@@ -1,4 +1,4 @@
-// timetracker — HTTP handlers: staff and invites.
+// timetracker - HTTP handlers: staff and invites.
 
 use super::*;
 use unified_core::context::AppContext;

@@ -1,4 +1,4 @@
-// cards — In-memory state and its methods.
+// cards - In-memory state and its methods.
 
 use super::*;
 use unified_core::hooks::HookBus;
@@ -6,10 +6,8 @@ use dashmap::DashMap;
 use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Module state (in-memory; migration 000099_cards is the
-// persistence target — see the module header).
-// ---------------------------------------------------------------------------
+// persistence target - see the module header).
 
 /// Live module state. Custom rules and daily counts are keyed by
 /// tenant id; settings are stored per tenant with defaults when a

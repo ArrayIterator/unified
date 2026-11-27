@@ -16,9 +16,7 @@ use super::{DigitalAccess, InventoryAudit, InventoryDiscrepancy, LibraryCategory
     LibraryFine, LibraryHold, LibraryItem, LibraryLoan, LibraryMember, LibrarySettings, LoanPolicy,
     constant_time_eq};
 
-// ---------------------------------------------------------------------------
 // Shared state
-// ---------------------------------------------------------------------------
 
 /// In-memory stores for the library. The hook bus is attached in
 /// `init` (the bus lives in `AppContext`); handlers tolerate a

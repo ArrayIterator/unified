@@ -1,4 +1,4 @@
-//! Curriculum module — competency-based school curricula. — Types.
+//! Curriculum module - competency-based school curricula. - Types.
 //!
 //! Split from `src/modules/curriculum.rs`; behaviour unchanged.
 
@@ -29,7 +29,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 /// One curriculum framework (the registry). A newer national
-/// curriculum is added as another row here — no code change.
+/// curriculum is added as another row here - no code change.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CurriculumFramework {
     pub id: Uuid,
@@ -232,7 +232,7 @@ pub struct Intervention {
 }
 
 /// A student reference seen through academic-module events. This is
-/// a lookup cache only — students are owned by the academic module
+/// a lookup cache only - students are owned by the academic module
 /// and are never duplicated here. `student_ref` IS the academic
 /// `student_id` (the canonical identity key); `program_id` is the
 /// academic program the student belongs to, when the event carried
@@ -313,7 +313,7 @@ pub struct GradeBand {
 }
 
 /// Admin-editable settings. Every list here is a configurable
-/// default / vocabulary — change it through `PATCH /settings` and
+/// default / vocabulary - change it through `PATCH /settings` and
 /// the whole module follows, with no code change.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CurriculumSettings {

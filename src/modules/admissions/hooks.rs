@@ -1,4 +1,4 @@
-// admissions module — Hook handlers.
+// admissions module - Hook handlers.
 //
 // Split from the former single-file module `src/modules/admissions.rs`.
 // The module root (`admissions.rs`) re-exports the public items, so the
@@ -23,14 +23,12 @@ use super::types::Application;
 use super::state::AdmissionsState;
 use super::helpers::{new_id, now, slugify};
 
-// ---------------------------------------------------------------------------
 // Hook handlers (events consumed)
-// ---------------------------------------------------------------------------
 
 /// Handle `forms.mapping.requested` for target
 /// `admissions_application`.
 ///
-/// CONTRACT — the registration form's mapping must use target
+/// CONTRACT - the registration form's mapping must use target
 /// `admissions_application` and a field map that produces these
 /// fields (all values are the submitted form values, already mapped
 /// by the forms module):

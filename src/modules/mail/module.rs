@@ -37,9 +37,7 @@ use super::types::EVENT_SCHEDULER_ENQUEUE;
 use super::types::MailLogEntry;
 use super::types::QueuedMail;
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct MailModule {
     state: Arc<MailState>,

@@ -29,9 +29,7 @@ use super::types::PanelProduct;
 use super::types::PanelService;
 use super::types::validate_panel_endpoint;
 
-// ---------------------------------------------------------------------------
 // WHMCS adapter.
-// ---------------------------------------------------------------------------
 
 /// WHMCS action API (`<endpoint>/includes/api.php`, form-encoded,
 /// `identifier` + `secret` + `action` + `responsetype=json`).
@@ -49,8 +47,8 @@ use super::types::validate_panel_endpoint;
 /// service creation or update).
 /// Most WHMCS records fetched for one collection in a single sync
 /// (400 pages of 250). Past this the adapter fails instead of
-/// truncating: a partial page would let sync report — and
-/// remote-wins delete — records the panel still has.
+/// truncating: a partial page would let sync report - and
+/// remote-wins delete - records the panel still has.
 const MAX_WHMCS_PAGES: u32 = 400;
 const MAX_WHMCS_RECORDS: u64 = MAX_WHMCS_PAGES as u64 * MAX_LIST_LIMIT as u64;
 

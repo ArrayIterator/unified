@@ -9,9 +9,7 @@ use diesel::data_types::PgNumeric;
 use diesel::prelude::*;
 use serde_json::Value;
 
-// ---------------------------------------------------------------------------
 // School fees (migration 000096_school_fees).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable)]
 #[diesel(table_name = school_fee_types)]

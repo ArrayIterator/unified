@@ -1,6 +1,6 @@
 -- Layered AI gating for the Unified Pentagonal Project
 -- (`src/modules/ai.rs`): the gate switches enforced by
--- `evaluate_ai_gate` on top of the batch-2 allowlists — a global
+-- `evaluate_ai_gate` on top of the batch-2 allowlists - a global
 -- kill-switch plus global per-feature switches, and per-company /
 -- per-user on-off switches plus per-feature off switches.
 -- Matches src/db/schema.rs conventions. PostgreSQL only.
@@ -30,7 +30,7 @@
 --     `ai.features.<name>.enabled` (one row per globally switched
 --     off feature; a row is created when an admin switches a
 --     feature off and removed when it is switched back on, or its
---     `enabled` flag is flipped — either shape round-trips through
+--     `enabled` flag is flipped - either shape round-trips through
 --     the in-memory `AiGlobalSettings`, which is authoritative).
 --     The kill-switch row is seeded on so a fresh install behaves
 --     exactly like before this migration.
@@ -40,9 +40,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- Company gate switches on the batch-2 allowlist table.
--- ---------------------------------------------------------------------------
 ALTER TABLE ai_company_policies
     ADD COLUMN IF NOT EXISTS ai_enabled BOOLEAN NOT NULL DEFAULT TRUE,
     ADD COLUMN IF NOT EXISTS disabled_features JSONB
@@ -51,9 +49,7 @@ ALTER TABLE ai_company_policies
 CREATE INDEX IF NOT EXISTS idx_ai_company_policies_ai_enabled
     ON ai_company_policies (ai_enabled);
 
--- ---------------------------------------------------------------------------
 -- User gate switches on the batch-2 allowlist table.
--- ---------------------------------------------------------------------------
 ALTER TABLE ai_user_policies
     ADD COLUMN IF NOT EXISTS ai_enabled BOOLEAN NOT NULL DEFAULT TRUE,
     ADD COLUMN IF NOT EXISTS disabled_features JSONB
@@ -62,9 +58,7 @@ ALTER TABLE ai_user_policies
 CREATE INDEX IF NOT EXISTS idx_ai_user_policies_ai_enabled
     ON ai_user_policies (ai_enabled);
 
--- ---------------------------------------------------------------------------
 -- Global AI settings: one row per setting, keyed by setting name.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS ai_global_settings (
     key VARCHAR PRIMARY KEY,
     enabled BOOLEAN NOT NULL,

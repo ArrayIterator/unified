@@ -144,9 +144,7 @@ pub(crate) fn shared_context_prompt(context: &SharedContext) -> String {
     out
 }
 
-// ---------------------------------------------------------------------------
 // Cost estimates.
-// ---------------------------------------------------------------------------
 
 /// Estimated USD cost from reported token counts, using list prices
 /// per million tokens for known models. Returns `None` for unknown

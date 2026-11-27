@@ -1,4 +1,4 @@
-// users module — User types.
+// users module - User types.
 //
 // Split from the former single-file module `src/modules/users.rs`.
 // The module root (`users.rs`) re-exports the public items, so the

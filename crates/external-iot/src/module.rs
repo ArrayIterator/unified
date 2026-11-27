@@ -1,11 +1,9 @@
-//! IoT external module (split from lib.rs; moved verbatim).
+//! IoT external module.
 
 use super::*;
 
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 /// The IoT device manager module.
 pub struct IotModule {

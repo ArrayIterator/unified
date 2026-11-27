@@ -19,9 +19,7 @@ use super::state::{WorkflowsState, caller, caller_company, created, err, in_comp
 use super::types::{CreateWorkflowRequest, RetryRunRequest, RunStatus, RunWorkflowRequest, TestWorkflowRequest, TriggerKind, UpdateWorkflowRequest, Workflow, WorkflowRun};
 use super::validation::{generate_webhook_token, hashes_equal, token_hash, validate_actions, validate_allowed_hosts, validate_conditions, validate_no_self_trigger_event, validate_trigger};
 
-// ---------------------------------------------------------------------------
 // Workflow handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_workflows(
     ctx: web::Data<Arc<AppContext>>,
@@ -529,9 +527,7 @@ pub(crate) async fn duplicate_workflow(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Run handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn run_workflow(
     ctx: web::Data<Arc<AppContext>>,
@@ -922,10 +918,8 @@ pub(crate) async fn list_trigger_subscriptions(
     }
 }
 
-// ---------------------------------------------------------------------------
-// Webhook trigger (token-authenticated; no capability check — see
+// Webhook trigger (token-authenticated; no capability check - see
 // the public-access note in the module header)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn webhook_trigger(
     state: web::Data<WorkflowsState>,
@@ -1001,7 +995,7 @@ pub(crate) async fn webhook_trigger(
     }
 }
 
-/// Resolve the caller's company for a WRITE (C3 task 315, strict by
+/// Resolve the caller's company for a WRITE (C3, strict by
 /// default): a write requires a resolved company scope, so an
 /// unresolved caller is refused with 403 instead of silently
 /// writing a global (unscoped) record. Mutation handlers call

@@ -9,9 +9,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::time::Duration;
 
-// ---------------------------------------------------------------------------
 // Capabilities (checked through the `role.check` hook; fails closed).
-// ---------------------------------------------------------------------------
 
 pub(crate) const PERM_READ: &str = "cache.read";
 
@@ -51,9 +49,7 @@ pub(crate) fn authorize(ctx: &AppContext, req: &HttpRequest, permission: &str) -
     }
 }
 
-// ---------------------------------------------------------------------------
 // Views.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Serialize)]
 pub(crate) struct CacheStatusView {
@@ -89,9 +85,7 @@ pub(crate) fn cache_value_to_json(value: &CacheValue) -> Value {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Request types.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct SetEntryRequest {

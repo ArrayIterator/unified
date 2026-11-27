@@ -253,9 +253,7 @@ struct PhoneCallFacts {
     ended_at: Option<String>,
 }
 
-// ---------------------------------------------------------------------------
 // Per-tenant settings (manager for writes)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn get_settings(
     state: web::Data<PhoneState>,

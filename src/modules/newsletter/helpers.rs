@@ -197,9 +197,7 @@ pub(crate) fn matches_search(haystack: &str, params: &PaginationParams) -> bool 
     }
 }
 
-// ---------------------------------------------------------------------------
 // Shared helpers.
-// ---------------------------------------------------------------------------
 
 /// Render a GrapeJS template through the Email Templates module.
 pub(crate) fn render_template(

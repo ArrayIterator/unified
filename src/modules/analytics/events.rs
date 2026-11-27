@@ -4,9 +4,7 @@ use actix_web::{ http::header };
 
 
 
-// ---------------------------------------------------------------------------
 // Event names.
-// ---------------------------------------------------------------------------
 pub const ANALYTICS_REPORT_GENERATED: &str = "analytics.report.generated";
 
 pub const ANALYTICS_REPORT_EXPORTED: &str = "analytics.report.exported";

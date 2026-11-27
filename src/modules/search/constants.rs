@@ -1,4 +1,4 @@
-// Global Search — Event names, permission strings, limits, and other constants.
+// Global Search - Event names, permission strings, limits, and other constants.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -21,9 +21,7 @@ use super::handlers::*;
 use super::hooks::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Types.
-// ---------------------------------------------------------------------------
 
 /// Document kinds the global index accepts. Keep this list in sync with
 /// the kinds named in the module documentation above.

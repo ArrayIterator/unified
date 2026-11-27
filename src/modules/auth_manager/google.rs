@@ -25,7 +25,6 @@ use uuid::Uuid;
 use super::{providers::*, jwt::*, state::*, handlers_providers::*, login::*, tokens::*, recovery::*, totp::*, module::*};
 use unified_core::error::UnifiedResult;
 
-// ---------------------------------------------------------------------------
 // Google connector
 //
 // One unified Google connector built on the `google` provider above:
@@ -42,7 +41,6 @@ use unified_core::error::UnifiedResult;
 // `google.drive.link` (and unlinking emits `google.drive.unlink`) so
 // the storage module can register the target in its own registry; see
 // the integration snippet in the coordinator report.
-// ---------------------------------------------------------------------------
 
 pub(crate) const GOOGLE_AUTH_URL: &str = "https://accounts.google.com/o/oauth2/v2/auth";
 
@@ -477,9 +475,7 @@ pub(crate) fn paginate_google<T: Serialize + Clone>(items: Vec<T>, params: &unif
     PageResult::new(page_items, total, &pagination).to_json()
 }
 
-// ---------------------------------------------------------------------------
 // Google handlers
-// ---------------------------------------------------------------------------
 
 /// Google status: which accounts are linked. Authenticated callers
 /// only: the account list contains user emails. The configured

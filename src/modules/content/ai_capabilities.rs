@@ -1,4 +1,4 @@
-//! Content Management module. — AI capabilities (AI Capabilities Contract, see `crate::modules::ai`). Declared here, registered once in `init`, grounded through the `content.ai.<capability>_requested` hooks, and run through the AI module's gated runner. Drafts are returned inline and are never published by this module.
+//! Content Management module. - AI capabilities (AI Capabilities Contract, see `crate::modules::ai`). Declared here, registered once in `init`, grounded through the `content.ai.<capability>_requested` hooks, and run through the AI module's gated runner. Drafts are returned inline and are never published by this module.
 //!
 //! Split from `src/modules/content.rs`; behaviour unchanged.
 

@@ -24,9 +24,7 @@ use super::types::*;
 use super::validation::*;
 use super::views::*;
 
-// ---------------------------------------------------------------------------
 // Balancer handlers.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_balancers(
     ctx: web::Data<Arc<AppContext>>,

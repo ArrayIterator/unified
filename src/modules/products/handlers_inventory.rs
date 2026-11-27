@@ -17,9 +17,7 @@ use super::types::{AdjustInventory, AttachTag, CreateProductFile, CreateProductV
 use super::state::ProductsState;
 use super::validation::{build_tree, is_descendant_of, matches_search, new_id, now, paginate, recompute_subtree, respond_created, slugify, taxonomy_path, validate_hex_checksum};
 
-// ---------------------------------------------------------------------------
 // Inventory handlers (physical products only)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_inventory(
     ctx: web::Data<Arc<AppContext>>,
@@ -232,9 +230,7 @@ pub(crate) async fn adjust_inventory(
     json::respond(result, ctx.is_debug())
 }
 
-// ---------------------------------------------------------------------------
 // Product file and version handlers (references only)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_product_files(
     ctx: web::Data<Arc<AppContext>>,
@@ -474,9 +470,7 @@ pub(crate) async fn delete_product_version(
     json::respond(result, ctx.is_debug())
 }
 
-// ---------------------------------------------------------------------------
 // Taxonomy handlers (same shapes as the software module)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_taxonomy(
     ctx: web::Data<Arc<AppContext>>,
@@ -873,9 +867,7 @@ pub(crate) async fn list_taxonomy_children(
     json::success_response(page, 200)
 }
 
-// ---------------------------------------------------------------------------
 // Tag handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_tags(
     ctx: web::Data<Arc<AppContext>>,

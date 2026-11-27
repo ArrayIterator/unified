@@ -39,7 +39,7 @@
 --     numbers are stored as decimal strings
 --     (`spreadsheet_cells.computed_value`, scale preserved in
 --     the string itself, e.g. `12.50`), and the evaluator works
---     on an integer-mantissa decimal type — `f64` is never used
+--     on an integer-mantissa decimal type - `f64` is never used
 --     for a stored or returned number anywhere in this module.
 --   - `spreadsheet_cells.kind` is `text`, `number`, `boolean`,
 --     `date`, `empty`, `formula`, or `error`; a formula cell
@@ -70,14 +70,12 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- Spreadsheet workbooks: one document. `owner_id` is the user
 -- id of the owner (plain TEXT, no foreign key). Public-link
 -- sharing is off by default: `public_link_enabled` is false
 -- and `public_token_hash` is empty until the owner enables it,
 -- at which point the raw token is returned exactly once and
 -- only its SHA-256 hash is stored.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS spreadsheets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -93,10 +91,8 @@ CREATE TABLE IF NOT EXISTS spreadsheets (
 CREATE INDEX IF NOT EXISTS idx_spreadsheets_tenant_owner ON spreadsheets (tenant_id, owner_id, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_spreadsheets_tenant_updated ON spreadsheets (tenant_id, updated_at DESC);
 
--- ---------------------------------------------------------------------------
 -- Sheets: one tab of one workbook. `position` orders the tabs;
 -- `title` is unique per workbook.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS spreadsheet_sheets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -109,7 +105,6 @@ CREATE TABLE IF NOT EXISTS spreadsheet_sheets (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_spreadsheet_sheets_workbook_title ON spreadsheet_sheets (workbook_id, title);
 CREATE INDEX IF NOT EXISTS idx_spreadsheet_sheets_tenant_workbook ON spreadsheet_sheets (tenant_id, workbook_id, position ASC);
 
--- ---------------------------------------------------------------------------
 -- Cells: one cell of one sheet. `address` is A1 notation
 -- (`B12`); `row_index` / `column_index` are zero-based so the
 -- grid can be ranged without parsing addresses in SQL.
@@ -118,7 +113,6 @@ CREATE INDEX IF NOT EXISTS idx_spreadsheet_sheets_tenant_workbook ON spreadsheet
 -- string for numbers, `TRUE` / `FALSE` for booleans, an ISO
 -- date for dates, or an error token. `number_format` names a
 -- format from the tenant settings (data, not an enum).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS spreadsheet_cells (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -139,13 +133,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_spreadsheet_cells_sheet_address ON spreads
 CREATE INDEX IF NOT EXISTS idx_spreadsheet_cells_tenant_sheet ON spreadsheet_cells (tenant_id, sheet_id, row_index ASC, column_index ASC);
 CREATE INDEX IF NOT EXISTS idx_spreadsheet_cells_tenant_workbook ON spreadsheet_cells (tenant_id, workbook_id, updated_at DESC);
 
--- ---------------------------------------------------------------------------
 -- Shares: one workbook shared with one user. `role` is data
 -- (the tenant settings list the allowed roles; the module
 -- defaults are `viewer` and `editor`). `shared_with` is a user
 -- id; `shared_with_email` is kept for a person with no account
 -- yet, and is anonymized when the user is deleted.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS spreadsheet_shares (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -161,14 +153,12 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_spreadsheet_shares_workbook_user ON spread
 CREATE INDEX IF NOT EXISTS idx_spreadsheet_shares_tenant_workbook ON spreadsheet_shares (tenant_id, workbook_id, created_at ASC);
 CREATE INDEX IF NOT EXISTS idx_spreadsheet_shares_tenant_user ON spreadsheet_shares (tenant_id, shared_with, created_at DESC);
 
--- ---------------------------------------------------------------------------
 -- Versions: one snapshot of one sheet. Every cell-write batch
 -- creates one version; `version_number` counts up per sheet.
 -- `cells_snapshot` is a JSON array of every non-empty cell
 -- (`{address, kind, raw_value}`) so a restore reproduces the
 -- sheet exactly. `change_summary` logs the batch that created
 -- the version (addresses changed with before/after values).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS spreadsheet_versions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -183,7 +173,6 @@ CREATE TABLE IF NOT EXISTS spreadsheet_versions (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_spreadsheet_versions_sheet_number ON spreadsheet_versions (sheet_id, version_number);
 CREATE INDEX IF NOT EXISTS idx_spreadsheet_versions_tenant_sheet ON spreadsheet_versions (tenant_id, sheet_id, version_number DESC);
 
--- ---------------------------------------------------------------------------
 -- Per-tenant spreadsheets settings. Number formats and share
 -- roles are data: `number_formats` is a JSON array of
 -- `{name, pattern}` (for example `{"name": "0.00", "pattern":
@@ -192,9 +181,8 @@ CREATE INDEX IF NOT EXISTS idx_spreadsheet_versions_tenant_sheet ON spreadsheet_
 -- renders. `public_links_allowed` is the tenant-wide switch
 -- for public-link sharing (off by default); a workbook link
 -- still needs to be enabled per workbook. Changing the
--- formats or roles only affects later writes — stored cells
+-- formats or roles only affects later writes - stored cells
 -- keep the format name they were written with.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS spreadsheet_settings (
     tenant_id TEXT PRIMARY KEY CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
     default_currency TEXT NOT NULL DEFAULT 'USD' CHECK (char_length(default_currency) BETWEEN 1 AND 8),

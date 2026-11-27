@@ -30,7 +30,7 @@
 --     `offer`, `hired`, or `rejected` (`ApplicantStage`). The
 --     pipeline is forward-only with `rejected` reachable from any
 --     open stage; the CHECK below mirrors the module's
---     `allowed_stage_transition` only loosely — the strict
+--     `allowed_stage_transition` only loosely - the strict
 --     transition rules live in the module, not in SQL.
 --   - `applicants.resume_storage_target` /
 --     `resume_storage_key` are metadata only: the resume bytes

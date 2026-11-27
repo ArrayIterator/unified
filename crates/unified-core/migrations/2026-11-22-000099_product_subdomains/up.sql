@@ -58,9 +58,9 @@
 --     module records them once the event names are added to its
 --     audited list (see docs/integration/INTEGRATION_NOTES_BATCH15_B2.md).
 --   - Migration number: 000099 after the integration renumber
---     (000093 when written; the pre-renumber duplicates — 000090
---     twice, 000100_calculator out of sequence — were resolved by
---     the gapless renumber, see docs/integration/INTEGRATION_NOTES_INTEGRATION2.md §4).
+--     (000093 when written; the pre-renumber duplicates - 000090
+--     twice, 000100_calculator out of sequence - were resolved by
+--     the gapless renumber, see docs/integration/INTEGRATION_NOTES_INTEGRATION2.md sec. 4).
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 

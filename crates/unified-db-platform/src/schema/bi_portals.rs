@@ -3,9 +3,7 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Business Intelligence (migration 000042_bi).
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     bi_reports (id) {
@@ -54,9 +52,7 @@ diesel::table! {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Client portals (migration 000046_portals).
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     portals (id) {

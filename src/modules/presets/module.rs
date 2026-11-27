@@ -72,7 +72,7 @@
 // module's data (see its capability list), not a matrix in this
 // module.
 
-//! Presets + Setup Wizard module. — Module implementation.
+//! Presets + Setup Wizard module. - Module implementation.
 //!
 //! Split from `src/modules/presets.rs`; behaviour unchanged.
 

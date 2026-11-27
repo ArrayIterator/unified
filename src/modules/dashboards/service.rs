@@ -26,9 +26,7 @@ use super::{ALL_CAPABILITIES, CAP_ADMIN_ACCESS, CAP_RESELLER_ACCESS, CAP_USER_AC
     MAX_VIEW_AS_TTL_MINUTES, MIN_VIEW_AS_TTL_MINUTES, OrderRow, has_capability, nav_items,
     require_capability};
 
-// ---------------------------------------------------------------------------
 // Database access (blocking Diesel work runs on the blocking pool)
-// ---------------------------------------------------------------------------
 
 pub(crate) fn db_pool(ctx: &AppContext) -> UnifiedResult<DbPool> {
     ctx.db
@@ -448,16 +446,14 @@ pub(crate) fn render_page_response(
     response
 }
 
-// ---------------------------------------------------------------------------
 // Overview data (database-backed counts and rows; hook-merged sections)
-// ---------------------------------------------------------------------------
 
 /// Resolve the tenant scope for an admin-overview request, failing
 /// closed. `None` means no tenant context was attached: a
 /// control-plane request (main host, explicit ControlPlane opt-in,
 /// or exempt path). `Some` is the validated tenant context. A
 /// request that resolved to a tenant host but whose tenant id is not
-/// a valid tenant UUID is rejected — it must never fall through to
+/// a valid tenant UUID is rejected - it must never fall through to
 /// the `None` branch and be served platform-wide counts as if it
 /// were a control-plane request.
 pub(crate) fn overview_tenant_scope(req: &HttpRequest) -> UnifiedResult<Option<TenantContext>> {
@@ -474,7 +470,7 @@ pub(crate) fn overview_tenant_scope(req: &HttpRequest) -> UnifiedResult<Option<T
 /// Tenant scoping (C3): the counts are scoped to the request's
 /// tenant whenever one resolved, and are platform-wide ONLY on a
 /// proven control-plane request (`tenant` is `None`). A tenant host
-/// must never see platform-wide totals — `users`, `licenses`, and
+/// must never see platform-wide totals - `users`, `licenses`, and
 /// `store_orders` are filtered by the tenant's company id, and
 /// `roles` (a global vocabulary with no company id) counts the
 /// distinct roles assigned to that tenant's users. A resolved tenant
@@ -484,7 +480,7 @@ pub(crate) fn overview_tenant_scope(req: &HttpRequest) -> UnifiedResult<Option<T
 /// opt-in / exempt path): since the C4 fix, unresolved hosts are
 /// answered 404 by the tenant-resolution middleware before any
 /// handler runs, so "no tenant context" is the same proof the
-/// codebase's `require_control_plane` guard relies on — never a
+/// codebase's `require_control_plane` guard relies on - never a
 /// fallback to `public` for an unresolved tenant.
 pub(crate) async fn admin_overview_data(
     ctx: &AppContext,
@@ -754,9 +750,7 @@ pub(crate) fn linked_client_ids(state: &DashboardsState, reseller_id: Uuid) -> V
     ids
 }
 
-// ---------------------------------------------------------------------------
 // API handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn get_scope(
     req: HttpRequest,

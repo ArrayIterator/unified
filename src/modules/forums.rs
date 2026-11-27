@@ -1,4 +1,4 @@
-// Forums module — public-facing discussion forums with SEO
+// Forums module - public-facing discussion forums with SEO
 // slugs, categories, threads with solved/best-answer marking,
 // two-level nested replies with quotes and mentions, polls,
 // thread/forum subscriptions with notifications, voting with
@@ -9,20 +9,20 @@
 // Routes live under `/api/v1/forums`:
 //
 //   Public (no auth; see the public-access note below):
-//     GET  /public/forums — public forums.
-//     GET  /public/forums/{slug} — one public forum.
-//     GET  /public/forums/{slug}/threads — threads of a public forum.
-//     GET  /public/threads/{id} — one public thread with its posts.
-//     GET  /public/search — substring search over public content.
+//     GET  /public/forums - public forums.
+//     GET  /public/forums/{slug} - one public forum.
+//     GET  /public/forums/{slug}/threads - threads of a public forum.
+//     GET  /public/threads/{id} - one public thread with its posts.
+//     GET  /public/search - substring search over public content.
 //   Forums:
-//     GET/POST /forums — list forums / create a forum.
+//     GET/POST /forums - list forums / create a forum.
 //     GET/PATCH/DELETE /forums/{id}.
 //     POST /forums/{id}/subscribe, /forums/{id}/unsubscribe.
 //   Categories:
-//     GET/POST /forums/{forum_id}/categories — list / create.
+//     GET/POST /forums/{forum_id}/categories - list / create.
 //     GET/PATCH/DELETE /categories/{id}.
 //   Threads:
-//     GET/POST /forums/{forum_id}/threads — list / create (creating
+//     GET/POST /forums/{forum_id}/threads - list / create (creating
 //       a thread also creates its opening post from `body`).
 //     GET/PATCH/DELETE /threads/{id}.
 //     POST /threads/{id}/pin, /threads/{id}/lock,
@@ -30,40 +30,40 @@
 //       /threads/{id}/view (record a view),
 //       /threads/{id}/report,
 //       /threads/{id}/subscribe, /threads/{id}/unsubscribe.
-//     GET/POST /threads/{id}/poll — the thread's poll (one per
+//     GET/POST /threads/{id}/poll - the thread's poll (one per
 //       thread).
 //   Posts and replies:
-//     GET/POST /threads/{id}/posts — list posts of a thread / reply
+//     GET/POST /threads/{id}/posts - list posts of a thread / reply
 //       to the thread (a reply names `parent_post_id` to answer one
 //       post; replies nest two levels deep: depth 0, 1, 2).
 //     GET/PATCH/DELETE /posts/{id}.
-//     POST /posts/{id}/vote — up (+1) or down (-1); one vote per
+//     POST /posts/{id}/vote - up (+1) or down (-1); one vote per
 //       user per post, changing a vote updates it.
-//     GET  /posts/{id}/votes — vote totals plus the caller's vote.
-//     POST /posts/{id}/report — report a post with a reason.
+//     GET  /posts/{id}/votes - vote totals plus the caller's vote.
+//     POST /posts/{id}/report - report a post with a reason.
 //   Polls:
-//     GET  /polls/{id} — a poll with options, vote counts, and the
+//     GET  /polls/{id} - a poll with options, vote counts, and the
 //       caller's vote.
-//     POST /polls/{id}/vote — one vote per user per poll.
-//     POST /polls/{id}/close — poll creator or moderator.
+//     POST /polls/{id}/vote - one vote per user per poll.
+//     POST /polls/{id}/close - poll creator or moderator.
 //   Subscriptions:
-//     GET  /subscriptions — the caller's own subscriptions.
+//     GET  /subscriptions - the caller's own subscriptions.
 //   Reports and moderation audit:
-//     GET  /reports — open reports first (moderators).
-//     POST /reports/{id}/review — dismiss, hide, or delete the
+//     GET  /reports - open reports first (moderators).
+//     POST /reports/{id}/review - dismiss, hide, or delete the
 //       target (moderators, audited).
-//     GET  /moderation-actions — audited moderator actions.
+//     GET  /moderation-actions - audited moderator actions.
 //   Settings:
-//     GET  /settings — rate limits, spam threshold, new-user
+//     GET  /settings - rate limits, spam threshold, new-user
 //       restrictions.
 //     PATCH /settings (moderators).
 //   Search and reputation:
-//     GET  /search — substring search over threads and posts.
-//     GET  /reputation/{user_id} — reputation totals of one user.
-//     GET  /reputation/leaderboard — top users by score
+//     GET  /search - substring search over threads and posts.
+//     GET  /reputation/{user_id} - reputation totals of one user.
+//     GET  /reputation/leaderboard - top users by score
 //       (?limit=, default 20, max 100).
 //
-// HONESTY — READ THIS FIRST. What is real in this module:
+// HONESTY - READ THIS FIRST. What is real in this module:
 // in-memory forum, category, thread, post, vote, report,
 // subscription, poll, moderation-action, reputation, and
 // post-edit-history management; one vote per user per post
@@ -73,7 +73,7 @@
 // rate limits for threads and posts (defaults 10 threads / 30
 // posts, configurable); a spam-report threshold that auto-hides a
 // reported post pending review (default 5 open reports,
-// configurable) — reported threads are queued for moderator
+// configurable) - reported threads are queued for moderator
 // review without auto-action; visibility rules (public / members-only /
 // staff-only forums, staff-only content answers 404 to anyone
 // without the manage capability); two-level nested replies with
@@ -87,11 +87,11 @@
 // audited moderation action. What is NOT built here: durable
 // storage until the migration runs (the DashMap stores are
 // authoritative; migration `2026-11-22-000110_forums` is the
-// persistence target); badge awarding (gamification owns badges —
+// persistence target); badge awarding (gamification owns badges -
 // this module only tracks badge counts via the
 // `gamification.badge.awarded` listener and emits forums events
 // so gamification can award points); email / push delivery (the
-// notifications module owns delivery — this module only emits
+// notifications module owns delivery - this module only emits
 // `notification.requested`); full-text search (this module emits
 // `search.index` and searches by substring; ranking lives in the
 // search module); and live file uploads (attachments are metadata
@@ -102,9 +102,9 @@
 // an endpoint is public only when a rule exists with
 // `public_access: true`, and denied outright when a rule exists
 // with `allowed: false`). There is no reusable per-request
-// "is this endpoint public?" helper to call from a handler — the
+// "is this endpoint public?" helper to call from a handler - the
 // check lives in the API Manager middleware / `resolve_public`
-// path — so the public routes below rely on that gate: an
+// path - so the public routes below rely on that gate: an
 // administrator must create the matching `ApiAccessRule` rows for
 // `GET /api/v1/forums/public/*`. The routes are registered in
 // `route_info()` with `route_version_support()` defaulting to
@@ -144,13 +144,13 @@
 //   - `notification.requested` (new posts for subscribers, in the
 //     notifications module's payload shape).
 // Events this module listens to:
-//   - `user.deleted` — anonymizes the user's threads, posts, and
+//   - `user.deleted` - anonymizes the user's threads, posts, and
 //     post edits to `deleted-user`; deletes their subscriptions,
 //     votes, poll votes, and reputation row.
-//   - `gamification.badge.awarded` — increments the user's badge
+//   - `gamification.badge.awarded` - increments the user's badge
 //     count (badges themselves are owned by gamification; this
 //     module never awards a badge).
-//   - `search.reindex.requested` — republishes every stored thread
+//   - `search.reindex.requested` - republishes every stored thread
 //     and post through `search.index` so the search index is
 //     rebuilt from the forums stores.
 //
@@ -163,7 +163,7 @@
 // marking, view counts, polls, subscriptions with notifications,
 // reputation with a leaderboard, new-user link limits, and search
 // indexing. Community has no member directory equivalent here,
-// no announcements, and no one-level-only reply limit — forums
+// no announcements, and no one-level-only reply limit - forums
 // has no member directory and no announcements. The two modules
 // never share rows: separate stores, separate routes, separate
 // events.

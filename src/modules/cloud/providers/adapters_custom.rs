@@ -12,9 +12,7 @@ use url::Url;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Redshift adapter.
-// ---------------------------------------------------------------------------
 
 /// Amazon Redshift (`redshift.<region>.amazonaws.com`), SigV4 signed
 /// query API. Clusters list / status only -- read-only scope, no query

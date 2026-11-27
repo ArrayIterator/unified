@@ -1,4 +1,4 @@
--- Reverse of 000131: remove the 43 email providers added by task 354
+-- Reverse of 000131: remove the 43 email providers
 -- and the five columns it added. Only the 43 built-in ids are
 -- deleted; rows an admin registered themselves are untouched. The
 -- updated notes on the 13 existing providers are NOT reverted (the

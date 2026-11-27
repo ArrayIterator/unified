@@ -74,9 +74,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One bookable service.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS appointment_services (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(200) NOT NULL,
@@ -98,10 +96,8 @@ CREATE TABLE IF NOT EXISTS appointment_services (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- ---------------------------------------------------------------------------
 -- One staff availability row: working hours (with optional break) or
 -- one day off.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS appointment_staff_availability (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     staff_user_id VARCHAR(128) NOT NULL,
@@ -129,9 +125,7 @@ CREATE INDEX IF NOT EXISTS idx_appointment_staff_availability_staff
 CREATE INDEX IF NOT EXISTS idx_appointment_staff_availability_date
     ON appointment_staff_availability (staff_user_id, date);
 
--- ---------------------------------------------------------------------------
 -- One assignment of a staff member to a service they may perform.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS appointment_staff_services (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     staff_user_id VARCHAR(128) NOT NULL,
@@ -147,9 +141,7 @@ CREATE INDEX IF NOT EXISTS idx_appointment_staff_services_staff
 CREATE INDEX IF NOT EXISTS idx_appointment_staff_services_service
     ON appointment_staff_services (service_id);
 
--- ---------------------------------------------------------------------------
 -- One booking.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS appointments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     service_id UUID NOT NULL REFERENCES appointment_services (id),
@@ -186,9 +178,7 @@ CREATE INDEX IF NOT EXISTS idx_appointments_customer
 CREATE INDEX IF NOT EXISTS idx_appointments_status
     ON appointments (status, starts_at);
 
--- ---------------------------------------------------------------------------
 -- One reminder for one appointment.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS appointment_reminders (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     appointment_id UUID NOT NULL REFERENCES appointments (id) ON DELETE CASCADE,

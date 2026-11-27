@@ -13,9 +13,7 @@ use super::helpers::{matches_search};
 
 
 
-// ---------------------------------------------------------------------------
 // Report definition handlers.
-// ---------------------------------------------------------------------------
 pub(crate) fn parse_optional_datetime(value: Option<String>, field: &str) -> UnifiedResult<Option<DateTime<Utc>>> {
     match value {
         Some(value) => Ok(Some(parse_datetime(&value, field)?)),

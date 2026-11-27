@@ -1,4 +1,4 @@
-// todos — store.
+// todos - store.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -26,9 +26,7 @@ use super::handlers_subtasks::*;
 use super::handlers_ai::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Shared state.
-// ---------------------------------------------------------------------------
 
 /// In-memory stores for todos. The hook bus is attached in `init`
 /// (the bus lives in `AppContext`); handlers use `ctx.hooks` directly

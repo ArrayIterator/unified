@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""C3 pilot 5 group A verification (task 319): billing, cards,
+"""C3 pilot 5 group A verification: billing, cards,
 delivery_notes, entitlements.
 
 For each module, per routed handler (same routed-set rule as the
@@ -12,7 +12,7 @@ pilot 4 verifier: names appearing in `.to(name)` in the module):
 
 Adaptations vs the pilot 4 template (documented in
 docs/integration/pilot5/group-a-results.md):
-  - billing / delivery_notes are strict under task 315 (2026-11-23):
+- billing / delivery_notes are strict under (2026-11-23):
     GET handlers resolve `caller_company`; mutation handlers
     resolve the strict write gate `require_company_for_write`,
     except the named carve-outs (settings, scan/test triggers,
@@ -29,7 +29,7 @@ docs/integration/pilot5/group-a-results.md):
     via the pre-existing `TenantScope::resolve` (caller_company +
     TenantScope::resolve), except `ai_capabilities` (GET, no
     TenantScope, caller_company only); the admin surface
-    (handlers_admin.rs) is platform-gated since task 315 C.5
+(handlers_admin.rs) is platform-gated since C.5
     (`require_control_plane` / ControlPlaneGuard) instead of
     tenant-gate-only.
   - identity calls are per-module (billing adds fee_caller,
@@ -73,7 +73,7 @@ IDENTITY_CALLS = {
     ),
 }
 
-# kind rule per module: "strict" (pilot 4), "strict315" (task 315:
+# kind rule per module: "strict" (pilot 4), "strict315" (
 # mutations resolve require_company_for_write except the named
 # carve-outs), "entitlements".
 KIND = {
@@ -83,7 +83,7 @@ KIND = {
     "entitlements": "entitlements",
 }
 
-# Task 315 carve-outs: mutation handlers that keep caller_company
+# carve-outs: mutation handlers that keep caller_company
 # (settings with no company field, scan/test triggers, print/email
 # actions). Every other mutation must resolve the strict write gate.
 STRICT315_CARVEOUT = {

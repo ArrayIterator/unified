@@ -13,9 +13,7 @@ use super::{FIELD_KEY_PREFIX, FIELD_TYPES, FIELD_TYPE_BOOLEAN, FIELD_TYPE_DATE, 
     MAX_LAYOUT_ENTRIES, MAX_OPTIONS, MAX_OPTION_LEN, MAX_PATTERN_LEN, MAX_RECORD_TYPE_LEN,
     MAX_SECTIONS, MAX_USER_ID_LEN, StudioState, VISIBILITY_PRIVATE, VISIBILITY_SHARED};
 
-// ---------------------------------------------------------------------------
 // Validation.
-// ---------------------------------------------------------------------------
 
 pub(crate) fn require_text(value: &str, field: &str, max: usize) -> UnifiedResult<String> {
     let trimmed = value.trim();
@@ -195,7 +193,7 @@ pub(crate) fn validate_sort_field(raw: &str) -> UnifiedResult<String> {
 }
 
 /// Validate the validation rules themselves. A bad rule is rejected
-/// at definition time, never at use time — including the regex,
+/// at definition time, never at use time - including the regex,
 /// which is compiled here.
 pub(crate) fn validate_rules(field_type: &str, rules: &FieldValidation) -> UnifiedResult<()> {
     let numeric = field_type == FIELD_TYPE_NUMBER || field_type == FIELD_TYPE_DECIMAL;
@@ -435,7 +433,7 @@ pub(crate) fn validate_value(definition: &FieldDefinition, value: Option<&Value>
 
 /// A stored filter is a flat field/value map (same rule as the
 /// saved-views module): scalars or arrays of scalars only, never
-/// nested objects — a filter is data, never executable logic.
+/// nested objects - a filter is data, never executable logic.
 pub(crate) fn validate_filter(filter: &Value) -> UnifiedResult<()> {
     let object = match filter {
         Value::Object(map) => map,
@@ -517,7 +515,7 @@ pub(crate) fn validate_columns(columns: &[String]) -> UnifiedResult<Vec<String>>
 /// (a system field or an effective custom definition for this
 /// record type), and a system field that is required or
 /// non-hideable may never be hidden. Custom fields may always be
-/// hidden — they are optional by construction.
+/// hidden - they are optional by construction.
 pub(crate) fn validate_layout(
     state: &StudioState,
     record_type: &str,
@@ -608,9 +606,7 @@ pub(crate) fn require_record_type(state: &StudioState, raw: &str) -> UnifiedResu
     Ok(record_type)
 }
 
-// ---------------------------------------------------------------------------
 // Helpers.
-// ---------------------------------------------------------------------------
 
 pub(crate) fn paginate<T: Serialize + Clone>(items: Vec<T>, params: &PaginationParams) -> PageResult<T> {
     let pagination = params.normalized();

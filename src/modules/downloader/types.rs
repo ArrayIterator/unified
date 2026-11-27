@@ -23,9 +23,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Limits (clamped the same way for every job).
-// ---------------------------------------------------------------------------
 
 /// Default number of retries after a transient failure.
 const DEFAULT_MAX_RETRIES: u32 = 3;
@@ -58,9 +56,7 @@ pub(crate) const USER_AGENT: &str = concat!("unified/", env!("CARGO_PKG_VERSION"
 pub(crate) const PERM_DOWNLOADER_VIEW: &str = "downloader.view";
 pub(crate) const PERM_DOWNLOADER_MANAGE: &str = "downloader.manage";
 
-// ---------------------------------------------------------------------------
 // Job status: a small state machine with validated transitions.
-// ---------------------------------------------------------------------------
 
 /// Lifecycle of a download job. Terminal states (`Completed`, `Failed`,
 /// `Cancelled`) accept no further transition, except that a `Failed` job
@@ -117,9 +113,7 @@ impl std::fmt::Display for DownloadStatus {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Job state.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize)]
 pub struct DownloadJobView {
@@ -284,9 +278,7 @@ pub(crate) fn jobs_store() -> &'static DashMap<Uuid, Arc<DownloadJobState>> {
     JOBS.get_or_init(DashMap::new)
 }
 
-// ---------------------------------------------------------------------------
 // Request types.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct CreateJobRequest {

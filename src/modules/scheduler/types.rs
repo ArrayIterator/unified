@@ -4,9 +4,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Job {
@@ -102,7 +100,7 @@ pub struct EnqueueRequest {
 /// the `<kind>_requested` event the owning module listens to; a few
 /// kinds name the event directly (the owning module registered a
 /// handler for the kind name itself), and those arms emit the kind
-/// name unchanged — see the arm comments.
+/// name unchanged - see the arm comments.
 pub(crate) const KNOWN_KINDS: &[&str] = &[
     "mail.send",
     "geo.update",

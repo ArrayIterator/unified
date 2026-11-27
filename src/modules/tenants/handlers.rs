@@ -13,9 +13,7 @@ use super::{constants::*, vocabulary::*, events::*, settings::*, records::*, sta
 
 
 
-// ---------------------------------------------------------------------------
 // Handlers.
-// ---------------------------------------------------------------------------
 /// Atomically claim a slug for a tenant: under the slug-claim lock,
 /// reject with 409 when another tenant already holds the slug and
 /// insert the tenant otherwise. The check and the insert happen
@@ -415,7 +413,7 @@ pub(crate) async fn list_provision_steps(
 
 /// Retry provisioning: resumes a `provision_failed` (or stalled
 /// `provisioning`) tenant at the first incomplete step instead of
-/// duplicating anything. An `active` tenant is a 409 — there is
+/// duplicating anything. An `active` tenant is a 409 - there is
 /// nothing to retry.
 pub(crate) async fn retry_provisioning(
     ctx: web::Data<Arc<AppContext>>,

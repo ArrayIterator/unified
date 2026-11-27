@@ -1,4 +1,4 @@
-// Webhooks — URL safety (SSRF guard).
+// Webhooks - URL safety (SSRF guard).
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -23,13 +23,11 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // URL safety (SSRF guard).
-// ---------------------------------------------------------------------------
 
 /// Normalize an address before classification: an IPv4-mapped IPv6
 /// address (`::ffff:127.0.0.1`) is the IPv4 address it wraps, so the
-/// wrapped address is what must be classified — otherwise the mapped
+/// wrapped address is what must be classified - otherwise the mapped
 /// loopback (or mapped private address) would pass the guard while
 /// the socket connects to 127.0.0.1 (or 10.0.0.1).
 ///
@@ -153,7 +151,7 @@ pub fn validate_webhook_url(raw: &str) -> UnifiedResult<Url> {
 /// resolves to. Returns the validated socket addresses for the
 /// delivery to connect to. Callers must connect only to these
 /// addresses (for example through a reqwest DNS override), keeping
-/// the original host in the URL for the Host header and TLS SNI —
+/// the original host in the URL for the Host header and TLS SNI -
 /// the request must never re-resolve the host, because a second
 /// lookup could return a different, private address after this
 /// check passed (DNS-rebinding TOCTOU). An IP-literal host resolves

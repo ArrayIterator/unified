@@ -41,7 +41,7 @@
 --     taxonomy itself (`environmental`, `social`,
 --     `governance`), the three value data types (`number`,
 --     `text`, `boolean`), and the two target directions
---     (`increase`, `decrease`) — those are the shape of the
+--     (`increase`, `decrease`) - those are the shape of the
 --     module, not its content.
 --   - There is no floating point money or measurement in this
 --     module: numeric entry and target values are stored as
@@ -49,7 +49,7 @@
 --     `esg_targets.target_value`, scale preserved in the
 --     string itself, e.g. `12.50` is stored as `12.5`), and
 --     progress math runs on an integer-mantissa decimal type
---     in basis points (10000 = 100%) — `f64` is never used
+--     in basis points (10000 = 100%) - `f64` is never used
 --     for a stored or returned number anywhere in this module.
 --     Boolean values are stored as the strings `true` /
 --     `false`; text values are stored as written.
@@ -73,11 +73,9 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- Reporting frameworks: admin-entered definitions of a
 -- standard a tenant reports against, with its own version.
 -- Frameworks are data, never a hard-coded list.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS esg_frameworks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -90,7 +88,6 @@ CREATE TABLE IF NOT EXISTS esg_frameworks (
 );
 CREATE INDEX IF NOT EXISTS idx_esg_frameworks_tenant_name ON esg_frameworks (tenant_id, name, created_at DESC);
 
--- ---------------------------------------------------------------------------
 -- Metric definitions: one admin-defined sustainability
 -- metric. `category` is the ESG taxonomy (`environmental`,
 -- `social`, `governance`); `data_type` is `number`, `text`,
@@ -98,11 +95,10 @@ CREATE INDEX IF NOT EXISTS idx_esg_frameworks_tenant_name ON esg_frameworks (ten
 -- uses); `frequency` is free text (a cadence name) so no
 -- cadence list is hard-coded; `framework_ids` is a JSON array
 -- of framework ids the metric reports under (plain TEXT
--- references, no foreign key — a metric may tag a framework
+-- references, no foreign key - a metric may tag a framework
 -- that is created later, and deleting a framework never
 -- deletes the metrics that tagged it). `active` false hides
 -- the metric from new entries without deleting its history.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS esg_metrics (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -121,13 +117,11 @@ CREATE TABLE IF NOT EXISTS esg_metrics (
 CREATE INDEX IF NOT EXISTS idx_esg_metrics_tenant_category ON esg_metrics (tenant_id, category, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_esg_metrics_tenant_active ON esg_metrics (tenant_id, active, created_at DESC);
 
--- ---------------------------------------------------------------------------
 -- Reporting periods: one period definition with a code (a
 -- quarter or fiscal-year label), a date range, and an open /
 -- closed status. Entries and targets may only be written
 -- while a period is open; closing is explicit and reversible
 -- through reopen. The code is unique per tenant.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS esg_periods (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -143,7 +137,6 @@ CREATE TABLE IF NOT EXISTS esg_periods (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_esg_periods_tenant_code ON esg_periods (tenant_id, code);
 CREATE INDEX IF NOT EXISTS idx_esg_periods_tenant_status ON esg_periods (tenant_id, status, starts_on DESC);
 
--- ---------------------------------------------------------------------------
 -- Entries: one recorded metric value for a metric in a period
 -- at a scope. `value_text` is the canonical decimal string
 -- for numeric metrics, `true` / `false` for boolean metrics,
@@ -153,7 +146,6 @@ CREATE INDEX IF NOT EXISTS idx_esg_periods_tenant_status ON esg_periods (tenant_
 -- `document_ids` is a JSON array of document ids from the
 -- documents module (references by id only, no document data
 -- is copied here). One entry per (metric, period, scope).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS esg_entries (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -172,13 +164,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_esg_entries_metric_period_scope ON esg_ent
 CREATE INDEX IF NOT EXISTS idx_esg_entries_tenant_period ON esg_entries (tenant_id, period_id, created_at ASC);
 CREATE INDEX IF NOT EXISTS idx_esg_entries_tenant_metric ON esg_entries (tenant_id, metric_id, created_at DESC);
 
--- ---------------------------------------------------------------------------
 -- Entry history: one row per recorded value. Every entry
 -- creation and every update appends a row with who entered
 -- the value and when, so the full history of a value is
 -- preserved even though the entry row only holds the latest
 -- value. History rows are never updated or deleted.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS esg_entry_history (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -193,7 +183,6 @@ CREATE TABLE IF NOT EXISTS esg_entry_history (
 CREATE INDEX IF NOT EXISTS idx_esg_entry_history_entry ON esg_entry_history (entry_id, created_at ASC);
 CREATE INDEX IF NOT EXISTS idx_esg_entry_history_tenant_metric ON esg_entry_history (tenant_id, metric_id, created_at DESC);
 
--- ---------------------------------------------------------------------------
 -- Targets: one per-metric, per-period, per-scope target. The
 -- target value uses the same storage as entries (canonical
 -- decimal string, `true` / `false`, or free text).
@@ -202,7 +191,6 @@ CREATE INDEX IF NOT EXISTS idx_esg_entry_history_tenant_metric ON esg_entry_hist
 -- lower-is-better, e.g. emissions). One target per (metric,
 -- period, scope); setting a target again replaces it, and
 -- the replacement is recorded in the audit trail.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS esg_targets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -221,7 +209,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_esg_targets_metric_period_scope ON esg_tar
 CREATE INDEX IF NOT EXISTS idx_esg_targets_tenant_period ON esg_targets (tenant_id, period_id, created_at ASC);
 CREATE INDEX IF NOT EXISTS idx_esg_targets_tenant_metric ON esg_targets (tenant_id, metric_id, created_at DESC);
 
--- ---------------------------------------------------------------------------
 -- Audit trail: one row per change to an entry, a target, or
 -- a period (creates, updates, deletes, close / reopen).
 -- `entity_type` names the row kind (`entry`, `target`,
@@ -229,7 +216,6 @@ CREATE INDEX IF NOT EXISTS idx_esg_targets_tenant_metric ON esg_targets (tenant_
 -- names the change; `before` / `after` are the serialized
 -- rows (or NULL for creates / deletes). Audit rows are
 -- never updated or deleted through the API.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS esg_audit (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),

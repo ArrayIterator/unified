@@ -1,5 +1,5 @@
-// Document Vault module — secure document storage per company and
-// client: folders, documents (metadata only — file bytes live in
+// Document Vault module - secure document storage per company and
+// client: folders, documents (metadata only - file bytes live in
 // the storage module, referenced by target + key), versioning,
 // append-only access logs, expiring share links, access requests
 // with approvals, and retention rules.
@@ -7,36 +7,36 @@
 // Routes live under `/api/v1/vault`:
 //
 //   Folders:
-//     GET/POST /folders — list folders / create a folder.
+//     GET/POST /folders - list folders / create a folder.
 //     GET/PATCH/DELETE /folders/{id}.
-//     POST /folders/{id}/retention — set the retention rule.
-//     GET  /folders/{id}/documents — documents in a folder.
+//     POST /folders/{id}/retention - set the retention rule.
+//     GET  /folders/{id}/documents - documents in a folder.
 //   Documents:
-//     GET/POST /documents — list visible documents / upload metadata.
+//     GET/POST /documents - list visible documents / upload metadata.
 //     GET/PATCH/DELETE /documents/{id}.
-//     POST /documents/{id}/versions — upload a new version (metadata).
-//     GET  /documents/{id}/versions — version list.
+//     POST /documents/{id}/versions - upload a new version (metadata).
+//     GET  /documents/{id}/versions - version list.
 //     POST /documents/{id}/versions/{version_id}/restore.
-//     POST /documents/{id}/download — record a download, return the
+//     POST /documents/{id}/download - record a download, return the
 //       storage reference (no file bytes are served here).
-//     GET  /documents/{id}/access-log — append-only access log.
-//     POST /documents/{id}/share — create an expiring share link.
-//     GET  /documents/{id}/share-links — links of a document.
-//     POST /documents/{id}/request-access — request access.
-//     POST /documents/{id}/flag-review — flag for retention review.
+//     GET  /documents/{id}/access-log - append-only access log.
+//     POST /documents/{id}/share - create an expiring share link.
+//     GET  /documents/{id}/share-links - links of a document.
+//     POST /documents/{id}/request-access - request access.
+//     POST /documents/{id}/flag-review - flag for retention review.
 //   Share links:
-//     POST /share-links/{id}/revoke — revoke a link.
-//     GET  /shared/{token} — resolve a share link (public route;
+//     POST /share-links/{id}/revoke - revoke a link.
+//     GET  /shared/{token} - resolve a share link (public route;
 //       see the public-access note below).
 //   Access requests:
-//     GET  /access-requests — pending / decided requests.
+//     GET  /access-requests - pending / decided requests.
 //     POST /access-requests/{id}/approve.
 //     POST /access-requests/{id}/deny.
 //   Retention:
-//     GET  /retention/review — documents past their retention
+//     GET  /retention/review - documents past their retention
 //       window, flagged for review (never auto-deleted).
 //
-// HONESTY — READ THIS FIRST. What is real in this module:
+// HONESTY - READ THIS FIRST. What is real in this module:
 // in-memory folder, document, version, access-log, share-link, and
 // access-request management; versioning where every upload is a new
 // version and old versions are kept and restorable; an append-only
@@ -44,21 +44,21 @@
 // unguessable share tokens with expiry, a download cap, and
 // revocation; access requests with approve / deny decisions that
 // are themselves audited; retention rules that only flag documents
-// for review — deletion is always an explicit, audited manage
+// for review - deletion is always an explicit, audited manage
 // action. What is NOT built here: file bytes (the storage module
-// owns upload / download of bytes — this module only stores the
+// owns upload / download of bytes - this module only stores the
 // storage target + key, the SHA-256 checksum, and the size, and
 // verifies the checksum format on write); actual file encryption
 // at rest (the storage target is responsible for it); virus
-// scanning; and automatic deletion (by design — see the retention
+// scanning; and automatic deletion (by design - see the retention
 // note in the module header).
 //
 // Public-access gate: the API Manager module enforces public access
 // through its admin-managed `ApiAccessRule` records (default deny:
 // an endpoint is public only when a rule exists with
 // `public_access: true`). There is no reusable per-request "is this
-// endpoint public?" helper to call from a handler — the check lives
-// in the API Manager middleware / `resolve_public` path — so the
+// endpoint public?" helper to call from a handler - the check lives
+// in the API Manager middleware / `resolve_public` path - so the
 // public route below relies on that gate: an administrator must
 // create the matching `ApiAccessRule` row for
 // `GET /api/v1/vault/shared/{token}`. The route is registered in

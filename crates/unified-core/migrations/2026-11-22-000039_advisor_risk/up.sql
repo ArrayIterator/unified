@@ -38,9 +38,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One advisor recommendation, produced by one named rule.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS advisor_suggestions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id UUID,
@@ -81,10 +79,8 @@ CREATE INDEX IF NOT EXISTS idx_advisor_suggestions_status
 CREATE INDEX IF NOT EXISTS idx_advisor_suggestions_created_at
     ON advisor_suggestions (created_at);
 
--- ---------------------------------------------------------------------------
 -- One rule evaluation run: the audit trail of what the advisor
 -- evaluated and what it produced.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS advisor_rule_runs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id UUID,
@@ -106,10 +102,8 @@ CREATE INDEX IF NOT EXISTS idx_advisor_rule_runs_rule_id
 CREATE INDEX IF NOT EXISTS idx_advisor_rule_runs_ran_at
     ON advisor_rule_runs (ran_at);
 
--- ---------------------------------------------------------------------------
 -- One risk in the register. Score and band are derived, never
 -- supplied by the client.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS risks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id UUID,
@@ -151,9 +145,7 @@ CREATE INDEX IF NOT EXISTS idx_risks_owner_id
 CREATE INDEX IF NOT EXISTS idx_risks_next_review_at
     ON risks (next_review_at);
 
--- ---------------------------------------------------------------------------
 -- One mitigation plan, owned by one risk.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS risk_mitigation_plans (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     risk_id UUID NOT NULL REFERENCES risks (id)
@@ -172,11 +164,9 @@ CREATE INDEX IF NOT EXISTS idx_risk_mitigation_plans_risk_id
 CREATE INDEX IF NOT EXISTS idx_risk_mitigation_plans_status
     ON risk_mitigation_plans (status);
 
--- ---------------------------------------------------------------------------
 -- One mitigation task. The backing Projects task is requested via
 -- the `risk.mitigation_task_requested` hook event; its id lands in
 -- `external_project_task_id` once the Projects module answers.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS risk_mitigation_tasks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     plan_id UUID NOT NULL REFERENCES risk_mitigation_plans (id)
@@ -204,9 +194,7 @@ CREATE INDEX IF NOT EXISTS idx_risk_mitigation_tasks_status
 CREATE INDEX IF NOT EXISTS idx_risk_mitigation_tasks_assignee_id
     ON risk_mitigation_tasks (assignee_id);
 
--- ---------------------------------------------------------------------------
 -- One compliance checklist template.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS risk_checklist_templates (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title VARCHAR NOT NULL,
@@ -220,9 +208,7 @@ CREATE TABLE IF NOT EXISTS risk_checklist_templates (
 CREATE INDEX IF NOT EXISTS idx_risk_checklist_templates_category
     ON risk_checklist_templates (category);
 
--- ---------------------------------------------------------------------------
 -- One item of a checklist template.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS risk_checklist_template_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     template_id UUID NOT NULL REFERENCES risk_checklist_templates (id)
@@ -238,11 +224,9 @@ CREATE TABLE IF NOT EXISTS risk_checklist_template_items (
 CREATE INDEX IF NOT EXISTS idx_risk_checklist_template_items_template_id
     ON risk_checklist_template_items (template_id);
 
--- ---------------------------------------------------------------------------
 -- One per-company run of a checklist template, optionally linked to
 -- a risk. Deleting the risk unlinks the instance (SET NULL) instead
 -- of deleting the compliance record.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS risk_checklist_instances (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     template_id UUID NOT NULL REFERENCES risk_checklist_templates (id)
@@ -267,10 +251,8 @@ CREATE INDEX IF NOT EXISTS idx_risk_checklist_instances_risk_id
 CREATE INDEX IF NOT EXISTS idx_risk_checklist_instances_status
     ON risk_checklist_instances (status);
 
--- ---------------------------------------------------------------------------
 -- One item of a checklist instance. Title, required flag, and sort
 -- order are snapshotted from the template item at creation time.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS risk_checklist_instance_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     instance_id UUID NOT NULL REFERENCES risk_checklist_instances (id)
@@ -292,10 +274,8 @@ CREATE INDEX IF NOT EXISTS idx_risk_checklist_instance_items_instance_id
 CREATE INDEX IF NOT EXISTS idx_risk_checklist_instance_items_completed
     ON risk_checklist_instance_items (completed);
 
--- ---------------------------------------------------------------------------
 -- One recorded risk alert (threshold crossing or overdue review):
 -- the alerts history.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS risk_alerts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     risk_id UUID NOT NULL REFERENCES risks (id)

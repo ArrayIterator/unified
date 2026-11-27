@@ -1,4 +1,4 @@
--- Reverse of 000128: remove the 4 email providers added by task 350
+-- Reverse of 000128: remove the 4 email providers
 -- and the logo column. Only the 4 built-in ids are deleted; rows an
 -- admin registered themselves are untouched. The runtime registry
 -- falls back to the embedded seed document, so the providers keep

@@ -13,14 +13,12 @@ use super::{events::*, paper::*, thermal::*, profiles::*, jobs::*, state::*, hoo
 
 
 
-// ---------------------------------------------------------------------------
 // Caller identity and capability checks
-// ---------------------------------------------------------------------------
 /// Caller identity: the server-verified caller (user id plus
 /// server-resolved role, both required for capability checks),
 /// exactly like the assets and POS modules.
 /// `tenant_id` is the resolved tenant (uuidv7) from the
-/// middleware-attached context — every handler scopes its reads
+/// middleware-attached context - every handler scopes its reads
 /// and writes to it (see `tenant_visible`).
 pub(crate) struct Caller {
     pub(crate) actor: String,
@@ -34,7 +32,7 @@ pub(crate) struct Caller {
 /// (see `unified_core::tenancy`): this function returns the tenancy
 /// `TenantContext` (tenant id as Uuid + schema name derived only
 /// by `tenancy::schema_name()`), and the Diesel persistence wiring
-/// — when it lands — takes the Uuid from here into
+/// - when it lands - takes the Uuid from here into
 /// `tenancy::with_tenant_connection`. Fail closed:
 /// `from_http_request` answers 401 when the request did not
 /// resolve to a tenant and 403 when the resolved tenant id is not
@@ -48,7 +46,7 @@ pub(crate) struct Caller {
 /// act on another tenant's jobs, paper sizes, or profiles.
 /// Records with no tenant are the exception: the global standard
 /// paper sizes (visible to every tenant by design) and records
-/// created through a hook that carried no tenant context — the
+/// created through a hook that carried no tenant context - the
 /// billing module does not pass `tenant_id` in
 /// `printing.job.requested` yet, so hook-created jobs are
 /// tenant-less until it does. When the Diesel persistence wiring

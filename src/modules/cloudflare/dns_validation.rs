@@ -1,4 +1,4 @@
-//! Cloudflare connector module. — DNS validation.
+//! Cloudflare connector module. - DNS validation.
 //!
 //! Split from `src/modules/cloudflare.rs`; behaviour unchanged.
 

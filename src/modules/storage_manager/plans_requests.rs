@@ -3,9 +3,7 @@
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
-// ---------------------------------------------------------------------------
 // Plan request bodies.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct CreatePlanRequest {

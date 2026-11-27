@@ -12,9 +12,7 @@ use super::{events::*, paper::*, thermal::*, profiles::*, jobs::*, state::*, aut
 
 
 
-// ---------------------------------------------------------------------------
 // Printer-profile handlers
-// ---------------------------------------------------------------------------
 pub(crate) async fn list_printer_profiles(
     state: web::Data<Arc<PrintingState>>,
     ctx: web::Data<Arc<AppContext>>,

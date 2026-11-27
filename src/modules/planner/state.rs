@@ -14,9 +14,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 use super::{constants::*, helpers::*, types::*, handlers_pools::*, forecast::*, handlers_plans::*, events::*, module::*};
 
-// ---------------------------------------------------------------------------
 // State.
-// ---------------------------------------------------------------------------
 
 pub struct PlannerState {
     pub(crate) pools: DashMap<String, CapacityPool>,

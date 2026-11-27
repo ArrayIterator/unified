@@ -1,4 +1,4 @@
-// Curriculum module — competency-based school curricula.
+// Curriculum module - competency-based school curricula.
 //
 // Full module notes (routes, honesty notes) live at the
 // top of `src/modules/curriculum/module.rs`.

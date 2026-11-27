@@ -14,9 +14,7 @@ use super::handlers_vendors::*;
 use super::state::*;
 use super::ai_capabilities::AI_CAPABILITIES;
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct ProcurementModule {
     state: ProcurementState,

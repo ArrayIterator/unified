@@ -1,4 +1,4 @@
-// surveys module — Helpers.
+// surveys module - Helpers.
 //
 // Split from the former single-file module `src/modules/surveys.rs`.
 // The module root (`surveys.rs`) re-exports the public items, so the
@@ -24,9 +24,7 @@ use super::constants::{MAX_EMAIL_LEN, QUESTION_TYPES};
 use super::types::{Survey, SurveyAnswer, SurveyDistribution, SurveyQuestion, SurveyResponse};
 use super::state::SurveysState;
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 /// Caller identity: the server-verified caller (user id plus
 /// server-resolved role, both required for capability checks),
@@ -67,9 +65,7 @@ pub(crate) fn require_permission(ctx: &AppContext, role: &str, permission: &str)
     }
 }
 
-// ---------------------------------------------------------------------------
-// Tenant edge guard (C3 pilot 4, task 316).
-// ---------------------------------------------------------------------------
+// Tenant edge guard (C3 pilot 4).
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request
@@ -91,7 +87,7 @@ pub(crate) fn require_tenant(
 /// The company scope the caller acts in: the tenant context's
 /// company first, the verified caller's server-resolved company
 /// otherwise. Fails closed (403) when both are present and disagree
-/// — a request must not carry one company in its tenant context and
+/// - a request must not carry one company in its tenant context and
 /// another in its verified identity. The `X-Company-Id` header is
 /// NEVER trusted here: only the verified caller (company resolved
 /// from the database at authentication time) and the
@@ -117,7 +113,7 @@ pub(crate) fn caller_company(
 /// Fail closed (403) when no company resolves for a mutating
 /// handler: the tenant context's company first, the verified
 /// caller's server-resolved company otherwise. An unresolved caller
-/// writes nothing (the shared `CallerScope::Unresolved` rule) — the
+/// writes nothing (the shared `CallerScope::Unresolved` rule) - the
 /// records in this module carry no company field to stamp, so there
 /// is no global-row write to fall back to.
 pub(crate) fn require_company(
@@ -276,8 +272,8 @@ pub(crate) fn answers_for_response(state: &SurveysState, response_id: Uuid) -> V
     items
 }
 
-/// Score bounds for a question type: NPS 0–10, CSAT and rating
-/// 1–5, no score bounds for text / multiple choice.
+/// Score bounds for a question type: NPS 0-10, CSAT and rating
+/// 1-5, no score bounds for text / multiple choice.
 pub(crate) fn score_bounds(question_type: &str) -> (Option<i32>, Option<i32>) {
     match question_type {
         "nps" => (Some(0), Some(10)),

@@ -17,9 +17,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Handlers: onboarding / offboarding checklists
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn create_checklist(
     ctx: web::Data<Arc<AppContext>>,

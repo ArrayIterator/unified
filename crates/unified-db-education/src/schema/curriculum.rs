@@ -3,9 +3,7 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Curriculum (migration 000092_curriculum).
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     curriculum_frameworks (id) {

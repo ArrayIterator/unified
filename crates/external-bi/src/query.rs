@@ -1,12 +1,10 @@
-//! BI external module (split from lib.rs; moved verbatim).
+//! BI external module.
 
 use super::*;
 
 
-// ---------------------------------------------------------------------------
 // Query engine (small, honest: filters / grouping / aggregations over
-// one snapshot's in-memory rows — never a SQL engine)
-// ---------------------------------------------------------------------------
+// one snapshot's in-memory rows - never a SQL engine)
 
 fn field_type_of<'a>(dataset: &'a Dataset, name: &str) -> Option<FieldType> {
     dataset

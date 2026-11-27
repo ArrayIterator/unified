@@ -6,9 +6,7 @@ use super::{constants::*, types::*, inputs::*, helpers::*, store::*, validation:
 
 
 
-// ---------------------------------------------------------------------------
 // Hook listeners
-// ---------------------------------------------------------------------------
 /// Record a stock confirmation from the inventory side and mark
 /// the matching reservations confirmed.
 pub(crate) fn on_stock_confirmed(state: ManufacturingState, ctx: &mut HookContext) {

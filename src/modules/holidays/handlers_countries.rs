@@ -24,9 +24,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Handlers: countries (platform reference data).
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_countries(
     ctx: web::Data<Arc<AppContext>>,

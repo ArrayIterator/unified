@@ -1,4 +1,4 @@
-// Tenant Destroy module — in-memory stores and destroy lookups.
+// Tenant Destroy module - in-memory stores and destroy lookups.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use unified_core::context::AppContext;
@@ -26,9 +26,7 @@ use std::sync::{Arc, OnceLock, RwLock};
 use uuid::Uuid;
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Stores.
-// ---------------------------------------------------------------------------
 
 pub(crate) static DESTROY_REQUESTS: OnceLock<DashMap<Uuid, DestroyRequest>> = OnceLock::new();
 
@@ -78,7 +76,7 @@ pub(crate) fn destroy_requests_store() -> &'static DashMap<Uuid, DestroyRequest>
 /// so "no record" can only mean "never existed".
 /// Fails closed: when the hook bus was never wired (the module was
 /// never initialised), the guard cannot be answered and an error
-/// is returned instead of `false` — answering "not destroyed"
+/// is returned instead of `false` - answering "not destroyed"
 /// without a bus would let provisioning re-create a destroyed
 /// tenant. Callers must treat the error as destroyed.
 /// Public so provisioning (tenants module / integrator) can

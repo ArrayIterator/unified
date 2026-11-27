@@ -1,4 +1,4 @@
-//! Dashboards module — Dashboards module — separate admin, user (client), and reseller dashboards.
+//! Dashboards module - Dashboards module - separate admin, user (client), and reseller dashboards.
 //!
 //! Split into submodules by concern; the public API is
 //! re-exported below. The full route map and module notes

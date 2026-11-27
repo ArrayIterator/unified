@@ -20,10 +20,8 @@ use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 use super::{constants::*, types::*, state::*, seed::*, auth::*, helpers::*, provisioning::*, handlers_packages::*, handlers_purchases::*, handlers_ai::*, module::*};
 
-// ---------------------------------------------------------------------------
 // Hook handlers (event-driven; all read defensively -- a missing
 // field or an unknown purchase is skipped, never an error).
-// ---------------------------------------------------------------------------
 
 pub(crate) fn opt_string(data: &Value, key: &str) -> Option<String> {
     data.get(key)

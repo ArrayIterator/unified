@@ -13,9 +13,7 @@ use super::types::QualityCriterion;
 use super::types::QualityPoint;
 use super::types::QualitySettings;
 
-// ---------------------------------------------------------------------------
 // State
-// ---------------------------------------------------------------------------
 
 #[derive(Clone)]
 pub struct QualityState {

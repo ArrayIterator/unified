@@ -13,7 +13,6 @@ use actix_web::HttpResponse;
 use actix_web::web;
 use std::sync::Arc;
 
-// ---------------------------------------------------------------------------
 // AI capabilities (AI Capabilities Contract, see `crate::modules::ai`).
 //
 // Declared here, registered once in `init`, grounded through the

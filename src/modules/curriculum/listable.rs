@@ -1,4 +1,4 @@
-//! Curriculum module — competency-based school curricula. — Listable implementations (search text + exact-match filters).
+//! Curriculum module - competency-based school curricula. - Listable implementations (search text + exact-match filters).
 //!
 //! Split from `src/modules/curriculum.rs`; behaviour unchanged.
 

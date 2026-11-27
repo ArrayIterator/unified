@@ -1,4 +1,4 @@
-// Global Search — Business logic shared by handlers and hooks.
+// Global Search - Business logic shared by handlers and hooks.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -21,9 +21,7 @@ use super::handlers::*;
 use super::hooks::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Helpers.
-// ---------------------------------------------------------------------------
 
 pub(crate) fn tokenize(query: &str) -> Vec<String> {
     query
@@ -67,9 +65,7 @@ pub(crate) fn group_counts(documents: &[SearchDocument]) -> Vec<KindGroup> {
     groups
 }
 
-// ---------------------------------------------------------------------------
 // Caller identity, capability checks, and safe URLs.
-// ---------------------------------------------------------------------------
 
 /// Capability required by the index-mutating endpoints (`POST
 /// /index`, `POST /reindex`, `DELETE /{kind}/{id}`). Read endpoints
@@ -128,8 +124,8 @@ pub(crate) fn authorize(ctx: &AppContext, req: &HttpRequest, permission: &str) -
 /// True when `url` uses an allowlisted shape for indexed document
 /// links: `http://`, `https://`, a site-relative path starting with
 /// `/` (but not protocol-relative `//`), or a `#` fragment. Anything
-/// else — `javascript:`, `data:`, `vbscript:`, a bare scheme, or a
-/// URL containing control characters — is rejected, so a stored
+/// else - `javascript:`, `data:`, `vbscript:`, a bare scheme, or a
+/// URL containing control characters - is rejected, so a stored
 /// document can never carry a link that executes on click.
 pub(crate) fn is_safe_url(url: &str) -> bool {
     let url = url.trim();

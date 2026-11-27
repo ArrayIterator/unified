@@ -1,4 +1,4 @@
-// Projects module — program increment and business case handlers.
+// Projects module - program increment and business case handlers.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use super::*;
@@ -9,9 +9,7 @@ use actix_web::{HttpRequest, HttpResponse, web};
 use serde_json::{Value, json};
 use std::sync::Arc;
 
-// ---------------------------------------------------------------------------
 // SAFe program increments
-// ---------------------------------------------------------------------------
 
 /// Planning is only valid for a planned increment: planning an
 /// already-active (or completed) increment must not silently demote
@@ -331,9 +329,7 @@ pub(crate) async fn plan_program_increment(
     json::respond(result, false)
 }
 
-// ---------------------------------------------------------------------------
 // PRINCE2 business cases
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_business_cases(
     req: HttpRequest,

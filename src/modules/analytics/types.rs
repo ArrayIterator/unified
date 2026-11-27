@@ -18,9 +18,7 @@ pub(crate) const PERM_ANALYTICS_VIEW: &str = "analytics.view";
 pub(crate) const PERM_ANALYTICS_MANAGE: &str = "analytics.manage";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-// ---------------------------------------------------------------------------
 // Types.
-// ---------------------------------------------------------------------------
 /// One recorded sale or refund. Sales come from `store.order.completed`
 /// events; refunds from `store.order.refunded` events; both can also be
 /// recorded manually through POST /sales.

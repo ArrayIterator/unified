@@ -69,23 +69,23 @@
 // Events emitted by this module:
 //   - `risk.risk_created`, `risk.risk_updated`,
 //     `risk.risk_deleted`, `risk.risk_status_changed`
-//   - `risk.threshold_crossed` — a risk reached or passed its
+//   - `risk.threshold_crossed` - a risk reached or passed its
 //     alert threshold (also sent as `notification.requested`).
-//   - `risk.review_overdue` — a risk's review date passed
+//   - `risk.review_overdue` - a risk's review date passed
 //     (also sent as `notification.requested`).
-//   - `risk.mitigation_task_requested` — a mitigation task was
+//   - `risk.mitigation_task_requested` - a mitigation task was
 //     requested from the Projects module.
-//   - `risk.checklist_completed` — a checklist instance completed.
+//   - `risk.checklist_completed` - a checklist instance completed.
 //   The audit module records these once the integrator adds them
 //   to its audited list (see docs/integration/INTEGRATION_NOTES_BATCH3_B4.md);
 //   this module itself emits them on every change.
 //
-// Interconnection happens only through the hook bus — no module
+// Interconnection happens only through the hook bus - no module
 // calls another module directly. Money is NUMERIC(19,4) in SQL
 // (see the migration); this module stores no money, but the
 // migration keeps the convention for any future cost fields.
 
-// risk — types.
+// risk - types.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -109,9 +109,7 @@ use super::handlers_templates::*;
 use super::handlers_instances::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Score bands (the single source of truth, also served by /matrix)
-// ---------------------------------------------------------------------------
 
 /// Score band thresholds: Low 1-4, Medium 5-9, High 10-16,
 /// Critical 17-25. The boundaries are inclusive and cover 1..=25
@@ -239,9 +237,7 @@ pub(crate) fn valid_task_transition(from: &str, to: &str) -> bool {
     )
 }
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Risk {
@@ -482,9 +478,7 @@ pub struct ActorQuery {
     pub viewer_role: Option<String>,
 }
 
-// ---------------------------------------------------------------------------
 // State
-// ---------------------------------------------------------------------------
 
 pub struct RiskState {
     pub(crate) hooks: RwLock<Arc<HookBus>>,

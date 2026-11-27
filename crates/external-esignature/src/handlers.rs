@@ -1,4 +1,4 @@
-//! eSignature external module (split from lib.rs; moved verbatim).
+//! eSignature external module.
 
 use super::*;
 
@@ -28,9 +28,7 @@ fn parse_status(raw: &str) -> UnifiedResult<RequestStatus> {
     }
 }
 
-// ---------------------------------------------------------------------------
 // HTTP handlers (thin wrappers over the state operations)
-// ---------------------------------------------------------------------------
 
 fn require_tenant(query: &TenantQuery) -> UnifiedResult<String> {
     match &query.tenant_id {

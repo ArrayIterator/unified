@@ -5,9 +5,7 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::time::{Duration};
 use super::types::{DEFAULT_CONNECT_TIMEOUT_SECS, DEFAULT_TOTAL_TIMEOUT_SECS, MAX_CONNECT_TIMEOUT_SECS, MAX_TOTAL_TIMEOUT_SECS};
 
-// ---------------------------------------------------------------------------
 // Input validation and SSRF guards.
-// ---------------------------------------------------------------------------
 
 /// A hostname is accepted when it is a dotted name of labels made of
 /// letters, digits, and hyphens (no leading/trailing hyphen, no empty

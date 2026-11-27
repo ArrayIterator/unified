@@ -32,10 +32,10 @@ use super::types::AiUsageRecord;
 /// rejects a tenant id that is not a UUID): a present-but-invalid
 /// tenant context, or a tenant context with no parseable company
 /// id, resolves to `None` (the gate then denies the call when
-/// enforcement is on) instead of falling back to a weaker claim —
+/// enforcement is on) instead of falling back to a weaker claim -
 /// a broken tenant context must never be overridden by a header.
 /// Control-plane requests carry no tenant context, so they fall
-/// back to `resolve_caller_company` (verified caller, then hook) —
+/// back to `resolve_caller_company` (verified caller, then hook) -
 /// the pre-existing control-plane path. Nothing here falls back to a
 /// `public`-schema query: this module's stores are in-memory and
 /// no capability path touches Postgres at all (see the tenant

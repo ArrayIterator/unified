@@ -5,9 +5,7 @@ use super::{events::*, card_validation::*, card_settings::*, providers::*, types
 
 
 
-// ---------------------------------------------------------------------------
 // Limits.
-// ---------------------------------------------------------------------------
 /// Default HTTP timeout for provider API calls.
 pub(crate) const DEFAULT_TIMEOUT_SECS: u64 = 30;
 

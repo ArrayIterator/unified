@@ -31,9 +31,7 @@ use std::time::{Duration, Instant};
 use uuid::Uuid;
 use super::{keys::*, expiry::*, store::*, hooks::*, types::*, validation::*, handlers::*, products::*, helpers::*, product_handlers::*, offline::*, distribution::*, releases::*, module::*};
 
-// ---------------------------------------------------------------------------
 // SaaS handlers: public verification API.
-// ---------------------------------------------------------------------------
 
 /// Public license verification for the product owner's own
 /// applications: `POST /api/v1/licensing/public/verify`.
@@ -206,9 +204,7 @@ pub(crate) fn public_verify(
     }))
 }
 
-// ---------------------------------------------------------------------------
 // SaaS handlers: activation lifecycle.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_activation_history(
     ctx: web::Data<Arc<AppContext>>,
@@ -379,9 +375,7 @@ pub(crate) async fn update_seats(
     json::respond(result, debug)
 }
 
-// ---------------------------------------------------------------------------
 // SaaS handlers: hash-chained event log.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_license_events(
     ctx: web::Data<Arc<AppContext>>,

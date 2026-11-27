@@ -4,14 +4,12 @@ use serde::{Deserialize, Serialize};
 use std::net::IpAddr;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-// ---------------------------------------------------------------------------
 // Active-connection counters.
 //
 // There is no shared connection-stats extension on `AppContext`, so the
 // counts live in a module-level static. The HTTP server and WebSocket
 // layers call `note_connection_open` / `note_connection_closed` whenever
 // a connection is accepted or dropped.
-// ---------------------------------------------------------------------------
 
 pub struct ConnectionStats {
     pub http: AtomicU64,
@@ -29,9 +27,7 @@ impl ConnectionStats {
     }
 }
 
-// ---------------------------------------------------------------------------
 // DNS verifier library.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize)]
 pub struct MxRecord {
@@ -148,9 +144,7 @@ pub const LOCAL_SUFFIXES: &[&str] = &[
 /// domain-syntax (including IDNA / punycode), and resolver health checks.
 
 #[derive(Debug, Deserialize)]
-// ---------------------------------------------------------------------------
 // Request types and handlers.
-// ---------------------------------------------------------------------------
 
 pub(crate) struct GeoLookupRequest {
     pub(crate) ip: String,

@@ -1,8 +1,8 @@
 //!
-//! Content Management module. — State.
+//! Content Management module. - State.
 //!
 //! Split from `src/modules/content.rs`; behaviour unchanged.
-//! Task 356 adds the tag, post-type, and custom-entry stores.
+//! adds the tag, post-type, and custom-entry stores.
 //!
 //! Tenant isolation: every new record carries the resolved tenant
 //! id and every handler filters on it. The older posts / categories

@@ -1,4 +1,4 @@
--- C12 provider registries (task 269): one registry table for every
+-- C12 provider registries: one registry table for every
 -- provider family (payments, email, storage, vcs, ai, cloud).
 --
 -- Before this migration each family kept its providers as a closed
@@ -15,7 +15,7 @@
 --
 -- Seed rows below are GENERATED from
 -- crates/unified-core/provider_registry_seed.json (the single source
--- of truth) — see docs/integration/c12_generate_registry_seed_sql.py.
+-- of truth) - see docs/integration/c12_generate_registry_seed_sql.py.
 -- Do not hand-edit the INSERT block; regenerate it instead.
 -- `ON CONFLICT ... DO NOTHING` keeps the migration idempotent and
 -- never overwrites an admin-edited row on re-run.
@@ -62,7 +62,7 @@ CREATE INDEX IF NOT EXISTS idx_provider_registry_adapter_kind
     ON provider_registry_definitions (adapter_kind);
 
 -- Seed: the 50 built-in definitions (payments 12, email 9,
--- storage 5, vcs 3, ai 4, cloud 17). Generated — see header.
+-- storage 5, vcs 3, ai 4, cloud 17). Generated - see header.
 -- Seed rows generated from crates/unified-core/provider_registry_seed.json (version 1, 50 providers). Do not hand-edit: regenerate instead.
 INSERT INTO provider_registry_definitions (family, provider_id, display_name, base_url, sandbox_base_url, api_style, auth_scheme, webhook_signature_header, allowed_hosts, capabilities, currencies, credentials_shape, models, default_model, adapter_kind, needs_endpoint, needs_delegate, notes, builtin) VALUES ('payments', 'xendit', 'Xendit', 'https://api.xendit.co', NULL, NULL, NULL, NULL, '["api.xendit.co"]', '{"authorize":true,"capture":true,"charge":true,"refund":true,"void":false,"subscriptions":true,"payouts":true,"3ds":true,"webhooks":true,"subscriptions_are_local_schedule":true}', '["IDR","PHP","THB","VND","MYR","SGD","USD"]', '[{"name":"api_key","label":"Secret key","type":"password","required":true,"secret":true,"applies_to":"both","description":"Xendit secret key (xnd_development_... in sandbox, xnd_production_... in live). Used as the Basic-auth username."},{"name":"webhook_secret","label":"Callback token","type":"password","required":true,"secret":true,"applies_to":"both","description":"Xendit callback token (X-Callback-Token). Must match the token configured in the Xendit dashboard."},{"name":"public_key","label":"Public key","type":"text","required":false,"secret":false,"applies_to":"both","description":"Xendit public key, only needed when tokenizing cards client-side."}]', '[]', NULL, 'xendit', FALSE, FALSE, NULL, TRUE) ON CONFLICT (family, provider_id) DO NOTHING;
 INSERT INTO provider_registry_definitions (family, provider_id, display_name, base_url, sandbox_base_url, api_style, auth_scheme, webhook_signature_header, allowed_hosts, capabilities, currencies, credentials_shape, models, default_model, adapter_kind, needs_endpoint, needs_delegate, notes, builtin) VALUES ('payments', 'hyperswitch', 'Hyperswitch', 'https://api.hyperswitch.io', 'https://sandbox.hyperswitch.io', NULL, NULL, 'X-Webhook-Signature-512', '["api.hyperswitch.io","sandbox.hyperswitch.io"]', '{"authorize":true,"capture":true,"charge":true,"refund":true,"void":true,"subscriptions":true,"payouts":false,"3ds":true,"webhooks":true,"subscriptions_are_local_schedule":true}', '["USD","EUR","GBP","AUD","CAD","JPY","SGD","HKD","NZD","CHF","SEK","NOK","DKK","PLN","CZK","HUF","ILS","MXN","BRL","INR","IDR","MYR","PHP","THB","VND","ZAR","KRW","TWD","AED"]', '[{"name":"api_key","label":"API key","type":"password","required":true,"secret":true,"applies_to":"both","description":"Hyperswitch API key (secret key). Sandbox and live keys differ; switch mode to use the matching one."},{"name":"profile_id","label":"Profile ID","type":"text","required":false,"secret":false,"applies_to":"both","description":"Hyperswitch profile id (business profile). Sent as profile_id on every payment when set; empty means the account default profile."},{"name":"webhook_secret","label":"Webhook secret","type":"password","required":false,"secret":true,"applies_to":"both","description":"Hyperswitch payment_response_hash_key for the business profile. Verifies the X-Webhook-Signature-512 header (hex HMAC-SHA512 of the raw body)."}]', '[]', NULL, 'hyperswitch', FALSE, FALSE, NULL, TRUE) ON CONFLICT (family, provider_id) DO NOTHING;

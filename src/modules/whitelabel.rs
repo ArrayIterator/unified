@@ -57,7 +57,7 @@
 // admin-editable global defaults record. Resolution is the pure,
 // testable function `resolve_branding` over those three inputs plus
 // the effective allowance. When the tenant is NOT allowed, the
-// resolved branding is the global defaults record in full — tenant
+// resolved branding is the global defaults record in full - tenant
 // and company overrides are ignored entirely.
 //
 // # How other modules consume this module (hook bus)
@@ -84,18 +84,18 @@
 //
 // # Events emitted (audit trail)
 //
-// - `whitelabel.allowance.changed` — global or per-company allowance
+// - `whitelabel.allowance.changed` - global or per-company allowance
 //   changed: `{"scope", "company_id"?, "mode"/"allow_whitelabel",
 //   "actor"}`.
-// - `whitelabel.defaults.changed` — global defaults record changed:
+// - `whitelabel.defaults.changed` - global defaults record changed:
 //   `{"actor", "fields"}`.
-// - `whitelabel.branding.changed` — tenant branding saved:
+// - `whitelabel.branding.changed` - tenant branding saved:
 //   `{"company_id", "tenant_id"?, "actor", "fields"}`.
-// - `whitelabel.branding.denied` — a tenant without permission tried
+// - `whitelabel.branding.denied` - a tenant without permission tried
 //   to set custom branding (rejected with 403):
 //   `{"company_id", "tenant_id"?, "actor", "fields"}`.
-// - `whitelabel.branding.reset` — tenant branding reset to defaults.
-// - `whitelabel.domain.verified` / `whitelabel.domain.rejected` —
+// - `whitelabel.branding.reset` - tenant branding reset to defaults.
+// - `whitelabel.domain.verified` / `whitelabel.domain.rejected` -
 //   domain verification outcome applied to a profile.
 // Every change AND every disallowed attempt is also recorded in the
 // module's own history store (table `whitelabel_history`), which the
@@ -132,7 +132,7 @@
 // server-resolved branding for a login/portal page render. Like the
 // portals public route it carries no capability check on purpose:
 // it is gated by the API Manager's admin-managed `ApiAccessRule`
-// records (default deny — an administrator must create the matching
+// records (default deny - an administrator must create the matching
 // rule for `GET /api/v1/whitelabel/public/*`). Without the rule the
 // API Manager denies the call. It only ever returns resolved
 // branding (defaults when the tenant is not allowed); it never

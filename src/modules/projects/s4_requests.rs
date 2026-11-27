@@ -1,4 +1,4 @@
-// Projects module — sprint, phase, cycle, program increment, and business case inputs.
+// Projects module - sprint, phase, cycle, program increment, and business case inputs.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use super::*;
@@ -16,9 +16,7 @@ use serde_json::Value;
 // and the route table live in section s1; this file only adds the input
 // structs and handlers named there.
 
-// ---------------------------------------------------------------------------
 // Input structs
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct CreateProjectSprint {

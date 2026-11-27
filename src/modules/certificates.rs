@@ -1,4 +1,4 @@
-// Certificates module — advanced SSL certificate management.
+// Certificates module - advanced SSL certificate management.
 //
 // Config-first certificate management built on `unified_core::tls`
 // (SNI storage, self-signed fallback, swap with rollback) and

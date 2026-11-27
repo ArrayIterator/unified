@@ -49,9 +49,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One property: a land parcel or a housing development.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS properties (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title VARCHAR(200) NOT NULL,
@@ -81,11 +79,9 @@ CREATE INDEX IF NOT EXISTS idx_properties_company_id
 CREATE INDEX IF NOT EXISTS idx_properties_slug
     ON properties (slug);
 
--- ---------------------------------------------------------------------------
 -- One site plan (master plan) of a property. `geometry` is the plan
 -- boundary (Polygon / MultiPolygon GeoJSON, or NULL when the plan
 -- has no boundary yet).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS property_plans (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     property_id UUID NOT NULL REFERENCES properties (id)
@@ -102,12 +98,10 @@ CREATE TABLE IF NOT EXISTS property_plans (
 CREATE INDEX IF NOT EXISTS idx_property_plans_property_id
     ON property_plans (property_id);
 
--- ---------------------------------------------------------------------------
 -- One block (plot) inside a site plan. `geometry` is GeoJSON
 -- (Polygon / MultiPolygon for a plot, LineString for a drawn line).
 -- `area_sqm` is computed server-side for polygons, `length_m`
 -- for lines.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS property_blocks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     plan_id UUID NOT NULL REFERENCES property_plans (id)
@@ -146,10 +140,8 @@ CREATE INDEX IF NOT EXISTS idx_property_blocks_assigned_customer_id
 CREATE INDEX IF NOT EXISTS idx_property_blocks_order_id
     ON property_blocks (order_id);
 
--- ---------------------------------------------------------------------------
 -- One audited block status change: who moved the block, when, from
 -- which status to which, and why. Append-only.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS property_block_history (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     block_id UUID NOT NULL REFERENCES property_blocks (id)

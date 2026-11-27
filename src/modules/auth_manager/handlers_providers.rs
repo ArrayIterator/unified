@@ -24,7 +24,6 @@ use std::time::Duration;
 use uuid::Uuid;
 use super::{providers::*, jwt::*, state::*, login::*, tokens::*, recovery::*, totp::*, google::*, module::*};
 
-// ---------------------------------------------------------------------------
 // Provider handlers
 //
 // Provider administration is admin-only: every mutating handler and
@@ -33,7 +32,6 @@ use super::{providers::*, jwt::*, state::*, login::*, tokens::*, recovery::*, to
 // settings are never returned: callers see the non-secret settings
 // plus a `secrets_configured` map (`setting key -> configured?`)
 // instead of the stored secret values.
-// ---------------------------------------------------------------------------
 
 /// Require an authenticated caller with an admin capability. Returns
 /// the caller id and scopes, or the error response to return.

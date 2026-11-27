@@ -1,4 +1,4 @@
-// Pos module — register and shift handlers.
+// Pos module - register and shift handlers.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use unified_core::context::AppContext;
@@ -19,9 +19,7 @@ use std::sync::{
 use uuid::Uuid;
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Register handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_registers(
     ctx: web::Data<Arc<AppContext>>,
@@ -346,9 +344,7 @@ pub(crate) async fn unassign_cashier(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Shift handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_shifts(
     ctx: web::Data<Arc<AppContext>>,

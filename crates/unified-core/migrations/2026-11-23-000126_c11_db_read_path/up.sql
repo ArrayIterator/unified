@@ -1,4 +1,4 @@
--- C11 DB read path (task 271): tenant scoping columns for the
+-- C11 DB read path: tenant scoping columns for the
 -- tables this slice wires to the database.
 --
 -- No new tables: every table below already exists (000123 for
@@ -24,7 +24,7 @@
 -- ESG (`000119`) and forums (`000110`) already carry
 -- `tenant_id TEXT NOT NULL` on every row: nothing to add
 -- for them here (their Diesel schema/models are added in
--- this slice instead — they never had any).
+-- this slice instead - they never had any).
 -- All statements are idempotent (`IF NOT EXISTS`), so a
 -- re-run after a partial apply is safe.
 

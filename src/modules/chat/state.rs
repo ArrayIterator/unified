@@ -11,9 +11,7 @@ use super::{limits::*, types::*, hub::*, helpers::*, module::*, handlers_channel
 
 
 #[derive(Clone)]
-// ---------------------------------------------------------------------------
 // Shared state
-// ---------------------------------------------------------------------------
 /// In-memory stores for chat. The hook bus is attached in `init` (the bus
 /// lives in `AppContext`); handlers tolerate a missing bus by skipping
 /// event emission, but still store and broadcast locally.

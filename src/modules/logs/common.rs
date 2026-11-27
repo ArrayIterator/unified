@@ -1,4 +1,4 @@
-// logs — common.
+// logs - common.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -28,9 +28,7 @@ use super::handlers::*;
 use super::hooks::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 pub(crate) fn paginate<T: Serialize + Clone>(items: Vec<T>, params: &PaginationParams) -> PageResult<T> {
     let pagination = params.normalized();
@@ -124,9 +122,7 @@ pub(crate) fn filtered_entries(
     Ok(items)
 }
 
-// ---------------------------------------------------------------------------
 // Caller and capabilities (same pattern as todos/pricing: fail closed).
-// ---------------------------------------------------------------------------
 
 /// The server-verified caller (see `unified_core::caller::Caller`):
 /// the user id identifies the actor, the server-resolved role is the
@@ -174,9 +170,7 @@ pub(crate) fn authorize(ctx: &AppContext, req: &HttpRequest, permission: &str) -
     require_permission(ctx, &call.role, permission)
 }
 
-// ---------------------------------------------------------------------------
 // Ingestion limits for `record_log`.
-// ---------------------------------------------------------------------------
 
 /// Maximum message length accepted by `record_log`.
 pub(crate) const MAX_LOG_MESSAGE_CHARS: usize = 10_000;

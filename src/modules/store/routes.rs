@@ -27,9 +27,7 @@ use super::state::{StoreState};
 use super::subscriptions::{cancel_subscription, change_subscription_plan, expire_due_subscriptions, get_subscription, list_subscriptions, on_subscription_lifecycle_apply, on_subscription_module_entitlement_check};
 use super::ai_capabilities::AI_CAPABILITIES;
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct StoreModule {
     pub(crate) state: Arc<StoreState>,

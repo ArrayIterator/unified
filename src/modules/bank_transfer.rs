@@ -1,4 +1,4 @@
-// Bank Transfer module — manual payment verification.
+// Bank Transfer module - manual payment verification.
 //
 // Bank transfer is a payment method with no provider API: the
 // operator configures the bank accounts that receive money, the
@@ -19,7 +19,7 @@
 //      /api/v1/bank-transfer/verifications/{id}/proof`): a file
 //      reference (storage key) plus the transferred amount, the
 //      transfer date, and the bank reference number. Only the
-//      reference is stored — never raw file bytes. The amount is
+//      reference is stored - never raw file bytes. The amount is
 //      checked against the expected order total within a
 //      configurable tolerance; a mismatch flags the verification
 //      instead of blocking it, so an administrator can still
@@ -47,12 +47,12 @@
 // every read (only the last four characters are ever returned); the
 // full number is stored only in the account record and never
 // leaves the API, is never logged, and never appears in a hook
-// payload. Secrets do not exist here — there is no provider API and
+// payload. Secrets do not exist here - there is no provider API and
 // therefore no credential to store.
 //
 // Persistence: records are kept in memory (same pattern as the
 // provider registry and the store). Durable persistence is a
-// follow-up for the integrator — see the migration sketch in the
+// follow-up for the integrator - see the migration sketch in the
 // coordinator report.
 //
 // Events emitted: `bank_transfer.verification.created`,

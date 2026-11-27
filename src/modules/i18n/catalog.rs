@@ -7,7 +7,6 @@ use super::locale::*;
 use super::state::*;
 use super::types::*;
 
-// ---------------------------------------------------------------------------
 // Minimal gettext (.po) catalogue parsing (no extra dependency).
 //
 // Supported: `msgid`, `msgid_plural`, `msgctxt`, `msgstr`, `msgstr[n]`,
@@ -17,7 +16,6 @@ use super::types::*;
 // pragmatic subset for importing translator-produced catalogues, not a
 // full .po implementation: obsolete (`#~`) entries and previous-msgid
 // (`#|`) comments are ignored.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PoEntry {
@@ -237,7 +235,7 @@ pub(crate) fn po_header_plural_expr(header_msgstr: &str) -> Option<String> {
 ///   the header carries no formula, the older (one, zero, other)
 ///   order is assumed, matching the order documented in
 ///   `locale::plural_form_index`.
-/// - Irish (`ga`): audited, no normalisation needed — gettext
+/// - Irish (`ga`): audited, no normalisation needed - gettext
 ///   stores (one, two, few, many, other), which is already the
 ///   CLDR order. The `ga` note in `locale.rs` is about which form
 ///   count 0 *selects* (CLDR `other`, form 4), not about stored

@@ -59,9 +59,7 @@ use super::mode_handlers::upload_custom_cert;
 use super::state::CertificatesState;
 use super::ai_capabilities::AI_CAPABILITIES;
 
-// ---------------------------------------------------------------------------
 // Module definition
-// ---------------------------------------------------------------------------
 
 pub struct CertificatesModule {
     state: Arc<CertificatesState>,
@@ -106,7 +104,7 @@ impl Module for CertificatesModule {
         // context; `ctx.tls()` is `None` at init time in the normal
         // startup order (module init runs before `run_server` builds
         // the storage), so seeding falls back to its own lenient
-        // storage there — see `seed_from_config`.
+        // storage there - see `seed_from_config`.
         self.state
             .seed_from_config(&config, ctx.hooks.clone(), ctx.tls());
         Ok(())

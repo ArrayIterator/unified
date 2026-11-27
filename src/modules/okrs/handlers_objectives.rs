@@ -1,4 +1,4 @@
-// OKR / Goals — Objective and alignment handlers.
+// OKR / Goals - Objective and alignment handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -25,9 +25,7 @@ use super::handlers_key_results::*;
 use super::hooks::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Objective handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_objectives(
     ctx: web::Data<Arc<AppContext>>,

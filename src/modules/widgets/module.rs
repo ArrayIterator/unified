@@ -1,4 +1,4 @@
-// Widgets — module definition: routes and registration.
+// Widgets - module definition: routes and registration.
 //!
 //! The widgets module is a STANDALONE CORE module: it owns the
 //! widget catalogue and the per-zone layouts. Dashboards consume
@@ -15,19 +15,19 @@
 //!
 //! How a page opts in:
 //!
-//!   React — the page calls `fetchWidgetLayout("<zone>")` and orders
+//!   React - the page calls `fetchWidgetLayout("<zone>")` and orders
 //!     its sections with `orderWidgetSections(sections, layout)`
 //!     (see `assets/react/src/api.ts`; `DashboardPage` and
 //!     `AdminPage` are the working examples). A failed layout load
 //!     keeps the page's fixed section order. Saving is `PUT
 //!     /api/v1/widgets/layouts/<zone>` with `{ items, shared? }`.
-//!   Handlebars — the template marks the zone container with
+//!   Handlebars - the template marks the zone container with
 //!     `data-widget-zone="<zone>"` and each widget section with
 //!     `data-widget="<id>"` (the id is a catalogue id from `GET
 //!     /api/v1/widgets/types?context=<zone>`), and the page script
 //!     loads the layout for the zone, applies the order, and offers
 //!     pin / add / remove / drag-to-reorder (Pointer Events only).
-//!     The demo (`demo/dashboard.html` + the "Widgets — task 352"
+//! The demo (`demo/dashboard.html` + the "Widgets"
 //!     section of `demo/assets/demo.js`) is the reference client
 //!     for this shape; the app's own `assets/js/dashboard.ts` does
 //!     not have a widget client yet, so a Handlebars page opts in
@@ -60,10 +60,10 @@
 //! Hooks:
 //!
 //!   Emitted:
-//!     `widgets.widget_types`  — collect widget definitions from
+//!     `widgets.widget_types`  - collect widget definitions from
 //!       other modules (each result is one definition object, or an
 //!       array of them).
-//!     `widgets.layout_changed` — after a layout is saved or reset.
+//!     `widgets.layout_changed` - after a layout is saved or reset.
 
 use unified_core::modules::{Module, ModuleRegistry, RouteInfo};
 use actix_web::web;
@@ -116,14 +116,14 @@ impl Module for WidgetsModule {
                 method: "PUT",
                 path: "/api/v1/widgets/layouts/{context}",
                 owner: "widgets",
-                description: "Save layout for a zone — own layout, or the shared default with \"shared\": true (requires widgets.manage).",
+                description: "Save layout for a zone - own layout, or the shared default with \"shared\": true (requires widgets.manage).",
                 auth: unified_core::auth::RouteAuth::Authenticated,
             },
             RouteInfo {
                 method: "DELETE",
                 path: "/api/v1/widgets/layouts/{context}",
                 owner: "widgets",
-                description: "Reset layout for a zone — deletes the caller's row (or the shared default with ?shared=true) (requires widgets.manage).",
+                description: "Reset layout for a zone - deletes the caller's row (or the shared default with ?shared=true) (requires widgets.manage).",
                 auth: unified_core::auth::RouteAuth::Authenticated,
             },
         ]

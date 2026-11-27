@@ -1,4 +1,4 @@
-// surveys module — Public response handlers.
+// surveys module - Public response handlers.
 //
 // Split from the former single-file module `src/modules/surveys.rs`.
 // The module root (`surveys.rs`) re-exports the public items, so the
@@ -27,9 +27,7 @@ use super::state::SurveysState;
 use super::helpers::{err, ok, questions_for, require_text, score_bounds};
 use super::service::maybe_create_followup;
 
-// ---------------------------------------------------------------------------
 // Public response handlers (token-gated; see the public-access note)
-// ---------------------------------------------------------------------------
 
 pub(crate) fn find_response_by_token(state: &SurveysState, token: &str) -> UnifiedResult<SurveyResponse> {
     let token = token.trim();

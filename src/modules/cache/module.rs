@@ -5,9 +5,7 @@ use actix_web::{web};
 use std::sync::Arc;
 use super::handlers::{clear_cache, delete_entry, delete_tenant_entry, get_entry, get_status, get_tenant_entry, invalidate_prefix, invalidate_tenant, prune_cache, set_entry, set_tenant_entry};
 
-// ---------------------------------------------------------------------------
 // Module definition.
-// ---------------------------------------------------------------------------
 
 pub struct CacheModule;
 

@@ -1,4 +1,4 @@
-// logs — hooks.
+// logs - hooks.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -28,9 +28,7 @@ use super::common::*;
 use super::handlers::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Hook handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) fn on_request_after(_state: Arc<LogsState>, ctx: &mut HookContext) {
     let data = &ctx.data;

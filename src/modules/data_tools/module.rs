@@ -1,14 +1,14 @@
-// Data Tools module — orphaned-data resolver, expired-data purging,
+// Data Tools module - orphaned-data resolver, expired-data purging,
 // and cleanup rules + runs.
 //
 // What it owns: the `cleanup_rules` + `cleanup_runs` tables
 // (migration 000125), the minimal `document_shares` table (no sharing
-// feature exists yet — see the migration header), the resolver, the
+// feature exists yet - see the migration header), the resolver, the
 // scan / run endpoints, and the admin page. What it does NOT own:
 // the Scheduler's WHEN (the `cleanup` kind emits
 // `cleanup.requested`, this module answers it), other modules'
 // tables (reached ONLY through the `data_tools.cleanup.<target>`
-// hook — never directly), backups, or Postgres VACUUM.
+// hook - never directly), backups, or Postgres VACUUM.
 //
 // Routes live under `/api/v1/data-tools`:
 //
@@ -24,7 +24,7 @@
 //
 // Events emitted on the hook bus (never direct calls to other modules):
 //   - `data_tools.cleanup.<target>` (per target: documents sessions,
-//     revoked tokens, downloads, spool temps, cross-check) — the
+//     revoked tokens, downloads, spool temps, cross-check) - the
 //     owning module answers with counts + deletes.
 //   - `data_tools.run.started` / `data_tools.run.completed` (the run
 //     audit events; the `cleanup_runs` row is the audit record).
@@ -34,7 +34,7 @@
 //     `triggered_by: scheduler`.
 //
 // Authentication: every route is gated by `authorize` in
-// `validation.rs` — the verified caller plus the `data_tools:read`
+// `validation.rs` - the verified caller plus the `data_tools:read`
 // (reads) or `data_tools:admin` (changes, scans, runs, admin page)
 // capability through the `role.check` hook. The check fails closed
 // when the roles module does not answer. Rules are platform
@@ -52,9 +52,7 @@ use unified_core::modules::{Module, ModuleRegistry, RouteInfo};
 
 use super::events::on_cleanup_requested;
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct DataToolsModule {
     state: Arc<DataToolsState>,

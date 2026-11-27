@@ -1,4 +1,4 @@
-// affiliates module — Module constants.
+// affiliates module - Module constants.
 //
 // Split from the former single-file module `src/modules/affiliates.rs`.
 // The module root (`affiliates.rs`) re-exports the public items, so the

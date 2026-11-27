@@ -1,4 +1,4 @@
-// todos — handlers todos.
+// todos - handlers todos.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -26,9 +26,7 @@ use super::handlers_subtasks::*;
 use super::handlers_ai::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Todo handlers.
-// ---------------------------------------------------------------------------
 
 /// Recompute `recurrence_remaining` from a (possibly new) count:
 /// the count minus the occurrences already created in this series
@@ -272,7 +270,7 @@ pub(crate) async fn create_todo(
         let tags = validate_tags(&input.tags.unwrap_or_default())?;
         // Quick capture: no list given means the default Inbox list.
         // A list that is only shared with the caller (not owned) can
-        // hold a new todo only with edit access — and the todo still
+        // hold a new todo only with edit access - and the todo still
         // belongs to the list owner, never to the caller.
         let list = match input.list_id {
             Some(list_id) => load_list_for_edit(&state, list_id, &caller.actor)?,
@@ -321,7 +319,7 @@ pub(crate) async fn create_todo(
             id: Uuid::now_v7(),
             list_id: list.id,
             // Ownership: the todo belongs to the LIST owner, not to
-            // the caller — for an owned list those are the same user.
+            // the caller - for an owned list those are the same user.
             owner_id: list.owner_id.clone(),
             title,
             notes,

@@ -54,9 +54,7 @@ pub(crate) fn require_permission(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Tenant edge guard (C3 pilot 4, group B).
-// ---------------------------------------------------------------------------
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request

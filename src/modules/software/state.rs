@@ -10,9 +10,7 @@ use std::sync::{Arc, RwLock};
 use super::types::{Release, ReleaseFile, Software, SoftwareDetail, SoftwareVersion, Tag, TaxonomyNode};
 use super::handlers_versions::release_files;
 
-// ---------------------------------------------------------------------------
 // State
-// ---------------------------------------------------------------------------
 
 pub struct SoftwareState {
     pub(crate) hooks: RwLock<Arc<HookBus>>,

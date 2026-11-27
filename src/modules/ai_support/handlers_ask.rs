@@ -8,9 +8,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Ask handler (grounded answering)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn ask(
     state: web::Data<AiSupportState>,

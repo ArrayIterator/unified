@@ -2,14 +2,14 @@
 //! campaign events, and the AI grounding hooks.
 //!
 //! `user.deleted` carries only `{id: user_id}` (verified
-//! from the users module's delete handler — no tenant, no
+//! from the users module's delete handler - no tenant, no
 //! handle). This module therefore anonymizes the identity
 //! fields it owns (`created_by` / `actor` become
 //! `deleted-user`) and keeps every row: the publish and
 //! analytics history stays auditable. Account handles are
 //! the account's public handle on its network, not a user
 //! id, and the payload names no handle, so no handle is
-//! redacted by deletion — this listener never claims
+//! redacted by deletion - this listener never claims
 //! otherwise.
 //!
 //! `marketing.campaign.created` carries `{campaign_id,

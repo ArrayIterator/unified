@@ -7,7 +7,7 @@
 // visibility (`private` or `shared`), and whether the view is the
 // user's default for that module. `apply` returns the stored filter
 // definition so the client can run it against the module's own list
-// endpoint — this module never executes another module's query itself.
+// endpoint - this module never executes another module's query itself.
 //
 // Validation rules (enforced on create and update):
 //   - `module_id` must be a registered module id, checked against the
@@ -37,9 +37,7 @@ use std::sync::Arc;
 use super::{SavedViewsState, apply_view, create_view, delete_view, get_default_view,
     get_view_handler, list_views, set_default_view, update_view};
 
-// ---------------------------------------------------------------------------
 // Module.
-// ---------------------------------------------------------------------------
 
 pub struct SavedViewsModule {
     state: Arc<SavedViewsState>,

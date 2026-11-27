@@ -23,7 +23,6 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // URL safety (SSRF guard, same rules as the webhooks module).
 //
 // A download URL is attacker-influenced input: without these checks
@@ -34,7 +33,6 @@ use super::*;
 // `DOWNLOADER_ALLOW_LOOPBACK` opt-in (development only) re-allows
 // them. The checks run at job creation and again on every redirect
 // target (see `build_client`).
-// ---------------------------------------------------------------------------
 
 /// The IPv4 address behind an IPv4-mapped (`::ffff:a.b.c.d`) or
 /// IPv4-compatible (`::a.b.c.d`) IPv6 address, if any. Such an
@@ -57,7 +55,7 @@ fn is_loopback(ip: IpAddr) -> bool {
 
 /// True when the address is private, link-local, or otherwise
 /// reserved: never a valid download target. Loopback is forbidden
-/// too, by default — see `allow_loopback_downloads` for the
+/// too, by default - see `allow_loopback_downloads` for the
 /// explicit opt-in development exception.
 fn is_forbidden_ip(ip: IpAddr) -> bool {
     match ip {
@@ -90,7 +88,7 @@ fn is_forbidden_ip(ip: IpAddr) -> bool {
 /// Development-only loopback exception: loopback targets are
 /// forbidden unless `DOWNLOADER_ALLOW_LOOPBACK` is explicitly set
 /// to `1` or `true`. The flag is off by default and must never be
-/// enabled in production — the SSRF guard exists to stop the
+/// enabled in production - the SSRF guard exists to stop the
 /// server fetching loopback admin interfaces.
 pub(crate) fn allow_loopback_downloads() -> bool {
     std::env::var("DOWNLOADER_ALLOW_LOOPBACK")

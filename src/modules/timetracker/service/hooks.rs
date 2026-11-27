@@ -1,7 +1,6 @@
-// service — hooks.
+// service - hooks.
 // Hook handlers (project/user/screenshot events).
 //
-// Split from `src/modules/timetracker/service.rs`; moved verbatim, no behaviour changes.
 
 use super::super::*;
 use super::*;
@@ -17,13 +16,11 @@ use unified_core::pagination::PaginationParams;
 use unified_core::storage::StorageRegistry;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Hook handlers (cross-module events)
-// ---------------------------------------------------------------------------
 
 /// Answer `project.task.completed`: stop every running timer
-/// linked to that task — the work is done, so the timer must not
-/// keep running — and log their entries. Unknown or missing task
+/// linked to that task - the work is done, so the timer must not
+/// keep running - and log their entries. Unknown or missing task
 /// ids are ignored (a stale event can never stop unrelated
 /// timers). The event name is confirmed by the audit module's
 /// audited-events list; the projects module file itself was not
@@ -65,7 +62,7 @@ pub(crate) fn on_project_task_completed(state: TimeTrackerState, ctx: &mut HookC
 
 /// Answer `project.task.created`: acknowledged only. The task id
 /// is echoed back so the caller can verify the link; no record is
-/// created here — timers and entries link to tasks by id when the
+/// created here - timers and entries link to tasks by id when the
 /// user starts tracking against one.
 pub(crate) fn on_project_task_created(_state: TimeTrackerState, ctx: &mut HookContext) {
     let task_id = ctx
@@ -129,7 +126,7 @@ pub(crate) fn on_user_created(state: TimeTrackerState, ctx: &mut HookContext) {
         // provisions: a user who already has a staff record (from
         // an earlier invite or a manual add) still needs the team
         // membership this invite carries. `accepted` counts only
-        // invites that actually produced something new — a staff
+        // invites that actually produced something new - a staff
         // record or a team membership.
         let mut produced = false;
         if !state.staff.contains_key(&user_id) {
@@ -195,7 +192,7 @@ pub(crate) fn on_user_created(state: TimeTrackerState, ctx: &mut HookContext) {
 /// runs on a spawned worker (the backup module's pattern: the
 /// current Tokio runtime when there is one, otherwise a dedicated
 /// thread with its own runtime). The result reports the dispatch,
-/// not the counts — the counts arrive later in the
+/// not the counts - the counts arrive later in the
 /// `timetracker.screenshots.purged` event the purge emits.
 pub(crate) fn on_screenshots_purge_requested(state: TimeTrackerState, ctx: &mut HookContext) {
     let registry = state

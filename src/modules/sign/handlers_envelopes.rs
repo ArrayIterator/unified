@@ -57,9 +57,7 @@ fn envelope_event(state: &SignState, event: &str, tenant_id: &str, envelope: &Si
     );
 }
 
-// ---------------------------------------------------------------------------
 // Envelope handlers (authenticated)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_envelopes(
     state: web::Data<SignState>,

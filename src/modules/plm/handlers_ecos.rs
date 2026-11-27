@@ -63,9 +63,7 @@ fn validate_affected_versions(
     Ok(())
 }
 
-// ---------------------------------------------------------------------------
 // ECO handlers (authenticated)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_ecos(
     state: web::Data<PlmState>,
@@ -470,9 +468,7 @@ pub(crate) async fn transition_eco(
     }
 }
 
-// ---------------------------------------------------------------------------
 // ECO approvals (authenticated)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_eco_approvals(
     state: web::Data<PlmState>,
@@ -522,8 +518,8 @@ pub(crate) async fn list_eco_approvals(
 /// the ECO's data-driven `approval_steps`, must not have been
 /// decided already, and the caller must hold the manage
 /// capability. The decision is `approved` or `rejected`. A
-/// rejection does not by itself move the ECO — the ECO moves
-/// to `rejected` through the transition endpoint — but a
+/// rejection does not by itself move the ECO - the ECO moves
+/// to `rejected` through the transition endpoint - but a
 /// rejected required step blocks approval until the ECO is
 /// reworked.
 pub(crate) async fn create_eco_approval(

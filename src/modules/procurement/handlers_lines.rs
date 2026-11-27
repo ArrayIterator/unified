@@ -14,9 +14,7 @@ use super::helpers::*;
 use super::state::*;
 use super::types::*;
 
-// ---------------------------------------------------------------------------
 // Purchase order line handlers (draft POs only)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_po_lines(
     ctx: web::Data<Arc<AppContext>>,

@@ -32,7 +32,7 @@
 --   - `auditor_scopes` carries the read-only scope: one row per
 --     (module, resource kind, record / company) grant. There is no
 --     row that means "everything": a scope must name modules
---     explicitly, and `allow_export` defaults to FALSE — exports
+--     explicitly, and `allow_export` defaults to FALSE - exports
 --     are denied unless a row explicitly grants them.
 --   - `auditor_sessions` are records, not issued tokens: the auth
 --     flow owns the actual session token, this table only tracks
@@ -42,12 +42,10 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One public link: exactly one resource kind, one resource id, one
 -- view. Read-only by construction: the scope carries no action.
 -- `expires_at` is required and at most 30 days after creation;
 -- `revoked_at` set means the link never validates again.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public_links (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     token_hash TEXT NOT NULL UNIQUE CHECK (token_hash ~ '^[0-9a-f]{64}$'),
@@ -71,11 +69,9 @@ CREATE INDEX IF NOT EXISTS idx_public_links_created_by
 CREATE INDEX IF NOT EXISTS idx_public_links_expires_at
     ON public_links (expires_at);
 
--- ---------------------------------------------------------------------------
 -- One public-link access attempt: allowed AND denied attempts are
 -- both recorded. `link_id` is NULL when the presented token matched
 -- no link at all. Only hashes of the IP and user agent are stored.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public_link_access_log (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     link_id UUID REFERENCES public_links (id)
@@ -96,7 +92,6 @@ CREATE INDEX IF NOT EXISTS idx_public_link_access_log_allowed
 CREATE INDEX IF NOT EXISTS idx_public_link_access_log_reason
     ON public_link_access_log (reason);
 
--- ---------------------------------------------------------------------------
 -- One temporary sandbox auditor account. Time-limited by
 -- construction: `expires_at` is required. `is_auditor` is always
 -- true and `auditor_of` is the admin actor id that created the
@@ -104,7 +99,6 @@ CREATE INDEX IF NOT EXISTS idx_public_link_access_log_reason
 -- sessions. `scheduler_status` records whether the expiry job was
 -- actually queued (`queued` / `declined`); it never pretends a job
 -- was queued when the scheduler declined it.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS auditor_accounts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id TEXT NOT NULL,
@@ -135,13 +129,11 @@ CREATE INDEX IF NOT EXISTS idx_auditor_accounts_status_expires_at
 CREATE INDEX IF NOT EXISTS idx_auditor_accounts_auditor_of
     ON auditor_accounts (auditor_of);
 
--- ---------------------------------------------------------------------------
 -- One scope entry of one auditor account: what the auditor may see.
 -- `resource_id` set means exactly that one record; `resource_id`
 -- empty and `company_id` set means every record of this kind inside
 -- that company; both empty means every record of this kind in the
 -- module. `allow_export` defaults to FALSE.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS auditor_scopes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     auditor_id UUID NOT NULL REFERENCES auditor_accounts (id)
@@ -163,12 +155,10 @@ CREATE INDEX IF NOT EXISTS idx_auditor_scopes_module_resource_kind
 CREATE INDEX IF NOT EXISTS idx_auditor_scopes_company_id
     ON auditor_scopes (company_id);
 
--- ---------------------------------------------------------------------------
 -- One recorded auditor session: a login of an auditor user id.
 -- `revoked_at` set means the session was killed (account revoke,
 -- expiry, or single-session revoke). Sessions are records, not
 -- issued tokens: the auth flow owns the actual session token.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS auditor_sessions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     auditor_id UUID NOT NULL REFERENCES auditor_accounts (id)

@@ -1,4 +1,4 @@
-// Projects module — project template handlers.
+// Projects module - project template handlers.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use super::*;
@@ -10,9 +10,7 @@ use chrono::{DateTime, Utc};
 use serde_json::{Value, json};
 use std::sync::Arc;
 
-// ---------------------------------------------------------------------------
 // Project templates
-// ---------------------------------------------------------------------------
 
 /// Read guard for the template list and get handlers: templates are
 /// only readable by a role holding `projects:view`, like every other

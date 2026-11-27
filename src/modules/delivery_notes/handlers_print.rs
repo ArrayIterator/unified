@@ -9,7 +9,7 @@
 //! both sent through the `printing.job.requested` hook event
 //! exactly like the billing module's invoice printing. The
 //! printing module owns the queue, the ESC/POS stream, and
-//! delivery to hardware — this module never opens a device,
+//! delivery to hardware - this module never opens a device,
 //! socket, or serial port, and never claims to produce PDF
 //! bytes (converting the HTML to PDF is a deployment step, as
 //! in printing's own honesty note).
@@ -17,8 +17,8 @@
 //! Company header: the DO stores `company_id` by reference
 //! only. The company module answers no header-lookup hook
 //! today (it answers `company.exists` with a boolean), so the
-//! printed header is the DO's snapshotted sender block — the
-//! issuing party as frozen at creation time — plus the
+//! printed header is the DO's snapshotted sender block - the
+//! issuing party as frozen at creation time - plus the
 //! `company_id` reference in the payload. When the company
 //! module grows a header lookup, the print payload is the
 //! place to resolve it.
@@ -50,7 +50,7 @@ struct NotePath {
 /// Queue a print job through the printing module and return the
 /// `(job_id, status)` it answers with. Fails when the printing
 /// module has no `printing.job.requested` handler or when it
-/// reports an error — the same contract the billing module uses
+/// reports an error - the same contract the billing module uses
 /// for invoice printing.
 fn request_print_job(state: &DeliveryNoteState, payload: Value) -> UnifiedResult<(String, String)> {
     let Some(context) = state.query("printing.job.requested", payload) else {
@@ -84,7 +84,7 @@ fn request_print_job(state: &DeliveryNoteState, payload: Value) -> UnifiedResult
 /// print job through the printing module, and return the
 /// document inline. When the printing module is not registered
 /// the document is still returned with a warning and a null
-/// `print_job_id`, so the caller can always print — the job
+/// `print_job_id`, so the caller can always print - the job
 /// queue is a convenience, not the document itself.
 pub(crate) async fn print_note(
     state: web::Data<DeliveryNoteState>,

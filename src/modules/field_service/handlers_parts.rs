@@ -1,4 +1,4 @@
-// field_service module — Work order part handlers.
+// field_service module - Work order part handlers.
 //
 // Split from the former single-file module `src/modules/field_service.rs`.
 // The module root (`field_service.rs`) re-exports the public items, so the
@@ -27,9 +27,7 @@ use super::helpers::{
     paginate, parts_of, require_permission, require_tenant, require_text,
 };
 
-// ---------------------------------------------------------------------------
 // Work order part handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_work_order_parts(
     ctx: web::Data<Arc<AppContext>>,

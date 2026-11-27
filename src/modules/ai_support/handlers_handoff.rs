@@ -8,9 +8,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Handoff handlers (conversation -> support ticket, via hook)
-// ---------------------------------------------------------------------------
 
 /// Shared handoff implementation: emit `ticket.create_requested` and mark
 /// the conversation as handed off. The tickets module owns ticket creation;

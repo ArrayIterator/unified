@@ -32,9 +32,7 @@ use std::time::{Duration, Instant};
 use uuid::Uuid;
 use super::{keys::*, expiry::*, store::*, hooks::*, types::*, handlers::*, products::*, helpers::*, product_handlers::*, verify::*, offline::*, distribution::*, releases::*, module::*};
 
-// ---------------------------------------------------------------------------
 // Shared validation / activation logic.
-// ---------------------------------------------------------------------------
 
 /// Validate a license key and, when an `instance_id` is supplied and the
 /// license is valid, auto-register the activation (idempotent per
@@ -247,9 +245,7 @@ pub(crate) fn persist_license_status(ctx: &AppContext, license: &License) -> Uni
     Ok(())
 }
 
-// ---------------------------------------------------------------------------
 // Module entitlements: a sellable module as a product.
-// ---------------------------------------------------------------------------
 
 /// True when `license` entitles `company_id` to use `module_id`.
 ///
@@ -323,7 +319,7 @@ pub(crate) const SUBSCRIPTION_ENTITLEMENT_CHECK_EVENT: &str =
 
 /// True when the company holds an active subscription covering the
 /// module (trialing/active inside the period, past-due inside
-/// grace, or cancelled at period end inside the period — the exact
+/// grace, or cancelled at period end inside the period - the exact
 /// rule lives in the store answerer). Fail closed: no answer, or
 /// no entitled result, means no subscription entitlement. The
 /// hook emit is synchronous, so this is safe to call from the
@@ -412,7 +408,7 @@ pub fn subscription_entitlement_id(
 ///    subscription: requires an active stored entitlement row
 ///    for the company (SaaS package, manual grant, or a mirrored
 ///    license/subscription row). This is the leg the gate never
-///    consulted before — a module covered only by a stored row
+///    consulted before - a module covered only by a stored row
 ///    was entitled in `effective()` but 403 here. On success
 ///    emits `module.entitlement.granted` with `reason:
 ///    "stored_row"` and the row's `source_kind`.
@@ -445,8 +441,8 @@ pub fn check_module_entitlement(
     // The shared verdict covers steps 2-6 (builtin, owner,
     // license, subscription, stored row) in gate order; the
     // stored-row leg reads the entitlements state stashed at the
-    // entitlements module's `init`, and is skipped — fail closed,
-    // the pre-fix behaviour — when that module has not
+    // entitlements module's `init`, and is skipped - fail closed,
+    // the pre-fix behaviour - when that module has not
     // initialized yet.
     let verdict = entitled_via_live_sources(
         entitlements_state().as_deref(),

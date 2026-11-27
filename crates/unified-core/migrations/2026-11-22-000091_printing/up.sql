@@ -60,9 +60,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- Paper sizes: standard sizes seeded, custom sizes admin-editable.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS paper_sizes (
     code VARCHAR PRIMARY KEY,
     name VARCHAR NOT NULL,
@@ -120,12 +118,10 @@ VALUES
     ('thermal-80', 'Thermal 80mm', 80.00, NULL, 2, 2, 2, 2, TRUE, TRUE, 80, NULL)
 ON CONFLICT (code) DO NOTHING;
 
--- ---------------------------------------------------------------------------
 -- One invoice template: header/footer, logo reference, colours,
 -- columns, line-item layout, tax breakdown flag, payment
 -- instructions, footer notes. Templates are data, never hard-coded
 -- layouts; `version` bumps on every edit.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS invoice_templates (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id VARCHAR,
@@ -163,10 +159,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_invoice_templates_default_global
     ON invoice_templates ((TRUE))
     WHERE is_default AND company_id IS NULL;
 
--- ---------------------------------------------------------------------------
 -- One archived template version: the full JSON snapshot of the
 -- template as it was before an edit. Append-only.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS invoice_template_versions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     template_id UUID NOT NULL REFERENCES invoice_templates (id)
@@ -181,12 +175,10 @@ CREATE TABLE IF NOT EXISTS invoice_template_versions (
 CREATE INDEX IF NOT EXISTS idx_invoice_template_versions_template_id
     ON invoice_template_versions (template_id);
 
--- ---------------------------------------------------------------------------
 -- One thermal printer profile: connection, width, character set,
 -- code page, and capabilities. The profile describes how to reach
 -- the printer; the server emits the ESC/POS stream, it does not
 -- claim a direct hardware driver.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS printer_profiles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id VARCHAR,
@@ -220,10 +212,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_printer_profiles_default_global
     ON printer_profiles ((TRUE))
     WHERE is_default AND company_id IS NULL;
 
--- ---------------------------------------------------------------------------
 -- One print job: a queued request to print, email, or export one
 -- invoice, its lifecycle, and its rendered output references.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS print_jobs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id VARCHAR,

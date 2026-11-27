@@ -53,11 +53,9 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- Listings: a store product made rentable, with a deposit and a
 -- late-fee rule. `quantity` is how many identical units of this
 -- listing can be rented at once.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS rental_listings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -80,11 +78,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_rental_listings_tenant_slug ON rental_list
 CREATE INDEX IF NOT EXISTS idx_rental_listings_tenant_product ON rental_listings (tenant_id, product_id);
 CREATE INDEX IF NOT EXISTS idx_rental_listings_tenant_active ON rental_listings (tenant_id, active);
 
--- ---------------------------------------------------------------------------
 -- Rates: one per-period price of a listing. `period_unit` plus
 -- `period_length` define the period; `period_label` is the
 -- display name shown to renters.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS rental_rates (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -99,7 +95,6 @@ CREATE TABLE IF NOT EXISTS rental_rates (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_rental_rates_listing_label ON rental_rates (listing_id, period_label);
 CREATE INDEX IF NOT EXISTS idx_rental_rates_listing ON rental_rates (listing_id, period_unit);
 
--- ---------------------------------------------------------------------------
 -- Orders: one rental contract. `rental_amount_minor` is priced
 -- at booking time from the chosen rate; `late_fee_minor` is
 -- computed at return; `damage_total_minor` grows when damage
@@ -107,7 +102,6 @@ CREATE INDEX IF NOT EXISTS idx_rental_rates_listing ON rental_rates (listing_id,
 -- `contract_id` references a contracts-module agreement by id
 -- only; `shipment_id` is set by the logistics delivery
 -- listener.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS rental_orders (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -139,10 +133,8 @@ CREATE INDEX IF NOT EXISTS idx_rental_orders_customer ON rental_orders (tenant_i
 CREATE INDEX IF NOT EXISTS idx_rental_orders_status ON rental_orders (tenant_id, status, starts_at);
 CREATE INDEX IF NOT EXISTS idx_rental_orders_contract ON rental_orders (contract_id) WHERE contract_id IS NOT NULL;
 
--- ---------------------------------------------------------------------------
 -- Deliveries: one hand-out or return event per row, with
 -- condition notes and photo metadata.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS rental_deliveries (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -156,10 +148,8 @@ CREATE TABLE IF NOT EXISTS rental_deliveries (
 CREATE INDEX IF NOT EXISTS idx_rental_deliveries_order ON rental_deliveries (order_id, created_at ASC);
 CREATE INDEX IF NOT EXISTS idx_rental_deliveries_kind ON rental_deliveries (order_id, kind);
 
--- ---------------------------------------------------------------------------
 -- Damage reports: description plus estimated cost, resolved once
 -- (resolving adds the cost to the order total) or dismissed.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS rental_damage_reports (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -178,10 +168,8 @@ CREATE TABLE IF NOT EXISTS rental_damage_reports (
 CREATE INDEX IF NOT EXISTS idx_rental_damage_reports_order ON rental_damage_reports (order_id, created_at ASC);
 CREATE INDEX IF NOT EXISTS idx_rental_damage_reports_status ON rental_damage_reports (tenant_id, status, created_at ASC);
 
--- ---------------------------------------------------------------------------
 -- Per-tenant rental settings (late-fee grace, advance booking
 -- window, cancel cutoff).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS rental_settings (
     tenant_id TEXT PRIMARY KEY CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
     late_fee_grace_hours BIGINT NOT NULL DEFAULT 0 CHECK (late_fee_grace_hours >= 0),

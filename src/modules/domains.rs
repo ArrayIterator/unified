@@ -1,4 +1,4 @@
-// Domains module — domain and subdomain management.
+// Domains module - domain and subdomain management.
 //
 // Domains are verified with the Network module's DNS verifier (SPF /
 // DKIM / DMARC / MX / A records) plus a live TLS probe on port 443 that

@@ -15,9 +15,7 @@ use super::{events::*, card_validation::*, card_settings::*, limits::*, provider
 
 
 
-// ---------------------------------------------------------------------------
 // Handlers: split bills.
-// ---------------------------------------------------------------------------
 /// Recompute the paid / remaining amounts of a split from its parts.
 pub(crate) fn recompute_split_totals(split: &mut SplitBill) {
     split.paid_minor = split
@@ -46,7 +44,7 @@ pub(crate) fn find_split(id: Uuid) -> UnifiedResult<SplitBill> {
 ///
 /// Note: the caller supplies `total_minor` (the order/invoice total
 /// in minor units). This module cannot read the store or billing
-/// totals directly — hook wiring only — so the integrator should
+/// totals directly - hook wiring only - so the integrator should
 /// validate the total against the order/invoice when the durable
 /// layer lands (see the coordinator report).
 pub(crate) fn build_split_bill(input: CreateSplitRequest) -> UnifiedResult<SplitBill> {
@@ -393,7 +391,7 @@ pub(crate) async fn pay_split_part(
         )?;
         // Batch 18 (S4): validate the card before any provider
         // call. The bank-transfer early return above stays before
-        // the gate — no card is involved there. Raw details on the
+        // the gate - no card is involved there. Raw details on the
         // request run in `full` mode; a stored method id runs in
         // `method` mode; an opaque token alone skips the gate.
         request_card_validation(&state, &req, request.card.as_ref(), request.payment_method_id, None, &connection, &customer_id, split.order_id.as_deref(), None)?;

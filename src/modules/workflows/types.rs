@@ -7,9 +7,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// What starts a workflow.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -161,7 +159,7 @@ pub struct WorkflowRun {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub trigger_name: Option<String>,
     pub status: RunStatus,
-    /// Redacted summary of the trigger payload — never secrets,
+    /// Redacted summary of the trigger payload - never secrets,
     /// never the full payload (see `summarize_payload`).
     #[serde(default)]
     pub payload_summary: Value,
@@ -223,9 +221,7 @@ pub struct LeafEvaluation {
     pub matched: bool,
 }
 
-// ---------------------------------------------------------------------------
 // Request bodies
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct CreateWorkflowRequest {

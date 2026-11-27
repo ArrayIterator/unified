@@ -1,4 +1,4 @@
-// Properties — Hook listeners (payment / order events).
+// Properties - Hook listeners (payment / order events).
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -23,7 +23,7 @@ use super::*;
 // Module notes moved here from the original file header
 // (kept verbatim so no documentation is lost):
 
-// HONESTY — READ THIS FIRST. What is real in this module:
+// HONESTY - READ THIS FIRST. What is real in this module:
 // in-memory property, plan, block, history, and purchase
 // management; GeoJSON geometry validated server-side (only
 // Polygon / MultiPolygon / LineString, bounded vertices, closed
@@ -41,13 +41,13 @@ use super::*;
 // provider; and a buy flow that emits an event for the store
 // module and reacts to the payment events (see the buy-flow
 // contract below). What is NOT built here: TRUE 3D VISUALIZATION
-// — this is a 2D SVG site-plan editor only; a 3D view (extruded
+// - this is a 2D SVG site-plan editor only; a 3D view (extruded
 // plots, terrain, a WebGL viewer) is a future item, recorded in
 // the builder report, and nothing in this module pretends it
 // exists. There is also no built-in geocoding database: location
 // search needs a configured provider (see the location note).
 // No payment collection lives here (payments, store, and billing
-// own it — this module only reacts to their hook events), and no
+// own it - this module only reacts to their hook events), and no
 // image bytes live here (media is referenced through the storage
 // module by target + key, exactly like the events module's cover
 // image). The map picker itself is client-side: the server
@@ -133,22 +133,20 @@ use super::*;
 //   - `notification.requested` (reservation, sale, assignment)
 //     with the notifications module's payload shape.
 // Events this module listens to:
-//   - `properties.order.created` — links a store order id to a
+//   - `properties.order.created` - links a store order id to a
 //     purchase record (emitted by the store-side purchase
 //     handler; see the buy-flow contract above).
-//   - `payment.captured` — marks the purchased block `sold`
+//   - `payment.captured` - marks the purchased block `sold`
 //     (gateway captures must cover the block price; bank-transfer
 //     captures skip the amount check; only purchases in
 //     `requested` / `order_created` / `pending_verification` may
 //     move to sold; already-sold is a safe no-op).
-//   - `bank_transfer.verification.created` — moves the purchase
+//   - `bank_transfer.verification.created` - moves the purchase
 //     to `pending_verification` (the block stays `reserved`).
-//   - `bank_transfer.rejected` — releases the block back to
+//   - `bank_transfer.rejected` - releases the block back to
 //     `available`.
 
-// ---------------------------------------------------------------------------
 // Hook listeners (payment / order events)
-// ---------------------------------------------------------------------------
 
 /// Link a store order id to a purchase record. The store side
 /// emits `properties.order.created` after creating the order for
@@ -299,7 +297,7 @@ pub(crate) fn minor_to_major(amount_minor: i64, currency: &str) -> f64 {
 /// An approved payment (`payment.captured`, gateway or bank
 /// transfer) moves the purchased block to `sold`. Only purchases
 /// in `requested` / `order_created` / `pending_verification` may
-/// move to sold — never `rejected` or `cancelled` — and a block
+/// move to sold - never `rejected` or `cancelled` - and a block
 /// that is already sold is left alone, so redelivered captures
 /// are safe. Gateway captures must cover the block price;
 /// bank-transfer captures skip the amount check (the

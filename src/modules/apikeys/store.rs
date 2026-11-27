@@ -8,9 +8,7 @@ use uuid::Uuid;
 
 use super::types::ApiKeyRecord;
 
-// ---------------------------------------------------------------------------
 // State.
-// ---------------------------------------------------------------------------
 
 /// Hook bus stashed in `init` so `note_used` (called from middleware,
 /// outside any handler) can emit `apikey.used`.

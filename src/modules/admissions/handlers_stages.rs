@@ -1,4 +1,4 @@
-// admissions module — Stage definition handlers.
+// admissions module - Stage definition handlers.
 //
 // Split from the former single-file module `src/modules/admissions.rs`.
 // The module root (`admissions.rs`) re-exports the public items, so the
@@ -26,9 +26,7 @@ use super::helpers::{
 use super::state::AdmissionsState;
 use super::types::{CreateStage, StageDefinition, UpdateStage};
 
-// ---------------------------------------------------------------------------
 // Handlers: stage definitions
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_stages(
     ctx: web::Data<Arc<AppContext>>,

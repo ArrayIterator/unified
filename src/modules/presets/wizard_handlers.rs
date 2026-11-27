@@ -1,4 +1,4 @@
-//! Presets + Setup Wizard module. — Wizard handlers. Navigation is index-based over the step list stored on the wizard state: no handler matches on a business-type name. Saving a step merges whichever fields the payload carries (preset choice, optional-module toggles, settings answers) and then advances one stored step; the step the wizard is on only decides whether the preset application runs now (the stored "apply" step) or at completion.
+//! Presets + Setup Wizard module. - Wizard handlers. Navigation is index-based over the step list stored on the wizard state: no handler matches on a business-type name. Saving a step merges whichever fields the payload carries (preset choice, optional-module toggles, settings answers) and then advances one stored step; the step the wizard is on only decides whether the preset application runs now (the stored "apply" step) or at completion.
 //!
 //! Split from `src/modules/presets.rs`; behaviour unchanged.
 
@@ -411,7 +411,7 @@ pub(super) async fn skip_wizard_step(
     // The "apply" step is the one step that cannot be skipped:
     // skipping it would leave the preset unapplied, and skipping
     // it as the last stored step used to mark the wizard completed
-    // with no application at all — a later complete then failed
+    // with no application at all - a later complete then failed
     // as "already completed", leaving no path to apply except
     // restart. Save the step to apply the preset, or restart the
     // wizard.

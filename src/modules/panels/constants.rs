@@ -2,9 +2,7 @@
 
 use std::time::Duration;
 
-// ---------------------------------------------------------------------------
 // Events.
-// ---------------------------------------------------------------------------
 
 /// Emitted after a connection test succeeds.
 pub const PANEL_CONNECTED: &str = "panel.connected";
@@ -30,9 +28,7 @@ pub const PANEL_CONNECTION_DELETED: &str = "panel.connection.deleted";
 /// Emitted when a two-way sync conflict is detected or resolved.
 pub const PANEL_SYNC_CONFLICT: &str = "panel.sync.conflict";
 
-// ---------------------------------------------------------------------------
 // Permissions.
-// ---------------------------------------------------------------------------
 
 /// Read panel connections, stored records, and stored sync status.
 /// Every handler requires authentication first (see `caller` in
@@ -44,9 +40,7 @@ pub(crate) const PERM_PANELS_VIEW: &str = "panels.view";
 /// a panel, so they need the manage permission, not just view.
 pub(crate) const PERM_PANELS_MANAGE: &str = "panels.manage";
 
-// ---------------------------------------------------------------------------
 // Limits.
-// ---------------------------------------------------------------------------
 
 /// Default HTTP timeout for panel API calls.
 pub(crate) const DEFAULT_TIMEOUT_SECS: u64 = 30;

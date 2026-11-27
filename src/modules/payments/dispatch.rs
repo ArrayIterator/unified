@@ -14,9 +14,7 @@ use super::{events::*, card_validation::*, card_settings::*, limits::*, provider
 
 
 
-// ---------------------------------------------------------------------------
 // The dispatching adapter: one struct, one typed client per provider.
-// ---------------------------------------------------------------------------
 /// The built-in adapter. Each provider kind is served by its own
 /// private `*_charge` / `*_refund` / ... function below, so the
 /// per-provider request shapes stay typed and reviewable while the
@@ -451,9 +449,7 @@ impl ProviderAdapter {
 
 
 #[async_trait]
-// ---------------------------------------------------------------------------
 // `PaymentProvider` implementation: capability guards + dispatch.
-// ---------------------------------------------------------------------------
 impl PaymentProvider for ProviderAdapter {
     fn kind(&self) -> PaymentProviderKind {
         self.kind

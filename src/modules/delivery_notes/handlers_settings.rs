@@ -54,7 +54,7 @@ pub(crate) async fn get_settings(
 /// Update the tenant's delivery notes settings (manager). The
 /// number format is validated, never trusted: an invalid prefix
 /// or reset rule is a 400, and a changed format only affects
-/// numbers issued after the change — issued numbers are never
+/// numbers issued after the change - issued numbers are never
 /// rewritten.
 pub(crate) async fn update_settings(
     state: web::Data<DeliveryNoteState>,

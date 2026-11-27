@@ -1,4 +1,4 @@
-// OKR / Goals — Key result, check-in, and link handlers.
+// OKR / Goals - Key result, check-in, and link handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -25,9 +25,7 @@ use super::handlers_objectives::*;
 use super::hooks::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Key-result handlers
-// ---------------------------------------------------------------------------
 
 /// Remove a key result with its check-ins and links (shared by the
 /// objective delete and the key-result delete).
@@ -242,9 +240,7 @@ pub(crate) async fn delete_key_result(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Check-in + override handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_checkins(
     ctx: web::Data<Arc<AppContext>>,
@@ -403,9 +399,7 @@ pub(crate) async fn override_key_result(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Link handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_links(
     ctx: web::Data<Arc<AppContext>>,

@@ -3,11 +3,9 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Tenants (migration 000100_tenant_isolation); snippets from the
 // header doc comment of `src/modules/tenants.rs`, verified against
 // the migration. `tenant_module_grants` has no created_at/updated_at.
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     tenants (id) {
@@ -62,10 +60,8 @@ diesel::table! {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Tenant destroy requests (no migration yet; derived from the
 // `DestroyRequest` struct in src/modules/tenant_destroy.rs).
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     tenant_destroy_requests (id) {

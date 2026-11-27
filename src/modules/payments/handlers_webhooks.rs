@@ -15,9 +15,7 @@ use super::{events::*, card_validation::*, card_settings::*, limits::*, provider
 
 
 #[derive(Debug, Clone, Serialize)]
-// ---------------------------------------------------------------------------
 // Handlers: webhooks.
-// ---------------------------------------------------------------------------
 /// One processed webhook event, for the webhook event list.
 pub(crate) struct WebhookEventView {
     pub(crate) event_id: String,
@@ -103,7 +101,7 @@ pub(crate) fn event_currency(event: &Value) -> Option<String> {
 /// decimal places first so binary-float error cannot shift the
 /// amount. Caveat, shared with the module's other money helpers:
 /// three-decimal currencies (BHD, KWD, OMR) are converted as
-/// two-decimal — a pre-existing limitation, not introduced here.
+/// two-decimal - a pre-existing limitation, not introduced here.
 fn json_major_to_minor(body: &Value, keys: &[&str], currency: &str) -> Option<i64> {
     for key in keys {
         match body.get(key) {
@@ -127,7 +125,7 @@ fn json_major_to_minor(body: &Value, keys: &[&str], currency: &str) -> Option<i6
 /// string), Xendit's `amount` (major units), Midtrans's
 /// `gross_amount` (a major-unit string, IDR when the event carries
 /// no currency). A provider whose shape is not listed here yields
-/// `None` — an amount-less event — and the caller must treat it as
+/// `None` - an amount-less event - and the caller must treat it as
 /// unquantified, never as the full original amount.
 pub(crate) fn event_amount_minor(event: &Value, kind: PaymentProviderKind) -> Option<i64> {
     if let Some(amount) = json_i64(event, &["amount_minor"]) {
@@ -205,8 +203,8 @@ pub(crate) fn webhook_refund_idempotency_key(event_id: &str) -> String {
 /// refund can refund the same money again.
 ///
 /// The amount comes from the event when it carries one. An event
-/// with NO usable amount records a `pending` row with amount 0 —
-/// unquantified — and NEVER the full original amount: a partial
+/// with NO usable amount records a `pending` row with amount 0 -
+/// unquantified - and NEVER the full original amount: a partial
 /// refund without an amount is not a full refund, and treating it
 /// as one would mark the charge `refunded` and emit
 /// `payment.refunded` for money that may still be owed. The caller
@@ -341,7 +339,7 @@ pub(crate) async fn webhook_receiver(
             // The claim is released when processing fails below, so
             // the provider's retry is processed instead of dismissed
             // as a duplicate. (The claim is per-process, like the
-            // idempotency claims — see `claim_idempotency`; the
+            // idempotency claims - see `claim_idempotency`; the
             // durable form is the `webhook_event_claims` table from
             // migration 2026-11-22-000112.)
             webhook_events_store()
@@ -884,7 +882,7 @@ mod tests {
         let event_id = format!("evt-p5-bad-{}", Uuid::now_v7());
         let (raw_body, _) = signed_body(&event_id);
         // A tampered signature: verification fails, the event is
-        // never processed, and its id must not be recorded seen —
+        // never processed, and its id must not be recorded seen -
         // otherwise a later genuine redelivery would be dismissed
         // as a duplicate without ever being applied.
         let request = TestRequest::default()
@@ -943,8 +941,8 @@ mod tests {
         // The guard now sees the webhook refund: only 600 of the
         // 1000 remains refundable.
         assert_eq!(refunded_amount_minor(original.id), 400);
-        // An event with no amount is unquantified — pending with
-        // amount 0 — even when the disposition says completed. It
+        // An event with no amount is unquantified - pending with
+        // amount 0 - even when the disposition says completed. It
         // is NEVER a full refund of the original amount.
         let full = webhook_refund_transaction(
             &original,

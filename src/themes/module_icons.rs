@@ -12,7 +12,7 @@
 //! ```
 //!
 //! Where an icon comes from (WordPress-plugin model: the icon belongs
-//! to the module) — lookup order, implemented by the sprite builder
+//! to the module) - lookup order, implemented by the sprite builder
 //! (`scripts/build-module-icons-sprite.py`), which discovers icons by
 //! scanning the filesystem, never from a literal module list:
 //!   1. module-owned: `<module>/icon.svg` alongside the module code,
@@ -29,7 +29,7 @@
 //! `"placeholder"` on fallback). Icons declare their default animation
 //! with `data-animation="..."` in their icon file; the builder copies
 //! it onto the `<symbol>` and [`module_icon_animation`] reads it back,
-//! so [`module_icon_use`] can emit it as `data-icon-animation` —
+//! so [`module_icon_use`] can emit it as `data-icon-animation` -
 //! `assets/css/icons.css` only animates under a parent trigger, so
 //! animation stays off by default (see `assets/icons/ANIMATION.md`).
 //!

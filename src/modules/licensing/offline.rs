@@ -31,9 +31,7 @@ use std::time::{Duration, Instant};
 use uuid::Uuid;
 use super::{keys::*, expiry::*, store::*, hooks::*, types::*, validation::*, handlers::*, products::*, helpers::*, product_handlers::*, verify::*, distribution::*, releases::*, module::*};
 
-// ---------------------------------------------------------------------------
 // SaaS: offline tokens.
-// ---------------------------------------------------------------------------
 
 /// Signed offline-token payload. `token_id` is the server-side
 /// record id; the token itself is never stored.

@@ -67,9 +67,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One form definition.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS forms (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title VARCHAR(200) NOT NULL,
@@ -93,9 +91,7 @@ CREATE INDEX IF NOT EXISTS idx_forms_status ON forms (status);
 CREATE INDEX IF NOT EXISTS idx_forms_company_id ON forms (company_id);
 CREATE INDEX IF NOT EXISTS idx_forms_owner_id ON forms (owner_id);
 
--- ---------------------------------------------------------------------------
 -- One field of a form.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS form_fields (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     form_id UUID NOT NULL REFERENCES forms (id) ON DELETE CASCADE,
@@ -130,9 +126,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_form_fields_form_position
 CREATE INDEX IF NOT EXISTS idx_form_fields_form_id ON form_fields (form_id);
 CREATE INDEX IF NOT EXISTS idx_form_fields_field_type ON form_fields (field_type);
 
--- ---------------------------------------------------------------------------
 -- One received submission.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS form_submissions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     form_id UUID NOT NULL REFERENCES forms (id) ON DELETE CASCADE,
@@ -154,9 +148,7 @@ CREATE INDEX IF NOT EXISTS idx_form_submissions_status ON form_submissions (stat
 CREATE INDEX IF NOT EXISTS idx_form_submissions_mapping_status ON form_submissions (mapping_status);
 CREATE INDEX IF NOT EXISTS idx_form_submissions_created_at ON form_submissions (created_at);
 
--- ---------------------------------------------------------------------------
 -- One submitted value.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS form_submission_values (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     submission_id UUID NOT NULL REFERENCES form_submissions (id) ON DELETE CASCADE,

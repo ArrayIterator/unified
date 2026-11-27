@@ -50,10 +50,8 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One approval definition: for records of (module, record_type),
 -- which steps apply.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS approval_definitions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     module VARCHAR(128) NOT NULL,
@@ -77,9 +75,7 @@ CREATE INDEX IF NOT EXISTS idx_approval_definitions_module_record
 CREATE INDEX IF NOT EXISTS idx_approval_definitions_company
     ON approval_definitions (company_id);
 
--- ---------------------------------------------------------------------------
 -- One ordered step of a definition.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS approval_steps (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     definition_id UUID NOT NULL REFERENCES approval_definitions (id) ON DELETE CASCADE,
@@ -96,9 +92,7 @@ CREATE TABLE IF NOT EXISTS approval_steps (
 CREATE INDEX IF NOT EXISTS idx_approval_steps_definition
     ON approval_steps (definition_id, position);
 
--- ---------------------------------------------------------------------------
 -- One approval request for one record in one module.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS approval_requests (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     definition_id UUID NOT NULL REFERENCES approval_definitions (id) ON DELETE RESTRICT,
@@ -132,10 +126,8 @@ CREATE INDEX IF NOT EXISTS idx_approval_requests_status_expiry
 CREATE INDEX IF NOT EXISTS idx_approval_requests_definition
     ON approval_requests (definition_id);
 
--- ---------------------------------------------------------------------------
 -- One decision. Append-only: never edited, never deleted (see the
 -- trigger below).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS approval_decisions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     request_id UUID NOT NULL REFERENCES approval_requests (id) ON DELETE CASCADE,
@@ -155,10 +147,8 @@ CREATE TABLE IF NOT EXISTS approval_decisions (
 CREATE INDEX IF NOT EXISTS idx_approval_decisions_request
     ON approval_decisions (request_id, created_at);
 
--- ---------------------------------------------------------------------------
 -- A temporary delegation: delegate_id may decide in place of
 -- delegator_id between starts_at and ends_at.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS approval_delegations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     delegator_id VARCHAR(128) NOT NULL,
@@ -177,9 +167,7 @@ CREATE INDEX IF NOT EXISTS idx_approval_delegations_delegator
 CREATE INDEX IF NOT EXISTS idx_approval_delegations_delegate
     ON approval_delegations (delegate_id, is_active);
 
--- ---------------------------------------------------------------------------
 -- One escalation event on a request.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS approval_escalations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     request_id UUID NOT NULL REFERENCES approval_requests (id) ON DELETE CASCADE,
@@ -193,9 +181,7 @@ CREATE TABLE IF NOT EXISTS approval_escalations (
 CREATE INDEX IF NOT EXISTS idx_approval_escalations_request
     ON approval_escalations (request_id, created_at);
 
--- ---------------------------------------------------------------------------
 -- Append-only enforcement for approval_decisions.
--- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION forbid_approval_decision_mutation()
 RETURNS trigger AS $$
 BEGIN

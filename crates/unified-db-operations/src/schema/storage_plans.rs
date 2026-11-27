@@ -3,10 +3,8 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Storage product (migration 000057_storage_product_byo);
-// storage product notes §3. No `joinable!` entries (no FKs, per notes).
-// ---------------------------------------------------------------------------
+// storage product notes sec. 3. No `joinable!` entries (no FKs, per notes).
 
 diesel::table! {
     storage_plans (id) {

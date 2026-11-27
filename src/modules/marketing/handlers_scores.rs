@@ -1,4 +1,4 @@
-// Marketing Automation — Lead scoring handlers.
+// Marketing Automation - Lead scoring handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -30,9 +30,7 @@ use super::handlers_audience::*;
 use super::hooks::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Scoring handlers.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_scores(
     ctx: web::Data<Arc<AppContext>>,

@@ -48,9 +48,7 @@ pub(crate) const STOCK_DECREMENT_REQUESTED: &str = "assets.stock.decrement_reque
 pub(crate) const STOCK_INCREMENT_REQUESTED: &str = "assets.stock.increment_requested";
 pub(crate) const STOCK_ADJUST_REQUESTED: &str = "assets.stock.adjust_requested";
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// What kind of asset this is. `consumable` assets are tracked
 /// through the stock tables (quantity on hand); every other kind is
@@ -178,7 +176,7 @@ pub struct Asset {
     #[serde(with = "unified_core::money::serde_major")]
     pub salvage_value: i64,
     /// `none` (no method configured), `pending` (requested but no
-    /// schedule yet — see the honesty note), `computed`.
+    /// schedule yet - see the honesty note), `computed`.
     pub depreciation_status: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub depreciation_schedule: Option<Value>,
@@ -282,7 +280,7 @@ pub struct AssetStockTake {
 /// on-hand count when the line was added; `counted_quantity` is
 /// what the counter found (`None` until counted); `discrepancy`
 /// is `counted - expected` once counted, and is computed on read
-/// and on close — it is never typed in by hand.
+/// and on close - it is never typed in by hand.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AssetStockTakeLine {
     pub id: Uuid,
@@ -313,9 +311,7 @@ impl AssetStockTakeLine {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Request bodies
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct CreateAssetRequest {
@@ -407,9 +403,7 @@ pub struct CountStockTakeLineRequest {
     pub note: Option<String>,
 }
 
-// ---------------------------------------------------------------------------
 // Shared state
-// ---------------------------------------------------------------------------
 
 /// In-memory stores for assets. The hook bus is attached in `init`
 /// (the bus lives in `AppContext`); handlers tolerate a missing bus

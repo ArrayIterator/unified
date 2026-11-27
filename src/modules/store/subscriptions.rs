@@ -572,9 +572,7 @@ pub(crate) fn on_subscription_module_entitlement_check(state: Arc<StoreState>, c
     }
 }
 
-// ---------------------------------------------------------------------------
 // Subscription handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) fn require_subscription_owner(req: &HttpRequest, subscription: &Subscription) -> UnifiedResult<()> {
     if caller_owns(req, &subscription.user_id) {
@@ -932,7 +930,7 @@ pub(crate) async fn cancel_subscription(
 
 /// Expire subscriptions whose access window has closed. A live
 /// subscription (`active`, `trialing`, or `past_due` inside grace)
-/// whose period end — plus the grace days for `past_due` — is past
+/// whose period end - plus the grace days for `past_due` - is past
 /// no longer grants access (see `subscription_grants_access`), so
 /// the sweep moves it to the terminal `expired` status and emits
 /// `subscription.expired` (plus `subscription.entitlement_changed`
@@ -940,7 +938,7 @@ pub(crate) async fn cancel_subscription(
 /// lapse it. A subscription cancelled at period end instead becomes
 /// `cancelled` at the same boundary, with `subscription.cancelled`
 /// and reason `period_end`. Manager-only (`store.manage`); run on a
-/// schedule or on demand — call this endpoint from a scheduled job
+/// schedule or on demand - call this endpoint from a scheduled job
 /// until the scheduler learns a kind for it.
 pub(crate) async fn expire_due_subscriptions(
     state: web::Data<Arc<StoreState>>,

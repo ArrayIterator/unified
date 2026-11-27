@@ -1,14 +1,12 @@
-//! BI external module (split from lib.rs; moved verbatim).
+//! BI external module.
 
 use super::*;
 
 
-// ---------------------------------------------------------------------------
 // HTTP handlers. Every JSON response uses the standard envelope
 // (`{"data": ...}` on success, the standard error shape on failure).
 // The export endpoint is the single exception: it streams raw CSV /
 // JSONL file bytes, like a download, with a content-disposition.
-// ---------------------------------------------------------------------------
 
 type State = web::Data<Arc<BiState>>;
 
@@ -32,7 +30,7 @@ where
     items
 }
 
-// --- Datasets ---------------------------------------------------------------
+// Datasets
 
 pub(crate) async fn create_dataset(state: State, req: HttpRequest, body: web::Json<CreateDatasetRequest>) -> HttpResponse {
     let body = body.into_inner();
@@ -191,7 +189,7 @@ pub(crate) async fn delete_dataset(state: State, req: HttpRequest, path: web::Pa
     ok(json!({ "deleted": dataset.id }))
 }
 
-// --- Extracts and snapshots -------------------------------------------------
+// Extracts and snapshots
 
 pub(crate) async fn run_extract_handler(
     state: State,
@@ -286,7 +284,7 @@ pub(crate) async fn list_snapshots(state: State, req: HttpRequest, path: web::Pa
     ok(snapshots)
 }
 
-// --- Query and export -------------------------------------------------------
+// Query and export
 
 pub(crate) async fn query_dataset(
     state: State,
@@ -371,7 +369,7 @@ pub(crate) async fn export_dataset(
     }
 }
 
-// --- Destinations -----------------------------------------------------------
+// Destinations
 
 pub(crate) async fn create_destination(
     state: State,
@@ -625,7 +623,7 @@ pub(crate) async fn list_deliveries(state: State, req: HttpRequest, query: web::
     ok(sort_by_created_desc(attempts, |attempt| &attempt.attempted_at))
 }
 
-// --- Schedules --------------------------------------------------------------
+// Schedules
 
 pub(crate) async fn create_schedule(state: State, req: HttpRequest, body: web::Json<CreateScheduleRequest>) -> HttpResponse {
     let body = body.into_inner();

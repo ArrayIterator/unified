@@ -3,12 +3,10 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Procurement (migration 000049_procurement). `PurchaseOrder`,
 // `PurchaseOrderLine`, `GoodsReceipt` and `ProcurementBudget`
 // carry NUMERIC columns, so they skip ALL serde derives per the
 // repo header rule.
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     vendors (id) {

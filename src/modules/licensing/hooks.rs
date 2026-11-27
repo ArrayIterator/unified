@@ -441,9 +441,7 @@ pub(crate) fn on_order_refunded(ctx: &mut HookContext) {
     }));
 }
 
-// ---------------------------------------------------------------------------
 // SaaS hook handler: upgrades (store / billing plan changes).
-// ---------------------------------------------------------------------------
 
 /// Handle `store.order.upgraded` and `billing.plan.changed` by
 /// adjusting the named license(s): extend the expiry by
@@ -562,7 +560,7 @@ pub(crate) fn on_order_upgraded(ctx: &mut HookContext) {
         }
         // The reverse correction: an upgrade that sets an
         // already-past expiry must not leave the license `active`
-        // — it is expired now, whatever it was before. A suspended
+        // - it is expired now, whatever it was before. A suspended
         // license stays suspended and a revoked one stays revoked;
         // only the live `active` state is corrected.
         if license.status == "active" && license.expires_at.is_some_and(|exp| exp <= now) {

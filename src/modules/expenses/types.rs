@@ -6,9 +6,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Configurable settings (admin-editable; defaults are defaults only)
-// ---------------------------------------------------------------------------
 
 /// All behaviour-shaping lists and defaults of this module. An
 /// administrator edits these through `PUT /settings`; every
@@ -35,7 +33,7 @@ pub struct ExpensesSettings {
     pub default_per_diem_rate_minor: i64,
     /// Warning level for a report total in minor units: a report
     /// over this total is flagged in the violations analytics.
-    /// This is a flag only — it never blocks submission.
+    /// This is a flag only - it never blocks submission.
     pub report_total_warning_minor: i64,
 }
 
@@ -61,9 +59,7 @@ impl Default for ExpensesSettings {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// One expense category. Admin-editable: the receipt requirement
 /// and both limits are data, so a category can be tightened or
@@ -95,7 +91,7 @@ pub struct ExpenseCategory {
 /// is an opaque reference to a chain owned by the approvals flow
 /// (this module never interprets it). `max_report_total_minor`
 /// flags a report as over-limit; it never silently approves or
-/// rejects anything — the flag is shown to approvers.
+/// rejects anything - the flag is shown to approvers.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExpensePolicy {
     pub id: Uuid,
@@ -168,7 +164,7 @@ pub struct ExpenseReport {
 /// is computed server-side as distance times the policy rate and
 /// the rate used is recorded in `rate_minor_applied`; for
 /// `per_diem` lines the amount is days times the policy rate.
-/// `project_id` and `client_id` are opaque ids only — the
+/// `project_id` and `client_id` are opaque ids only - the
 /// projects and CRM modules own the records they point at, and
 /// no project or client data is duplicated here. `violations`
 /// holds the policy flags for this line, recomputed on every
@@ -286,9 +282,7 @@ pub struct CurrencyRate {
     pub created_at: DateTime<Utc>,
 }
 
-// ---------------------------------------------------------------------------
 // Request bodies
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct CreateCategoryRequest {

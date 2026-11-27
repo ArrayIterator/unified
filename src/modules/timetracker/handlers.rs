@@ -1,4 +1,4 @@
-// timetracker — HTTP handlers.
+// timetracker - HTTP handlers.
 
 use super::*;
 use unified_core::context::AppContext;
@@ -11,9 +11,7 @@ use serde_json::{Value, json};
 use std::sync::Arc;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Handlers: status, timers, entries
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn get_status(
     state: web::Data<TimeTrackerState>,

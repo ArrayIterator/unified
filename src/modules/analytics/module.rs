@@ -110,9 +110,7 @@ use super::ai_capabilities::AI_CAPABILITIES;
 
 
 
-// ---------------------------------------------------------------------------
 // Module definition.
-// ---------------------------------------------------------------------------
 pub struct AnalyticsModule {
     pub(crate) state: Arc<AnalyticsState>,
 }

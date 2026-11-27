@@ -1,4 +1,4 @@
-// risk — store.
+// risk - store.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -79,7 +79,7 @@ impl RiskState {
     }
 
     /// Record an alert and notify the owner, unless an identical
-    /// alert (same risk, kind, and figures) already exists — the
+    /// alert (same risk, kind, and figures) already exists - the
     /// threshold and review checks run repeatedly and must not spam
     /// the owner with the same alert.
     pub(crate) fn record_alert(
@@ -166,7 +166,7 @@ impl RiskState {
     /// task, through `risk.mitigation_task_requested`. Returns the
     /// project task id when a handler answers with one; None means
     /// no handler answered (the projects module has not wired this
-    /// event yet — see the module header convergence note).
+    /// event yet - see the module header convergence note).
     pub(crate) fn request_project_task(&self, task: &MitigationTask, project_id: Option<&str>) -> Option<String> {
         let context = self.emit_with_results(
             "risk.mitigation_task_requested",

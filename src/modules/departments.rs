@@ -2,20 +2,20 @@
 //
 // Departments own support agents, ticket routing rules, per-department
 // SLA policies, working hours, and auto-replies. Interconnection
-// happens only through the hook bus — no module calls another module
+// happens only through the hook bus - no module calls another module
 // directly.
 //
 // What this module answers for others:
-//   - `ticket.route_requested` — which department receives a ticket,
+//   - `ticket.route_requested` - which department receives a ticket,
 //     by category, product, or keyword rule, falling back to the
 //     default department.
-//   - `department.sla_requested` — a department's first-response and
+//   - `department.sla_requested` - a department's first-response and
 //     resolution targets in minutes.
-//   - `department.membership_check` — which departments a user agents
+//   - `department.membership_check` - which departments a user agents
 //     for (used by the tickets list handler for role-based access).
-//   - `department.agents_requested` — the agent user ids of a
+//   - `department.agents_requested` - the agent user ids of a
 //     department (used for SLA breach and escalation alerts).
-//   - `ticket.created` — sends the department auto-reply to the
+//   - `ticket.created` - sends the department auto-reply to the
 //     ticket owner when the ticket arrives outside working hours.
 //
 // Agents are stored as user ids only. Names are resolved by callers

@@ -60,7 +60,7 @@ pub(crate) async fn ai_capability(
 
 /// The grounding facts for one job: referral counts by
 /// pipeline stage plus reward totals, built from stored
-/// rows only — no candidate names or emails, so the AI
+/// rows only - no candidate names or emails, so the AI
 /// summarizes aggregates instead of personal data.
 pub(crate) fn grounding_facts(
     state: &ReferralState,

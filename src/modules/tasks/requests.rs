@@ -1,13 +1,11 @@
-// tasks — Request shapes for the HTTP handlers.
+// tasks - Request shapes for the HTTP handlers.
 
 use super::*;
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Request types.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct CreateTaskInput {

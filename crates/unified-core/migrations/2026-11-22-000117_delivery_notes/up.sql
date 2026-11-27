@@ -65,8 +65,8 @@
 --   - Unique indexes enforce the module invariants in the
 --     database too: one DO number per tenant, and one item
 --     row per (delivery note, product, description) is NOT
---     enforced — a DO may legitimately carry two lines for
---     the same product (different notes or units) — so the
+--     enforced - a DO may legitimately carry two lines for
+--     the same product (different notes or units) - so the
 --     item table carries no uniqueness beyond its id.
 --   - This migration seeds no rows: a tenant with no settings
 --     row uses the module defaults (prefix `SJ`, width 4,
@@ -77,7 +77,6 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- Delivery notes: one DO document. `number` is the human DO
 -- number (for example `SJ-2026-0001`), unique per tenant.
 -- `shipment_id` links the logistics shipment by id only;
@@ -93,7 +92,6 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- snapshotted at creation time. `proof_of_delivery_id` links
 -- the logistics proof of delivery by id only; the recipient
 -- signature metadata lives on this row.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS delivery_notes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -142,13 +140,11 @@ CREATE INDEX IF NOT EXISTS idx_delivery_notes_tenant_rental ON delivery_notes (t
 CREATE INDEX IF NOT EXISTS idx_delivery_notes_tenant_receiver ON delivery_notes (tenant_id, receiver_name, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_delivery_notes_tenant_company ON delivery_notes (tenant_id, company_id, created_at DESC) WHERE company_id IS NOT NULL;
 
--- ---------------------------------------------------------------------------
 -- Delivery note items: one line of one DO. `product_id`
 -- references a product by id only (no foreign key).
 -- `quantity_ordered` and `quantity_shipped` are frozen at
 -- creation; only `quantity_returned` grows, through the
 -- return endpoint, and it never exceeds `quantity_shipped`.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS delivery_note_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -168,7 +164,6 @@ CREATE TABLE IF NOT EXISTS delivery_note_items (
 CREATE INDEX IF NOT EXISTS idx_delivery_note_items_tenant_note ON delivery_note_items (tenant_id, delivery_note_id, created_at ASC);
 CREATE INDEX IF NOT EXISTS idx_delivery_note_items_tenant_product ON delivery_note_items (tenant_id, product_id, created_at DESC) WHERE product_id IS NOT NULL;
 
--- ---------------------------------------------------------------------------
 -- Per-tenant delivery notes settings. The DO number format is
 -- data: `number_prefix` + sequence, zero-padded to
 -- `number_width`, restarting per `number_reset_rule`
@@ -177,9 +172,8 @@ CREATE INDEX IF NOT EXISTS idx_delivery_note_items_tenant_product ON delivery_no
 -- on a linked proof of delivery;
 -- `auto_advance_from_shipment` lets logistics shipment events
 -- move DOs forward. Changing the format only affects numbers
--- issued after the change — issued numbers are never
+-- issued after the change - issued numbers are never
 -- rewritten, and the unique index above keeps them unique.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS delivery_note_settings (
     tenant_id TEXT PRIMARY KEY CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
     number_prefix TEXT NOT NULL DEFAULT 'SJ' CHECK (char_length(number_prefix) BETWEEN 1 AND 16),

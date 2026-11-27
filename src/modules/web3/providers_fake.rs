@@ -10,9 +10,7 @@ use super::helpers::*;
 use super::providers::*;
 use super::types::*;
 
-// ---------------------------------------------------------------------------
 // Fake provider (tests only)
-// ---------------------------------------------------------------------------
 
 /// In-memory provider for tests. Never used in production code.
 #[cfg(test)]

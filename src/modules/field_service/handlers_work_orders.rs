@@ -1,4 +1,4 @@
-// field_service module — Work order handlers.
+// field_service module - Work order handlers.
 //
 // Split from the former single-file module `src/modules/field_service.rs`.
 // The module root (`field_service.rs`) re-exports the public items, so the
@@ -28,9 +28,7 @@ use super::helpers::{
     priority_rank, require_permission, require_tenant, require_text,
 };
 
-// ---------------------------------------------------------------------------
 // Work order handlers
-// ---------------------------------------------------------------------------
 
 /// Shared work-order creation used by the create endpoint and by
 /// failure reports: validates references, seeds checklist items

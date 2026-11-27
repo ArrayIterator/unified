@@ -15,9 +15,7 @@ use unified_core::error::{UnifiedError, UnifiedResult};
 use url::Url;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Shared HTTP helpers (mirroring the cloud providers module).
-// ---------------------------------------------------------------------------
 pub(crate) fn hex_encode(bytes: &[u8]) -> String {
     const HEX: &[u8; 16] = b"0123456789abcdef";
     let mut out = String::with_capacity(bytes.len() * 2);
@@ -204,13 +202,11 @@ pub(crate) fn validate_email_address(input: &str) -> UnifiedResult<()> {
     Ok(())
 }
 
-// ---------------------------------------------------------------------------
 // AWS SigV4 signing (SES), following the same scheme as the cloud
 // providers module: canonical request, credential scope, and the
 // four-step HMAC key derivation. Only `host`, `x-amz-date`, and
 // `content-type` are signed, and the payload hash is the SHA-256 of
 // the request body.
-// ---------------------------------------------------------------------------
 pub(crate) struct SigV4Params {
     pub(crate) access_key_id: String,
     pub(crate) secret_access_key: String,

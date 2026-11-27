@@ -45,9 +45,7 @@ pub(crate) const PROJECT_TASK_CREATE_REQUESTED: &str = "project.task.create_requ
 
 pub(crate) const PROJECT_TASK_GET_REQUESTED: &str = "project.task.get_requested";
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// Role of a supervised assignment on a project site.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -552,9 +550,7 @@ pub struct Photo {
     pub updated_at: DateTime<Utc>,
 }
 
-// ---------------------------------------------------------------------------
 // Request bodies
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct CreateAssignmentRequest {

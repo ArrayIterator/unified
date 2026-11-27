@@ -53,10 +53,8 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- A payment gateway connection: one provider kind, one mode
 -- (sandbox / live), and its credentials.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS payment_connections (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR NOT NULL,
@@ -80,11 +78,9 @@ CREATE INDEX IF NOT EXISTS idx_payment_connections_kind
 CREATE INDEX IF NOT EXISTS idx_payment_connections_enabled
     ON payment_connections (enabled);
 
--- ---------------------------------------------------------------------------
 -- A payment intent: the record a checkout creates first, then
 -- confirms. The intent holds no card data, only a token reference
 -- (which is not stored here).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS payment_intents (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     connection_id UUID NOT NULL REFERENCES payment_connections (id) ON DELETE RESTRICT ON UPDATE NO ACTION,
@@ -114,10 +110,8 @@ CREATE INDEX IF NOT EXISTS idx_payment_intents_order_id
 CREATE INDEX IF NOT EXISTS idx_payment_intents_status
     ON payment_intents (status);
 
--- ---------------------------------------------------------------------------
 -- One money movement recorded by the gateway: charge, authorize,
 -- capture, refund, void, payout, or subscription period charge.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS payment_transactions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     intent_id UUID REFERENCES payment_intents (id) ON DELETE SET NULL ON UPDATE NO ACTION,
@@ -157,11 +151,9 @@ CREATE INDEX IF NOT EXISTS idx_payment_transactions_subscription_id
 CREATE INDEX IF NOT EXISTS idx_payment_transactions_status
     ON payment_transactions (status);
 
--- ---------------------------------------------------------------------------
 -- A tokenized payment method for one customer. The record holds the
 -- provider token, the card brand, the last four digits, and the
 -- expiry -- never a PAN or CVV.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS payment_methods (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     customer_id VARCHAR NOT NULL,
@@ -182,12 +174,10 @@ CREATE INDEX IF NOT EXISTS idx_payment_methods_customer_id
 CREATE INDEX IF NOT EXISTS idx_payment_methods_connection_id
     ON payment_methods (connection_id);
 
--- ---------------------------------------------------------------------------
 -- A gateway subscription: native provider subscriptions store the
 -- provider subscription id; local-schedule providers store the id
 -- of the initial charge and renew by charging the stored token
 -- each period.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS gateway_subscriptions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     connection_id UUID NOT NULL REFERENCES payment_connections (id) ON DELETE RESTRICT ON UPDATE NO ACTION,
@@ -218,9 +208,7 @@ CREATE INDEX IF NOT EXISTS idx_gateway_subscriptions_status
 CREATE INDEX IF NOT EXISTS idx_gateway_subscriptions_provider_subscription_id
     ON gateway_subscriptions (provider_subscription_id);
 
--- ---------------------------------------------------------------------------
 -- A split bill: one order / invoice total divided into parts.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS split_bills (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     order_id VARCHAR,
@@ -242,10 +230,8 @@ CREATE INDEX IF NOT EXISTS idx_split_bills_customer_id
 CREATE INDEX IF NOT EXISTS idx_split_bills_status
     ON split_bills (status);
 
--- ---------------------------------------------------------------------------
 -- One part of a split bill. A `bank_transfer` part opens a manual
 -- verification in the bank-transfer module instead of charging.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS split_parts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     split_id UUID NOT NULL REFERENCES split_bills (id) ON DELETE CASCADE ON UPDATE NO ACTION,
@@ -270,11 +256,9 @@ CREATE INDEX IF NOT EXISTS idx_split_parts_split_id
 CREATE INDEX IF NOT EXISTS idx_split_parts_status
     ON split_parts (status);
 
--- ---------------------------------------------------------------------------
 -- One bank account that can receive transfers. The full account
 -- number is stored on the record but is never returned in full:
 -- every read goes through a masked view.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS bank_accounts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     bank_name VARCHAR NOT NULL,
@@ -291,14 +275,12 @@ CREATE TABLE IF NOT EXISTS bank_accounts (
 CREATE INDEX IF NOT EXISTS idx_bank_accounts_active
     ON bank_accounts (active);
 
--- ---------------------------------------------------------------------------
 -- One manual transfer verification, keyed by order (and, for split
 -- bills, by split part). This record is the pending-verification
 -- state for the order until the store gains its own
 -- `pending_verification` status. `proof` is the submitted proof
 -- document, stored as JSON; `amount_check` is `not_checked`,
 -- `matched`, `mismatch`, or `skipped_no_expected_amount`.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS bank_transfer_verifications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     order_id VARCHAR NOT NULL,
@@ -330,12 +312,10 @@ CREATE INDEX IF NOT EXISTS idx_bank_transfer_verifications_split_id
 CREATE INDEX IF NOT EXISTS idx_bank_transfer_verifications_status
     ON bank_transfer_verifications (status);
 
--- ---------------------------------------------------------------------------
 -- One audit entry of the manual checking workflow: every step
 -- (created, proof requested / submitted, verified, rejected,
 -- cancelled) with the actor, the actor role, an optional reason,
 -- and a timestamp.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS bank_transfer_verification_audit (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     verification_id UUID NOT NULL REFERENCES bank_transfer_verifications (id) ON DELETE CASCADE ON UPDATE NO ACTION,
@@ -350,9 +330,7 @@ CREATE TABLE IF NOT EXISTS bank_transfer_verification_audit (
 CREATE INDEX IF NOT EXISTS idx_bank_transfer_verification_audit_verification_id
     ON bank_transfer_verification_audit (verification_id);
 
--- ---------------------------------------------------------------------------
 -- Operator settings for manual verification (singleton row).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS bank_transfer_settings (
     key VARCHAR PRIMARY KEY CHECK (key = 'global'),
     amount_tolerance_minor BIGINT NOT NULL DEFAULT 0 CHECK (amount_tolerance_minor >= 0),

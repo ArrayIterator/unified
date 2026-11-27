@@ -14,9 +14,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 use super::{helpers::*, types::*, state::*, handlers_pools::*, forecast::*, handlers_plans::*, events::*, module::*};
 
-// ---------------------------------------------------------------------------
 // Event names.
-// ---------------------------------------------------------------------------
 
 pub const PLANNER_POOL_CREATED: &str = "planner.pool.created";
 
@@ -39,8 +37,8 @@ pub(crate) const PROVIDER_SYNC_COMPLETED: &str = "provider.sync.completed";
 ///
 /// Every planner route requires the `X-User-Id` and `X-Role` headers
 /// (see `caller` in helpers.rs). Reads require `planner.view`;
-/// mutations — creating, updating or deleting pools and plans,
-/// recording usage, and the approve / activate / expire transitions —
+/// mutations - creating, updating or deleting pools and plans,
+/// recording usage, and the approve / activate / expire transitions -
 /// require `planner.manage`. The check fails closed: when no
 /// `role.check` handler answers, the request is refused.
 pub(crate) const PERM_PLANNER_VIEW: &str = "planner.view";

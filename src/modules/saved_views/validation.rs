@@ -8,9 +8,7 @@ use uuid::Uuid;
 
 use super::{CreateSavedView, SavedView, VISIBILITY_PRIVATE, VISIBILITY_SHARED};
 
-// ---------------------------------------------------------------------------
 // Validation.
-// ---------------------------------------------------------------------------
 
 pub(crate) fn validate_name(name: &str) -> UnifiedResult<()> {
     let trimmed = name.trim();

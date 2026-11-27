@@ -1,4 +1,4 @@
-// Workflow Automation / Autopilot module — event-driven workflows
+// Workflow Automation / Autopilot module - event-driven workflows
 // ("if this happens, do that"), scheduled workflows, webhook
 // triggers, and manual runs, with condition groups, ordered
 // actions, per-run logs, dry-run testing, retries, and loop /
@@ -7,27 +7,27 @@
 // Routes live under `/api/v1/workflows`:
 //
 //   Workflows:
-//     GET/POST / — list workflows / create a workflow.
+//     GET/POST / - list workflows / create a workflow.
 //     GET/PATCH/DELETE /{id}.
-//     POST /{id}/enable, /{id}/disable — activate / deactivate.
-//     POST /{id}/duplicate — copy (the copy starts disabled).
-//     POST /{id}/run — manual run ({payload, dry_run}).
-//     POST /{id}/test — dry-run evaluation: conditions + planned
+//     POST /{id}/enable, /{id}/disable - activate / deactivate.
+//     POST /{id}/duplicate - copy (the copy starts disabled).
+//     POST /{id}/run - manual run ({payload, dry_run}).
+//     POST /{id}/test - dry-run evaluation: conditions + planned
 //       actions, no side effects, no run row.
 //   Runs:
-//     GET  /{id}/runs — paginated, filter by status, trigger_kind.
-//     GET  /runs/{run_id} — one run with its steps.
-//     POST /runs/{run_id}/retry — re-run a failed run with a
+//     GET  /{id}/runs - paginated, filter by status, trigger_kind.
+//     GET  /runs/{run_id} - one run with its steps.
+//     POST /runs/{run_id}/retry - re-run a failed run with a
 //       caller-supplied payload (see the honesty note: the original
 //       payload is not retained, only a redacted summary).
 //   Triggers:
-//     GET  /triggers — active bus-event subscriptions
+//     GET  /triggers - active bus-event subscriptions
 //       (event name -> workflow ids).
-//     POST /hooks/{token} — webhook trigger. The token is the
+//     POST /hooks/{token} - webhook trigger. The token is the
 //       secret (see the public-access note below); the body is the
 //       trigger payload.
 //
-// HONESTY — READ THIS FIRST. What is real in this module:
+// HONESTY - READ THIS FIRST. What is real in this module:
 // in-memory workflow, run, and run-step management; trigger
 // validation (bus-event names, 5-field cron + timezone, webhook
 // tokens); condition groups nested up to 3 levels with field
@@ -37,7 +37,7 @@
 // attempts, and duration; dry-run / test mode that evaluates
 // conditions and lists planned actions without side effects;
 // retries (max 3 attempts, exponential backoff) for outbound
-// webhook steps only — emit-based actions are attempted once,
+// webhook steps only - emit-based actions are attempted once,
 // because re-emitting them could duplicate a notification, email,
 // task, or ticket; loop / recursion guards (max workflow-call
 // depth 3, max 60 runs per workflow per minute with excess runs
@@ -87,7 +87,7 @@
 //
 // Public-access gate: the webhook trigger endpoint
 // `POST /api/v1/workflows/hooks/{token}` carries no `X-User-Id` /
-// `X-Role` headers, so it has no capability check — the token in
+// `X-Role` headers, so it has no capability check - the token in
 // the URL path IS the credential (64 hex characters, stored only
 // as a SHA-256 hash, compared in constant time). Like the events
 // module's public routes it relies on the API Manager's
@@ -115,7 +115,7 @@
 //     module's payload shape (`to`, `subject`, `body_text` /
 //     `body_html` / `template_id`, `variables`).
 //   - `task.create_requested` (create_task action; no consumer
-//     yet — see the honesty note).
+//     yet - see the honesty note).
 //   - `ticket.create_requested` (create_ticket action; consumed
 //     by the tickets module).
 //   - `{tasks|tickets}.update_requested`,
@@ -133,10 +133,10 @@
 //     handler is registered per workflow, so several workflows
 //     can listen to the same event independently. Subscribing is
 //     how a trigger "listens": there is no static list of event
-//     names in this file — any hook-bus event name is a valid
+//     names in this file - any hook-bus event name is a valid
 //     trigger, for example `invoice.overdue`, `ticket.created`,
 //     or `order.paid`.
-//   - `workflows.run_requested` — the event the scheduler emits
+//   - `workflows.run_requested` - the event the scheduler emits
 //     when a `workflows.run` job fires, following its naming rule
 //     (`backup.run` -> `backup.run_requested`); runs the named
 //     scheduled workflow.

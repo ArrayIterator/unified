@@ -1,4 +1,4 @@
-// Storage Manager module — the storage hub every other module uses.
+// Storage Manager module - the storage hub every other module uses.
 //
 // Split into submodules; the full module documentation lives in `module.rs`.
 

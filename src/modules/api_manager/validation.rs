@@ -20,12 +20,10 @@ use super::{ApiManagerState, EndpointRule, HTTP_METHODS, RULE_TYPES, RegisteredE
 pub(crate) const PERM_API_MANAGER_READ: &str = "api-manager:read";
 pub(crate) const PERM_API_MANAGER_MANAGE: &str = "api-manager:manage";
 
-// ---------------------------------------------------------------------------
 // Caller identity and capability checks (same shape as the cards /
 // apikeys modules: `X-User-Id` identifies the actor, `X-Role`
 // carries the role slug the capability check runs against,
 // `role.check` answers; no answer means not allowed -- fail closed).
-// ---------------------------------------------------------------------------
 
 /// The authenticated admin caller, resolved from request headers.
 pub(crate) struct Caller {

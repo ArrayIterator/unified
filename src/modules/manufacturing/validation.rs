@@ -12,9 +12,7 @@ use super::{constants::*, types::*, inputs::*, helpers::*, store::*, stock::*, m
 
 
 
-// ---------------------------------------------------------------------------
 // BOM validation and explosion
-// ---------------------------------------------------------------------------
 /// Validate BOM lines against the stored unit definitions and
 /// the caller's own limits. Returns validated lines with the
 /// caller's scrap allowance filled from the settings default.

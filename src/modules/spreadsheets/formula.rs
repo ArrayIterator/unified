@@ -4,12 +4,12 @@
 //!
 //! The function table [`FUNCTION_REGISTRY`] IS the data: a
 //! function's name, arity, and description live in the table,
-//! and the dispatcher looks the name up there — no
+//! and the dispatcher looks the name up there - no
 //! hard-coded `match` on function names outside the table's
 //! own dispatch. Adding a function means adding one table row
 //! and one arm in `call_function`.
 //!
-//! Numbers are [`Decimal`] (integer mantissa + scale) — `f64`
+//! Numbers are [`Decimal`] (integer mantissa + scale) - `f64`
 //! is never used. A formula string is parsed into an AST
 //! ([`Expr`]); [`evaluate_formula`] evaluates it against a
 //! cell resolver; [`recalculate_sheet`] recomputes every
@@ -24,9 +24,7 @@ use super::types::{
 };
 use std::collections::{HashMap, HashSet};
 
-// ---------------------------------------------------------------------------
 // Values
-// ---------------------------------------------------------------------------
 
 /// One evaluated value. `Empty` is a blank cell (counts as 0
 /// in arithmetic, as "" in text); `Error` carries an error
@@ -109,9 +107,7 @@ impl EvalValue {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Function registry (the data)
-// ---------------------------------------------------------------------------
 
 /// One function in the registry: its name, its arity bounds
 /// (`max_args: None` is variadic), and its description.
@@ -257,9 +253,7 @@ pub fn function_names() -> Vec<&'static str> {
     FUNCTION_REGISTRY.iter().map(|def| def.name).collect()
 }
 
-// ---------------------------------------------------------------------------
 // Lexer
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, PartialEq)]
 enum Token {
@@ -435,9 +429,7 @@ fn tokenize(input: &str) -> Result<Vec<Token>, String> {
     Ok(tokens)
 }
 
-// ---------------------------------------------------------------------------
 // Parser (recursive descent, precedence climbing)
-// ---------------------------------------------------------------------------
 
 /// Formula AST. A `Range` expands to its cells at evaluation
 /// time; a `Call` carries its raw argument expressions so `IF`
@@ -712,9 +704,7 @@ pub fn formula_references(formula: &str) -> Result<Vec<(i64, i64)>, String> {
     collect_refs(&ast)
 }
 
-// ---------------------------------------------------------------------------
 // Evaluator
-// ---------------------------------------------------------------------------
 
 /// Evaluate an AST. `resolve` answers one cell's current
 /// value (its computed value when it is a formula cell, its
@@ -916,7 +906,7 @@ fn evaluate_call(
 /// Dispatch a fully evaluated argument list on the registry
 /// name. This is the only place function names are matched,
 /// and only after the registry lookup above has accepted the
-/// name — the table is the source of truth for what exists.
+/// name - the table is the source of truth for what exists.
 fn call_function(name: &str, values: &[EvalValue]) -> EvalValue {
     let upper = name.to_ascii_uppercase();
     match upper.as_str() {
@@ -1091,9 +1081,7 @@ pub fn evaluate_formula(
     )
 }
 
-// ---------------------------------------------------------------------------
 // Sheet recalculation (topological order, cycle detection)
-// ---------------------------------------------------------------------------
 
 /// One input cell for a recalculation: its typed value plus
 /// its kind (`formula` cells carry the formula text, starting
@@ -1107,7 +1095,7 @@ pub type RecalcOutput = HashMap<(i64, i64), (String, CellKind)>;
 /// Recompute every formula cell of a sheet in topological
 /// order: a formula is evaluated only after every formula cell
 /// it references has been evaluated. Cells in a reference
-/// cycle — or depending on one — get `#CIRC!` instead of a
+/// cycle - or depending on one - get `#CIRC!` instead of a
 /// value, and evaluation of the rest of the sheet continues.
 /// Non-formula cells keep their typed computed value.
 pub fn recalculate_sheet(inputs: &RecalcInput, today: &str) -> RecalcOutput {
@@ -1210,7 +1198,7 @@ pub fn recalculate_sheet(inputs: &RecalcInput, today: &str) -> RecalcOutput {
     }
     // Whatever never became ready is in a cycle (or depends on
     // one): an error value, never an infinite loop. A cell that
-    // references itself counts here too — its pending count
+    // references itself counts here too - its pending count
     // never reaches zero because the self edge was excluded
     // above, so check self-references explicitly.
     for cell in &formula_cells {

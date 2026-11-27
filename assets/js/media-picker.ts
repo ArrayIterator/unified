@@ -1,7 +1,7 @@
 /* Shared media picker.
  *
  * TypeScript source, transpiled in-memory by the Rust server at startup.
- * One picker over the shared documents store — never a per-module
+ * One picker over the shared documents store - never a per-module
  * upload silo. The list tab shows PUBLIC files only
  * (`GET /api/v1/documents/picker` filters `visibility = 'public'`
  * server-side); a private file is invisible here until a manager or
@@ -32,7 +32,7 @@
 (function () {
   "use strict";
 
-  /* ---------- Types (compile-time only; erased by the transpiler) ---------- */
+  /* Types (compile-time only; erased by the transpiler) */
 
   interface ApiErrorBody {
     error?: {
@@ -76,7 +76,7 @@
     close: () => void;
   }
 
-  /* ---------- CSRF protection ---------- */
+  /* CSRF protection */
   // Cookie-authenticated mutations require a valid `X-CSRF-Token`
   // header: the server answers 403 without one. The token is bound
   // to the session, fetched from `GET /api/v1/security/csrf-token`,
@@ -183,7 +183,7 @@
     });
   }
 
-  /* ---------- Helpers ---------- */
+  /* Helpers */
 
   function apiErrorMessage(body: unknown, fallback: string): string {
     var envelope = body as ApiErrorBody | null;
@@ -209,7 +209,7 @@
       .replace(/"/g, "&quot;");
   }
 
-  /* ---------- Picker dialog ---------- */
+  /* Picker dialog */
 
   var overlay: HTMLDivElement | null = null;
   var currentOptions: MediaPickerOptions | null = null;
@@ -260,7 +260,7 @@
     // cannot narrow across) keep a non-null element.
     var listEl: HTMLElement = list;
     currentPage = page;
-    listEl.innerHTML = "<p>Loading…</p>";
+    listEl.innerHTML = "<p>Loading...</p>";
     setStatus("");
     window
       .fetch(pickerQuery(page), {
@@ -296,7 +296,7 @@
   function renderItems(list: HTMLElement, data: PickerPage): void {
     if (data.items.length === 0) {
       list.innerHTML =
-        "<p class=\"empty-state\">No public files yet. Upload one below — " +
+        "<p class=\"empty-state\">No public files yet. Upload one below - " +
         "it starts private and only appears here once it is public.</p>";
       renderPager(data);
       return;
@@ -386,7 +386,7 @@
     if (!currentOptions) {
       return;
     }
-    setStatus("Uploading " + file.name + "…");
+    setStatus("Uploading " + file.name + "...");
     var form = new FormData();
     form.append("module_id", currentOptions.moduleId || "content");
     form.append("scope", "owner");

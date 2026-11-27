@@ -1,4 +1,4 @@
-// tasks — HTTP handlers.
+// tasks - HTTP handlers.
 
 use super::types::{PERM_TASKS_MANAGE, PERM_TASKS_READ, TASK_DELETED};
 use super::validation::{
@@ -18,9 +18,7 @@ use serde_json::Value;
 use std::sync::Arc;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Handlers.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_tasks(
     ctx: web::Data<Arc<AppContext>>,
@@ -1027,12 +1025,12 @@ mod tests {
         TestRequest::default().to_http_request()
     }
 
-    /// The company the handler tests act as (C3 task 315). It must
+    /// The company the handler tests act as (C3). It must
     /// be a UUID: tasks store `company_id` as `Uuid`, and the
     /// record check parses the caller's company string as one.
     const TEST_COMPANY_ID: &str = "11111111-2222-4333-8444-555555555555";
 
-    /// A request scoped to the test company (C3 task 315): mutation
+    /// A request scoped to the test company (C3): mutation
     /// handlers require a resolved company, so the happy-path tests
     /// carry one on both the tenant context and the verified caller.
     /// The seeded tasks belong to the same company, so the writable

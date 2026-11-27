@@ -24,9 +24,7 @@ use super::constants::TICKET_UPDATED;
 use super::state::PortalsState;
 use super::types::PortalRecord;
 
-// ---------------------------------------------------------------------------
 // Read-only projection (listeners on the owning modules' events)
-// ---------------------------------------------------------------------------
 
 /// Upsert one projection row from a hook payload. Payload shapes
 /// differ per owning module, so the ids, amount, and status are

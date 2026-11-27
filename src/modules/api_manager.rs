@@ -1,4 +1,4 @@
-//! Api Manager module — API Manager module.
+//! Api Manager module - API Manager module.
 //!
 //! Split into submodules by concern; the public API is
 //! re-exported below. The full route map and module notes

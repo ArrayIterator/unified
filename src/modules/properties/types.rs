@@ -1,4 +1,4 @@
-// Properties — Types.
+// Properties - Types.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -19,9 +19,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// Lifecycle of a property: `draft` -> `published` -> `sold_out`,
 /// with `archived` reachable from draft / published / sold_out.
@@ -53,7 +51,7 @@ impl PropertyStatus {
 }
 
 /// One property: a land parcel or a housing development. The
-/// developer / owner company is referenced by id only — company
+/// developer / owner company is referenced by id only - company
 /// rows are never duplicated here (the company module owns them).
 /// Media is referenced through the storage module (target + key);
 /// no image bytes live in this module.
@@ -74,7 +72,7 @@ pub struct Property {
     pub address: Option<String>,
     /// Total area in square metres (declared by the seller; the
     /// per-block areas computed from geometry do not have to sum
-    /// to this value — roads and common areas are not blocks).
+    /// to this value - roads and common areas are not blocks).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub total_area_sqm: Option<f64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -90,7 +88,7 @@ pub struct Property {
 }
 
 /// One site plan (master plan) of a property. `geometry` is the
-/// plan boundary as GeoJSON (Polygon / MultiPolygon only — a plan
+/// plan boundary as GeoJSON (Polygon / MultiPolygon only - a plan
 /// boundary is an area, never a line). Blocks carry their own
 /// geometry; a plan with no boundary still renders its blocks.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -189,7 +187,7 @@ pub enum ClickLinkKind {
 /// line such as a road or boundary marker). `area_sqm` is
 /// computed server-side from the geometry for polygons;
 /// `length_m` is computed server-side for lines. The buyer is
-/// referenced by customer id only — customer rows are never
+/// referenced by customer id only - customer rows are never
 /// duplicated here (the CRM module owns them).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PropertyBlock {

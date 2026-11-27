@@ -73,13 +73,13 @@
     return fallback;
   }
 
-  /* ---------- CSRF protection ---------- */
+  /* CSRF protection */
   // Cookie-authenticated mutations require a valid `X-CSRF-Token`
   // header: the server answers 403 without one. The token is bound
   // to the session, fetched from `GET /api/v1/security/csrf-token`,
   // and cached in memory; a failed fetch resolves to `null` and the
   // request goes out without the header. Sign-in and registration
-  // are pre-auth calls, so they need no token — but when a session
+  // are pre-auth calls, so they need no token - but when a session
   // already exists the token is attached anyway, covering the
   // cookie-authenticated auth writes.
   var csrfToken: string | null = null;
@@ -197,7 +197,7 @@
         payload.recovery_code = recoveryInput.value.trim();
       }
       submit.disabled = true;
-      submit.textContent = "Signing in…";
+      submit.textContent = "Signing in...";
       postJson<LoginResponse>("/api/v1/auth-manager/jwt/issue", payload)
         .then(function (result: PostResult<LoginResponse>) {
           if (!result.ok) {
@@ -249,7 +249,7 @@
         return;
       }
       submit.disabled = true;
-      submit.textContent = "Creating account…";
+      submit.textContent = "Creating account...";
       var payload: RegisterPayload = { name: name, email: email, password: password };
       postJson<unknown>("/api/v1/users", payload)
         .then(function (result: PostResult<unknown>) {

@@ -20,9 +20,7 @@ use super::constants::{CONFIG_NAME, DUMP_NAME, MANIFEST_NAME};
 use super::state::{now, sha256_hex};
 use super::types::{BackupJob, BackupKind, BackupRun, BackupSettings, DbSnapshot};
 
-// ---------------------------------------------------------------------------
 // Archive building (blocking work).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct ManifestFile {
@@ -247,7 +245,7 @@ pub(crate) fn build_archive(input: ArchiveInput) -> UnifiedResult<ArchiveOutput>
         kind: input.kind.as_str().to_string(),
         created_at: now().to_rfc3339(),
         // Archives are stored unencrypted (at-rest encryption is
-        // not supported — see the module header).
+        // not supported - see the module header).
         encryption: "none".to_string(),
         database: None,
         files: Vec::new(),
@@ -392,9 +390,7 @@ pub(crate) fn extract_archive(bytes: &[u8]) -> UnifiedResult<Vec<(String, Vec<u8
     extract_archive_with_limits(bytes, defaults.max_file_bytes, defaults.max_total_bytes)
 }
 
-// ---------------------------------------------------------------------------
 // Execution.
-// ---------------------------------------------------------------------------
 
 pub(crate) fn audit_payload(job: &BackupJob, run: Option<&BackupRun>, extra: Value) -> Value {
     let mut payload = json!({

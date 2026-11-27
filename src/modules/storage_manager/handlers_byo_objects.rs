@@ -12,13 +12,11 @@ use std::sync::Arc;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // BYO object operations. Every operation re-checks ownership,
 // status, the allowed operation, the prefix scope, the file-type
-// allowlists, and the quotas — the provider is never reached
+// allowlists, and the quotas - the provider is never reached
 // before those checks pass. Keys are relative to the connection
 // prefix; the full provider key is always prefix + relative key.
-// ---------------------------------------------------------------------------
 
 /// Emit a metering delta for one BYO connection with the same
 /// `storage.metering.reported` event the plan reports use, so

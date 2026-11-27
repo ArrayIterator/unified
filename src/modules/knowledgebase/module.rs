@@ -18,9 +18,7 @@ use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 use super::{constants::*, types::*, state::*, helpers::*, handlers_articles::*, handlers_tickets::*, handlers_categories::*};
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct KnowledgebaseModule {
     pub(crate) state: KnowledgebaseState,

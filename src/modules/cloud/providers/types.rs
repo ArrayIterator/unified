@@ -11,9 +11,7 @@ use unified_core::provider_registry::{
 };
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Events.
-// ---------------------------------------------------------------------------
 
 /// Emitted after a connection test succeeds.
 pub const PROVIDER_CONNECTED: &str = "provider.connected";
@@ -56,9 +54,7 @@ pub(crate) const PERM_PROVIDERS_VIEW: &str = "providers.view";
 /// and to create, scale, delete, start, or stop servers.
 pub(crate) const PERM_PROVIDERS_MANAGE: &str = "providers.manage";
 
-// ---------------------------------------------------------------------------
 // Limits.
-// ---------------------------------------------------------------------------
 
 /// Default HTTP timeout for provider API calls.
 pub(crate) const DEFAULT_TIMEOUT_SECS: u64 = 30;
@@ -90,9 +86,7 @@ pub(crate) const MAX_ENDPOINT_LEN: usize = 2048;
 /// User-Agent sent to provider APIs.
 pub(crate) const USER_AGENT: &str = concat!("unified/", env!("CARGO_PKG_VERSION"), " providers");
 
-// ---------------------------------------------------------------------------
 // Provider kinds and capabilities.
-// ---------------------------------------------------------------------------
 
 /// Every cloud / VPS / container provider this module can talk to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -299,9 +293,7 @@ pub struct ServerInfo {
     pub created_at: Option<String>,
 }
 
-// ---------------------------------------------------------------------------
 // Requests.
-// ---------------------------------------------------------------------------
 
 /// Generic create request. Adapters use the fields that apply to them
 /// and reject the request when a field they require is missing.
@@ -417,9 +409,7 @@ pub struct ProviderMetadata {
     pub requires_server: bool,
 }
 
-// ---------------------------------------------------------------------------
 // Credentials and connections.
-// ---------------------------------------------------------------------------
 
 /// Credentials for one connection. Every field is optional at the type
 /// level; `validate_connection` enforces the per-kind required set.
@@ -643,7 +633,7 @@ impl ProviderConnection {
 }
 
 /// Capabilities per kind, from the provider registry (C12, task
-/// 269) — the single source of truth for the catalog, the read
+/// 269) - the single source of truth for the catalog, the read
 /// views, and the create/scale guards. A missing definition reads
 /// as "supports nothing" (fail closed) instead of falling back to
 /// another provider.
@@ -671,9 +661,7 @@ pub fn catalog() -> Vec<Arc<ProviderDefinition>> {
     provider_registry().list_family_enabled("cloud")
 }
 
-// ---------------------------------------------------------------------------
-// Registry-backed attributes (C12, task 269).
-// ---------------------------------------------------------------------------
+// Registry-backed attributes (C12).
 /// The `&'static` view of one provider's registry definition; see the
 /// same bridge in the payments module. Capabilities are an owned
 /// struct and read the definition directly, so only the display name
@@ -708,9 +696,7 @@ fn attrs(kind: &ProviderKind) -> &'static CloudAttrs {
         .expect("every ProviderKind has a registry definition")
 }
 
-// ---------------------------------------------------------------------------
 // Custom (config-driven) provider.
-// ---------------------------------------------------------------------------
 
 /// Response field mapping for a custom provider: dot paths into the
 /// provider's JSON item objects (`networks.v4.0.ip_address` walks
@@ -876,9 +862,7 @@ pub(crate) enum CustomAuth {
     None,
 }
 
-// ---------------------------------------------------------------------------
 // Request types and views.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct CreateConnectionRequest {
@@ -1030,7 +1014,7 @@ mod tests {
         // display name, hosts, and capabilities from that data. No enum
         // variant exists for it and no match arm was added. (Building
         // an adapter for it needs a generic-adapter factory keyed by
-        // the definition id — the Custom adapter is the vehicle, and
+        // the definition id - the Custom adapter is the vehicle, and
         // wiring it by id is follow-up work; see
         // INTEGRATION_NOTES_C12.)
         let mut def = unified_core::provider_registry::ProviderDefinition::new(

@@ -9,9 +9,7 @@ use super::store::*;
 use super::types::*;
 use super::constants::{default_true, default_weight};
 
-// ---------------------------------------------------------------------------
 // Request types.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct HealthCheckInput {

@@ -58,9 +58,7 @@ pub(crate) fn optional_uuid_field(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Cart handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) fn empty_cart(owner: &str) -> Cart {
     Cart {
@@ -205,9 +203,7 @@ pub(crate) async fn remove_from_cart(
     json::respond(result, false)
 }
 
-// ---------------------------------------------------------------------------
 // Order handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn checkout(
     state: web::Data<Arc<StoreState>>,
@@ -215,7 +211,7 @@ pub(crate) async fn checkout(
     body: web::Json<CheckoutRequest>,
 ) -> HttpResponse {
     // C1/C2 (2026-11-22): the buyer is the server-verified Caller,
-    // never the `user_id` the request body used to carry — the body
+    // never the `user_id` the request body used to carry - the body
     // value let any caller check out as any other user. The global
     // auth middleware attaches the verified Caller; without it
     // (public route, or a request that never passed the middleware)
@@ -411,7 +407,7 @@ pub(crate) async fn checkout(
         // that covers nothing in the order is rejected below. The
         // discount is evaluated through the shared pricing
         // evaluator first, with the store-local float math as the
-        // fallback when pricing cannot price this coupon — exactly
+        // fallback when pricing cannot price this coupon - exactly
         // one evaluator's math is applied, and the trace is
         // recorded on the order.
         let mut discount_total: i64 = 0;

@@ -1,4 +1,4 @@
-//! Documents state — lazy finalize worker (split from state.rs).
+//! Documents state - lazy finalize worker.
 //!
 //! The worker hashes stored objects AFTER the upload completes
 //! (lazy finalize): the upload returns as soon as all parts are
@@ -15,7 +15,7 @@
 //! than the starvation guard runs anyway. Hashing is CPU-bound,
 //! so concurrent jobs are capped.
 //!
-//! C11 write-through (task 271): when a database pool is attached
+//! C11 write-through: when a database pool is attached
 //! (see `attach_finalize_pool`, called once from
 //! `DocumentsModule::init`), every job mutation writes the
 //! `finalize_jobs` table first and the in-memory map second, the
@@ -48,8 +48,7 @@ const FINALIZE_STARVATION: chrono::Duration = chrono::Duration::hours(24);
 /// really empty (idle) and the worker may drain.
 const FINALIZE_IDLE_WINDOW: chrono::Duration = chrono::Duration::seconds(60);
 
-// ---------------------------------------------------------------------------
-// Database write-through (C11, task 271).
+// Database write-through (C11).
 //
 // The pool is attached once, from `DocumentsModule::init`, through
 // `attach_finalize_pool`:
@@ -65,7 +64,7 @@ const FINALIZE_IDLE_WINDOW: chrono::Duration = chrono::Duration::seconds(60);
 // pool-less process. When the pool IS attached but the database
 // is unreachable, the helpers fail soft (the error is swallowed
 // at the call site) and the in-memory map stays authoritative
-// for that tick — the same degraded-mode contract the licensing
+// for that tick - the same degraded-mode contract the licensing
 // module uses (database reads fall back to the map when no pool
 // is attached). A job row is only ever inserted when its parent
 // rows exist (see `db_insert_job`): the `finalize_jobs` foreign
@@ -74,7 +73,6 @@ const FINALIZE_IDLE_WINDOW: chrono::Duration = chrono::Duration::seconds(60);
 // worker owns session/document persistence), so a job for an
 // unpersisted session stays in-memory-only instead of failing
 // the insert on the foreign key.
-// ---------------------------------------------------------------------------
 
 /// Attached database pool for the finalize write-through.
 /// `None` (never attached) means in-memory-only operation.
@@ -167,7 +165,7 @@ fn db_document_exists(pool: &DbPool, document_id: Uuid) -> UnifiedResult<bool> {
 
 /// Insert a job row. Returns `false` (and inserts nothing) when
 /// the job cannot be represented as a row, or when its session
-/// (or document) row does not exist yet in the database — the
+/// (or document) row does not exist yet in the database - the
 /// caller keeps the job in-memory-only in both cases. The
 /// insert is idempotent on the job id, so a retried creation
 /// never duplicates the row.
@@ -787,7 +785,7 @@ impl DocumentsState {
                 }
                 // Write the `.sha256` sidecar now that the hash is
                 // verified (best-effort: a sidecar failure does not
-                // fail the verification — the DB row is the
+                // fail the verification - the DB row is the
                 // authority).
                 if let Some(tenant_id) = job.tenant_id {
                     let scope = StorageScope::Tenant(tenant_id);

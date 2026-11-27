@@ -1,4 +1,4 @@
-// Generic Approvals — Business logic shared by handlers and hooks.
+// Generic Approvals - Business logic shared by handlers and hooks.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -32,7 +32,7 @@ use super::module::*;
 /// (see `unified_core::tenancy`): this function returns the tenancy
 /// `TenantContext` (tenant id as Uuid + schema name derived only
 /// by `tenancy::schema_name()`), and the Diesel persistence wiring
-/// — when it lands — takes the Uuid from here into
+/// - when it lands - takes the Uuid from here into
 /// `tenancy::with_tenant_connection`. Fail closed:
 /// `from_http_request` answers 401 when the request did not
 /// resolve to a tenant and 403 when the resolved tenant id is not
@@ -42,7 +42,7 @@ use super::module::*;
 /// OPEN (not closed by this guard): the in-memory DashMap stores
 /// in this module carry no `tenant_id` on their records yet, so
 /// there is no per-record tenant filtering to apply once the
-/// context is resolved — that needs a store-shape change (tenant
+/// context is resolved - that needs a store-shape change (tenant
 /// id on every record + a migration column) and is integrator
 /// work. What this guard does close is the context requirement
 /// itself: every tenant-data endpoint resolves the tenant first
@@ -52,9 +52,7 @@ pub(crate) fn resolve_tenant(req: &HttpRequest) -> UnifiedResult<TenancyContext>
     TenancyContext::from_http_request(req)
 }
 
-// ---------------------------------------------------------------------------
 // Lookups
-// ---------------------------------------------------------------------------
 
 pub(crate) fn load_definition(state: &ApprovalsState, raw_id: &str) -> UnifiedResult<ApprovalDefinition> {
     let id = parse_uuid(raw_id, "definition")?;
@@ -141,12 +139,10 @@ pub(crate) fn approvers_for_step(
         .unwrap_or_else(|| step.approvers.clone())
 }
 
-// ---------------------------------------------------------------------------
 // Approver resolution
-// ---------------------------------------------------------------------------
 
 /// Ask the HR / users module for the requester's manager. Returns
-/// `None` when nobody answers or the answer carries no manager id —
+/// `None` when nobody answers or the answer carries no manager id -
 /// the slot stays unresolved instead of failing the whole request.
 pub(crate) fn resolve_manager(state: &ApprovalsState, requester_id: &str) -> Option<String> {
     let bus = state.bus()?;
@@ -261,7 +257,7 @@ pub(crate) fn matchable_slots(
     (matched, unresolved)
 }
 
-/// Is the caller waiting on this request — an approver of its current
+/// Is the caller waiting on this request - an approver of its current
 /// step, or a delegate of one? Used by the `my-pending` dashboard.
 pub(crate) fn caller_is_pending_approver(
     state: &ApprovalsState,
@@ -473,7 +469,7 @@ pub(crate) fn notify_step(state: &ApprovalsState, request: &ApprovalRequest, ste
             &request.requester_id,
             title,
             &format!(
-                "Approval requested: {} — waiting on {}.",
+                "Approval requested: {} - waiting on {}.",
                 request.summary,
                 named.join(", ")
             ),

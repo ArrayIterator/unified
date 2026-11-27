@@ -9,8 +9,7 @@ use super::{constants::*, vocabulary::*, events::*, settings::*, records::*, sta
 
 
 
-// ---------------------------------------------------------------------------
-// Destroy-flow extension point (B3 — `tenant_destroy.rs`).
+// Destroy-flow extension point (B3 - `tenant_destroy.rs`).
 //
 // The destroy flow is NOT in this file. It extends this module
 // through these public helpers: B3 drives export, confirmation,
@@ -18,7 +17,6 @@ use super::{constants::*, vocabulary::*, events::*, settings::*, records::*, sta
 // record through `deprovisioning` -> `deleted` with the matching
 // events and audit records. No HTTP destroy route is registered
 // here.
-// ---------------------------------------------------------------------------
 /// Begin deprovisioning: move a tenant to `deprovisioning` from
 /// any live status (`provisioning`, `provision_failed`, `active`,
 /// `suspended`). Emits `tenant.deprovisioning_started` plus an

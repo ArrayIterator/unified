@@ -1,4 +1,4 @@
-// Domain Verification module — ownership verification for custom domain
+// Domain Verification module - ownership verification for custom domain
 // aliases through admin-determined DNS records.
 //
 // A tenant adds a custom domain alias on the user dashboard (main site);
@@ -62,20 +62,20 @@
 // not read them yet (the schema registry is owned by the integrator).
 //
 // Events emitted on the hook bus:
-//   - `domain.verification.token_issued` — a token was issued
+//   - `domain.verification.token_issued` - a token was issued
 //     (never carries the raw token).
-//   - `domain.verification.attempted` — one DNS check attempt.
-//   - `domain.verification.completed` — verification succeeded;
+//   - `domain.verification.attempted` - one DNS check attempt.
+//   - `domain.verification.completed` - verification succeeded;
 //     payload `{"alias_id", "domain", "tenant_id", "company_id",
 //     "status": "verified", "record_found", "verified_at"}`.
-//   - `domain.verification.failed` — attempts exhausted; payload
+//   - `domain.verification.failed` - attempts exhausted; payload
 //     `{"alias_id", "domain", "tenant_id", "company_id",
 //     "status": "failed", "record_found", "error", "attempts",
 //     "verified_at": null}`.
-//   - `domain.verification.settings_updated` — admin settings
+//   - `domain.verification.settings_updated` - admin settings
 //     changed (audit event).
 // Events this module listens to:
-//   - `domain.verification.status_requested` — payload
+//   - `domain.verification.status_requested` - payload
 //     `{"domain"}`; answers with `{"domain", "status",
 //     "verified_at"}` (no result when the domain is unknown).
 

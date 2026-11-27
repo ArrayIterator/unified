@@ -10,9 +10,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Import / export hardening (migration 000083_import_export_hardening).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = mapping_templates)]
@@ -36,9 +34,7 @@ pub struct NewMappingTemplate {
     pub company_id: Option<Uuid>,
 }
 
-// ---------------------------------------------------------------------------
 // Quality management (migration 000087_quality).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = quality_points)]

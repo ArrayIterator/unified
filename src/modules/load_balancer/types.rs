@@ -6,9 +6,7 @@ use uuid::Uuid;
 
 use super::constants::*;
 
-// ---------------------------------------------------------------------------
 // Enumerations.
-// ---------------------------------------------------------------------------
 
 /// TLS handling at the balancer listener.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -96,9 +94,7 @@ impl Default for HealthCheckKind {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Stored records.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HealthCheckConfig {

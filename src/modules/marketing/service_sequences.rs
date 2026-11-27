@@ -1,4 +1,4 @@
-// Marketing Automation — Sequence engine: step decisions and enrollment advancement.
+// Marketing Automation - Sequence engine: step decisions and enrollment advancement.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -30,9 +30,7 @@ use super::handlers_audience::*;
 use super::hooks::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Sequence step execution.
-// ---------------------------------------------------------------------------
 
 pub(crate) fn sequence_steps(state: &MarketingState, sequence_id: &str) -> Vec<SequenceStep> {
     let mut items: Vec<SequenceStep> = state

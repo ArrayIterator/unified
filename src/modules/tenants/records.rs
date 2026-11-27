@@ -10,9 +10,7 @@ use super::{constants::*, vocabulary::*, events::*, settings::*, state::*, auth:
 
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-// ---------------------------------------------------------------------------
 // Records.
-// ---------------------------------------------------------------------------
 /// One tenant: the control-plane record for a provisioned schema.
 /// The tenant id is a uuidv7 and doubles as the company id the
 /// rest of the platform keys tenant-scoped records by. The schema
@@ -118,7 +116,7 @@ pub struct TenantContextView {
 /// explicit module list; `package_id` resolves its list through
 /// the packages event; `preset_id` is recorded on the tenant and
 /// its module list is resolved by the presets apply flow (see the
-/// grant step — a preset id alone resolves no modules today).
+/// grant step - a preset id alone resolves no modules today).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateTenantRequest {
     pub slug: String,

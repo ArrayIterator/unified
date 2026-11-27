@@ -12,9 +12,7 @@ use super::helpers::*;
 use super::state::*;
 use super::types::*;
 
-// ---------------------------------------------------------------------------
 // Attendance handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn join_webinar(
     state: web::Data<WebinarsState>,

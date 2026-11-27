@@ -1,4 +1,4 @@
-// Generic Approvals — Input validation and pure value checks.
+// Generic Approvals - Input validation and pure value checks.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -103,7 +103,7 @@ pub(crate) fn validate_approver(slot: &StepApprover) -> UnifiedResult<()> {
         }
         _ => {
             // The kind was validated against APPROVER_KINDS above,
-            // so this arm is unreachable in practice — but a panic
+            // so this arm is unreachable in practice - but a panic
             // here would take down the request if the list and this
             // match ever drift apart, so fail with a proper error
             // instead of `unreachable!()`.

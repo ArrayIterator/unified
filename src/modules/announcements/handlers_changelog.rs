@@ -17,9 +17,7 @@ use super::validation::{
 };
 use super::state::AnnouncementsState;
 
-// ---------------------------------------------------------------------------
 // Changelog handlers
-// ---------------------------------------------------------------------------
 
 /// PUBLIC: changelog entries, newest first.
 /// No auth is required; public access is gated by the API Manager's

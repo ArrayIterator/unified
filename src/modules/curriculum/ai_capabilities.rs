@@ -1,4 +1,4 @@
-//! Curriculum module — competency-based school curricula. — Module.
+//! Curriculum module - competency-based school curricula. - Module.
 //!
 //! Split from `src/modules/curriculum.rs`; behaviour unchanged.
 
@@ -40,7 +40,6 @@ use uuid::Uuid;
 // the AI module's gated runner. Drafts are returned inline and are
 // never stored, published, or issued by this module: creating a
 // lesson plan stays on the existing human endpoints.
-// ---------------------------------------------------------------------------
 
 /// AI capabilities this module exposes through the AI module's
 /// contract. The capability is non-PII: competency texts and the

@@ -10,10 +10,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Calendar (migration 000101_calendar). `module` is a Rust keyword,
 // so the struct field is `module_` (Diesel strips the underscore).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = calendar_feeds)]

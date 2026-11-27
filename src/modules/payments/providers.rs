@@ -12,9 +12,7 @@ use super::{events::*, card_validation::*, card_settings::*, limits::*, types::*
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-// ---------------------------------------------------------------------------
 // Provider kinds, capabilities, currencies, settings fields.
-// ---------------------------------------------------------------------------
 /// Every payment provider this module can talk to.
 pub enum PaymentProviderKind {
     Xendit,
@@ -72,7 +70,7 @@ impl PaymentProviderKind {
     /// `"payment-paypal"`), matching a file in
     /// `src/modules/payments/logos/` and a symbol
     /// `provider-logo-payment-<id>` in `logos/sprite.svg`. A stem,
-    /// never a URL — the catalog returns the stem and the UI resolves
+    /// never a URL - the catalog returns the stem and the UI resolves
     /// it against the embedded sprite.
     pub fn logo_stem(&self) -> &'static str {
         match self {
@@ -156,9 +154,7 @@ pub fn catalog() -> Vec<Arc<ProviderDefinition>> {
     provider_registry().list_family_enabled("payments")
 }
 
-// ---------------------------------------------------------------------------
-// Registry-backed attributes (C12, task 269).
-// ---------------------------------------------------------------------------
+// Registry-backed attributes (C12).
 /// The `&'static` view of one provider's registry definition. The
 /// public methods above predate the registry and return `&'static`
 /// data, so the attributes are built once from registry data and the
@@ -258,7 +254,7 @@ pub struct PaymentCapabilities {
 
 /// Capabilities per kind (single source of truth for the catalog, the
 /// read views, and the operation guards). From the provider registry
-/// (C12, task 269); the `subscriptions_are_local_schedule` flag marks
+/// (C12); the `subscriptions_are_local_schedule` flag marks
 /// providers where the subscription record lives in this module and
 /// each period is a tokenized charge, because the provider exposes no
 /// subscription object to this adapter.
@@ -268,7 +264,7 @@ pub fn capabilities_for(kind: PaymentProviderKind) -> PaymentCapabilities {
 
 
 /// Currencies the adapter can charge in, from the provider
-/// registry (C12, task 269). These are the currencies the provider
+/// registry (C12). These are the currencies the provider
 /// documents for the API surface used here; a charge in any other
 /// currency is rejected before any provider call. Wallet kinds use
 /// the delegate connection's list at charge time; the catalog shows
@@ -316,7 +312,7 @@ pub(crate) fn field(
 
 
 /// Settings-page field definitions per provider kind, from the
-/// provider registry (C12, task 269).
+/// provider registry (C12).
 pub fn settings_fields_for(kind: PaymentProviderKind) -> Vec<SettingField> {
     attrs(&kind).settings_fields.clone()
 }

@@ -7,7 +7,6 @@
 // envelope (`{"data": ...}`) on every response.
 //
 // What this module does
-// ---------------------
 // - Device registry: devices are provisioned per tenant, each with a
 //   unique device key, a lifecycle
 //   (provisioned -> active -> suspended -> decommissioned, terminal),
@@ -34,7 +33,6 @@
 //   devices, out-of-sync twins, open alerts).
 //
 // What this module honestly does NOT do
-// --------------------------------------
 // - Ingestion here is HTTP only. No MQTT broker is embedded and no
 //   broker connection is opened. The MQTT topic mapping a broker
 //   deployment would use is documented in README.md
@@ -127,9 +125,7 @@ pub use types::{DeviceStatus, allowed_transition, Device, TelemetryPoint, Teleme
 pub(crate) use handlers::{ack_command, create_alert_rule, create_device, create_device_type, delete_alert_rule, delete_device, fleet_health, get_device, get_telemetry, get_twin, ingest_telemetry, list_alert_rules, list_alerts, list_commands, list_device_types, list_devices, paginate, queue_command, report_twin, update_device, update_twin};
 pub(crate) use validate::{constant_time_eq, generate_device_api_key, hash_device_key, is_valid_metric_name, new_id, now_utc, validate_device_key, validate_json_object_size, validate_tenant_id, validate_text};
 
-// ---------------------------------------------------------------------------
 // Unit tests (run with `cargo check -p external-iot --tests` / `cargo test`)
-// ---------------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {

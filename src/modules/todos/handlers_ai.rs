@@ -1,4 +1,4 @@
-// todos — handlers ai.
+// todos - handlers ai.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -26,12 +26,10 @@ use super::handlers_todos::*;
 use super::handlers_subtasks::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // AI handlers (drafts only).
-// ---------------------------------------------------------------------------
 
 /// Render the caller's own todos as grounding text for an AI draft
-/// request. Only todos the caller OWNS are included — never todos
+/// request. Only todos the caller OWNS are included - never todos
 /// from a list shared with them, and never another user's todos.
 pub(crate) fn todos_context_text(state: &TodosState, user_id: &str, list_id: Option<Uuid>, include_completed: bool, max_todos: usize) -> (String, Vec<Uuid>) {
     let mut owned: Vec<Todo> = state
@@ -58,7 +56,7 @@ pub(crate) fn todos_context_text(state: &TodosState, user_id: &str, list_id: Opt
         let notes = todo
             .notes
             .as_ref()
-            .map(|notes| format!(" — {notes}"))
+            .map(|notes| format!(" - {notes}"))
             .unwrap_or_default();
         let subtasks: Vec<String> = todo
             .subtasks
@@ -97,7 +95,7 @@ pub(crate) fn todos_context_text(state: &TodosState, user_id: &str, list_id: Opt
 /// build context from the caller's own todos, emit
 /// `todos.ai.draft_requested`, and return the first hook result that
 /// carries a draft string. Fails closed (503) when no AI handler
-/// answers — a summary is never fabricated locally.
+/// answers - a summary is never fabricated locally.
 pub(crate) fn request_ai_draft(
     ctx: &AppContext,
     caller: &Caller,
@@ -293,9 +291,7 @@ pub(crate) async fn ai_plan_day(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Hook handlers.
-// ---------------------------------------------------------------------------
 
 /// Answer `todos.context_requested`: return the subject user's own
 /// todos (optionally filtered by list, date, or status) so an AI
@@ -369,7 +365,7 @@ pub(crate) fn on_todos_context_requested(state: TodosState, ctx: &mut HookContex
 ///   only, through `notification.requested` (kind `todo.due_soon`).
 /// - The overdue sweep emits `todos.todo.overdue` plus a
 ///   `notification.requested` (kind `todo.overdue`) at most once per
-///   todo per UTC day, for open todos past their due time — including
+///   todo per UTC day, for open todos past their due time - including
 ///   todos that never had a reminder, so overdue detection does not
 ///   depend on reminders existing.
 pub(crate) fn on_reminders_send_requested(state: TodosState, ctx: &mut HookContext) {

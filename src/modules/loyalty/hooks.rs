@@ -29,9 +29,7 @@ use super::types::LoyaltyEarnRule;
 use super::types::LoyaltyProgram;
 use super::types::LoyaltyState;
 
-// ---------------------------------------------------------------------------
 // Hook listeners
-// ---------------------------------------------------------------------------
 
 /// `store.order.completed` -> purchase earn. The order payload is
 /// the store `Order` JSON (`id`, `user_id`, `total`, `currency`,
@@ -412,9 +410,7 @@ pub(crate) fn on_user_created(state: Arc<LoyaltyState>, ctx: &mut HookContext) {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Discount confirmation (L4)
-// ---------------------------------------------------------------------------
 
 /// Find the pending discount redemption a store event refers to:
 /// by `redemption_id` when present, else by `order_id` (the one

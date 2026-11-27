@@ -9,9 +9,7 @@ use super::helpers::*;
 use super::state::*;
 use super::types::*;
 
-// ---------------------------------------------------------------------------
 // Scheduler linkage
-// ---------------------------------------------------------------------------
 
 /// Link a scheduled webinar to the scheduler module.
 ///
@@ -185,9 +183,7 @@ pub(crate) fn close_open_sessions(state: &WebinarsState, webinar_id: Uuid, at: D
     }
 }
 
-// ---------------------------------------------------------------------------
 // Scheduler / order hook handlers
-// ---------------------------------------------------------------------------
 
 /// Answer `webinar.start_requested`: the event the scheduler emits
 /// when a `webinar.start` job fires. A scheduled webinar whose start

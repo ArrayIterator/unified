@@ -1,4 +1,4 @@
-// cards — Module registration: struct, defaults, routes, and hooks.
+// cards - Module registration: struct, defaults, routes, and hooks.
 
 use super::*;
 use unified_core::context::AppContext;
@@ -8,9 +8,7 @@ use unified_core::modules::{Module, ModuleRegistry, RouteInfo};
 use actix_web::web;
 use std::sync::Arc;
 
-// ---------------------------------------------------------------------------
 // Module.
-// ---------------------------------------------------------------------------
 
 pub struct CardsModule {
     state: Arc<CardsState>,

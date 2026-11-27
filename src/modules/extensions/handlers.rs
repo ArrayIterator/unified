@@ -21,14 +21,12 @@ use super::module::*;
 use super::types::*;
 use super::service::*;
 
-// ---------------------------------------------------------------------------
 // Caller identity and capability checks (same shape as the calculator
 // and pricing modules: `X-User-Id` + `X-Role` headers, capability
 // asked through the `role.check` hook, failing closed when no handler
 // answers). Enabling and disabling modules is admin-only: it changes
 // which modules serve requests, and a forced disable also disables
 // every module that depends on the target.
-// ---------------------------------------------------------------------------
 
 /// Capability required to enable or disable a module. This reuses the
 /// existing `modules:manage` capability (already listed in the roles

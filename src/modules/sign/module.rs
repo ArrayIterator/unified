@@ -25,9 +25,7 @@ use unified_core::error::UnifiedResult;
 use unified_core::hooks::{HookBus, HookContext};
 use unified_core::modules::{Module, ModuleRegistry, RouteInfo, RouteVersionSupport};
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct SignModule {
     pub(crate) state: SignState,
@@ -57,7 +55,7 @@ impl Module for SignModule {
     }
 
     fn description(&self) -> &'static str {
-        "Core e-signature: signing requests (envelopes) over multiple documents-module documents with sequential or parallel signing order and expiry; signers with hashed signing tokens (raw token returned once, resend rotates), statuses pending, sent, viewed, signed, and declined; signature capture as drawn strokes, typed names, or uploaded images — only SHA-256 hashes are stored, plus the hash of the signed document and the signed-at time for tamper evidence; reusable templates with signer roles and fields as data; reminder schedules as data with due computation and reminder events for the notifications module; completion certificates bound to the hash-chained audit trail; and public token-gated sign and certificate-verify flows."
+        "Core e-signature: signing requests (envelopes) over multiple documents-module documents with sequential or parallel signing order and expiry; signers with hashed signing tokens (raw token returned once, resend rotates), statuses pending, sent, viewed, signed, and declined; signature capture as drawn strokes, typed names, or uploaded images - only SHA-256 hashes are stored, plus the hash of the signed document and the signed-at time for tamper evidence; reusable templates with signer roles and fields as data; reminder schedules as data with due computation and reminder events for the notifications module; completion certificates bound to the hash-chained audit trail; and public token-gated sign and certificate-verify flows."
     }
 
     fn is_core(&self) -> bool {
@@ -187,14 +185,14 @@ impl Module for SignModule {
                 method: "GET",
                 path: "/api/v1/sign/public/sign/{token}",
                 owner: "sign",
-                description: "PUBLIC (token-gated): sign page data for one signing token — envelope summary, the signer, other signers' progress, and allowed capture methods.",
+                description: "PUBLIC (token-gated): sign page data for one signing token - envelope summary, the signer, other signers' progress, and allowed capture methods.",
                 auth: unified_core::auth::RouteAuth::Public,
             },
             RouteInfo {
                 method: "POST",
                 path: "/api/v1/sign/public/sign/{token}",
                 owner: "sign",
-                description: "PUBLIC (token-gated): record a signature through a signing token — signature hash and document hash only, checked against the hashes recorded at send time.",
+                description: "PUBLIC (token-gated): record a signature through a signing token - signature hash and document hash only, checked against the hashes recorded at send time.",
                 auth: unified_core::auth::RouteAuth::Public,
             },
             RouteInfo {
@@ -208,7 +206,7 @@ impl Module for SignModule {
                 method: "GET",
                 path: "/api/v1/sign/public/verify/{certificate_hash}",
                 owner: "sign",
-                description: "PUBLIC: verify a completion certificate — recompute its hash from the signing record and verify the audit chain.",
+                description: "PUBLIC: verify a completion certificate - recompute its hash from the signing record and verify the audit chain.",
                 auth: unified_core::auth::RouteAuth::Public,
             },
             RouteInfo {

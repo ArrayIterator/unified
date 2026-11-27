@@ -24,16 +24,14 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Helpers: tenant, caller, capabilities, envelope.
-// ---------------------------------------------------------------------------
 
 /// Resolve the tenant context for a request. THE single convergence
 /// point for batch-17 schema-per-tenant plumbing (see the module
 /// header): this function returns the tenancy `TenantContext`
 /// (tenant id as Uuid + schema name derived ONLY by
-/// `tenancy::schema_name()`), and the Diesel persistence wiring —
-/// when it lands — takes the Uuid from here into
+/// `tenancy::schema_name()`), and the Diesel persistence wiring -
+/// when it lands - takes the Uuid from here into
 /// `tenancy::with_tenant_connection`. Fail closed:
 /// `from_http_request` answers 401 when the request did not resolve
 /// to a tenant and 403 when the resolved tenant id is not a valid

@@ -18,9 +18,7 @@ use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 use super::{constants::*, types::*, state::*, module::*, handlers_articles::*, handlers_tickets::*, handlers_categories::*};
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 /// Caller identity: the server-verified caller (user id plus
 /// server-resolved role, both required for capability checks),
@@ -64,9 +62,7 @@ pub(crate) fn require_permission(ctx: &AppContext, role: &str, permission: &str)
     }
 }
 
-// ---------------------------------------------------------------------------
 // Tenant edge guard (C3 pilot 3).
-// ---------------------------------------------------------------------------
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request
@@ -82,19 +78,19 @@ pub(crate) fn require_tenant(
 /// The company scope the caller acts in, as a `Uuid`: the tenant
 /// context's company first, the verified caller's server-resolved
 /// company otherwise. Fails closed (403) when both are present and
-/// disagree — a request must not carry one company in its tenant
+/// disagree - a request must not carry one company in its tenant
 /// context and another in its verified identity. The
 /// `X-Company-Id` header is NEVER trusted here: only the verified
 /// caller (company resolved from the database at authentication
 /// time) and the middleware-resolved tenant context are sources
-/// (header trust removal is task 317's job elsewhere). A company
+/// (header trust removal is handled elsewhere). A company
 /// value that does not parse as a UUID names no tenant here and is
 /// ignored, matching the previous `caller_company_id` behaviour.
 ///
 /// This replaces the old `caller_company_id` helper (removed in
 /// pilot 3): that helper also fell back to the
 /// `user.company_requested` hook, which the guard path no longer
-/// uses — a caller whose company the middleware did not resolve is
+/// uses - a caller whose company the middleware did not resolve is
 /// unresolved and reads global records only.
 pub(crate) fn caller_company(
     tenant: &unified_core::tenancy::TenantContext,
@@ -119,7 +115,7 @@ pub(crate) fn caller_company(
     }
 }
 
-/// Resolve the caller's company for a WRITE (C3 task 315, strict by
+/// Resolve the caller's company for a WRITE (C3, strict by
 /// default): a write requires a resolved company scope, so an
 /// unresolved caller is refused with 403 instead of silently
 /// writing a global (unscoped) record. Mutation handlers call
@@ -146,7 +142,7 @@ pub(crate) fn require_company_for_write(
 /// company-owned record is denied (the shared
 /// `CallerScope::Unresolved` rule). With a scope, only records
 /// carrying that company match, plus unscoped (global/legacy) records,
-/// which are shared content visible to any resolved scope (C3 task 320, rule A).
+/// which are shared content visible to any resolved scope (C3, rule A).
 pub(crate) fn in_company_scope(
     record_company_id: &Option<Uuid>,
     caller_company: &Option<Uuid>,
@@ -175,11 +171,11 @@ pub(crate) fn require_record_in_company_scope(
 }
 
 /// Fail closed (403) when a stored record is outside the caller's
-/// company scope FOR A WRITE (C3 task 315, strict by default).
+/// company scope FOR A WRITE (C3, strict by default).
 /// Unlike the read check above (rule A), a write requires an exact
 /// company match: a company caller may write only their own
-/// company's records — global (unscoped) records are platform-only
-/// — and an unresolved caller may write nothing. Mutation handlers
+/// company's records - global (unscoped) records are platform-only
+/// - and an unresolved caller may write nothing. Mutation handlers
 /// call this right after loading the record they mutate; handlers
 /// that only read the record, or load a parent to scope a child
 /// write, keep the read check.
@@ -426,14 +422,12 @@ pub fn search_articles_for_company(
     search_articles(&scoped, query, only_published, limit)
 }
 
-// ---------------------------------------------------------------------------
 // AI capabilities (AI Capabilities Contract, see `crate::modules::ai`).
 //
 // Declared here, registered once in `init`, grounded through the
 // `knowledgebase.ai.answer_draft_requested` hook (published
 // articles only), and run through the AI module's gated runner.
 // Drafts are returned inline and are never published by this module.
-// ---------------------------------------------------------------------------
 
 /// AI capabilities this module exposes through the AI module's
 /// contract. The capability is non-PII: the question is redacted

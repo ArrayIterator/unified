@@ -1,10 +1,10 @@
 // Theme validity validation: a structured, collect-all-issues report
 // for one theme, instead of the loader's first-error bail.
 //
-// `validate_theme_directory` checks everything it can — theme id,
+// `validate_theme_directory` checks everything it can - theme id,
 // manifest presence and shape, required files, every declared template
 // file, and the Handlebars syntax of every `.hbs` file the theme ships
-// (templates, partials, and per-module overrides) — and returns all
+// (templates, partials, and per-module overrides) - and returns all
 // problems at once, so an admin UI can list every broken thing about a
 // theme without attempting activation. Errors make the theme invalid
 // and un-activatable; warnings (missing screenshot, unknown manifest
@@ -77,7 +77,7 @@ impl ThemeIssue {
 /// `.hbs` files that were syntax-checked; `module_templates_checked`
 /// counts registered module templates that were re-checked (they are
 /// compiled at registration time already, so this is a second,
-/// defensive pass — see `check_module_sources`).
+/// defensive pass - see `check_module_sources`).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ThemeValidationReport {
     pub id: String,
@@ -226,36 +226,36 @@ pub fn report_for_sources(
 ///
 /// Error codes used:
 ///
-/// * `invalid-theme-id` — the id fails `validate_theme_id`.
-/// * `missing-theme-dir` — `themes/<id>/` does not exist.
-/// * `missing-manifest` — no `theme.yaml` in the theme directory.
-/// * `unreadable-manifest` — `theme.yaml` cannot be read.
-/// * `invalid-yaml` — `theme.yaml` is not valid YAML, is not a YAML
+/// * `invalid-theme-id` - the id fails `validate_theme_id`.
+/// * `missing-theme-dir` - `themes/<id>/` does not exist.
+/// * `missing-manifest` - no `theme.yaml` in the theme directory.
+/// * `unreadable-manifest` - `theme.yaml` cannot be read.
+/// * `invalid-yaml` - `theme.yaml` is not valid YAML, is not a YAML
 ///   mapping, or has invalid field types.
-/// * `invalid-manifest-field` — the manifest has no (or an empty)
+/// * `invalid-manifest-field` - the manifest has no (or an empty)
 ///   `name` or `version`.
-/// * `missing-layout` — `templates/layout.hbs` does not exist.
-/// * `invalid-requirement` — the manifest `require` list names a
+/// * `missing-layout` - `templates/layout.hbs` does not exist.
+/// * `invalid-requirement` - the manifest `require` list names a
 ///   capability the engine does not know.
-/// * `invalid-asset-path` — a manifest `assets` entry is not a safe
+/// * `invalid-asset-path` - a manifest `assets` entry is not a safe
 ///   theme-relative `.js`/`.css` path.
-/// * `missing-asset` — a manifest-declared asset file does not exist
+/// * `missing-asset` - a manifest-declared asset file does not exist
 ///   under the theme's `assets/` directory.
-/// * `missing-template` — a manifest-declared (or required) template
+/// * `missing-template` - a manifest-declared (or required) template
 ///   file, or a `template_files` mapping target, does not exist.
-/// * `invalid-template-name` — a declared template name or a
+/// * `invalid-template-name` - a declared template name or a
 ///   `template_files` stem breaks the template naming rules.
-/// * `template-too-large` — a `.hbs` file exceeds `MAX_TEMPLATE_SIZE`.
-/// * `unreadable-template` — a `.hbs` file cannot be read.
-/// * `invalid-template-syntax` — a `.hbs` file (or a registered module
+/// * `template-too-large` - a `.hbs` file exceeds `MAX_TEMPLATE_SIZE`.
+/// * `unreadable-template` - a `.hbs` file cannot be read.
+/// * `invalid-template-syntax` - a `.hbs` file (or a registered module
 ///   template source) fails to parse as Handlebars.
 ///
 /// Warning codes used (never invalidating):
 ///
-/// * `missing-screenshot` — no screenshot file ships with the theme.
-/// * `unknown-manifest-field` — a top-level `theme.yaml` key the
+/// * `missing-screenshot` - no screenshot file ships with the theme.
+/// * `unknown-manifest-field` - a top-level `theme.yaml` key the
 ///   loader does not know.
-/// * `undeclared-template` — a `.hbs` file directly under
+/// * `undeclared-template` - a `.hbs` file directly under
 ///   `templates/` that the manifest does not declare, so the loader
 ///   ignores it. (Files in subdirectories are per-module overrides
 ///   and are never warned about.)
@@ -961,7 +961,7 @@ mod tests {
         assert!(report.valid, "errors: {:?}", report.errors);
         assert!(report.errors.is_empty());
         // The embedded default ships no screenshot, so that warning
-        // is expected — and it must not invalidate the theme.
+        // is expected - and it must not invalidate the theme.
         assert!(report.has_warning("missing-screenshot"));
         assert!(report.templates_checked > 0);
         let _ = std::fs::remove_dir_all(&base);

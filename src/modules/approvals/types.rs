@@ -1,4 +1,4 @@
-// Generic Approvals — Public record, request, and view types.
+// Generic Approvals - Public record, request, and view types.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -27,9 +27,7 @@ use super::handlers_dashboards::*;
 use super::hooks::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// One approver slot on a step: who may satisfy it. `ref_value` is
 /// the user id for `user`, the role slug for `role`, and is ignored
@@ -219,9 +217,7 @@ pub struct ApprovalStepView {
     pub resolution: String,
 }
 
-// ---------------------------------------------------------------------------
 // Input payloads
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct CreateDefinitionInput {

@@ -11,9 +11,7 @@ use super::{limits::*, types::*, hub::*, state::*, helpers::*, module::*, handle
 
 
 
-// ---------------------------------------------------------------------------
 // Live support: offline messages
-// ---------------------------------------------------------------------------
 pub(crate) async fn list_offline_messages(
     state: web::Data<ChatState>,
     req: HttpRequest,

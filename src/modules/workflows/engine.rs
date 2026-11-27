@@ -15,14 +15,12 @@ use super::state::{WorkflowsState};
 use super::types::{ConditionGroup, ConditionLeaf, ConditionNode, LeafEvaluation, RunStatus, Workflow, WorkflowAction};
 use super::validation::{host_allowed, is_secret_segment, validate_field_path};
 
-// ---------------------------------------------------------------------------
 // Payload summary, conditions, templates
-// ---------------------------------------------------------------------------
 
 /// Redacted summary of a trigger payload for a run row: only
 /// top-level keys, values replaced by their type (strings truncated
 /// to 128 characters), secret-named keys dropped entirely. The full
-/// payload is never stored — that is why a retry needs a
+/// payload is never stored - that is why a retry needs a
 /// caller-supplied payload.
 pub(crate) fn summarize_payload(payload: &Value) -> Value {
     match payload {
@@ -241,9 +239,7 @@ pub(crate) fn render_config_value(value: &Value, payload: &Value, workflow: &Wor
     }
 }
 
-// ---------------------------------------------------------------------------
 // Outbound webhook (SSRF-safe)
-// ---------------------------------------------------------------------------
 
 /// True when an IP address is safe to connect to from a workflow:
 /// public only. Private, loopback, link-local, multicast,
@@ -590,9 +586,7 @@ pub(crate) async fn execute_webhook_action(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Execution engine
-// ---------------------------------------------------------------------------
 
 /// Execute one action. Emit-based actions run synchronously; the
 /// webhook action needs the network and runs async. `depth` is the
@@ -940,7 +934,7 @@ pub(crate) fn execute_action_sync(
     }
     // Emit-based actions share the async implementation: build a
     // blocking-free future is impossible here, so reuse the same
-    // code through a tiny local runtime-free path — the emits are
+    // code through a tiny local runtime-free path - the emits are
     // synchronous, so run them directly via a duplicate of the
     // emit branches.
     let config = render_config_value(&action.config, payload, workflow);

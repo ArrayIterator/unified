@@ -8,7 +8,7 @@
 //! `kyc.ai.verify_identity_documents_requested`, and this
 //! handler answers with the resolved default context, the
 //! active extra instructions, and the case's document metadata
-//! (references and hashes only — never file bytes). The AI
+//! (references and hashes only - never file bytes). The AI
 //! module merges that grounding into the system prompt, so
 //! the behaviour the AI follows is the stored configuration,
 //! not text hard-coded in this module.
@@ -24,9 +24,7 @@ use uuid::Uuid;
 
 /// Marker for anonymized rows is `deleted-user` (see types.rs).
 
-// ---------------------------------------------------------------------------
 // User deletion (users module owns the event)
-// ---------------------------------------------------------------------------
 
 /// `user.deleted` carries `user_id` (falling back to `id`, the
 /// same shape the forums module reads). The user's cases are
@@ -93,16 +91,14 @@ pub(crate) fn on_user_deleted(state: KycState, ctx: &mut HookContext) {
     }));
 }
 
-// ---------------------------------------------------------------------------
 // AI verification grounding (ai module owns the event)
-// ---------------------------------------------------------------------------
 
 /// Answer `kyc.ai.verify_identity_documents_requested` with
 /// the grounding the AI runner merges into the system prompt:
 /// the resolved default verification context (which fields the
 /// AI may see, which checks to run, which version), the active
 /// extra instructions in merge order, and the case's document
-/// metadata (type codes, document references, content hashes —
+/// metadata (type codes, document references, content hashes -
 /// never file bytes). The payload carries `case_id` and
 /// `tenant_id` under the input the verify handler passed to
 /// `run_ai_capability`. A payload naming no case, or a case
@@ -180,9 +176,7 @@ pub(crate) fn ai_verification_event() -> &'static str {
     EVENT_AI_VERIFY_REQUESTED
 }
 
-// ---------------------------------------------------------------------------
 // MCP context source (mcp module owns the `mcp.context.*` contract)
-// ---------------------------------------------------------------------------
 
 /// Answer `mcp.context.kyc` for MCP servers: per-status case
 /// counts and recent case summaries for one tenant. The MCP

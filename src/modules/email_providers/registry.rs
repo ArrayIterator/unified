@@ -13,15 +13,13 @@ use unified_core::error::{UnifiedError, UnifiedResult};
 use unified_core::hooks::HookBus;
 use unified_core::provider_registry::valid_provider_id;
 
-// ---------------------------------------------------------------------------
 // Provider registry: the plug-in point for adapters.
-// ---------------------------------------------------------------------------
 pub type EmailProviderFactory =
     Arc<dyn Fn(&EmailConnection) -> UnifiedResult<Arc<dyn EmailProvider>> + Send + Sync>;
 
 pub struct EmailProviderRegistry {
     pub(crate) factories: RwLock<HashMap<EmailProviderKind, EmailProviderFactory>>,
-    /// Factories keyed by registry definition id (C12, task 269):
+    /// Factories keyed by registry definition id (C12):
     /// the extension point for a provider an admin registered
     /// through the provider registry, which has no enum variant.
     /// The factory receives the connection and decides how to build
@@ -49,8 +47,8 @@ impl EmailProviderRegistry {
     }
 
     /// Register (or replace) the factory for a registry definition id
-    /// (C12, task 269). This is how a provider added through the
-    /// provider registry — no code change, no enum variant — gets an
+    /// (C12). This is how a provider added through the
+    /// provider registry - no code change, no enum variant - gets an
     /// adapter: register its definition, then register its factory
     /// under the same id, once at startup or from an extension.
     pub fn register_factory_by_id(
@@ -499,9 +497,7 @@ pub(crate) fn emit_event(event: &str, data: Value) {
 }
 
 #[async_trait]
-// ---------------------------------------------------------------------------
 // Common adapter interface.
-// ---------------------------------------------------------------------------
 /// The interface every email provider adapter implements. Only `send`
 /// and `test_connection` are required; `send_batch` defaults to
 /// sending one by one, and `webhook_verify` defaults to the shared

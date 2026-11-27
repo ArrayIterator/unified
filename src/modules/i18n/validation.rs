@@ -6,9 +6,7 @@ use std::sync::OnceLock;
 
 use super::languages::*;
 
-// ---------------------------------------------------------------------------
 // Validation helpers
-// ---------------------------------------------------------------------------
 
 /// The compiled dot-separated key pattern, built once and shared by
 /// every `validate_key` call instead of recompiling the regex per call.

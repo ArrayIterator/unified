@@ -1,4 +1,4 @@
-// admissions module — Period handlers.
+// admissions module - Period handlers.
 //
 // Split from the former single-file module `src/modules/admissions.rs`.
 // The module root (`admissions.rs`) re-exports the public items, so the
@@ -26,9 +26,7 @@ use super::helpers::{
     require_id, require_permission, require_tenant, require_text, today, valid_currency,
 };
 
-// ---------------------------------------------------------------------------
 // Handlers: periods
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_periods(
     ctx: web::Data<Arc<AppContext>>,

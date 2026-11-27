@@ -1,4 +1,4 @@
-//! Cloudflare connector module. — Handlers: cache.
+//! Cloudflare connector module. - Handlers: cache.
 //!
 //! Split from `src/modules/cloudflare.rs`; behaviour unchanged.
 

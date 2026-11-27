@@ -1,4 +1,4 @@
-//! Map & Tagging — shared types: locations, links, layers,
+//! Map & Tagging - shared types: locations, links, layers,
 //! geofences, positions, kinds, roles, providers, settings, and
 //! the hook + capability names other modules use to talk to this
 //! module.
@@ -21,7 +21,7 @@ use serde_json::Value;
 use uuid::Uuid;
 
 /// Stable module id. Consumers declare it in `requires()`:
-/// `&["maps"]` — see docs/integration/MAP_TAGGING.md. The id is
+/// `&["maps"]` - see docs/integration/MAP_TAGGING.md. The id is
 /// the dependency id: enabling a consumer auto-activates this
 /// module, and disabling it is blocked while an enabled consumer
 /// still needs it (the extensions dependency system enforces
@@ -113,7 +113,7 @@ pub struct LocationLink {
 }
 
 /// One location attached to an entity, with the role it was
-/// attached under — the shape `locations_for_entity` returns.
+/// attached under - the shape `locations_for_entity` returns.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EntityLocation {
     #[serde(flatten)]
@@ -383,9 +383,7 @@ pub fn builtin_providers() -> Vec<MapProvider> {
     ]
 }
 
-// ---------------------------------------------------------------------------
 // Request bodies.
-// ---------------------------------------------------------------------------
 
 /// `POST /api/v1/maps/locations`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -532,7 +530,7 @@ pub struct UpdateRoleInput {
 
 /// `POST /api/v1/maps/providers`. A custom provider is any
 /// tile source: an open-source tile server, Mapbox, Google
-/// Maps, or a fully custom tile API — the same shape carries
+/// Maps, or a fully custom tile API - the same shape carries
 /// them all (tile URL template + attribution + key flag + max
 /// zoom + subdomains + options). `subdomains` is a string of
 /// single-character subdomain names (`abc`); `options` is a

@@ -20,9 +20,7 @@ use super::{
     validate_options, validate_rules, validate_value,
 };
 
-// ---------------------------------------------------------------------------
 // Handlers: field types and record types.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_field_types(
     ctx: web::Data<Arc<AppContext>>,
@@ -323,7 +321,7 @@ pub(crate) async fn get_definition(
 
 /// Update creates a NEW version: the old row becomes `superseded`
 /// and is never mutated, so values validated against it keep
-/// working. The field type and field key are immutable — changing
+/// working. The field type and field key are immutable - changing
 /// a type is a new field, not a new version.
 pub(crate) async fn update_definition(
     ctx: web::Data<Arc<AppContext>>,

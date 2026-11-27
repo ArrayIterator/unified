@@ -1,4 +1,4 @@
-// Marketing Automation — Campaign and A/B variant handlers.
+// Marketing Automation - Campaign and A/B variant handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -30,9 +30,7 @@ use super::handlers_audience::*;
 use super::hooks::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Campaign handlers.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct CampaignInput {
@@ -530,9 +528,7 @@ pub(crate) async fn get_campaign_stats(
     }
 }
 
-// ---------------------------------------------------------------------------
 // A/B variant handlers.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct VariantInput {

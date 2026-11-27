@@ -1,7 +1,6 @@
-// storage — events.
+// storage - events.
 // Hook event names emitted by the storage module.
 //
-// Split from `crates/unified-core/src/storage.rs`; moved verbatim, no behaviour changes.
 
 use super::*;
 use crate::error::{UnifiedError, UnifiedResult};
@@ -19,9 +18,7 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::{Arc, RwLock};
 
-// ---------------------------------------------------------------------------
 // Hook event names (emitted by the storage module).
-// ---------------------------------------------------------------------------
 
 pub const TARGET_CREATED: &str = "storage.target.created";
 pub const TARGET_DELETED: &str = "storage.target.deleted";

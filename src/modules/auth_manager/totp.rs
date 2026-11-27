@@ -24,7 +24,6 @@ use std::time::Duration;
 use uuid::Uuid;
 use super::{providers::*, jwt::*, state::*, handlers_providers::*, login::*, tokens::*, recovery::*, google::*, module::*};
 
-// ---------------------------------------------------------------------------
 // TOTP enrolment
 //
 // TOTP secrets live in the `users` table (`totp_secret`,
@@ -39,7 +38,6 @@ use super::{providers::*, jwt::*, state::*, handlers_providers::*, login::*, tok
 // (`auth::totp::encrypt_secret`); a legacy plaintext row still
 // verifies and is re-encrypted on the next successful password
 // login (see `issue_token`).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct TotpCodeInput {

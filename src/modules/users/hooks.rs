@@ -1,4 +1,4 @@
-// users module — Hook support.
+// users module - Hook support.
 //
 // Split from the former single-file module `src/modules/users.rs`.
 // The module root (`users.rs`) re-exports the public items, so the
@@ -27,14 +27,12 @@ use uuid::Uuid;
 use super::types::{StoredUser, UserResponse, UsersStore};
 use super::validation::{db_pool, hash_password, is_unique_violation, validate_email, validate_name, validate_password};
 
-// ---------------------------------------------------------------------------
 // Hook support: `init` stashes the shared application context so the
 // synchronous `user.create_requested` handler below can use the
 // database and emit events. The handler reads it lazily, so
 // registration order (hooks before `init`) does not matter. The
 // stashed context shares the live pool/config locks; only the uptime
 // and pause flags are snapshots.
-// ---------------------------------------------------------------------------
 
 pub(crate) static USERS_CTX: OnceLock<Arc<AppContext>> = OnceLock::new();
 

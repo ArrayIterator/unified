@@ -6,9 +6,7 @@ use super::{limits::*, types::*, state::*, helpers::*, module::*, handlers_chann
 
 
 #[derive(Debug)]
-// ---------------------------------------------------------------------------
 // WebSocket hub
-// ---------------------------------------------------------------------------
 /// The chat WebSocket hub: a tokio broadcast channel. Handlers publish
 /// every new message here; WebSocket sessions subscribe and forward events
 /// to their clients.

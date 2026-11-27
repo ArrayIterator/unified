@@ -29,11 +29,9 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One saved check: a named tool + target + parameters, owned by a user
 -- (optionally scoped to a company), re-runnable through
 -- `POST /api/v1/network-tools/saved-checks/{id}/run`.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS network_tool_saved_checks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id TEXT NOT NULL,
@@ -57,11 +55,9 @@ CREATE INDEX IF NOT EXISTS idx_network_tool_saved_checks_company_id
 CREATE INDEX IF NOT EXISTS idx_network_tool_saved_checks_tool
     ON network_tool_saved_checks (tool);
 
--- ---------------------------------------------------------------------------
 -- One tool run: every execution of any tool, success or failure. The
 -- `summary` holds outcome metadata only (duration, method, error
 -- message) - never a response body.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS network_tool_runs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id TEXT NOT NULL,
@@ -83,12 +79,10 @@ CREATE INDEX IF NOT EXISTS idx_network_tool_runs_tool
 CREATE INDEX IF NOT EXISTS idx_network_tool_runs_created_at
     ON network_tool_runs (created_at DESC);
 
--- ---------------------------------------------------------------------------
 -- One uptime monitor: a URL probed on an interval with an expected
 -- status and a failure threshold. `consecutive_failures` counts the
 -- current failing streak; `last_status` is 'up', 'down', or NULL when
 -- never probed.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS network_tool_uptime_monitors (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id TEXT NOT NULL,
@@ -117,10 +111,8 @@ CREATE INDEX IF NOT EXISTS idx_network_tool_uptime_monitors_company_id
 CREATE INDEX IF NOT EXISTS idx_network_tool_uptime_monitors_enabled
     ON network_tool_uptime_monitors (enabled);
 
--- ---------------------------------------------------------------------------
 -- One uptime event: the outcome of a single probe of a monitor.
 -- Deleted with the monitor (ON DELETE CASCADE).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS network_tool_uptime_events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     monitor_id UUID NOT NULL REFERENCES network_tool_uptime_monitors (id)
@@ -137,12 +129,10 @@ CREATE INDEX IF NOT EXISTS idx_network_tool_uptime_events_monitor_id
 CREATE INDEX IF NOT EXISTS idx_network_tool_uptime_events_created_at
     ON network_tool_uptime_events (created_at DESC);
 
--- ---------------------------------------------------------------------------
 -- One certificate watch: a domain whose certificate expiry is watched
 -- at the 30/14/7/1-day thresholds. `alerted_thresholds` records which
 -- thresholds already fired, so each threshold alerts exactly once
 -- (-1 means "expired").
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS network_tool_cert_watches (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id TEXT NOT NULL,

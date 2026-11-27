@@ -14,9 +14,7 @@ use super::adapters_whmcs::WhmcsAdapter;
 use super::types::PanelConnection;
 use super::types::PanelKind;
 
-// ---------------------------------------------------------------------------
 // Panel registry: the plug-in point for adapters.
-// ---------------------------------------------------------------------------
 
 /// Factory that builds an adapter for one stored connection.
 pub type PanelFactory =

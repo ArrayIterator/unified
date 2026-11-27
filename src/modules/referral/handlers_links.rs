@@ -1,7 +1,7 @@
 //! HTTP handlers for referral links: one unique shareable
 //! link per (employee, job), token-based with the raw token
 //! returned once and only its hash stored, plus the public
-//! token-gated click endpoint (counts only — no IP address,
+//! token-gated click endpoint (counts only - no IP address,
 //! user agent, or fingerprint is stored).
 
 use actix_web::{HttpRequest, HttpResponse, web};
@@ -21,7 +21,7 @@ use super::types::{CreateLinkRequest, EVENT_LINK_CREATED, LinkCreated, hash_valu
 
 /// Create a referral link for the caller and one job
 /// (manager or any authenticated employee with the view
-/// capability — the caller is the referrer). One active link
+/// capability - the caller is the referrer). One active link
 /// per (employee, job): a second create returns 409 and the
 /// existing link must be rotated for a fresh token.
 pub(crate) async fn create_link(
@@ -235,12 +235,12 @@ pub(crate) async fn revoke_link(
 }
 
 /// PUBLIC (token-gated): follow a referral link. The token
-/// is the credential — unknown, revoked, and expired tokens
+/// is the credential - unknown, revoked, and expired tokens
 /// all answer 404 with the same message, so tokens cannot
 /// be probed apart. A successful click increments the click
 /// count and stamps the last click; no IP address, user
 /// agent, or fingerprint is stored. The response names only
-/// the job the link points at — never the referrer or the
+/// the job the link points at - never the referrer or the
 /// token hash.
 ///
 /// Public-access gate: like the recruitment and sign

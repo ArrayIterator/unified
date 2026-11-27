@@ -1,4 +1,4 @@
-// Properties — XML / HTML / CSV escaping (all output text is escaped).
+// Properties - XML / HTML / CSV escaping (all output text is escaped).
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -19,9 +19,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // XML / HTML / CSV escaping (all output text is escaped)
-// ---------------------------------------------------------------------------
 
 pub(crate) fn xml_escape(value: &str) -> String {
     let mut out = String::with_capacity(value.len());

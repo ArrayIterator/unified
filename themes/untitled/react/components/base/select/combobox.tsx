@@ -12,13 +12,13 @@ import { cx } from "../../../utils/cx";
 import { isReactComponent } from "../../../utils/is-react-component";
 
 interface ComboBoxProps extends Omit<AriaComboBoxProps<SelectItemType>, "children" | "items">, RefAttributes<HTMLDivElement>, CommonProps {
-    /** Whether to pin a ⌘K key hint to the right edge of the input. It is hidden below the medium breakpoint. */
+    /** Whether to pin a Cmd+K key hint to the right edge of the input. It is hidden below the medium breakpoint. */
     shortcut?: boolean;
     /** The options to render in the dropdown. When `children` is a function it is called once per item to render it. */
     items?: SelectItemType[];
     /** Additional classes merged onto the dropdown popover, which is sized to match the input. */
     popoverClassName?: string;
-    /** Additional classes merged onto the ⌘K hint container, useful for adjusting its fade and spacing. */
+    /** Additional classes merged onto the Cmd+K hint container, useful for adjusting its fade and spacing. */
     shortcutClassName?: string;
     /** Leading icon component displayed before the input. */
     icon?: FC | ReactNode;
@@ -29,11 +29,11 @@ interface ComboBoxProps extends Omit<AriaComboBoxProps<SelectItemType>, "childre
 interface ComboBoxValueProps extends AriaGroupProps {
     /** Controls the field's padding, text size, and icon size. */
     size: "sm" | "md" | "lg";
-    /** Whether to pin the ⌘K key hint to the right edge of the field. */
+    /** Whether to pin the Cmd+K key hint to the right edge of the field. */
     shortcut: boolean;
     /** Text shown in the input while it is empty. */
     placeholder?: string;
-    /** Additional classes merged onto the ⌘K hint container. */
+    /** Additional classes merged onto the Cmd+K hint container. */
     shortcutClassName?: string;
     /** Leading icon rendered before the input. Falls back to a search icon when omitted. */
     icon?: FC | ReactNode;
@@ -119,7 +119,7 @@ const ComboBoxValue = ({ size, shortcut, placeholder, shortcutClassName, icon: I
                         className="pointer-events-none rounded px-1 py-px text-xs font-medium text-quaternary ring-1 ring-secondary select-none ring-inset"
                         aria-hidden="true"
                     >
-                        ⌘K
+                        Cmd+K
                     </span>
                 </div>
             )}

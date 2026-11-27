@@ -8,9 +8,7 @@ use super::{events::*, paper::*, thermal::*, profiles::*, state::*, auth::*, hoo
 
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-// ---------------------------------------------------------------------------
 // Print jobs
-// ---------------------------------------------------------------------------
 /// One print job: a queued request to print, export, or email one
 /// invoice. `document_html` is the print-ready HTML document for
 /// paper, pdf, and email jobs; `escpos_base64` and

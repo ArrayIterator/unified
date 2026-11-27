@@ -8,9 +8,7 @@ use dashmap::DashMap;
 use super::{CreateSavedView, SavedView, UpdateSavedView, validate_filter, validate_name,
     validate_new, validate_order, validate_sort, validate_visibility};
 
-// ---------------------------------------------------------------------------
 // State.
-// ---------------------------------------------------------------------------
 
 pub struct SavedViewsState {
     pub(crate) views: DashMap<String, SavedView>,
@@ -50,7 +48,7 @@ impl SavedViewsState {
 
     /// Update a view. Only the view's owner may update it: `actor`
     /// is the authenticated caller id, and a non-owner cannot change
-    /// the view at all — not its name or filter, and not its
+    /// the view at all - not its name or filter, and not its
     /// visibility or default flag either.
     pub(crate) fn update(
         &self,

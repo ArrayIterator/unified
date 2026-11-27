@@ -1,4 +1,4 @@
-// pricing — service.
+// pricing - service.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -54,9 +54,7 @@ pub(crate) fn build_ai_narrative(recommendation: &PricingRecommendation) -> Stri
     draft
 }
 
-// ---------------------------------------------------------------------------
 // Shared evaluation (used by the HTTP endpoint and the hook).
-// ---------------------------------------------------------------------------
 
 /// Evaluate discounts for a caller that supplies lines, an
 /// optional coupon code, and an optional customer id. Active rules
@@ -132,9 +130,7 @@ pub(crate) fn discount_lines_from_request(
     Ok(lines)
 }
 
-// ---------------------------------------------------------------------------
 // Hook handlers.
-// ---------------------------------------------------------------------------
 
 /// Read a scaled money amount from one hook payload line: a
 /// `_scaled` field that is present must be an integer, the plain
@@ -519,7 +515,7 @@ pub(crate) fn on_invoice_validate_requested(state: Arc<PricingState>, ctx: &mut 
 
 /// Answer `pricing.ai.recommend_requested`: the AI module asks
 /// for a narrative draft for a stored recommendation. The draft is
-/// built from the engine record only — the AI words the summary,
+/// built from the engine record only - the AI words the summary,
 /// it never invents prices. When the recommendation does not
 /// exist, no result is added, so the caller can report the
 /// recommendation as unavailable.
@@ -560,9 +556,7 @@ pub(crate) fn on_ai_recommend_requested(state: Arc<PricingState>, ctx: &mut Hook
     }
 }
 
-// ---------------------------------------------------------------------------
 // HTTP handlers: recommendations.
-// ---------------------------------------------------------------------------
 
 pub(crate) fn store_recommendation(
     state: &PricingState,

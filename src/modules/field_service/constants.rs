@@ -1,4 +1,4 @@
-// field_service module — Module constants.
+// field_service module - Module constants.
 //
 // Split from the former single-file module `src/modules/field_service.rs`.
 // The module root (`field_service.rs`) re-exports the public items, so the

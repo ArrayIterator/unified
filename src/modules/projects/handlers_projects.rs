@@ -1,4 +1,4 @@
-// Projects module — project handlers.
+// Projects module - project handlers.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use super::*;
@@ -10,14 +10,12 @@ use serde_json::{Value, json};
 use std::collections::HashSet;
 use std::sync::Arc;
 
-// ---------------------------------------------------------------------------
 // Projects
-// ---------------------------------------------------------------------------
 
 /// Whether a project appears in a list for a viewer: capability
 /// holders see everything, owners and members see their own projects,
-/// and anyone else — including an anonymous caller with no viewer at
-/// all — sees nothing.
+/// and anyone else - including an anonymous caller with no viewer at
+/// all - sees nothing.
 pub(crate) fn list_project_visible(
     project: &Project,
     viewer_id: Option<&str>,

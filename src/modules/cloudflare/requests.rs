@@ -1,4 +1,4 @@
-//! Cloudflare connector module. — Request types.
+//! Cloudflare connector module. - Request types.
 //!
 //! Split from `src/modules/cloudflare.rs`; behaviour unchanged.
 

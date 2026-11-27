@@ -3,11 +3,9 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Whitelabel (migration 000073_whitelabel) + presets
-// (migration 000071_presets); batch 9 notes §4. The notes write bare
+// (migration 000071_presets); batch 9 notes sec. 4. The notes write bare
 // `table!`; normalised to the file's `diesel::table!` style.
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     whitelabel_global_settings (id) {

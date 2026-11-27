@@ -1,4 +1,4 @@
-// Properties — SVG rendering.
+// Properties - SVG rendering.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -19,9 +19,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // SVG rendering
-// ---------------------------------------------------------------------------
 
 /// A projected plan: bounds in local metres plus the scale that
 /// maps metres to SVG units.
@@ -185,7 +183,7 @@ pub fn render_plan_svg(
         let fill = block.status.svg_fill();
         let label = xml_escape(&block.title);
         let detail = xml_escape(&format!(
-            "{} — {} — {} {}",
+            "{} - {} - {} {}",
             block.title,
             status,
             format_money(block.price, &block.currency),
@@ -290,7 +288,7 @@ pub fn render_print_html(
     for block in blocks {
         let area = block
             .area_sqm
-            .map(|value| format!("{value:.2} m²"))
+            .map(|value| format!("{value:.2} m2"))
             .unwrap_or_else(|| "-".to_string());
         let length = block
             .length_m
@@ -316,7 +314,7 @@ pub fn render_print_html(
     }
     let buyer_header = if show_buyer { "<th>Buyer</th>" } else { "" };
     format!(
-        "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\" />\n<title>{} — {}</title>\n<style>\nbody {{ font-family: sans-serif; color: #111827; margin: 24px; }}\nh1 {{ font-size: 22px; margin-bottom: 4px; }}\nh2 {{ font-size: 16px; margin: 24px 0 8px; }}\n.meta {{ color: #4b5563; font-size: 13px; margin-bottom: 16px; }}\n.site-plan {{ width: 100%; height: auto; border: 1px solid #d1d5db; }}\ntable {{ border-collapse: collapse; width: 100%; font-size: 13px; }}\nth, td {{ border: 1px solid #d1d5db; padding: 6px 8px; text-align: left; }}\nth {{ background: #f3f4f6; }}\n@media print {{\n  body {{ margin: 0; }}\n  .no-print {{ display: none; }}\n  .site-plan {{ border: none; }}\n}}\n</style>\n</head>\n<body>\n<h1>{} — {}</h1>\n<p class=\"meta\">Plan: {} &middot; {} block(s) &middot; Printed site plan</p>\n<div class=\"plan-svg\">{}</div>\n<h2>Blocks</h2>\n<table>\n<thead><tr><th>Title</th><th>Status</th><th>Area</th><th>Length</th><th>Price</th>{}</tr></thead>\n<tbody>\n{}\n</tbody>\n</table>\n<p class=\"no-print\"><button onclick=\"window.print()\">Print</button></p>\n</body>\n</html>\n",
+        "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\" />\n<title>{} - {}</title>\n<style>\nbody {{ font-family: sans-serif; color: #111827; margin: 24px; }}\nh1 {{ font-size: 22px; margin-bottom: 4px; }}\nh2 {{ font-size: 16px; margin: 24px 0 8px; }}\n.meta {{ color: #4b5563; font-size: 13px; margin-bottom: 16px; }}\n.site-plan {{ width: 100%; height: auto; border: 1px solid #d1d5db; }}\ntable {{ border-collapse: collapse; width: 100%; font-size: 13px; }}\nth, td {{ border: 1px solid #d1d5db; padding: 6px 8px; text-align: left; }}\nth {{ background: #f3f4f6; }}\n@media print {{\n  body {{ margin: 0; }}\n  .no-print {{ display: none; }}\n  .site-plan {{ border: none; }}\n}}\n</style>\n</head>\n<body>\n<h1>{} - {}</h1>\n<p class=\"meta\">Plan: {} &middot; {} block(s) &middot; Printed site plan</p>\n<div class=\"plan-svg\">{}</div>\n<h2>Blocks</h2>\n<table>\n<thead><tr><th>Title</th><th>Status</th><th>Area</th><th>Length</th><th>Price</th>{}</tr></thead>\n<tbody>\n{}\n</tbody>\n</table>\n<p class=\"no-print\"><button onclick=\"window.print()\">Print</button></p>\n</body>\n</html>\n",
         xml_escape(&property.title),
         xml_escape(&plan.name),
         xml_escape(&property.title),

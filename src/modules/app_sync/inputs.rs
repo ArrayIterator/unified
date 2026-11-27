@@ -7,9 +7,7 @@ use serde_json::Value;
 
 
 #[derive(Debug, Deserialize)]
-// ---------------------------------------------------------------------------
 // Request types.
-// ---------------------------------------------------------------------------
 pub(crate) struct RegisterDeviceRequest {
     pub(crate) device_name: String,
     #[serde(default = "default_platform")]

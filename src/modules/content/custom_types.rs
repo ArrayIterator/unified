@@ -1,4 +1,4 @@
-//! Content Management module. — Dynamic custom post types (task 356).
+//! Content Management module. - Dynamic custom post types.
 //!
 //! Admin-definable post types: every setting lives on the
 //! `PostTypeDefinition` row (labels, icon, supports, dynamic field
@@ -6,7 +6,7 @@
 //! There is no per-type code anywhere:
 //!
 //! * API routes are the generic `/api/v1/content/custom/{type_slug}`
-//!   set below — registering a definition makes the type usable
+//!   set below - registering a definition makes the type usable
 //!   immediately, with no deploy.
 //! * The admin menu and the React list/form screens are generated
 //!   from the definition (`GET /api/v1/content/post-types` +
@@ -54,9 +54,7 @@ use unified_core::json as api_json;
 use unified_core::pagination::PaginationParams;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Definition validation.
-// ---------------------------------------------------------------------------
 
 /// Validate a `supports` list: known feature names only, no
 /// duplicates. An absent list means "no built-in features".
@@ -167,7 +165,7 @@ fn validate_field_defs(defs: &[CustomFieldDef]) -> Result<Vec<CustomFieldDef>, U
 
 /// Validate one field value against its definition. Returns the
 /// normalized value (media objects collapse to their document id).
-/// A missing value is NOT an error here — required-ness is checked
+/// A missing value is NOT an error here - required-ness is checked
 /// by `validate_entry_fields`.
 fn validate_field_value(def: &CustomFieldDef, value: &Value) -> Result<Value, UnifiedError> {
     let bad = |detail: &str| {
@@ -344,9 +342,7 @@ fn relation_target_exists(state: &ContentState, tenant_id: Uuid, value: &Value) 
             .is_some_and(|entry| entry.value().tenant_id == tenant_id)
 }
 
-// ---------------------------------------------------------------------------
 // Type resolution + visibility.
-// ---------------------------------------------------------------------------
 
 /// Find a type definition by slug within this tenant.
 pub(super) fn find_type_by_slug(
@@ -470,9 +466,7 @@ fn emit_type_event(ctx: &AppContext, event: &str, definition: &PostTypeDefinitio
     );
 }
 
-// ---------------------------------------------------------------------------
 // Post type definition CRUD.
-// ---------------------------------------------------------------------------
 
 pub(super) async fn list_post_types(
     state: web::Data<ContentState>,
@@ -765,7 +759,7 @@ pub(super) async fn update_post_type(
 /// Delete a post type: a SOFT disable. The definition stays (with
 /// `enabled: false`) and every entry is preserved; the type's
 /// routes and menu entry disappear until it is re-enabled. There
-/// is no hard delete for a type — deleting a type must never
+/// is no hard delete for a type - deleting a type must never
 /// destroy its entries.
 pub(super) async fn delete_post_type(
     state: web::Data<ContentState>,
@@ -830,9 +824,7 @@ async fn set_post_type_enabled(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Custom entries.
-// ---------------------------------------------------------------------------
 
 /// Check the entry body against the type's `supports`: values for
 /// unsupported built-in features are rejected instead of silently
@@ -1429,9 +1421,7 @@ pub(super) async fn delete_custom_entry(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Tags on a custom entry.
-// ---------------------------------------------------------------------------
 
 pub(super) async fn list_custom_entry_tags(
     state: web::Data<ContentState>,

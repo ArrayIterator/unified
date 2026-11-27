@@ -1,19 +1,19 @@
-//! C12 provider registries (task 269).
+//! C12 provider registries.
 //!
 //! Provider definitions are DATA, not code. One registry table
 //! (`provider_registry_definitions`, migration 000127) holds every
-//! provider for every family — id, display name, base URLs, allowed
-//! hosts, capabilities, currencies, credentials shape, models — and
+//! provider for every family - id, display name, base URLs, allowed
+//! hosts, capabilities, currencies, credentials shape, models - and
 //! this in-memory registry is the runtime view of that table.
 //!
 //! The built-in definitions ship as an embedded JSON seed document
 //! (`crates/unified-core/provider_registry_seed.json`, the single
 //! source of truth; the migration seed SQL is generated from the same
 //! file). At runtime an admin adds a provider by registering a
-//! definition — through the JSON config document
+//! definition - through the JSON config document
 //! (`ProviderRegistry::load_json` / `load_json_file`), through the
 //! future DB-row loader (`load_from_rows`), or directly with
-//! `register` — and the factories resolve it by string id. No code
+//! `register` - and the factories resolve it by string id. No code
 //! change, no new enum variant, no new `match` arm.
 //!
 //! The per-family enums (`PaymentProviderKind`, `EmailProviderKind`,
@@ -27,7 +27,7 @@
 //! `docs/integration/INTEGRATION_NOTES_C12.md` for the per-family
 //! status and the remaining work.
 //!
-//! Security: definitions never carry credential *values* — only the
+//! Security: definitions never carry credential *values* - only the
 //! *shape* of the credentials (field names, types, required/secret
 //! flags). `register` validates ids (lowercase ASCII, digits, `-`,
 //! `_`) so a definition id can never smuggle a path, URL, or SQL
@@ -41,7 +41,7 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::sync::{Arc, OnceLock, RwLock};
 
-/// Registry families. New families are just new strings — the
+/// Registry families. New families are just new strings - the
 /// registry never closes over a family enum.
 pub const FAMILY_PAYMENTS: &str = "payments";
 pub const FAMILY_EMAIL: &str = "email";
@@ -150,7 +150,7 @@ pub struct ProviderDefinition {
     /// adapter (`"custom"` for payments/cloud).
     pub adapter_kind: String,
     /// SMTP relay preset for email providers served by the generic
-    /// SMTP adapter (task 354): the relay host, port, and TLS mode
+    /// SMTP adapter: the relay host, port, and TLS mode
     /// (`"starttls"` | `"implicit"` | `"none"`). A connection may
     /// override all three; an empty connection field falls back to
     /// these. `None` means "no preset" (custom SMTP, OAuth, API).
@@ -158,7 +158,7 @@ pub struct ProviderDefinition {
     pub smtp_port: Option<u16>,
     pub smtp_tls: Option<String>,
     /// Generic HTTP API configuration for email providers served by
-    /// the generic HTTP adapter (task 354): `{"endpoint",
+    /// the generic HTTP adapter: `{"endpoint",
     /// "auth": {"scheme": "bearer" | "basic-key", "header":
     /// "Authorization"}, "payload": <JSON template with
     /// {to}/{from}/{subject}/{body}/{template_id}/{app_id}/
@@ -167,7 +167,7 @@ pub struct ProviderDefinition {
     /// means the provider has no generic HTTP API.
     pub http_api: Option<Value>,
     /// Affiliate URL for the provider, if the operator configured
-    /// one. Empty by default — never invented; the catalog never
+    /// one. Empty by default - never invented; the catalog never
     /// returns one unless an admin set it.
     pub affiliate_url: Option<String>,
     /// Whether connections need a user-supplied endpoint (payments).
@@ -270,10 +270,10 @@ impl ProviderDefinition {
         }
     }
 
-    /// The SMTP relay preset for this provider (task 354): the relay
+    /// The SMTP relay preset for this provider: the relay
     /// host plus the port and TLS mode with the adapter defaults
     /// applied (587, STARTTLS). `None` when the provider has no
-    /// preset host — the connection must supply its own server.
+    /// preset host - the connection must supply its own server.
     pub fn smtp_preset(&self) -> Option<(String, u16, String)> {
         let host = self.smtp_host.clone().filter(|value| !value.trim().is_empty())?;
         Some((
@@ -328,7 +328,7 @@ fn validate_definition(def: &ProviderDefinition) -> UnifiedResult<()> {
             "Provider capabilities must be a JSON object",
         ));
     }
-    // Task 354: an SMTP preset must be a usable relay (a port of 0
+    // An SMTP preset must be a usable relay (a port of 0
     // is never valid; the TLS mode is one of the three the SMTP
     // adapter understands), and a generic HTTP API config must be
     // an object with an https endpoint.
@@ -410,7 +410,7 @@ impl ProviderRegistry {
     }
 
     /// Look a definition up by `(family, id)`. `None` means "no such
-    /// provider" — callers must not fall back to a different provider.
+    /// provider" - callers must not fall back to a different provider.
     pub fn get(&self, family: &str, id: &str) -> Option<Arc<ProviderDefinition>> {
         self.definitions
             .read()
@@ -460,8 +460,8 @@ impl ProviderRegistry {
         self.list_family(family).len()
     }
 
-    /// Remove a definition. Built-ins cannot be removed — disable
-    /// them with `set_enabled` instead — so an admin can never delete
+    /// Remove a definition. Built-ins cannot be removed - disable
+    /// them with `set_enabled` instead - so an admin can never delete
     /// a provider other code depends on. Returns `false` when there
     /// was no such definition.
     pub fn remove(&self, family: &str, id: &str) -> UnifiedResult<bool> {
@@ -540,7 +540,7 @@ impl ProviderRegistry {
         self.load_json(&json)
     }
 
-    /// Register definitions from rows — the hook a startup loader uses
+    /// Register definitions from rows - the hook a startup loader uses
     /// to replace the embedded seeds with the rows of
     /// `provider_registry_definitions` (migration 000127). A row with
     /// the same `(family, id)` as a built-in overrides it (keeping the
@@ -655,7 +655,7 @@ mod tests {
             assert!(!def.display_name.trim().is_empty());
             assert!(!def.adapter_kind.trim().is_empty());
             assert!(seen.insert((def.family.clone(), def.id.clone())));
-            // Task 350: every email provider carries a logo reference
+            // Every email provider carries a logo reference
             // (the catalog serves it; the demo renders it).
             if def.family == FAMILY_EMAIL {
                 assert!(

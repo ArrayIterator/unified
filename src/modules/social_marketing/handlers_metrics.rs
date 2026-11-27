@@ -3,7 +3,7 @@
 //! metrics-ingest webhook, and the per-account rollup.
 //!
 //! Metrics arrive only through the webhook or through
-//! manual entry — this module never fetches live numbers
+//! manual entry - this module never fetches live numbers
 //! from a network, so a metric row is always a reported
 //! value, never a scraped one. Re-ingesting the same
 //! metric from the same source replaces the value instead

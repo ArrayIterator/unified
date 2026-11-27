@@ -31,9 +31,7 @@ use std::time::{Duration, Instant};
 use uuid::Uuid;
 use super::{keys::*, expiry::*, store::*, hooks::*, types::*, validation::*, handlers::*, products::*, helpers::*, product_handlers::*, verify::*, offline::*, releases::*, module::*};
 
-// ---------------------------------------------------------------------------
 // SaaS handlers: distribution channels (git).
-// ---------------------------------------------------------------------------
 
 pub(crate) fn validate_provider(provider: &str) -> UnifiedResult<String> {
     match provider.trim().to_lowercase().as_str() {

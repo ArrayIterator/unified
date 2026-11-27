@@ -6,9 +6,7 @@ use serde::Serialize;
 
 use super::{SavedView, SavedViewsState, VISIBILITY_SHARED};
 
-// ---------------------------------------------------------------------------
 // Helpers.
-// ---------------------------------------------------------------------------
 
 pub(crate) fn paginate<T: Serialize + Clone>(items: Vec<T>, params: &PaginationParams) -> PageResult<T> {
     let pagination = params.normalized();

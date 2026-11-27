@@ -1,4 +1,4 @@
-// field_service module — Definition and settings handlers.
+// field_service module - Definition and settings handlers.
 //
 // Split from the former single-file module `src/modules/field_service.rs`.
 // The module root (`field_service.rs`) re-exports the public items, so the
@@ -27,9 +27,7 @@ use super::helpers::{
     valid_slug,
 };
 
-// ---------------------------------------------------------------------------
 // Definition and settings handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_definitions(
     ctx: web::Data<Arc<AppContext>>,

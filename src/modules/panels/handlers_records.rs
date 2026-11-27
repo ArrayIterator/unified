@@ -181,7 +181,7 @@ pub(crate) async fn sync_collection(
 }
 
 /// Stored sync status: served from the last sync state and the
-/// stored records only — no outbound call. A GET must not perform
+/// stored records only - no outbound call. A GET must not perform
 /// network fetches against the panel (that is both a read doing
 /// writes' work and the SSRF surface). Remote-side counts are
 /// unknown here (`null`, `"live": false`); use the explicit POST
@@ -259,7 +259,7 @@ pub(crate) async fn get_sync_status(
 /// Live sync status: fetches every supported collection from the
 /// panel and compares it with the stored records, reporting per
 /// collection what changed locally vs remotely and how many
-/// conflicts exist. Explicit POST only — a live fetch is an
+/// conflicts exist. Explicit POST only - a live fetch is an
 /// outbound call carrying panel credentials, so it needs the
 /// manage permission and must never run on a GET. A collection
 /// whose live fetch fails is reported with its error instead of
@@ -267,7 +267,7 @@ pub(crate) async fn get_sync_status(
 ///
 /// The fetch is complete by adapter contract (adapters walk every
 /// page or fail instead of truncating), so a stored record absent
-/// from the fetched set really is absent remotely — `only_local`
+/// from the fetched set really is absent remotely - `only_local`
 /// here is a genuine count, not a page-boundary artefact.
 pub(crate) async fn refresh_sync_status(
     ctx: web::Data<Arc<AppContext>>,
@@ -499,7 +499,7 @@ pub(crate) async fn resolve_conflict(
                 // and the deletion is reported. The fetch is complete
                 // by adapter contract (every page walked, or the
                 // fetch fails instead of truncating), so absence
-                // here means the record is really gone remotely —
+                // here means the record is really gone remotely -
                 // never a page-boundary artefact.
                 let adapter = panel_registry().build(&connection)?;
                 let remote = fetch_collection(&adapter, collection).await?;

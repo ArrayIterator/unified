@@ -1,4 +1,4 @@
-// affiliates module — Domain types.
+// affiliates module - Domain types.
 //
 // Split from the former single-file module `src/modules/affiliates.rs`.
 // The module root (`affiliates.rs`) re-exports the public items, so the
@@ -22,9 +22,7 @@ use uuid::Uuid;
 
 use super::helpers::caller;
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// Approval lifecycle of an affiliate: `pending` -> `approved` /
 /// `rejected`; `approved` -> `suspended` -> `approved` (reactivate).

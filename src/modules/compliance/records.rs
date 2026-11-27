@@ -1,4 +1,4 @@
-//! Compliance Center module — GDPR / ISO support: data export — Processing-record handlers (RoPA).
+//! Compliance Center module - GDPR / ISO support: data export - Processing-record handlers (RoPA).
 //!
 //! Split from `src/modules/compliance.rs`; behaviour unchanged.
 

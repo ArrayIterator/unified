@@ -33,9 +33,7 @@ pub(crate) fn stash_ctx(ctx: &AppContext) -> Arc<AppContext> {
     })
 }
 
-// ---------------------------------------------------------------------------
 // State
-// ---------------------------------------------------------------------------
 
 pub struct Web3State {
     pub(crate) hooks: RwLock<Arc<HookBus>>,

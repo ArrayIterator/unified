@@ -1,4 +1,4 @@
-// admissions module — Domain types.
+// admissions module - Domain types.
 //
 // Split from the former single-file module `src/modules/admissions.rs`.
 // The module root (`admissions.rs`) re-exports the public items, so the
@@ -18,9 +18,7 @@ use serde_json::{json, Value};
 use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// One admission period: one academic year and term, with open and
 /// close dates, an optional registration fee, and an optional link to

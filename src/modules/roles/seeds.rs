@@ -68,7 +68,7 @@ pub(crate) fn default_roles() -> Vec<(&'static str, &'static str, &'static str, 
         (
             // Finance role (batch 18): the only non-admin role seeded
             // with card capabilities. Never grant `cards:validate`
-            // to customer, editor, author, or member roles — an open
+            // to customer, editor, author, or member roles - an open
             // validation oracle lets anyone probe card numbers.
             "Finance",
             "finance",

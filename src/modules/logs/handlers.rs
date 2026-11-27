@@ -1,4 +1,4 @@
-// logs — handlers.
+// logs - handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -28,9 +28,7 @@ use super::common::*;
 use super::hooks::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_logs(
     ctx: web::Data<Arc<AppContext>>,

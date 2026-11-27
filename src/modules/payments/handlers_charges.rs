@@ -13,9 +13,7 @@ use super::{events::*, card_validation::*, card_settings::*, limits::*, provider
 
 
 
-// ---------------------------------------------------------------------------
 // Handlers: charges, transactions, refunds, voids, payouts.
-// ---------------------------------------------------------------------------
 /// Direct charge (no intent): create the charge at the provider,
 /// record it, and emit the matching event. Idempotent on
 /// (connection, idempotency key).
@@ -281,7 +279,7 @@ pub(crate) async fn get_transaction(
 /// then return its latest state. A duplicate that arrives while
 /// the first refund is still at the provider gets the settled
 /// result instead of refunding twice. Returns `None` when the row
-/// was discarded — the provider call failed, so the caller may
+/// was discarded - the provider call failed, so the caller may
 /// attempt the refund itself.
 async fn wait_for_refund_settled(id: Uuid) -> Option<PaymentTransaction> {
     for _ in 0..50 {
@@ -321,7 +319,7 @@ fn discard_pending_refund(connection_id: Uuid, key: &str, row_id: Uuid) {
 /// with an explicit `status` so the store and billing listeners
 /// can gate on it. A `Pending` result (bank-transfer refunds)
 /// records the refund with status `pending`, moves the original
-/// to `refund_pending`, and emits NOTHING — the order and invoice
+/// to `refund_pending`, and emits NOTHING - the order and invoice
 /// stay un-refunded until `complete_refund` closes it. Any other
 /// result (failed, ...) records nothing and returns an error, so
 /// a failed refund can never mark an order refunded.

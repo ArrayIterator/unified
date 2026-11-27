@@ -10,9 +10,7 @@ use super::{events::*, card_validation::*, card_settings::*, limits::*, provider
 
 
 
-// ---------------------------------------------------------------------------
 // Xendit.
-// ---------------------------------------------------------------------------
 impl ProviderAdapter {
     /// Xendit card charge (Charges API v2, one-time payment with a
     /// tokenized card). The provider reference is the order's

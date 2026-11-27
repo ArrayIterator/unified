@@ -3,11 +3,9 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Network Tools (migration 000070_network_tools) + Licensing SaaS
-// (migration 000069_licensing_saas); batch 7 notes §2. The notes
+// (migration 000069_licensing_saas); batch 7 notes sec. 2. The notes
 // write `BigInt`; normalised to the file's `Int8` style.
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     network_tool_saved_checks (id) {

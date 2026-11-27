@@ -26,9 +26,7 @@ pub(crate) const DEFAULT_SIGNED_URL_SECS: u64 = 3600;
 /// Maximum signed-URL lifetime in seconds (7 days, the S3 presign cap).
 pub(crate) const MAX_SIGNED_URL_SECS: u64 = 604_800;
 
-// ---------------------------------------------------------------------------
 // Capabilities (checked through the `role.check` hook; fails closed).
-// ---------------------------------------------------------------------------
 
 pub(crate) const PERM_READ: &str = "storage.read";
 
@@ -61,9 +59,7 @@ pub(crate) fn authorize(
         )))
     }
 }
-// ---------------------------------------------------------------------------
 // Tenant edge guard (C3 pilot 4, gate-only).
-// ---------------------------------------------------------------------------
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request
@@ -107,9 +103,7 @@ pub(crate) fn caller_company(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Target metadata store (in-memory, like the downloader job store).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct StoredTarget {

@@ -113,9 +113,7 @@ fn list_visible_cases(
     items.iter().map(|case| case_view(state, case)).collect()
 }
 
-// ---------------------------------------------------------------------------
 // Case handlers (authenticated)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_cases(
     state: web::Data<KycState>,
@@ -226,7 +224,7 @@ pub(crate) async fn get_case(
 }
 
 /// Lightweight status read for the subject: status, risk,
-/// verdict summary, and expiry — the full case view is
+/// verdict summary, and expiry - the full case view is
 /// `GET /cases/{id}`.
 pub(crate) async fn get_case_status(
     state: web::Data<KycState>,

@@ -2,10 +2,10 @@
 //!
 //! Two surfaces, both tenant-scoped and fail-closed:
 //!
-//! * `db.kv` — a module-scoped key/value store (ephemeral, held in
+//! * `db.kv` - a module-scoped key/value store (ephemeral, held in
 //!   memory; restart clears it). Keys are namespaced by tenant and
 //!   module, so one tenant's module can never read another's keys.
-//! * `db.query` — read-only SQL against the calling tenant's
+//! * `db.query` - read-only SQL against the calling tenant's
 //!   schema only, with `$N` parameters substituted as escaped text
 //!   literals (see `substitute_params`), through the one sanctioned path
 //!   (`unified_core::tenancy::with_tenant_connection`). Only a
@@ -31,7 +31,7 @@ pub const MAX_QUERY_PARAMS: usize = 64;
 /// Maximum length of one KV key.
 pub const MAX_KV_KEY_LEN: usize = 256;
 
-// ---------------------------------------------------------------- KV
+// KV
 
 /// Module-scoped key/value store. One instance is shared by every
 /// script module; keys are namespaced by tenant and module id, so
@@ -114,15 +114,15 @@ impl KvStore {
     }
 }
 
-// ------------------------------------------------------------- query
+// query
 
 /// Validate that `sql` is exactly one read-only statement: a
 /// `SELECT`. Leading SQL comments and whitespace are skipped.
 /// `WITH` is refused outright: a WITH-CTE can carry a write
 /// (`WITH d AS (DELETE ... RETURNING ...) SELECT ...`), which
-/// would bypass the read-only contract. Anything else — INSERT,
+/// would bypass the read-only contract. Anything else - INSERT,
 /// UPDATE, DELETE, DDL, a second statement (`;`), or an empty
-/// string — is refused.
+/// string - is refused.
 pub fn validate_select(sql: &str) -> UnifiedResult<String> {
     let mut rest = sql.trim_start();
     // Skip leading `--` line comments and `/* */` block comments.
@@ -170,7 +170,7 @@ pub fn validate_select(sql: &str) -> UnifiedResult<String> {
 /// wrap in single quotes, doubling any single quote inside. With
 /// `standard_conforming_strings` on (the Postgres default since
 /// 9.1) a backslash is an ordinary character, so doubling the quote
-/// is the whole rule — a value can never terminate the literal
+/// is the whole rule - a value can never terminate the literal
 /// early.
 fn escape_literal(value: &Value) -> String {
     let text = match value {
@@ -329,7 +329,7 @@ fn substitute_params(sql: &str, params: &[Value]) -> UnifiedResult<String> {
 /// This needs a live database pool and a tenant id; both missing
 /// cases fail closed. There is no live PostgreSQL in the dev VM, so
 /// this function is verified by its validation unit tests and by
-/// compilation only — a live run is still open (see the crate
+/// compilation only - a live run is still open (see the crate
 /// README).
 pub fn db_query(
     pool: &unified_core::db::DbPool,

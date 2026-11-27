@@ -26,7 +26,7 @@
 --     tables below are created in the schema the migration runner
 --     targets today; when batch 17 lands the schema-per-tenant
 --     plumbing, the integrator re-points these tables at the
---     per-tenant schema — every table already carries `tenant_id`,
+--     per-tenant schema - every table already carries `tenant_id`,
 --     so no column changes are needed.
 --   - `pricing_currencies` is the one exception: ISO 4217 codes
 --     are standard constants and the currency rows are platform
@@ -58,9 +58,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- Per-tenant pricing settings: one row per tenant.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS pricing_settings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL,
@@ -82,11 +80,9 @@ CREATE TABLE IF NOT EXISTS pricing_settings (
 CREATE UNIQUE INDEX IF NOT EXISTS uq_pricing_settings_tenant
     ON pricing_settings (tenant_id);
 
--- ---------------------------------------------------------------------------
 -- Currency registry: platform reference data (ISO 4217 codes are the
 -- sanctioned standard constants). Exchange rates are integer ratios
 -- relative to the default currency, entered by an admin only.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS pricing_currencies (
     code VARCHAR PRIMARY KEY CHECK (code ~ '^[A-Z]{3}$'),
     exponent BIGINT NOT NULL DEFAULT 2 CHECK (exponent IN (0, 2)),
@@ -114,9 +110,7 @@ VALUES
     ('VND', 0, TRUE, NULL, NULL)
 ON CONFLICT (code) DO NOTHING;
 
--- ---------------------------------------------------------------------------
 -- Discount rules: kind, order, scope, and limits are data.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS pricing_rules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL,
@@ -155,10 +149,8 @@ CREATE INDEX IF NOT EXISTS idx_pricing_rules_tenant_order
 CREATE INDEX IF NOT EXISTS idx_pricing_rules_status
     ON pricing_rules (tenant_id, status);
 
--- ---------------------------------------------------------------------------
 -- Coupons: a discount rule with a code, a validity window, a global
 -- usage limit, and a per-customer usage limit.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS pricing_coupons (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL,
@@ -196,9 +188,7 @@ CREATE INDEX IF NOT EXISTS idx_pricing_coupons_tenant
 CREATE INDEX IF NOT EXISTS idx_pricing_coupons_active
     ON pricing_coupons (tenant_id, active);
 
--- ---------------------------------------------------------------------------
 -- Per-customer coupon redemption counts.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS pricing_coupon_redemptions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL,
@@ -214,9 +204,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_pricing_coupon_redemptions
 CREATE INDEX IF NOT EXISTS idx_pricing_coupon_redemptions_coupon
     ON pricing_coupon_redemptions (coupon_id);
 
--- ---------------------------------------------------------------------------
 -- Price recommendations: suggestions only, with the full calculation.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS pricing_recommendations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL,
@@ -245,9 +233,7 @@ CREATE INDEX IF NOT EXISTS idx_pricing_recommendations_product
 CREATE INDEX IF NOT EXISTS idx_pricing_recommendations_status
     ON pricing_recommendations (tenant_id, status);
 
--- ---------------------------------------------------------------------------
 -- Cost lines of a recommendation (durable form of the cost inputs).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS pricing_cost_lines (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL,
@@ -263,9 +249,7 @@ CREATE TABLE IF NOT EXISTS pricing_cost_lines (
 CREATE INDEX IF NOT EXISTS idx_pricing_cost_lines_recommendation
     ON pricing_cost_lines (recommendation_id);
 
--- ---------------------------------------------------------------------------
 -- Stored tiers of a tiered price definition.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS pricing_volume_tiers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL,
@@ -284,9 +268,7 @@ CREATE TABLE IF NOT EXISTS pricing_volume_tiers (
 CREATE INDEX IF NOT EXISTS idx_pricing_volume_tiers_tenant_product
     ON pricing_volume_tiers (tenant_id, product_id, min_quantity);
 
--- ---------------------------------------------------------------------------
 -- Bundle definitions.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS pricing_bundles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL,
@@ -310,9 +292,7 @@ CREATE INDEX IF NOT EXISTS idx_pricing_bundles_tenant
 CREATE INDEX IF NOT EXISTS idx_pricing_bundles_product
     ON pricing_bundles (tenant_id, product_id);
 
--- ---------------------------------------------------------------------------
 -- Components of a stored bundle.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS pricing_bundle_components (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL,
@@ -328,11 +308,9 @@ CREATE TABLE IF NOT EXISTS pricing_bundle_components (
 CREATE INDEX IF NOT EXISTS idx_pricing_bundle_components_bundle
     ON pricing_bundle_components (bundle_id);
 
--- ---------------------------------------------------------------------------
 -- Human-entered market reference prices. The source and the
 -- observation date are mandatory: a reference without provenance
 -- is rejected. References are never scraped.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS pricing_reference_prices (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL,
@@ -355,9 +333,7 @@ CREATE INDEX IF NOT EXISTS idx_pricing_reference_prices_product
 CREATE INDEX IF NOT EXISTS idx_pricing_reference_prices_observed
     ON pricing_reference_prices (tenant_id, product_id, observed_at);
 
--- ---------------------------------------------------------------------------
 -- Versioned prices with the approval threshold state.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS pricing_price_versions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL,
@@ -387,9 +363,7 @@ CREATE INDEX IF NOT EXISTS idx_pricing_price_versions_tenant
 CREATE INDEX IF NOT EXISTS idx_pricing_price_versions_status
     ON pricing_price_versions (tenant_id, product_id, status);
 
--- ---------------------------------------------------------------------------
 -- Approval decisions on price versions (append-only history).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS pricing_price_approvals (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL,
@@ -404,11 +378,9 @@ CREATE TABLE IF NOT EXISTS pricing_price_approvals (
 CREATE INDEX IF NOT EXISTS idx_pricing_price_approvals_version
     ON pricing_price_approvals (price_version_id);
 
--- ---------------------------------------------------------------------------
 -- Computed proration records (mid-cycle upgrade/downgrade, plan and
 -- seat changes). The daily rate is rounded half-up to the minor
 -- unit first, then multiplied by whole days.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS pricing_proration_records (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL,
@@ -446,10 +418,8 @@ CREATE INDEX IF NOT EXISTS idx_pricing_proration_tenant
 CREATE INDEX IF NOT EXISTS idx_pricing_proration_subscription
     ON pricing_proration_records (tenant_id, subscription_id);
 
--- ---------------------------------------------------------------------------
 -- Credit notes: the only way to correct an issued invoice. Issued
 -- notes are immutable; corrections never edit the invoice itself.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS pricing_credit_notes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL,
@@ -473,9 +443,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_pricing_credit_notes_number
 CREATE INDEX IF NOT EXISTS idx_pricing_credit_notes_invoice
     ON pricing_credit_notes (tenant_id, invoice_id);
 
--- ---------------------------------------------------------------------------
 -- Stored reconciliation runs (invoice validation before issuing).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS pricing_reconciliation_reports (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL,

@@ -12,9 +12,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Assignment handlers
-// ---------------------------------------------------------------------------
 
 /// Validate an assignment period against the effective start and
 /// end, whatever the caller supplied in this request. Callers
@@ -272,9 +270,7 @@ pub(crate) async fn delete_assignment(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Inspection template handlers
-// ---------------------------------------------------------------------------
 
 
 pub(crate) async fn list_templates(
@@ -500,9 +496,7 @@ pub(crate) async fn delete_template(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Inspection handlers
-// ---------------------------------------------------------------------------
 
 
 #[cfg(test)]

@@ -1,4 +1,4 @@
-// Elearning — Enrollment and progress handlers.
+// Elearning - Enrollment and progress handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -20,9 +20,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Enrollment and progress handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn enroll_course(
     ctx: web::Data<Arc<AppContext>>,

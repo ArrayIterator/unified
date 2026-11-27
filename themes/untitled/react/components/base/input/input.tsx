@@ -192,7 +192,7 @@ export const InputBase = ({
                         aria-hidden="true"
                         className="pointer-events-none rounded px-1 py-px text-xs font-medium text-quaternary ring-1 ring-secondary select-none ring-inset"
                     >
-                        {typeof shortcut === "string" ? shortcut : "⌘K"}
+                        {typeof shortcut === "string" ? shortcut : "Cmd+K"}
                     </span>
                 </div>
             )}

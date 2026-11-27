@@ -9,16 +9,14 @@ use super::{events::*, paper::*, thermal::*, jobs::*, state::*, auth::*, hooks::
 
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-// ---------------------------------------------------------------------------
 // Printer profiles
-// ---------------------------------------------------------------------------
 /// One thermal printer profile: how to reach the printer and what
 /// it can do. `connection_target` is an address, never a secret:
 /// `192.168.1.50:9100` for a network printer, `/dev/usb/lp0` for a
 /// USB printer, a device path for serial, a file path for a spool
 /// file, or a connector id for a cloud printer. When the printer
 /// needs credentials, `auth_token_ref` holds a reference to the
-/// credential in the vault or secrets store — never the credential
+/// credential in the vault or secrets store - never the credential
 /// itself.
 pub struct PrinterProfile {
     pub id: String,

@@ -1,4 +1,4 @@
-// OKR / Goals module — objectives and key results at company,
+// OKR / Goals module - objectives and key results at company,
 // team, and personal levels, with cycles / quarters, check-ins,
 // cycle-end scoring, computed status, alignment (objective to
 // parent objective, key result to project / task), and progress
@@ -7,30 +7,30 @@
 // Routes live under `/api/v1/okrs`:
 //
 //   Cycles:
-//     GET/POST /cycles — list cycles / create a cycle.
+//     GET/POST /cycles - list cycles / create a cycle.
 //     GET  /cycles/{id}.
-//     POST /cycles/{id}/activate — make it the active cycle
+//     POST /cycles/{id}/activate - make it the active cycle
 //          (one active cycle at a time per company).
-//     POST /cycles/{id}/close — close the cycle and score every
-//          objective (0.0–1.0).
+//     POST /cycles/{id}/close - close the cycle and score every
+//          objective (0.0-1.0).
 //   Objectives:
-//     GET/POST /objectives — list / create an objective.
+//     GET/POST /objectives - list / create an objective.
 //     GET/PATCH/DELETE /objectives/{id}.
-//     GET  /objectives/{id}/alignment — parent chain, children,
+//     GET  /objectives/{id}/alignment - parent chain, children,
 //          and linked projects / tasks.
 //   Key results:
-//     GET/POST /objectives/{id}/key-results — list / add a key result.
+//     GET/POST /objectives/{id}/key-results - list / add a key result.
 //     GET/PATCH/DELETE /key-results/{id}.
-//     POST /key-results/{id}/check-ins — periodic progress note +
+//     POST /key-results/{id}/check-ins - periodic progress note +
 //          confidence (no value change; see the roll-up note).
-//     GET  /key-results/{id}/check-ins — list check-ins.
-//     POST /key-results/{id}/override — manual current-value
+//     GET  /key-results/{id}/check-ins - list check-ins.
+//     POST /key-results/{id}/override - manual current-value
 //          override; requires a reason and writes an audit record.
-//     GET/POST /key-results/{id}/links — list / link a project or
+//     GET/POST /key-results/{id}/links - list / link a project or
 //          task.
-//     DELETE /key-results/{id}/links/{link_id} — unlink.
+//     DELETE /key-results/{id}/links/{link_id} - unlink.
 //
-// HONESTY — READ THIS FIRST. What is real in this module:
+// HONESTY - READ THIS FIRST. What is real in this module:
 // in-memory cycles, objectives, key results, check-ins, and links;
 // one active cycle per company enforced at write time; key-result
 // progress computed as (current - start) / (target - start);
@@ -41,8 +41,8 @@
 // stored as an override check-in, and emit the audit-shaped
 // `okrs.kr.override` event; status computed from progress versus
 // elapsed cycle time; cycle-end scoring (mean key-result progress
-// per objective, clamped to 0.0–1.0). What is NOT built here: no
-// automatic discovery of a project's total task count — a link of
+// per objective, clamped to 0.0-1.0). What is NOT built here: no
+// automatic discovery of a project's total task count - a link of
 // type `project` is stored for alignment and shown in the
 // alignment view, but the numeric roll-up counts linked *tasks*
 // only (a project link with no linked tasks contributes no
@@ -74,14 +74,14 @@
 //   - `okrs.kr.checkin`
 //   - `okrs.kr.override` (audit-shaped payload: `actor_id`,
 //     `resource`, `key_result_id`, `old_value`, `new_value`,
-//     `reason` — the audit module records it once the integrator
+//     `reason` - the audit module records it once the integrator
 //     adds the name to `AUDITED_EVENTS` in `audit.rs`).
 //   - `okrs.link.created`, `okrs.link.deleted`
 // Events this module listens to:
-//   - `task.completed` — refreshes roll-ups of key results linked
+//   - `task.completed` - refreshes roll-ups of key results linked
 //     to the completed task (payload: `task_id` / `id`, optional
 //     `project_id`, `company_id`).
-//   - `project.task.completed` — same, for project tasks (payload:
+//   - `project.task.completed` - same, for project tasks (payload:
 //     `task_id` / `id`, optional `project_id`).
 
 
@@ -112,9 +112,7 @@ use super::handlers_key_results::*;
 use super::hooks::*;
 use super::ai_capabilities::AI_CAPABILITIES;
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct OkrsModule {
     state: OkrState,

@@ -9,9 +9,7 @@ use diesel::data_types::PgNumeric;
 use diesel::prelude::*;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Loyalty (migration 000045_loyalty).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable)]
 #[diesel(table_name = loyalty_programs)]

@@ -1,4 +1,4 @@
-// Generic Approvals — Event names, permission strings, limits, and other constants.
+// Generic Approvals - Event names, permission strings, limits, and other constants.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -104,8 +104,8 @@ pub(crate) const USER_MANAGER_QUERY: &str = "user.manager.query";
 /// Request statuses. This is the state-machine vocabulary (see the
 /// lifecycle note in the header): the values are fixed so every
 /// module that reads `approval.decided` can rely on them, while
-/// everything else about a workflow — steps, approvers, timeouts,
-/// escalation rules — is data.
+/// everything else about a workflow - steps, approvers, timeouts,
+/// escalation rules - is data.
 pub(crate) const STATUS_REQUESTED: &str = "requested";
 
 pub(crate) const STATUS_IN_PROGRESS: &str = "in_progress";

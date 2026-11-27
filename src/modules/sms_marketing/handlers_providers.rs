@@ -243,7 +243,7 @@ pub(crate) async fn create_provider(
     }
 }
 
-/// Get one provider (masked view — the credential and the
+/// Get one provider (masked view - the credential and the
 /// webhook secret never appear).
 pub(crate) async fn get_provider(
     state: web::Data<SmsMarketingState>,
@@ -503,7 +503,7 @@ pub(crate) async fn rotate_provider_webhook_secret(
 /// Dry-run check of a provider's configuration (manager):
 /// validates the endpoint, the auth type, and whether a
 /// credential is stored. This makes NO network call and
-/// sends NO message — a live probe would spend credit, so
+/// sends NO message - a live probe would spend credit, so
 /// reachability is proven by the first real campaign send,
 /// not here.
 pub(crate) async fn test_provider(

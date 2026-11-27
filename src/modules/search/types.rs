@@ -1,4 +1,4 @@
-// Global Search — Public record, request, and view types.
+// Global Search - Public record, request, and view types.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};

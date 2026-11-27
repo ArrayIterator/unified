@@ -12,7 +12,7 @@
 // `knowledgebase:manage`; the AI route needs `ai:use` through the AI
 // module's gated runner. Articles record the owning tenant
 // (`Article.company_id`, resolved at creation from the verified
-// caller and the tenant context — never from the `X-Company-Id`
+// caller and the tenant context - never from the `X-Company-Id`
 // header); the hook searches below return only that tenant's
 // published articles.
 //

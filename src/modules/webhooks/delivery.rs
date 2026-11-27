@@ -1,4 +1,4 @@
-// Webhooks — Delivery worker.
+// Webhooks - Delivery worker.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -23,9 +23,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Delivery worker.
-// ---------------------------------------------------------------------------
 
 pub(crate) fn build_client(timeout_secs: u64) -> UnifiedResult<reqwest::Client> {
     build_client_resolved(timeout_secs, "", &[])
@@ -34,7 +32,7 @@ pub(crate) fn build_client(timeout_secs: u64) -> UnifiedResult<reqwest::Client> 
 /// Build the delivery client, pinning DNS for `host` to the
 /// pre-validated addresses. The override keeps the original host in
 /// the request URL (Host header and TLS SNI), while the socket only
-/// ever connects to an address that passed validation — the client
+/// ever connects to an address that passed validation - the client
 /// performs no second lookup, so a DNS change between validation
 /// and connect cannot steer the request at a private address
 /// (DNS-rebinding TOCTOU). IP-literal hosts need no override: no

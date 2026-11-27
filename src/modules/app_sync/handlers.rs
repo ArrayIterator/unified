@@ -16,9 +16,7 @@ use super::{constants::*, helpers::*, types::*, tokens::*, inputs::*, module::*}
 
 
 
-// ---------------------------------------------------------------------------
 // Handlers.
-// ---------------------------------------------------------------------------
 pub(crate) async fn register_device(
     ctx: web::Data<Arc<AppContext>>,
     req: HttpRequest,

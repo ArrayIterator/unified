@@ -3,10 +3,8 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
-// Logistics (migration 000062_logistics; batch 5 notes §c). The notes
+// Logistics (migration 000062_logistics; batch 5 notes sec. c). The notes
 // write `Double`; normalised to the file's `Float8` style (same type).
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     logistics_drivers (id) {

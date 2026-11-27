@@ -7,9 +7,7 @@ use lettre::Address;
 
 use super::constants::{MAX_DOMAIN_LEN, MAX_STORAGE_REF_LEN};
 
-// ---------------------------------------------------------------------------
 // Validation helpers
-// ---------------------------------------------------------------------------
 
 pub(crate) fn valid_hex_color(color: &str) -> bool {
     let digits = color.strip_prefix('#').unwrap_or("");

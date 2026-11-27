@@ -1,4 +1,4 @@
-//! Curriculum module — competency-based school curricula. — Hook handlers (academic module events).
+//! Curriculum module - competency-based school curricula. - Hook handlers (academic module events).
 //!
 //! Split from `src/modules/curriculum.rs`; behaviour unchanged.
 
@@ -33,7 +33,7 @@ use uuid::Uuid;
 /// `student_id`, stored here as `student_ref`; `level_id` is kept
 /// when the event carries one (the academic module has no level
 /// concept, so the canonical event never does). Only the reference
-/// is cached — students stay owned by the academic module.
+/// is cached - students stay owned by the academic module.
 pub(super) fn on_academic_student(state: CurriculumState, ctx: &mut HookContext) {
     let Some(student_ref) = ctx
         .get("student_id")
@@ -105,7 +105,7 @@ pub(super) fn on_academic_enrollment_approved(state: CurriculumState, ctx: &mut 
     );
     // Record the student only when the lookup cache does not
     // already hold them: `academic.student.created` carries the
-    // program id, and this event does not — overwriting would drop
+    // program id, and this event does not - overwriting would drop
     // it.
     if !state.known_students.contains_key(&student_ref) {
         state.known_students.insert(
@@ -125,7 +125,7 @@ pub(super) fn on_academic_enrollment_approved(state: CurriculumState, ctx: &mut 
 /// through the admin-managed mapping table. Returns the competency
 /// id when a mapping row exists AND the competency still exists in
 /// this module's store; otherwise `None` (a mapping that points at
-/// a deleted competency resolves to nothing — never to a guessed
+/// a deleted competency resolves to nothing - never to a guessed
 /// replacement).
 pub(super) fn competency_for_component(
     state: &CurriculumState,
@@ -144,18 +144,18 @@ pub(super) fn competency_for_component(
 /// Handle `academic.grade.recorded`.
 ///
 /// Canonical payload `{grade_id, enrollment_id, component_id,
-/// score}` — resolved in two steps, both inside this module:
-///   1. enrollment → student: `enrollment_id` is looked up in the
+/// score}` - resolved in two steps, both inside this module:
+///   1. enrollment -> student: `enrollment_id` is looked up in the
 ///      cache filled by `academic.enrollment.approved`. When the
 ///      enrollment was never seen (approved before this module
 ///      registered, or the approval event was missed), the student
 ///      is unknown and the grade is recorded unmapped with reason
-///      `unknown_enrollment` — the student is never guessed.
-///   2. component → competency: `component_id` is looked up in the
+///      `unknown_enrollment` - the student is never guessed.
+///   2. component -> competency: `component_id` is looked up in the
 ///      admin-managed grade-component mapping table. When no row
 ///      exists (or the row points at a deleted competency), the
 ///      grade is recorded unmapped with reason
-///      `unmapped_component` — a mapping is never fabricated.
+///      `unmapped_component` - a mapping is never fabricated.
 ///
 /// Legacy payload `{academic_grade_id, student_ref,
 /// basic_competency_id, score}` is still accepted: the student and

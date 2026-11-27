@@ -39,9 +39,7 @@ pub fn collection_from_segment(segment: &str) -> Option<&'static str> {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Panel kinds and capabilities.
-// ---------------------------------------------------------------------------
 
 /// Every hosting / billing panel this module can talk to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -222,9 +220,7 @@ pub struct PanelInfo {
     pub detail: String,
 }
 
-// ---------------------------------------------------------------------------
 // Shared record shapes.
-// ---------------------------------------------------------------------------
 
 /// One billing client.
 #[derive(Debug, Clone, Serialize)]
@@ -353,9 +349,7 @@ pub struct PanelSyncCounts {
     pub synced_at: DateTime<Utc>,
 }
 
-// ---------------------------------------------------------------------------
 // Credentials and connections.
-// ---------------------------------------------------------------------------
 
 /// Credentials for one connection. Every field is optional at the type
 /// level; `validate_connection` enforces the per-kind required set.
@@ -535,7 +529,7 @@ impl GenericPanelConfig {
 
 /// One stored panel connection. Kept in memory (same pattern as the
 /// provider connection store); durable persistence is a follow-up for
-/// the integrator — see the migration sketch in the coordinator report.
+/// the integrator - see the migration sketch in the coordinator report.
 #[derive(Debug, Clone)]
 pub struct PanelConnection {
     pub id: Uuid,
@@ -638,9 +632,7 @@ pub fn generic_capabilities(config: &GenericPanelConfig) -> PanelCapabilities {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Connection validation.
-// ---------------------------------------------------------------------------
 
 /// True when the address is loopback (IPv4-mapped IPv6 loopback
 /// included).
@@ -721,7 +713,7 @@ pub(crate) fn resolved_addresses_are_safe(url: &Url) -> bool {
 }
 
 /// Validate a user-supplied panel endpoint: http(s), a host, no
-/// embedded user info, and — unless `allow_private` is set — a host
+/// embedded user info, and - unless `allow_private` is set - a host
 /// that does not resolve to a private, loopback, link-local, or
 /// reserved address. The old comment claimed private hosts were
 /// fine because "the operator chose the endpoint"; that is no
@@ -774,8 +766,8 @@ pub(crate) fn validate_panel_endpoint(
 /// same host, http(s), no embedded credentials, and (unless the
 /// connection opted into a private endpoint) a host that does not
 /// resolve to a forbidden address. Used by the redirect policy in
-/// `build_client`, so a panel 302 to an internal host — or to any
-/// other host — stops the chain instead of carrying the panel
+/// `build_client`, so a panel 302 to an internal host - or to any
+/// other host - stops the chain instead of carrying the panel
 /// credentials there.
 pub(crate) fn redirect_target_allowed(
     url: &Url,

@@ -3,7 +3,7 @@
 // Posts, categories, tags, and pages with pagination, filtering, and
 // search, slug generation with uniqueness guarantees, a draft ->
 // published flow that emits the `content.published` hook, and
-// automatic excerpt generation from the body text. Task 356 adds
+// automatic excerpt generation from the body text. adds
 // admin-definable custom post types (one generic entry store, dynamic
 // field definitions validated on write) and the tags taxonomy shared
 // by posts and custom entries.

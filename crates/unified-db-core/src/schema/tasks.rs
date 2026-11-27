@@ -3,9 +3,7 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Tasks and system records (2026-11-22-000011_tasks_records).
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     tasks (id) {
@@ -67,9 +65,7 @@ diesel::table! {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Logs and billing (2026-11-22-000012_logs_billing).
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     app_logs (id) {

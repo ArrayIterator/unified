@@ -1,4 +1,4 @@
-//! Compliance Center module — GDPR / ISO support: data export — Shared state.
+//! Compliance Center module - GDPR / ISO support: data export - Shared state.
 //!
 //! Split from `src/modules/compliance.rs`; behaviour unchanged.
 

@@ -8,9 +8,7 @@ use serde_json::json;
 use unified_core::hooks::HookContext;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // User deletion (users module owns the event)
-// ---------------------------------------------------------------------------
 
 /// `user.deleted` carries `user_id` (falling back to `id`, the
 /// same shape the forums and rental modules read). Actor fields
@@ -81,9 +79,7 @@ pub(crate) fn on_user_deleted(state: PlmState, ctx: &mut HookContext) {
     }));
 }
 
-// ---------------------------------------------------------------------------
 // Product deletion (products module owns the event)
-// ---------------------------------------------------------------------------
 
 /// `product.deleted` carries the full deleted product record,
 /// so the product id is read from `id` (falling back to
@@ -140,9 +136,7 @@ pub(crate) fn on_product_deleted(state: PlmState, ctx: &mut HookContext) {
     }));
 }
 
-// ---------------------------------------------------------------------------
 // Manufacturing BOM version (manufacturing module owns the event)
-// ---------------------------------------------------------------------------
 
 /// `manufacturing.bom.version.created` carries `bom_id`,
 /// `version_id`, and `version` (the manufacturing version

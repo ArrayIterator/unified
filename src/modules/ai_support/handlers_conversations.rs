@@ -8,9 +8,7 @@ use serde_json::{json, Value};
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Conversation handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_conversations(
     state: web::Data<AiSupportState>,
@@ -120,7 +118,7 @@ pub(crate) async fn update_conversation(
         if let Some(status) = body.status {
             // The lifecycle table is enforced: an illegal move is a
             // 409. The only reopen is `closed` -> `open`, and it
-            // must be explicit — asking never reopens (see ask()).
+            // must be explicit - asking never reopens (see ask()).
             change_conversation_status(&mut conversation, status)?;
         }
         conversation.updated_at = Utc::now();

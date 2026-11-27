@@ -32,9 +32,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- Paid pricing on exams.
--- ---------------------------------------------------------------------------
 ALTER TABLE exams ADD COLUMN IF NOT EXISTS price_minor BIGINT NOT NULL DEFAULT 0 CHECK (price_minor >= 0);
 ALTER TABLE exams ADD COLUMN IF NOT EXISTS is_paid BOOLEAN NOT NULL DEFAULT FALSE;
 CREATE INDEX IF NOT EXISTS idx_exams_paid ON exams (is_paid) WHERE is_paid;
@@ -49,9 +47,7 @@ BEGIN
     END IF;
 END $$;
 
--- ---------------------------------------------------------------------------
 -- Paid-exam activations.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS exam_activations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     exam_id UUID NOT NULL,

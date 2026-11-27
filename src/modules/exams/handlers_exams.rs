@@ -11,9 +11,7 @@ use super::{constants::*, settings::*, types::*, module::*, helpers::*, inputs::
 
 
 
-// ---------------------------------------------------------------------------
 // Handlers: exams
-// ---------------------------------------------------------------------------
 pub(crate) fn exam_settings_from(input: &Option<ExamSettingsInput>, defaults: &ExamsSettings) -> UnifiedResult<ExamSettings> {
     let mut settings = ExamSettings::default();
     if let Some(input) = input {

@@ -64,11 +64,9 @@ use super::validation::validate_module_id;
 use super::validation::validate_weekend_days;
 use super::validation::validate_working_hours;
 
-// ---------------------------------------------------------------------------
 // Handlers.
-// ---------------------------------------------------------------------------
 
-/// GET /api/v1/calendar — month/week/day/agenda view: aggregated
+/// GET /api/v1/calendar - month/week/day/agenda view: aggregated
 /// items (with viewer-local times), non-working days, and conflict
 /// hints. Empty when no module answers; never an error. Returns
 /// every item in the range by default; pass `?page=` / `?per_page=`
@@ -183,7 +181,7 @@ pub(crate) async fn get_calendar_view(
     }
 }
 
-/// GET /api/v1/calendar/items — the same aggregation, paginated
+/// GET /api/v1/calendar/items - the same aggregation, paginated
 /// and filtered. `from`/`to` default to the current month.
 pub(crate) async fn list_calendar_items(
     ctx: web::Data<Arc<AppContext>>,
@@ -237,7 +235,7 @@ pub(crate) async fn list_calendar_items(
     }
 }
 
-/// POST /api/v1/calendar/create-intent — resolve the owning
+/// POST /api/v1/calendar/create-intent - resolve the owning
 /// module's create deep link for a date/time. The calendar NEVER
 /// creates a record itself.
 pub(crate) async fn create_intent(
@@ -379,7 +377,7 @@ pub(crate) async fn create_intent(
     }
 }
 
-/// GET /api/v1/calendar/settings — effective settings (company
+/// GET /api/v1/calendar/settings - effective settings (company
 /// defaults merged with the caller's overrides).
 pub(crate) async fn get_settings(
     ctx: web::Data<Arc<AppContext>>,
@@ -398,7 +396,7 @@ pub(crate) async fn get_settings(
     }
 }
 
-/// PUT /api/v1/calendar/settings — save settings. `scope` is
+/// PUT /api/v1/calendar/settings - save settings. `scope` is
 /// "user" (default) or "company"; both are tenant-scoped.
 pub(crate) async fn update_settings(
     ctx: web::Data<Arc<AppContext>>,
@@ -528,7 +526,7 @@ pub(crate) async fn update_settings(
     }
 }
 
-/// GET /api/v1/calendar/sources — the caller's per-module
+/// GET /api/v1/calendar/sources - the caller's per-module
 /// visibility toggles (absent means visible).
 pub(crate) async fn get_sources(
     ctx: web::Data<Arc<AppContext>>,
@@ -556,7 +554,7 @@ pub(crate) async fn get_sources(
     }
 }
 
-/// PUT /api/v1/calendar/sources — replace the caller's toggles
+/// PUT /api/v1/calendar/sources - replace the caller's toggles
 /// (full set; a module absent from the list is visible).
 pub(crate) async fn update_sources(
     ctx: web::Data<Arc<AppContext>>,
@@ -613,7 +611,7 @@ pub(crate) async fn update_sources(
     }
 }
 
-/// POST /api/v1/calendar/feeds — issue a revocable iCal
+/// POST /api/v1/calendar/feeds - issue a revocable iCal
 /// subscription token. The raw token is returned exactly once;
 /// only its SHA-256 hash is stored.
 pub(crate) async fn create_feed(
@@ -708,7 +706,7 @@ pub(crate) async fn create_feed(
     }
 }
 
-/// GET /api/v1/calendar/feeds — the caller's own feed tokens
+/// GET /api/v1/calendar/feeds - the caller's own feed tokens
 /// (metadata only; raw tokens are never returned again).
 pub(crate) async fn list_feeds(
     ctx: web::Data<Arc<AppContext>>,
@@ -738,7 +736,7 @@ pub(crate) async fn list_feeds(
     }
 }
 
-/// DELETE /api/v1/calendar/feeds/{id} — revoke a feed token.
+/// DELETE /api/v1/calendar/feeds/{id} - revoke a feed token.
 /// A feed from another tenant (or a missing one) answers 404.
 pub(crate) async fn revoke_feed(
     ctx: web::Data<Arc<AppContext>>,
@@ -780,7 +778,7 @@ pub(crate) async fn revoke_feed(
 }
 
 /// Verify a feed token. Every failure answers the same 404 so
-/// token existence never leaks — including a token whose feed
+/// token existence never leaks - including a token whose feed
 /// belongs to another tenant. The resolved tenant must match the
 /// feed's tenant.
 pub(crate) fn verify_feed_token(
@@ -817,7 +815,7 @@ pub(crate) fn verify_feed_token(
     Some(verified)
 }
 
-/// GET /api/v1/calendar/feed/{token} — public iCal subscription
+/// GET /api/v1/calendar/feed/{token} - public iCal subscription
 /// feed. No `X-User-Id` header: the signed token is the
 /// credential, and the request must still resolve to the feed's
 /// tenant (no tenant context, or a foreign tenant, answers 404).

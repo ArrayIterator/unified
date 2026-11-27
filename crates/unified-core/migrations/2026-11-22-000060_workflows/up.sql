@@ -25,13 +25,13 @@
 --     expression.
 --   - `workflows.conditions` is JSONB holding the `ConditionGroup`
 --     (`operator` and / or, `conditions` of leaves or nested
---     groups, at most 3 levels deep — validated in the module at
+--     groups, at most 3 levels deep - validated in the module at
 --     save time; the CHECK below only bounds the serialized size).
 --   - `workflows.actions` is JSONB holding the ordered
 --     `WorkflowAction` list (at most 50 actions; each action's
 --     `kind` is one of send_notification, send_email, create_task,
 --     create_ticket, update_record, call_webhook, assign_user,
---     add_tag, run_workflow — validated in the module).
+--     add_tag, run_workflow - validated in the module).
 --   - `workflows.webhook_token_hash` is the SHA-256 hex of the
 --     webhook token; the token itself is never stored. It is
 --     unique when present, so a token identifies exactly one
@@ -50,7 +50,7 @@
 --     holding the REDACTED summary of the trigger payload (top-
 --     level keys with value types, strings truncated to 128
 --     characters, secret-named keys dropped). The full payload is
---     never stored — that is why a retry needs a caller-supplied
+--     never stored - that is why a retry needs a caller-supplied
 --     payload. `condition_matched` records whether the conditions
 --     passed; `skipped_reason` explains a finished run that
 --     executed no actions. `retried_from_run_id` links a retry to
@@ -61,13 +61,11 @@
 --     async runtime). `attempts` is 1 for emit-based actions and
 --     up to 3 for outbound webhook steps (exponential backoff).
 --     `detail` is JSONB holding the step outcome detail (event
---     name, handler count, HTTP status — never secrets).
+--     name, handler count, HTTP status - never secrets).
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One workflow definition.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS workflows (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(200) NOT NULL,
@@ -106,9 +104,7 @@ CREATE INDEX IF NOT EXISTS idx_workflows_company_id ON workflows (company_id);
 CREATE INDEX IF NOT EXISTS idx_workflows_is_active ON workflows (is_active);
 CREATE INDEX IF NOT EXISTS idx_workflows_trigger_kind ON workflows ((trigger ->> 'kind'));
 
--- ---------------------------------------------------------------------------
 -- One execution of a workflow.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS workflow_runs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     workflow_id UUID NOT NULL REFERENCES workflows (id) ON DELETE CASCADE,
@@ -139,9 +135,7 @@ CREATE INDEX IF NOT EXISTS idx_workflow_runs_status ON workflow_runs (status);
 CREATE INDEX IF NOT EXISTS idx_workflow_runs_workflow_started ON workflow_runs (workflow_id, started_at);
 CREATE INDEX IF NOT EXISTS idx_workflow_runs_trigger_kind ON workflow_runs (trigger_kind);
 
--- ---------------------------------------------------------------------------
 -- One executed step of a run.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS workflow_run_steps (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     run_id UUID NOT NULL REFERENCES workflow_runs (id) ON DELETE CASCADE,

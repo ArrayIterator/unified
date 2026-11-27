@@ -10,14 +10,12 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
-// Network Tools + Licensing SaaS (batch 7 notes §3). The notes flag
+// Network Tools + Licensing SaaS (batch 7 notes sec. 3). The notes flag
 // the convention warning themselves: the network-tools structs
 // combine Queryable + Selectable + Insertable on one struct, so they
 // are split here into the repo's usual Queryable / New* form
 // (table_name form and derives normalised to the file convention;
 // the notes' `check_for_backend` is not used in this file).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = network_tool_saved_checks)]

@@ -2,9 +2,7 @@
 //
 // Split from `src/modules/backup.rs`; the module root re-exports the public API of this module.
 
-// ---------------------------------------------------------------------------
 // Events and limits.
-// ---------------------------------------------------------------------------
 
 pub const BACKUP_STARTED: &str = "backup.started";
 pub const BACKUP_COMPLETED: &str = "backup.completed";

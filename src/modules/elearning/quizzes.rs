@@ -1,4 +1,4 @@
-// Elearning — Quiz handlers.
+// Elearning - Quiz handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -20,9 +20,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Quiz handlers
-// ---------------------------------------------------------------------------
 
 /// True when the quiz time limit has run out: `now` is more
 /// than `time_limit_minutes` past `started_at`. Quizzes without

@@ -355,7 +355,7 @@ pub(crate) fn build_fee_invoice(
         Err(error) => {
             invoice.status = "draft".to_string();
             invoice.notes = Some(format!(
-                "Held as draft: invoice reconciliation did not pass ({}) — issue manually after review.",
+                "Held as draft: invoice reconciliation did not pass ({}) - issue manually after review.",
                 error.message
             ));
             invoice.updated_at = now();

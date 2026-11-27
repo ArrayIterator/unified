@@ -15,9 +15,7 @@ use super::{CreateCannedReplyRequest, InboxCannedReply, InboxState, MAX_BODY_LEN
     MAX_TITLE_LEN, PERM_INBOX_MANAGE, PERM_INBOX_VIEW, UpdateCannedReplyRequest, caller, created,
     err, load_canned_reply, ok, optional_text, paginate, require_permission, require_text};
 
-// ---------------------------------------------------------------------------
 // Canned reply handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_canned_replies(
     ctx: web::Data<Arc<AppContext>>,

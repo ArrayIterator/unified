@@ -67,9 +67,7 @@ fn listing_view(state: &RentalState, listing: &RentalListing) -> Value {
     value
 }
 
-// ---------------------------------------------------------------------------
 // Listing handlers (authenticated)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_listings(
     state: web::Data<RentalState>,
@@ -360,9 +358,7 @@ pub(crate) async fn delete_listing(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Rate handlers (authenticated, nested under a listing)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_rates(
     state: web::Data<RentalState>,
@@ -587,9 +583,7 @@ pub(crate) async fn delete_rate(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Availability (authenticated)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn check_listing_availability(
     state: web::Data<RentalState>,
@@ -627,9 +621,7 @@ pub(crate) async fn check_listing_availability(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Public handlers (no caller; tenant resolution still applies)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_public_listings(
     state: web::Data<RentalState>,

@@ -10,9 +10,7 @@ use sha2::Sha256;
 
 pub(crate) type HmacSha256 = Hmac<Sha256>;
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 pub(crate) fn default_product_status() -> String {
     "published".to_string()
@@ -787,9 +785,7 @@ pub struct PackageQuery {
     pub license_key: Option<String>,
 }
 
-// ---------------------------------------------------------------------------
 // Digital products (ebooks and other downloadable digital goods)
-// ---------------------------------------------------------------------------
 
 /// Capability declaration for the product registry, for the
 /// integrator: digital-products selling is a sellable store
@@ -897,7 +893,7 @@ pub struct DigitalProduct {
     #[serde(default)]
     pub formats: Vec<String>,
     /// Reference to the cover image in the shared documents store
-    /// — a documents document id, or a `/files/public/{key}` (or
+    /// - a documents document id, or a `/files/public/{key}` (or
     /// `/files/private/{key}`) URL from the media picker. Never
     /// file bytes, never a foreign URL.
     #[serde(default)]

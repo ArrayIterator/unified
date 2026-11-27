@@ -22,7 +22,7 @@ use std::time::{Duration, Instant};
 use uuid::Uuid;
 
 use super::*;
-// Downloader module — file downloads with progress, pause / resume /
+// Downloader module - file downloads with progress, pause / resume /
 // cancel / retry, HTTP Range resume with ETag / Last-Modified validation,
 // and checksum verification.
 //
@@ -46,7 +46,7 @@ use super::*;
 // credentials, and its host must not resolve to a private,
 // loopback, link-local, or reserved address; every redirect target
 // is re-validated with the same rules before it is followed.
-// Loopback is forbidden by default — only an explicit
+// Loopback is forbidden by default - only an explicit
 // `DOWNLOADER_ALLOW_LOOPBACK=1` opt-in (development only, never
 // in production) re-allows it.
 //
@@ -61,9 +61,7 @@ use super::*;
 // so a job can never write outside that directory.
 
 
-// ---------------------------------------------------------------------------
 // Module definition.
-// ---------------------------------------------------------------------------
 
 pub struct DownloaderModule;
 

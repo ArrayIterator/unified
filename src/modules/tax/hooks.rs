@@ -1,4 +1,4 @@
-// Tax module — hook handlers.
+// Tax module - hook handlers.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use super::*;
@@ -23,9 +23,7 @@ use std::time::Duration;
 use url::Url;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Hook handlers
-// ---------------------------------------------------------------------------
 
 /// Handle a billing source event (`invoice.created` / `order.created`
 /// and their `billing.*` alias spellings): compute the tax for the

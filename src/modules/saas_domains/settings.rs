@@ -11,11 +11,9 @@ use std::sync::OnceLock;
 
 use super::validation::validate_hostname;
 
-// ---------------------------------------------------------------------------
-// Settings — every tunable lives here, with a factory default that an
+// Settings - every tunable lives here, with a factory default that an
 // administrator can override through PUT /settings. Nothing below is
 // a behaviour constant: change the setting, change the behaviour.
-// ---------------------------------------------------------------------------
 
 /// Factory defaults. Each one is overridable through the settings
 /// endpoints (`saas_domains.*` config keys); the defaults only apply

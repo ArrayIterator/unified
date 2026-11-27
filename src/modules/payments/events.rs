@@ -4,9 +4,7 @@ use super::{card_validation::*, card_settings::*, limits::*, providers::*, types
 
 
 
-// ---------------------------------------------------------------------------
 // Events.
-// ---------------------------------------------------------------------------
 /// Emitted after a successful authorization (funds held, not captured).
 pub const PAYMENT_AUTHORIZED: &str = "payment.authorized";
 

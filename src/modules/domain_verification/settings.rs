@@ -1,4 +1,4 @@
-// Domain Verification — Admin settings.
+// Domain Verification - Admin settings.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -20,7 +20,6 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Admin settings.
 //
 // Every field is admin-editable through
@@ -29,7 +28,6 @@ use super::*;
 // an admin save replaces them wholesale. No handler reads a literal
 // record format, timeout, attempt count, or window from anywhere
 // else; verification logic always reads the current settings.
-// ---------------------------------------------------------------------------
 
 /// Admin-determined verification settings (one live version; every
 /// PUT bumps `version` and is announced with
@@ -73,7 +71,7 @@ pub struct VerificationSettings {
 /// CONFIGURABLE DEFAULTS (secure by default: TXT record, 32-char
 /// token). These seed the settings store only; an admin save
 /// replaces them entirely. Do NOT copy these literals into handler
-/// logic — handlers must read `current_settings()`.
+/// logic - handlers must read `current_settings()`.
 pub fn default_settings() -> VerificationSettings {
     VerificationSettings {
         record_type: "txt".to_string(),
@@ -194,7 +192,7 @@ pub(crate) fn settings_store() -> &'static RwLock<VerificationSettings> {
 }
 
 /// Snapshot of the current admin settings. All verification logic
-/// reads settings through here — never through a literal.
+/// reads settings through here - never through a literal.
 pub(crate) fn current_settings() -> VerificationSettings {
     settings_store()
         .read()

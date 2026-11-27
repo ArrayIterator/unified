@@ -1,4 +1,4 @@
-// Projects module — task validation, sorting, and automation helpers.
+// Projects module - task validation, sorting, and automation helpers.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use super::*;
@@ -8,9 +8,7 @@ use chrono::Utc;
 use serde_json::{Value, json};
 use std::collections::HashSet;
 
-// ---------------------------------------------------------------------------
 // Private helpers (s3_ prefixed; nothing here may collide with s1)
-// ---------------------------------------------------------------------------
 
 pub(crate) fn s3_valid_task_type(task_type: &str) -> bool {
     matches!(
@@ -264,7 +262,7 @@ pub(crate) fn s3_validate_task_refs(
     Ok(())
 }
 
-// --- Board columns and work-in-progress limits. ---
+// Board columns and work-in-progress limits.
 
 /// Find the column for a status key, scoped to the project and, when a
 /// board is known, to that board. Columns carry only a `board_id`, so
@@ -326,7 +324,7 @@ pub(crate) fn s3_check_wip_limit(
     Ok(())
 }
 
-// --- Task tree and cascade delete. ---
+// Task tree and cascade delete.
 
 /// Collect a task id plus every descendant subtask id (breadth first).
 pub(crate) fn s3_collect_task_tree(state: &ProjectsState, root_id: &str) -> Vec<String> {
@@ -376,7 +374,7 @@ pub(crate) fn s3_delete_task_cascade(state: &ProjectsState, task_id: &str) -> us
     count
 }
 
-// --- Automation rules. ---
+// Automation rules.
 
 /// Validate the actions array of a rule: non-empty, every action known,
 /// and every action carrying the parameters it needs. `set_status`

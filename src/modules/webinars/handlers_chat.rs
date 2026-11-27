@@ -11,9 +11,7 @@ use super::helpers::*;
 use super::state::*;
 use super::types::*;
 
-// ---------------------------------------------------------------------------
 // Chat handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn get_chat_channel(
     state: web::Data<WebinarsState>,

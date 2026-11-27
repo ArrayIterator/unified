@@ -1,6 +1,6 @@
 //! payments - module.
 
-// Payment Gateway module — a wrapper / framework, not a single provider.
+// Payment Gateway module - a wrapper / framework, not a single provider.
 //
 // One hookable provider registry with a common interface (`authorize`,
 // `capture`, `charge`, `refund`, `void`, `subscription_create`,
@@ -10,7 +10,7 @@
 // tests the connection against the real provider API, and maps provider
 // responses onto the shared result shapes. No adapter pretends to be a
 // full vendor SDK, and no adapter invents a provider capability it does
-// not have — the per-provider capability matrix is the single source of
+// not have - the per-provider capability matrix is the single source of
 // truth and is exposed by the catalog endpoint.
 //
 // Scope per provider (honest, documented on each adapter function):
@@ -33,7 +33,7 @@
 //   - Generic card processing: a configurable acquiring endpoint
 //     supplied on the connection. The processor must accept the
 //     documented JSON contract (see `CardAdapter`); raw card numbers
-//     are never accepted — only tokens from a PCI-compliant
+//     are never accepted - only tokens from a PCI-compliant
 //     tokenization step upstream.
 //   - Mastercard gateway (MPGS): PAY / AUTHORIZE / CAPTURE / REFUND /
 //     VOID operations against a merchant gateway host, 3-D Secure
@@ -56,7 +56,7 @@
 //     (`/v1/subscriptions`). Webhook verification is the documented
 //     SHA512 signature over order id + status code + gross amount +
 //     server key.
-//   - Custom: a config-driven generic adapter — base URL, auth type,
+//   - Custom: a config-driven generic adapter - base URL, auth type,
 //     endpoint paths, and response field mapping supplied on the
 //     connection, so a new gateway plugs in without a code change.
 //     Hosts are allow-listed by the operator-supplied https endpoint;
@@ -66,7 +66,7 @@
 // and are never returned by any API response: read views expose only
 // which credential fields are configured. Payment methods are
 // tokenized only: the stored record holds the provider token, the
-// card brand, last four digits and expiry — never a PAN or CVV. A
+// card brand, last four digits and expiry - never a PAN or CVV. A
 // token that looks like a card number (13-19 digits) is rejected.
 //
 // Money is always integer minor units (cents) plus an ISO 4217
@@ -87,7 +87,7 @@
 // `payment.split.part.paid`, `payment.split.completed`, and
 // `payment.split.cancelled`. Bank transfer is a first-class provider
 // kind here (`bank_transfer`): its adapter never moves money over an
-// API — a charge only opens a pending manual verification (handled
+// API - a charge only opens a pending manual verification (handled
 // by the bank-transfer module), an administrator approval is the
 // capture and emits `payment.captured`, and refund / void are manual
 // operations recorded with an audit note. This module also listens
@@ -99,7 +99,7 @@
 // renewal charge runs through the HTTP renew endpoint because hook
 // handlers are synchronous).
 //
-// Wiring to store / billing / licensing happens through hooks only —
+// Wiring to store / billing / licensing happens through hooks only -
 // this module never calls another module directly. The exact listener
 // snippets the integrator needs are in the coordinator report; the
 // short version: the store's `payment.initiated` is answered here, a
@@ -134,14 +134,14 @@
 // settings are owned per tenant by the cards module
 // (`PUT /api/v1/cards/settings`: test_mode live/sandbox,
 // max_expiry_years_ahead 1-50, gpn_enabled,
-// disabled_standard_brands) — the gateway keeps no `cards.*`
+// disabled_standard_brands) - the gateway keeps no `cards.*`
 // settings surface either. The gateway's old `cards.*` /
 // `reference_id.*` settings namespace was DROPPED (batch-18
 // integration decision), not mirrored: it used a divergent
 // allowlist (`enabled_brands`) and bound (max 30), and a global
 // (tenant-less) mirror cannot track the cards module's per-tenant
-// values — the validator reads its own per-tenant settings and
-// ignores anything the gateway sends — so any mirror would go
+// values - the validator reads its own per-tenant settings and
+// ignores anything the gateway sends - so any mirror would go
 // stale on the first cards-settings edit and present stale values
 // as effective. Writes to either namespace through the settings
 // module are refused with 422 by `on_config_validate_cards`,
@@ -153,7 +153,7 @@
 //
 // Persistence: records are kept in memory (same pattern as the
 // provider registry and the store). Durable persistence is a
-// follow-up for the integrator — see the migration sketch in the
+// follow-up for the integrator - see the migration sketch in the
 // coordinator report.
 
 use unified_core::context::AppContext;
@@ -168,9 +168,7 @@ use super::ai_capabilities::AI_CAPABILITIES;
 
 
 
-// ---------------------------------------------------------------------------
 // Module definition.
-// ---------------------------------------------------------------------------
 pub struct PaymentsModule {
     pub(crate) state: Arc<PaymentsState>,
 }

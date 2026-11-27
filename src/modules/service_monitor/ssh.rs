@@ -4,7 +4,6 @@ use unified_core::error::{UnifiedError, UnifiedResult};
 use serde::{Deserialize, Serialize};
 use std::sync::{LazyLock, RwLock};
 
-// ---------------------------------------------------------------------------
 // Remote checks over SSH.
 //
 // There is no SSH client library in the dependency set, and no
@@ -26,7 +25,6 @@ use std::sync::{LazyLock, RwLock};
 // process listing), and is dropped when the request ends. When the
 // `sshpass` helper is not installed, password auth is refused with
 // a clear error and keyfile auth is the way in.
-// ---------------------------------------------------------------------------
 
 /// One configured remote server. No secret material is stored here:
 /// keyfile auth stores the keyfile path only, and password auth

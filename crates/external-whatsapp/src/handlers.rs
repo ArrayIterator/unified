@@ -1,13 +1,11 @@
-//! WhatsApp external module (split from lib.rs; moved verbatim).
+//! WhatsApp external module.
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // HTTP handlers. Every response uses the standard envelope:
 // success -> {"data": ...} via `success_response`, error -> the standard
 // error shape via `error_response`. The single exception is the webhook
 // verification GET, which must echo Meta's `hub.challenge` as raw text.
-// ---------------------------------------------------------------------------
 
 #[derive(Deserialize)]
 pub(crate) struct SendRequest {
@@ -97,7 +95,7 @@ fn paginate<T: Clone>(items: Vec<T>, page: usize, per_page: usize) -> (Vec<T>, u
     (page_items, total)
 }
 
-/// `POST /api/v1/whatsapp/send` — queue an outbound text or template
+/// `POST /api/v1/whatsapp/send` - queue an outbound text or template
 /// message. Returns 202 with the queued record. When credentials are
 /// configured, delivery is attempted in the background; when they are
 /// not, the message stays `pending_config` and the response says so
@@ -275,7 +273,7 @@ pub(crate) async fn send_handler(
     success_response(record, 202)
 }
 
-/// `GET /api/v1/whatsapp/templates` — list a tenant's templates.
+/// `GET /api/v1/whatsapp/templates` - list a tenant's templates.
 pub(crate) async fn list_templates_handler(
     state: web::Data<Arc<WhatsAppState>>,
     query: web::Query<TemplatesQuery>,
@@ -320,7 +318,7 @@ pub(crate) async fn list_templates_handler(
     )
 }
 
-/// `POST /api/v1/whatsapp/templates` — create a template (admin data,
+/// `POST /api/v1/whatsapp/templates` - create a template (admin data,
 /// not code). Returns 201 with the created template.
 pub(crate) async fn create_template_handler(
     state: web::Data<Arc<WhatsAppState>>,
@@ -405,7 +403,7 @@ pub(crate) async fn create_template_handler(
     success_response(template, 201)
 }
 
-/// `GET /api/v1/whatsapp/webhook` — Meta webhook verification. Echoes
+/// `GET /api/v1/whatsapp/webhook` - Meta webhook verification. Echoes
 /// `hub.challenge` as raw text only when `hub.mode=subscribe` and the
 /// verify token matches (constant-time compare). This is the one
 /// handler that does not return the JSON envelope: Meta requires the
@@ -440,7 +438,7 @@ pub(crate) async fn webhook_verify_handler(
     }
 }
 
-/// `POST /api/v1/whatsapp/webhook` — Meta event webhook. The
+/// `POST /api/v1/whatsapp/webhook` - Meta event webhook. The
 /// X-Hub-Signature-256 HMAC-SHA256 signature is verified against the
 /// app secret BEFORE the body is parsed; a missing app secret, a
 /// missing signature, or a bad signature is rejected with 401.
@@ -620,7 +618,7 @@ pub(crate) async fn webhook_post_handler(
     )
 }
 
-/// `GET /api/v1/whatsapp/messages` — paginated message log for one
+/// `GET /api/v1/whatsapp/messages` - paginated message log for one
 /// tenant, optionally filtered by status and/or phone.
 pub(crate) async fn list_messages_handler(
     state: web::Data<Arc<WhatsAppState>>,
@@ -662,7 +660,7 @@ pub(crate) async fn list_messages_handler(
     )
 }
 
-/// `GET /api/v1/whatsapp/messages/{id}` — one message. A message from
+/// `GET /api/v1/whatsapp/messages/{id}` - one message. A message from
 /// another tenant looks exactly like a missing message (404).
 pub(crate) async fn get_message_handler(
     state: web::Data<Arc<WhatsAppState>>,
@@ -681,7 +679,7 @@ pub(crate) async fn get_message_handler(
     }
 }
 
-/// `GET /api/v1/whatsapp/conversations` — messages grouped by phone
+/// `GET /api/v1/whatsapp/conversations` - messages grouped by phone
 /// for one tenant: last message, message count, and unread count
 /// (inbound messages still in `received` status).
 pub(crate) async fn list_conversations_handler(
@@ -724,7 +722,7 @@ pub(crate) async fn list_conversations_handler(
     )
 }
 
-/// `GET /api/v1/whatsapp/status` — module status. Only booleans and
+/// `GET /api/v1/whatsapp/status` - module status. Only booleans and
 /// counts are reported; no secret is ever returned.
 pub(crate) async fn status_handler(state: web::Data<Arc<WhatsAppState>>) -> HttpResponse {
     let state = state.into_inner();

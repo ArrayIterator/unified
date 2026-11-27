@@ -11,9 +11,9 @@
 //   - `balancer`: a load balancer id. Upstreams are resolved at
 //     request time through the load-balancer module
 //     (`eligible_backends` + `select_backend`), so a balancer's
-//     backends — including cluster-node backends (`source_kind:
+//     backends - including cluster-node backends (`source_kind:
 //     "cluster"`, `source_id: "<cluster_id>/<node_id>"`) and provider
-//     backends — are reached without the gateway importing the
+//     backends - are reached without the gateway importing the
 //     cluster or provider modules. The gateway never caches a
 //     resolved backend address past the health-check TTL: selection
 //     runs against the live eligible set on every request.
@@ -47,9 +47,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::OnceLock;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Limits.
-// ---------------------------------------------------------------------------
 
 const MAX_NAME_LEN: usize = 200;
 const MAX_HOST_LEN: usize = 253;
@@ -62,9 +60,7 @@ const MAX_PRIORITY: i32 = 10_000;
 const MAX_WEIGHT: u32 = 100;
 const DEFAULT_PRIORITY: i32 = 100;
 
-// ---------------------------------------------------------------------------
 // Types.
-// ---------------------------------------------------------------------------
 
 /// One header matcher. `exact: true` requires the whole header value
 /// to equal `value` (case-insensitive); `exact: false` requires the
@@ -198,9 +194,7 @@ pub struct UpdateRuleRequest {
     pub health_check: Option<HealthCheckConfig>,
 }
 
-// ---------------------------------------------------------------------------
 // Matching (pure functions).
-// ---------------------------------------------------------------------------
 
 /// True when `host` (already stripped of any port, lowercased)
 /// matches the rule host pattern: exact match, or a `*.` wildcard
@@ -326,9 +320,7 @@ pub fn sorted_rules(rules: Vec<RoutingRule>) -> Vec<RoutingRule> {
     rules
 }
 
-// ---------------------------------------------------------------------------
 // Validation.
-// ---------------------------------------------------------------------------
 
 fn validate_name(name: &str) -> UnifiedResult<String> {
     let name = name.trim().to_string();
@@ -520,12 +512,10 @@ fn validate_rate_limit_override(value: &Option<String>) -> UnifiedResult<Option<
     }
 }
 
-// ---------------------------------------------------------------------------
 // Store (process-wide, in memory, like the load balancer's stores).
 // Rules are configuration, not traffic state: they reset on restart
 // until the integrator lands the persistence migration; the
 // management API is the source of truth at runtime.
-// ---------------------------------------------------------------------------
 
 static RULES: OnceLock<DashMap<Uuid, RoutingRule>> = OnceLock::new();
 

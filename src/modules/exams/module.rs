@@ -248,9 +248,7 @@ impl Default for ExamsModule {
 
 
 
-// ---------------------------------------------------------------------------
 // Module implementation
-// ---------------------------------------------------------------------------
 impl Module for ExamsModule {
     fn id(&self) -> &'static str {
         "exams"

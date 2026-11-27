@@ -3,9 +3,7 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
-// TimeTracker (migration 000032_timetracker; batch 2 notes §4).
-// ---------------------------------------------------------------------------
+// TimeTracker (migration 000032_timetracker; batch 2 notes sec. 4).
 
 diesel::table! {
     timetracker_timers (id) {

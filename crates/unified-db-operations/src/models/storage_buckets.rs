@@ -9,9 +9,7 @@ use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
-// Storage manager (migration 000033_storage_manager; batch 2 notes §5).
-// ---------------------------------------------------------------------------
+// Storage manager (migration 000033_storage_manager; batch 2 notes sec. 5).
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = storage_buckets)]

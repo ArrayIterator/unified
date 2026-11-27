@@ -1,4 +1,4 @@
-//! WhatsApp external module (split from lib.rs; moved verbatim).
+//! WhatsApp external module.
 
 use super::*;
 
@@ -38,9 +38,7 @@ pub(crate) const UNASSIGNED_TENANT: &str = "unassigned";
 /// Default template language when the caller does not specify one.
 pub(crate) const DEFAULT_TEMPLATE_LANGUAGE: &str = "en_US";
 
-// ---------------------------------------------------------------------------
 // Configuration
-// ---------------------------------------------------------------------------
 
 /// WhatsApp configuration, read from the environment. Secrets are held
 /// here only so the delivery worker and webhook handlers can use them;
@@ -96,9 +94,7 @@ fn env_non_empty(name: &str) -> Option<String> {
         .filter(|v| !v.is_empty())
 }
 
-// ---------------------------------------------------------------------------
 // Validation helpers (pure functions, unit-tested)
-// ---------------------------------------------------------------------------
 
 /// True when `phone` is a valid E.164 number: a leading `+`, then 8-15
 /// digits, the first of which is not `0`.

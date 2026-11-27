@@ -22,9 +22,7 @@ use std::time::Duration;
 use unified_core::error::{UnifiedError, UnifiedResult};
 use url::Url;
 
-// ---------------------------------------------------------------------------
 // Adapters.
-// ---------------------------------------------------------------------------
 /// Shared base: every HTTP adapter holds its connection and client.
 macro_rules! http_adapter {
     ($name:ident) => {
@@ -44,7 +42,7 @@ macro_rules! http_adapter {
     };
 }
 
-// --- Mailchimp Transactional (Mandrill) ------------------------------------
+// Mailchimp Transactional (Mandrill)
 
 http_adapter!(MailchimpAdapter);
 
@@ -110,7 +108,7 @@ impl EmailProvider for MailchimpAdapter {
             "track_clicks": true,
             "metadata": message.metadata,
         });
-        // Deliverability headers (task 354): Mandrill takes custom
+        // Deliverability headers: Mandrill takes custom
         // headers in the message "headers" object; the
         // deliverability values win on collision.
         let deliverability = deliverability_headers_object(message, &self.connection);
@@ -205,7 +203,7 @@ impl EmailProvider for MailchimpAdapter {
     }
 }
 
-// --- Brevo -----------------------------------------------------------------
+// Brevo
 
 http_adapter!(BrevoAdapter);
 
@@ -266,7 +264,7 @@ impl EmailProvider for BrevoAdapter {
         if let Some(reply_to) = &message.reply_to {
             payload["replyTo"] = json!({ "email": reply_to });
         }
-        // Deliverability headers (task 354): Brevo takes custom
+        // Deliverability headers: Brevo takes custom
         // headers in the payload "headers" object; the
         // deliverability values win on collision with the message
         // metadata.
@@ -303,7 +301,7 @@ impl EmailProvider for BrevoAdapter {
     }
 }
 
-// --- SendGrid ---------------------------------------------------------------
+// SendGrid
 
 http_adapter!(SendGridAdapter);
 
@@ -374,7 +372,7 @@ impl EmailProvider for SendGridAdapter {
         if let Some(reply_to) = &message.reply_to {
             payload["reply_to"] = json!({ "email": reply_to });
         }
-        // Deliverability headers (task 354): SendGrid takes global
+        // Deliverability headers: SendGrid takes global
         // custom headers in the top-level "headers" object.
         let deliverability = deliverability_headers_object(message, &self.connection);
         if deliverability.as_object().is_some_and(|object| !object.is_empty()) {
@@ -423,7 +421,7 @@ impl EmailProvider for SendGridAdapter {
     }
 }
 
-// --- Mailgun ----------------------------------------------------------------
+// Mailgun
 
 pub struct MailgunAdapter {
     pub(crate) connection: EmailConnection,
@@ -531,7 +529,7 @@ impl EmailProvider for MailgunAdapter {
         if let Some(reply_to) = &message.reply_to {
             form.push(("h:Reply-To".to_string(), reply_to.clone()));
         }
-        // Deliverability headers (task 354): Mailgun takes custom
+        // Deliverability headers: Mailgun takes custom
         // headers as h:Name form fields.
         for (name, value) in deliverability_headers(message, &self.connection, false) {
             form.push((format!("h:{name}"), value));
@@ -612,7 +610,7 @@ impl EmailProvider for MailgunAdapter {
     }
 }
 
-// --- Postmark ---------------------------------------------------------------
+// Postmark
 
 http_adapter!(PostmarkAdapter);
 
@@ -681,7 +679,7 @@ impl EmailProvider for PostmarkAdapter {
         if let Some(reply_to) = &message.reply_to {
             payload["ReplyTo"] = json!(reply_to);
         }
-        // Deliverability headers (task 354): Postmark takes custom
+        // Deliverability headers: Postmark takes custom
         // headers in the "Headers" array.
         let deliverability = deliverability_headers_array(message, &self.connection);
         if deliverability
@@ -726,7 +724,7 @@ impl EmailProvider for PostmarkAdapter {
     }
 }
 
-// --- Amazon SES (SigV4) -----------------------------------------------------
+// Amazon SES (SigV4)
 
 pub struct SesAdapter {
     pub(crate) connection: EmailConnection,
@@ -890,7 +888,7 @@ impl EmailProvider for SesAdapter {
             ));
         }
         // No deliverability headers: the SES SendEmail API has no
-        // custom-header support (task 354) — the SES SMTP interface
+        // custom-header support - the SES SMTP interface
         // is the alternative when headers are required.
         let source = match from_name.filter(|name| !name.trim().is_empty()) {
             Some(name) => format!("{name} <{from}>"),
@@ -932,7 +930,7 @@ impl EmailProvider for SesAdapter {
     }
 }
 
-// --- Resend ------------------------------------------------------------------
+// Resend
 
 http_adapter!(ResendAdapter);
 
@@ -1001,7 +999,7 @@ impl EmailProvider for ResendAdapter {
         if let Some(reply_to) = &message.reply_to {
             payload["reply_to"] = json!(reply_to);
         }
-        // Deliverability headers (task 354): Resend takes custom
+        // Deliverability headers: Resend takes custom
         // headers in the top-level "headers" object.
         let deliverability = deliverability_headers_object(message, &self.connection);
         if deliverability.as_object().is_some_and(|object| !object.is_empty()) {
@@ -1092,7 +1090,7 @@ impl EmailProvider for ResendAdapter {
     }
 }
 
-// --- SparkPost ---------------------------------------------------------------
+// SparkPost
 
 pub struct SparkPostAdapter {
     pub(crate) connection: EmailConnection,
@@ -1176,7 +1174,7 @@ impl EmailProvider for SparkPostAdapter {
         if let Some(reply_to) = &message.reply_to {
             content["reply_to"] = json!(reply_to);
         }
-        // Deliverability headers (task 354): SparkPost takes custom
+        // Deliverability headers: SparkPost takes custom
         // headers in the content "headers" object.
         let deliverability = deliverability_headers_object(message, &self.connection);
         if deliverability.as_object().is_some_and(|object| !object.is_empty()) {
@@ -1220,16 +1218,14 @@ impl EmailProvider for SparkPostAdapter {
     }
 }
 
-// --- SMTP (delegates to the Mail Manager) ------------------------------------
+// SMTP (delegates to the Mail Manager)
 //
 // Delivery goes through the `mail.send_requested` hook owned by the
 // Mail Manager, which owns the SMTP transport (lettre), the SMTP
 // settings, and the send log. This adapter never opens an SMTP
 // connection itself.
 
-// ---------------------------------------------------------------------------
 // Shared SMTP-family helpers (SMTP, OAuth, sendmail).
-// ---------------------------------------------------------------------------
 
 /// Build the lettre message for an SMTP-family send, mirroring
 /// `mail/service.rs::build_message`: multipart alternative when
@@ -1280,7 +1276,7 @@ pub(crate) fn build_lettre_message(
         })?;
         builder = builder.reply_to(reply_mailbox);
     }
-    // Deliverability headers (task 354, `deliverability.rs`):
+    // Deliverability headers (`deliverability.rs`):
     // List-Unsubscribe on bulk or opted-in transactional sends,
     // Precedence / X-Auto-Response-Suppress / Feedback-ID on bulk.
     // Computed once here so SMTP, OAuth, and sendmail all emit
@@ -1347,7 +1343,7 @@ pub(crate) fn smtp_transport(
     Ok(builder.build())
 }
 
-// --- Generic SMTP (direct, per-connection server settings) -----------
+// Generic SMTP (direct, per-connection server settings)
 
 pub struct SmtpAdapter {
     pub(crate) connection: EmailConnection,
@@ -1365,7 +1361,7 @@ impl SmtpAdapter {
     }
 
     /// Resolve the SMTP server: the connection's own settings win,
-    /// then the catalog preset for the kind (task 354), then the
+    /// then the catalog preset for the kind, then the
     /// adapter defaults (587, STARTTLS). A preset kind with no
     /// preset host and no connection host is an honest 400.
     fn resolve_server(
@@ -1429,7 +1425,7 @@ impl EmailProvider for SmtpAdapter {
 
     /// A real check now: the transport connects and issues NOOP.
     /// A refused or unreachable server is `reachable: false` with
-    /// the transport error as the detail — never a 500, because a
+    /// the transport error as the detail - never a 500, because a
     /// failed connection test is a result, not a handler error.
     async fn test_connection(&self) -> UnifiedResult<ConnectionTestResult> {
         let started = std::time::Instant::now();
@@ -1507,7 +1503,7 @@ impl EmailProvider for SmtpAdapter {
     }
 }
 
-// --- OAuth account providers (Gmail / Yahoo / Outlook) ---------------
+// OAuth account providers (Gmail / Yahoo / Outlook)
 
 /// The tokens one OAuth connection currently holds. The adapter
 /// refreshes the access token on first use when it is expired and
@@ -1554,7 +1550,7 @@ impl OAuthSmtpAdapter {
     /// A fresh access token: the stored one when it is still valid,
     /// otherwise a refresh from the stored refresh token (persisted
     /// back, rotated refresh token included). Errors honestly when
-    /// the account was never linked — that is a setup error, not a
+    /// the account was never linked - that is a setup error, not a
     /// send failure.
     async fn ensure_fresh_token(&self) -> UnifiedResult<String> {
         {
@@ -1774,7 +1770,7 @@ impl EmailProvider for OAuthSmtpAdapter {
     }
 }
 
-// --- Local sendmail ------------------------------------------------------
+// Local sendmail
 
 pub struct SendmailAdapter {
     pub(crate) connection: EmailConnection,
@@ -1850,8 +1846,8 @@ impl EmailProvider for SendmailAdapter {
         // of lettre's SendmailTransport: that transport needs the
         // `sendmail-transport` feature, which pulls the async-std
         // tree into the lock for one trivial spawn. The direct spawn
-        // is the same behaviour — `-t` reads recipients from the
-        // message headers, `-i` keeps dots in the body literal —
+        // is the same behaviour - `-t` reads recipients from the
+        // message headers, `-i` keeps dots in the body literal -
         // with no new dependency. Blocking process I/O runs off the
         // async worker in spawn_blocking, mirroring the mail module.
         let command = binary.to_string();
@@ -1902,7 +1898,7 @@ impl EmailProvider for SendmailAdapter {
     }
 }
 
-// --- Generic HTTP API providers (task 354) ---------------------------
+// Generic HTTP API providers 
 //
 // One adapter for the providers whose only send path is a simple
 // JSON HTTP API (Plunk, Courier, Loops, OneSignal): the endpoint,
@@ -1915,14 +1911,14 @@ impl EmailProvider for SendmailAdapter {
 //   {body} (HTML when present, else text)
 //   {reply_to} {template_id} {app_id} (the OneSignal App ID, from
 //   the connection's domain field)
-//   {variables} (whole value only — replaced by the variables object)
-//   {deliverability_headers} (whole value only — the deliverability
+//   {variables} (whole value only - replaced by the variables object)
+//   {deliverability_headers} (whole value only - the deliverability
 //   headers object; dropped when empty)
 // A placeholder whose value is missing drops the key; an unknown
 // placeholder is an honest 400. A template that mentions
 // {template_id} requires one on the message (Loops); a message
 // that carries a template_id for a provider whose template has no
-// {template_id} is refused — template sends are not silently
+// {template_id} is refused - template sends are not silently
 // downgraded to free-form sends.
 //
 // Deliverability headers: only Plunk's send API documents a
@@ -2199,7 +2195,7 @@ impl EmailProvider for GenericHttpAdapter {
 /// The Authorization header for a generic HTTP provider, from the
 /// definition's `http_api.auth`: `"bearer"` sends
 /// `Bearer <api_key>`; `"basic-key"` sends `Basic <api_key>` (the
-/// raw key, not a base64 user:password pair — OneSignal's REST API
+/// raw key, not a base64 user:password pair - OneSignal's REST API
 /// key works this way).
 fn generic_http_auth(
     http_api: &Value,
@@ -2438,7 +2434,7 @@ mod tests {
     #[tokio::test]
     async fn smtp_test_connection_reports_an_unreachable_host() {
         // No SMTP server listens on smtp.example.com:587 from the
-        // test runner, so the test must report unreachable — never
+        // test runner, so the test must report unreachable - never
         // a 500, never a hang (the transport timeout applies).
         let adapter = SmtpAdapter::new(&smtp_connection()).unwrap();
         let result = adapter.test_connection().await.unwrap();
@@ -2491,7 +2487,7 @@ mod tests {
     #[tokio::test]
     async fn sendmail_send_without_a_binary_fails_closed() {
         // When no binary exists, send must fail with a 502 naming
-        // the missing binary — never a panic, never a silent drop.
+        // the missing binary - never a panic, never a silent drop.
         if SendmailAdapter::sendmail_binary().is_some() {
             return;
         }
@@ -2502,7 +2498,7 @@ mod tests {
         assert!(err.to_string().contains("No sendmail binary"));
     }
 
-    // --- Task 354: preset resolution and generic HTTP rendering ---
+    // Preset resolution and generic HTTP rendering
 
     #[test]
     fn smtp_preset_resolution_prefers_connection_then_preset_then_default() {

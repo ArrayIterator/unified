@@ -10,9 +10,7 @@ use serde_json::json;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Caller identity + capability checks (AI-module shape).
-// ---------------------------------------------------------------------------
 
 /// `X-User-Id` identifies the actor, `X-Role` carries the role slug
 /// the capability check runs against.
@@ -64,11 +62,11 @@ pub(crate) fn authorize(
 }
 
 /// True when the caller is a PLATFORM admin for the given
-/// capability (C3 task 315, decision (a) — the platform arm of
+/// capability (C3, decision (a) - the platform arm of
 /// the owner-or-platform rule): the caller holds the capability
 /// AND the request carries no resolved tenant context
 /// (`ControlPlaneGuard`). Holding the capability alone is NOT
-/// platform identity — a tenant-host caller who holds it is
+/// platform identity - a tenant-host caller who holds it is
 /// still scoped by the owner arm in the access helpers below.
 /// This replaces `is_storage_admin`, which treated the
 /// capability alone as admin identity and so let any tenant
@@ -116,7 +114,7 @@ pub(crate) fn check_bucket_access(
 /// `is_platform_admin`) sees every bucket; a non-admin sees a
 /// bucket only when it is company-less (a shared bucket) or its
 /// `company_id` matches the caller's company. A missing bucket is
-/// never visible through this helper — list handlers resolve the
+/// never visible through this helper - list handlers resolve the
 /// parent bucket first and hide rows whose bucket is gone from
 /// non-admins.
 pub(crate) fn bucket_company_visible(
@@ -208,9 +206,7 @@ pub(crate) fn paginate<T: Serialize + Clone>(items: Vec<T>, params: &PaginationP
 }
 
 
-// ---------------------------------------------------------------------------
 // Tenant edge guard (C3 pilot 2).
-// ---------------------------------------------------------------------------
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request
@@ -226,12 +222,12 @@ pub(crate) fn require_tenant(
 /// The company scope the caller acts in: the tenant context's
 /// company first, the verified caller's server-resolved company
 /// otherwise. Fails closed (403) when both are present and disagree
-/// — a request must not carry one company in its tenant context and
+/// - a request must not carry one company in its tenant context and
 /// another in its verified identity. The `X-Company-Id` header is
 /// NEVER trusted here: only the verified caller (company resolved
 /// from the database at authentication time) and the
 /// middleware-resolved tenant context are sources (header trust
-/// removal is task 317's job elsewhere).
+/// removal is handled elsewhere).
 pub(crate) fn caller_company(
     tenant: &unified_core::tenancy::TenantContext,
     req: &HttpRequest,
@@ -259,7 +255,7 @@ pub(crate) fn caller_company(
 /// so the record is never stored unscoped under a scoped caller.
 /// When no caller scope is known, a body company is refused: an
 /// unresolved caller may not claim a company (the shared
-/// `CallerScope::Unresolved` rule); omitting the company is refused (C3 task 315):
+/// `CallerScope::Unresolved` rule); omitting the company is refused (C3):
 /// a write requires a resolved company scope.
 pub(crate) fn require_company_match(
     tenant: &unified_core::tenancy::TenantContext,
@@ -297,7 +293,7 @@ pub(crate) fn require_company_match_for(
 /// company-owned record is denied (the shared
 /// `CallerScope::Unresolved` rule). With a scope, only records
 /// carrying that company match, plus unscoped (global/legacy) records,
-/// which are shared content visible to any resolved scope (C3 task 320, rule A).
+/// which are shared content visible to any resolved scope (C3, rule A).
 pub(crate) fn in_company_scope(
     record_company_id: &Option<String>,
     caller_company: &Option<String>,
@@ -327,11 +323,11 @@ pub(crate) fn require_record_in_company_scope(
 }
 
 /// Fail closed (403) when a stored record is outside the caller's
-/// company scope FOR A WRITE (C3 task 315, strict by default).
+/// company scope FOR A WRITE (C3, strict by default).
 /// Unlike the read check above (rule A), a write requires an exact
 /// company match: a company caller may write only their own
-/// company's records — global (unscoped) records are platform-only
-/// — and an unresolved caller may write nothing. Mutation handlers
+/// company's records - global (unscoped) records are platform-only
+/// - and an unresolved caller may write nothing. Mutation handlers
 /// call this right after loading the record they mutate; handlers
 /// that only read the record, or load a parent to scope a child
 /// write, keep the read check.
@@ -385,7 +381,7 @@ pub(crate) fn require_quota_in_scope(
 }
 /// Bucket, object, binding, plan, quota and BYO records carry
 /// `company_id: Option<String>`; the shared-bucket design (a
-/// company-less bucket is shared) is unchanged — the gate only
+/// company-less bucket is shared) is unchanged - the gate only
 /// adds the fail-closed tenant context and the server-resolved
 /// caller company (see `check_bucket_access`).
 

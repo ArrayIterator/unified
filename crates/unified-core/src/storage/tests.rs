@@ -1,7 +1,6 @@
-// storage — tests.
+// storage - tests.
 // Unit tests for the storage module.
 //
-// Split from `crates/unified-core/src/storage.rs`; moved verbatim, no behaviour changes.
 
 use super::keys::hex_encode;
 use super::*;

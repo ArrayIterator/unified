@@ -22,9 +22,7 @@ use super::ai_capabilities::AI_CAPABILITIES;
 pub const WORKFLOWS_RUN_JOB_KIND: &str = JOB_KIND_WORKFLOWS_RUN;
 pub const WORKFLOWS_RUN_REQUESTED_EVENT: &str = WORKFLOWS_RUN_REQUESTED;
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct WorkflowsModule {
     pub(crate) state: WorkflowsState,

@@ -1,5 +1,5 @@
 // Diesel schema for the content tags + custom post types domain
-// of the unified-db-platform bounded context (task 356).
+// of the unified-db-platform bounded context.
 //
 // Byte-identical to migration
 // 2026-11-23-000133_content_tags_custom_types. The file is named

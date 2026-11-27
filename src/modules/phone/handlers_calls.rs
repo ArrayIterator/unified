@@ -175,9 +175,7 @@ fn mark_missed(state: &PhoneState, call: &mut super::types::PhoneCall, now: chro
     }
 }
 
-// ---------------------------------------------------------------------------
 // Call handlers (authenticated)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_calls(
     state: web::Data<PhoneState>,

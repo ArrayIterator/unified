@@ -1,4 +1,4 @@
-//! Map & Tagging — encryption for tile-provider browser API keys.
+//! Map & Tagging - encryption for tile-provider browser API keys.
 //!
 //! The provider API key a tenant stores (Google Maps browser
 //! key) is encrypted with the same `v1.` format the email
@@ -123,9 +123,9 @@ pub(crate) fn encrypt_secret(plaintext: &str) -> UnifiedResult<String> {
     ))
 }
 
-/// Decrypt a `v1.` value with the configured key. Any failure —
+/// Decrypt a `v1.` value with the configured key. Any failure -
 /// unknown format, undecodable blob, bad tag, non-UTF-8
-/// plaintext — is an internal error that names the failure,
+/// plaintext - is an internal error that names the failure,
 /// never the secret. A value that is not in `v1.` format is
 /// refused outright (it was never encrypted by this module).
 pub(crate) fn decrypt_secret(stored: &str) -> UnifiedResult<String> {

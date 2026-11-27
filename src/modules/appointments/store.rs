@@ -1,4 +1,4 @@
-// appointments — store.
+// appointments - store.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -27,9 +27,7 @@ use super::handlers_appointments::*;
 use super::handlers_reminders::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Shared state
-// ---------------------------------------------------------------------------
 
 /// In-memory stores for appointments. The hook bus is attached in
 /// `init` (the bus lives in `AppContext`); handlers tolerate a

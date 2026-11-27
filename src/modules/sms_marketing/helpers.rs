@@ -70,9 +70,7 @@ pub(crate) fn require_manage(ctx: &AppContext, role: &str) -> UnifiedResult<()> 
     require_permission(ctx, role, PERM_SMS_MANAGE)
 }
 
-// ---------------------------------------------------------------------------
 // Tenant edge guard (C3 pilot 5, group E).
-// ---------------------------------------------------------------------------
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request
@@ -191,9 +189,7 @@ pub(crate) fn paginate<T: Serialize + Clone>(
     PageResult::new(page_items, total, &pagination)
 }
 
-// ---------------------------------------------------------------------------
 // Validation
-// ---------------------------------------------------------------------------
 
 /// Validate a phone number: normalize to E.164, rejecting
 /// numbers without a country code.
@@ -441,9 +437,7 @@ pub(crate) fn validate_endpoint_url(raw: &Option<String>) -> UnifiedResult<Optio
     }
 }
 
-// ---------------------------------------------------------------------------
 // Tenant-scoped loaders (cross-tenant reads as 404, never 403)
-// ---------------------------------------------------------------------------
 
 fn tenant_match(row_tenant_id: &str, tenant_id: &str, id: Uuid, what: &str) -> UnifiedResult<()> {
     if row_tenant_id != tenant_id {
@@ -588,9 +582,7 @@ pub(crate) fn load_keyword(
     Ok(row)
 }
 
-// ---------------------------------------------------------------------------
 // Audit
-// ---------------------------------------------------------------------------
 
 /// Append one audit row for a change. `before` / `after` are
 /// the serialized rows (or `None` for creates / deletes).
@@ -618,9 +610,7 @@ pub(crate) fn record_audit(
     state.audit.insert(row.id, row);
 }
 
-// ---------------------------------------------------------------------------
 // Recipient resolution
-// ---------------------------------------------------------------------------
 
 /// One resolved recipient: a normalized number plus the
 /// template variables that apply to it (contact variables
@@ -637,7 +627,7 @@ pub(crate) struct ResolvedRecipient {
 /// is one recipient); a contact's own variables win over the
 /// campaign defaults, and an explicit number uses only the
 /// campaign defaults. Lists that no longer exist are
-/// skipped, never an error — deleting a list must not break
+/// skipped, never an error - deleting a list must not break
 /// a campaign that referenced it.
 pub(crate) fn resolve_recipients(
     state: &SmsMarketingState,

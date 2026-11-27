@@ -1,4 +1,4 @@
-// cards — HTTP handlers.
+// cards - HTTP handlers.
 
 use super::*;
 use unified_core::context::AppContext;
@@ -12,9 +12,7 @@ use serde_json::{Value, json};
 use std::sync::Arc;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Request/response shapes.
-// ---------------------------------------------------------------------------
 
 /// Read view of one standard brand, with its effective enabled
 /// state for the requesting tenant.
@@ -131,9 +129,7 @@ pub struct DailyCountView {
     pub count: u64,
 }
 
-// ---------------------------------------------------------------------------
 // Custom-rule input validation.
-// ---------------------------------------------------------------------------
 
 struct ValidatedRuleFields {
     pub(crate) name: String,
@@ -259,9 +255,7 @@ fn validate_rule_fields(
     })
 }
 
-// ---------------------------------------------------------------------------
 // HTTP handlers.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn validate(
     ctx: web::Data<Arc<AppContext>>,

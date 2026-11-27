@@ -1,4 +1,4 @@
-// timetracker — Shared types: constants, enums, records, and request/response shapes.
+// timetracker - Shared types: constants, enums, records, and request/response shapes.
 
 use super::*;
 use unified_core::json;
@@ -84,9 +84,7 @@ pub(crate) const SCREENSHOT_RATE_PER_MINUTE: u32 = 60;
 /// Per-key agent report rate limit (per minute).
 pub(crate) const AGENT_RATE_PER_MINUTE: u32 = 300;
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// Lifecycle of a timer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -223,7 +221,7 @@ impl TimeEntry {
     /// Entries without a project or task carry `null` for those
     /// ids. Included as `"project_time_entry"` in every
     /// `timetracker.time.logged` emit so the projects module can
-    /// store the entry without re-deriving it — and without a
+    /// store the entry without re-deriving it - and without a
     /// second billing path: billing prices
     /// `timetracker.time.logged` only.
     pub fn to_project_time_entry_json(&self) -> Value {
@@ -269,7 +267,7 @@ pub struct ActivitySample {
 }
 
 /// One agent-reported application / website usage interval. Only
-/// the hash of the window title is stored — never the raw title,
+/// the hash of the window title is stored - never the raw title,
 /// which may contain secrets (document names, message previews,
 /// credentials in a tab title). The agent must hash the title
 /// (SHA-256 hex) before sending it.
@@ -459,7 +457,6 @@ pub struct TeamMemberStatus {
     pub last_activity_at: Option<DateTime<Utc>>,
 }
 
-// ---------------------------------------------------------------------------
 // Staff management, teams, and per-buyer settings (batch addition).
 //
 // Staff are NOT duplicated here: a staff member is a user (from the
@@ -474,7 +471,7 @@ pub struct TeamMemberStatus {
 // and this module answers `timetracker.company.membership.check`
 // with `{"member": true}` from its own staff map and team
 // memberships (see `on_company_membership_check` in module.rs).
-// Both checks fail closed — an unanswered membership check means
+// Both checks fail closed - an unanswered membership check means
 // the caller is not treated as a member of that company, so a
 // company admin can only ever manage their own company's staff.
 //
@@ -482,10 +479,9 @@ pub struct TeamMemberStatus {
 // `TrackerSettings` above); each purchasing company overrides its
 // own copy in `BuyerSettings`. Behaviour (screenshots, activity,
 // idle timeout, retention) always reads the RESOLVED settings for
-// the acting user — staff override, then buyer setting, then global
-// default — never the global settings alone. See
+// the acting user - staff override, then buyer setting, then global
+// default - never the global settings alone. See
 // `resolve_settings_for_user`.
-// ---------------------------------------------------------------------------
 
 /// Capability names for staff and buyer-settings management.
 pub const PERM_MANAGE_STAFF: &str = "timetracker:manage_staff";

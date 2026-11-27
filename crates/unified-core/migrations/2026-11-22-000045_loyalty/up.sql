@@ -55,9 +55,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One points program.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS loyalty_programs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id VARCHAR(128),
@@ -84,9 +82,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_loyalty_programs_one_active_per_company
     ON loyalty_programs (COALESCE(company_id, ''))
     WHERE active;
 
--- ---------------------------------------------------------------------------
 -- One earn rule of a program.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS loyalty_earn_rules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     program_id UUID NOT NULL REFERENCES loyalty_programs (id) ON DELETE CASCADE,
@@ -109,9 +105,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_loyalty_earn_rules_one_active_per_kind
     ON loyalty_earn_rules (program_id, kind)
     WHERE active;
 
--- ---------------------------------------------------------------------------
 -- One tier of a program.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS loyalty_tiers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     program_id UUID NOT NULL REFERENCES loyalty_programs (id) ON DELETE CASCADE,
@@ -128,9 +122,7 @@ CREATE TABLE IF NOT EXISTS loyalty_tiers (
 
 CREATE INDEX IF NOT EXISTS idx_loyalty_tiers_program_id ON loyalty_tiers (program_id);
 
--- ---------------------------------------------------------------------------
 -- One ledger row: every points movement.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS loyalty_ledger (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     program_id UUID NOT NULL REFERENCES loyalty_programs (id) ON DELETE CASCADE,
@@ -156,9 +148,7 @@ CREATE INDEX IF NOT EXISTS idx_loyalty_ledger_program_customer
 CREATE INDEX IF NOT EXISTS idx_loyalty_ledger_kind ON loyalty_ledger (kind);
 CREATE INDEX IF NOT EXISTS idx_loyalty_ledger_created_at ON loyalty_ledger (created_at);
 
--- ---------------------------------------------------------------------------
 -- One redemption: points spent for a discount or a product.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS loyalty_redemptions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     program_id UUID NOT NULL REFERENCES loyalty_programs (id) ON DELETE CASCADE,

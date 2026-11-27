@@ -23,7 +23,7 @@ use std::time::{Duration, Instant};
 use uuid::Uuid;
 
 use super::*;
-// Holidays module — global public-holiday synchronization.
+// Holidays module - global public-holiday synchronization.
 //
 // What this module does: it keeps a shared, cached reference set of
 // public holidays per country and year, fetched from external
@@ -35,7 +35,7 @@ use super::*;
 // hooks below are the only integration surface.
 //
 // Provider response shapes (from provider documentation, NOT
-// live-verified — no outbound fetch has ever run from this
+// live-verified - no outbound fetch has ever run from this
 // workspace, so every shape below is documented, not proven):
 //   - Nager.Date: GET {base}/api/v3/publicholidays/{year}/{country}
 //     returns a JSON array of
@@ -69,10 +69,10 @@ use super::*;
 // Hook contracts (this module owns both; the calendar module is the
 // first consumer, HR / academic / appointments / projects consume
 // them the same way, through events only):
-//   - `holidays.is_holiday` — request
+//   - `holidays.is_holiday` - request
 //     {"date": "2026-12-25", "country": "ID",
 //     "tenant_id": "<uuidv7>"} (tenant_id is REQUIRED; a request
-//     without it gets no answer — fail closed, see Tenant scoping).
+//     without it gets no answer - fail closed, see Tenant scoping).
 //     Answer: exactly one result object
 //     {"date": "2026-12-25", "country": "ID",
 //     "is_holiday": true, "name": "Christmas Day",
@@ -93,7 +93,7 @@ use super::*;
 //     documented behaviour when the hook has no answer). The HTTP
 //     `GET /api/v1/holidays/is-holiday` endpoint always carries
 //     tenant context and works fully.
-//   - `holidays.non_working_days` — request
+//   - `holidays.non_working_days` - request
 //     {"start": "2026-12-24", "end": "2026-12-26",
 //     "country": "ID", "tenant_id": "<uuidv7>"} (tenant_id
 //     REQUIRED; no tenant id means no answer). Answer: exactly one
@@ -103,7 +103,7 @@ use super::*;
 //     "provider": "nager-date"}]}. The range is clamped to 366
 //     days. When the country is not selected by any enabled config
 //     of the tenant, the answer is {"dates": [], "in_scope": false}.
-//   - `holidays.sync_requested` / `holidays.sync_all_requested` —
+//   - `holidays.sync_requested` / `holidays.sync_all_requested` -
 //     the scheduler-facing listener names for the `holidays.sync`
 //     / `holidays.sync_all` job kinds (naming rule: `backup.run`
 //     -> `backup.run_requested`). Payloads:
@@ -121,13 +121,13 @@ use super::*;
 //   - `notification.requested` on sync failure (same payload shape
 //     the notifications module documents:
 //     {"tenant_id", "audience": "role:admin", "title", "body", "kind",
-//     "category", "module", "priority", "link"} — the audience is
+//     "category", "module", "priority", "link"} - the audience is
 //     what lets the notifications module resolve recipients; without
 //     it the alert is never delivered), so a failed provider chain is
 //     logged and alerted, never silently empty. Previously synced holidays
 //     stay cached when a sync fails.
 //
-// Tenant scoping (standing rule — read before changing anything
+// Tenant scoping (standing rule - read before changing anything
 // below). Sync configs, sync runs, and manual overrides are TENANT
 // business data: every record carries `tenant_id` (uuidv7) and
 // `company_id`, every lookup is filtered by the resolved tenant,
@@ -135,7 +135,7 @@ use super::*;
 // is resolved ONLY through `unified_core::tenancy::TenantContext`
 // (`from_http_request`, which fails closed: 401 when the request
 // did not resolve to a tenant, 403 when the resolved tenant id is
-// not a valid UUID) — never from a client-supplied header, and
+// not a valid UUID) - never from a client-supplied header, and
 // never from a hard-coded tenant id, schema name, or package id.
 // The schema name is derived ONLY by `tenancy::schema_name()` (via
 // `schema_name_for_str()` for hook payloads); no `tenant_...` name
@@ -145,7 +145,7 @@ use super::*;
 // `public` schema. Hook payloads carrying a tenant id that is not
 // a valid UUID get no answer (fail closed, same rule). The provider
 // registry and the country list are platform reference data
-// (admin-editable definitions, no tenant id) — shared global lookup
+// (admin-editable definitions, no tenant id) - shared global lookup
 // tables, readable from `public` by design (see `tenancy.rs`); they
 // are the ONLY endpoints that do not require a tenant context, and
 // their writes still require `holidays:manage`. The SYNCED
@@ -161,7 +161,7 @@ use super::*;
 // hook capabilities below, not by this module reading entitlement
 // tables.
 //
-// CONVERGENCE POINT (batch 17 — tenancy plumbing EXISTS on disk,
+// CONVERGENCE POINT (batch 17 - tenancy plumbing EXISTS on disk,
 // verified 2026-11-22 in crates/unified-core/src/tenancy.rs`: `schema_name()`,
 // `schema_name_for_str()`, `is_valid_schema_name()`,
 // `TenantContext::from_http_request`,
@@ -203,7 +203,7 @@ use super::*;
 // Credentials are write-only, following the ai.rs pattern exactly:
 // an API key is accepted once, encrypted with a key derived from
 // `app.secret_key`, and stored only as ciphertext (`v1.` HMAC
-// keystream with an HMAC tag — not an AEAD cipher, because no AEAD
+// keystream with an HMAC tag - not an AEAD cipher, because no AEAD
 // crate is in Cargo.toml yet; when one is added, replace
 // `encrypt_api_key` / `decrypt_api_key` and bump the version prefix
 // so old values can be re-encrypted on next write). The encryption
@@ -224,7 +224,7 @@ use super::*;
 // redirect target is re-validated with the same rules before it is
 // followed (max 10 redirects). A DNS change between validation and
 // fetch (TOCTOU rebinding) is still possible and is recorded as an
-// open limitation, not a closed gap — same as the downloader.
+// open limitation, not a closed gap - same as the downloader.
 //
 // Rate limiting: each provider definition carries `min_interval_secs`
 // (minimum seconds between requests) and `max_requests_per_minute`;
@@ -244,18 +244,16 @@ use super::*;
 // Modularity rule: nothing is hard-coded except standard constants
 // (ISO 3166-1 alpha-2 codes, HTTP status codes, the `v1.` key
 // format prefix). Providers, countries, schedules, fallback chains,
-// weekend handling (this module does not define weekends at all —
+// weekend handling (this module does not define weekends at all -
 // the calendar owns them), and all limits below are data or
 // configurable defaults, clearly marked CONFIG below.
 //
 // Routes live under `/api/v1/holidays` (27 routes; see
-// `route_info` — the count there must equal the `.route(` count
+// `route_info` - the count there must equal the `.route(` count
 // in `configure_routes`).
 
 
-// ---------------------------------------------------------------------------
 // Module declaration.
-// ---------------------------------------------------------------------------
 
 pub struct HolidaysModule {
     state: HolidaysState,

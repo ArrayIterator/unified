@@ -28,9 +28,7 @@ use super::types::Portal;
 use super::types::PortalMenu;
 use super::types::PortalView;
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 /// Caller identity: the server-verified caller (user id plus
 /// server-resolved role, both required for capability checks),
@@ -47,9 +45,7 @@ pub(crate) fn caller(req: &HttpRequest) -> UnifiedResult<Caller> {
     Ok(Caller { actor, role })
 }
 
-// ---------------------------------------------------------------------------
 // Tenant edge guard (C3 pilot 3).
-// ---------------------------------------------------------------------------
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request
@@ -59,7 +55,7 @@ pub(crate) fn caller(req: &HttpRequest) -> UnifiedResult<Caller> {
 /// module calls this FIRST, before `caller` or any capability check.
 /// The one exception is `get_public_portal`: the unauthenticated
 /// public portal render, which stays ungated by design (see the
-/// module header — the API Manager gate makes it public).
+/// module header - the API Manager gate makes it public).
 pub(crate) fn require_tenant(
     req: &HttpRequest,
 ) -> UnifiedResult<unified_core::tenancy::TenantContext> {
@@ -69,7 +65,7 @@ pub(crate) fn require_tenant(
 /// The company scope the caller acts in: the tenant context's
 /// company first, the verified caller's server-resolved company
 /// otherwise. Fails closed (403) when both are present and disagree
-/// — a request must not carry one company in its tenant context and
+/// - a request must not carry one company in its tenant context and
 /// another in its verified identity. The `X-Company-Id` header is
 /// NEVER trusted here.
 pub(crate) fn caller_company_scope(
@@ -108,7 +104,7 @@ pub(crate) fn require_caller_company(
 /// the caller's company scope and return the company id to store.
 /// Fails closed (403) when the body names a company other than the
 /// caller's, and when the caller has no resolved company (an
-/// unresolved caller may not claim a company — the shared
+/// unresolved caller may not claim a company - the shared
 /// `CallerScope::Unresolved` rule). Portals always carry a company,
 /// so there is no "omitted adopts scope" case here.
 pub(crate) fn require_company_match_str(
@@ -156,11 +152,11 @@ pub(crate) fn require_record_in_company_scope_str(
 }
 
 /// Fail closed (403) when a stored record is outside the caller's
-/// company scope FOR A WRITE (C3 task 315, strict by default).
+/// company scope FOR A WRITE (C3, strict by default).
 /// Unlike the read check above (rule A), a write requires an exact
 /// company match: a company caller may write only their own
-/// company's records — global (unscoped) records are platform-only
-/// — and an unresolved caller may write nothing. Mutation handlers
+/// company's records - global (unscoped) records are platform-only
+/// - and an unresolved caller may write nothing. Mutation handlers
 /// call this right after loading the record they mutate; handlers
 /// that only read the record, or load a parent to scope a child
 /// write, keep the read check.
@@ -434,9 +430,9 @@ pub(crate) fn domain_in_use(state: &PortalsState, domain: &str, except: Option<U
 }
 
 /// Apply a custom-domain change to a portal and report whether the
-/// domain actually changed. `domain_status` is only reset — to
+/// domain actually changed. `domain_status` is only reset - to
 /// `requested` for a new domain, `none` when the domain is removed
-/// — when the value changed; re-saving the same domain leaves a
+/// - when the value changed; re-saving the same domain leaves a
 /// `verified` (or `rejected`) status untouched and must not trigger
 /// a fresh verification request.
 pub(crate) fn apply_custom_domain(portal: &mut Portal, new_domain: Option<String>) -> bool {

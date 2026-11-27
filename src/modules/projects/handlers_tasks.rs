@@ -1,4 +1,4 @@
-// Projects module — task handlers.
+// Projects module - task handlers.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use super::*;
@@ -9,9 +9,7 @@ use actix_web::{HttpRequest, HttpResponse, web};
 use serde_json::{Value, json};
 use std::sync::Arc;
 
-// ---------------------------------------------------------------------------
 // Task handlers
-// ---------------------------------------------------------------------------
 
 /// Shared completion side effects for a task that just entered a done
 /// status: run the `task_completed` automation rules, then emit

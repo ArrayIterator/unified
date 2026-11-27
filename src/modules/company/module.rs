@@ -1,4 +1,4 @@
-// Company module — module definition and registration.
+// Company module - module definition and registration.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use unified_core::context::AppContext;
@@ -19,9 +19,7 @@ use std::sync::{Arc, OnceLock};
 use uuid::Uuid;
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Module definition.
-// ---------------------------------------------------------------------------
 
 pub struct CompanyModule;
 

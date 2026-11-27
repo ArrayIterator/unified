@@ -18,9 +18,7 @@ use uuid::Uuid;
 use super::*;
 use super::helpers::{minor_to_major};
 
-// ---------------------------------------------------------------------------
 // Handlers: HR reports
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn report_headcount(
     ctx: web::Data<Arc<AppContext>>,

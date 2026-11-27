@@ -16,8 +16,8 @@ use super::{DEFAULT_ADMIN_PATH, DEFAULT_USER_PATH, DEFAULT_VIEW_AS_TTL_MINUTES,
 
 /// Shared state for the dashboards module. The hook bus, configuration
 /// lock, and database pool lock are filled in by `init` (they live on
-/// `AppContext`, which handlers already receive, but the middleware —
-/// built from `register_middleware` — only gets this state). The route
+/// `AppContext`, which handlers already receive, but the middleware -
+/// built from `register_middleware` - only gets this state). The route
 /// registry is the single shared instance from `AppContext`
 /// (`ctx.routes`), attached by `init` together with the theme
 /// engine's copy of the same handle (see

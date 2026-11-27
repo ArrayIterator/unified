@@ -45,8 +45,8 @@
 //     asset URLs are redacted (query string and fragment removed).
 //   - Webhooks are verified before any payload is acted on: GitHub
 //     uses HMAC-SHA256 (`X-Hub-Signature-256`), GitLab uses its shared
-//     token header (`X-Gitlab-Token`), and Bitbucket — which provides
-//     no signature scheme — requires the configured webhook secret in
+//     token header (`X-Gitlab-Token`), and Bitbucket - which provides
+//     no signature scheme - requires the configured webhook secret in
 //     the `X-Webhook-Secret` header. Unsigned or unverifiable payloads
 //     are rejected with the standard error envelope.
 //   - Imported versions are always drafts. Nothing in this module
@@ -88,9 +88,7 @@ use super::handlers_drafts::*;
 use super::webhooks::*;
 use super::ai_capabilities::AI_CAPABILITIES;
 
-// ---------------------------------------------------------------------------
 // Module definition.
-// ---------------------------------------------------------------------------
 
 pub struct VcsModule {
     state: Arc<VcsState>,

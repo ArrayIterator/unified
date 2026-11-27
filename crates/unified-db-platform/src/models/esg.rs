@@ -1,13 +1,13 @@
 // Diesel models for the ESG domain of the unified-db-platform bounded context.
 //
 // Tables are defined by migration 2026-11-22-000119_esg. They had
-// no Diesel bindings before C11 (task 271): the ESG module kept
+// no Diesel bindings before C11: the ESG module kept
 // its live data in memory and the tables were persistence targets
 // only. The structs below mirror that migration exactly; the
 // runtime types live in `src/modules/esg/types.rs` and the
 // hydrate path in `src/modules/esg/state.rs` converts between
-// the two (the DB stores the fixed vocabularies — category,
-// data type, direction, period status — as plain TEXT).
+// the two (the DB stores the fixed vocabularies - category,
+// data type, direction, period status - as plain TEXT).
 
 use crate::schema::*;
 use chrono::{DateTime, NaiveDate, Utc};
@@ -16,9 +16,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // ESG (migration 000119_esg).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = esg_frameworks)]

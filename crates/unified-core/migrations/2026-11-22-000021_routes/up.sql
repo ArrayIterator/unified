@@ -27,9 +27,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One named route with its default path and override layers.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS named_routes (
     name VARCHAR PRIMARY KEY,
     default_path VARCHAR NOT NULL,
@@ -43,9 +41,7 @@ CREATE TABLE IF NOT EXISTS named_routes (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- ---------------------------------------------------------------------------
 -- One active old-path redirect (latest-only per route).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS route_redirects (
     route VARCHAR PRIMARY KEY REFERENCES named_routes (name) ON DELETE CASCADE ON UPDATE NO ACTION,
     old_path VARCHAR NOT NULL,

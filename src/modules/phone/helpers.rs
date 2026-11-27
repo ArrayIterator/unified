@@ -179,9 +179,7 @@ pub(crate) fn paginate<T: Serialize + Clone>(
     PageResult::new(page_items, total, &pagination)
 }
 
-// ---------------------------------------------------------------------------
 // Tenant-scoped loaders
-// ---------------------------------------------------------------------------
 //
 // Every loader checks the row's `tenant_id` against the caller's
 // tenant. A row from another tenant reads as 404, never 403, so
@@ -235,7 +233,7 @@ pub(crate) fn load_visible_call(
 }
 
 /// A call is actionable by its caller, by a participant, or by
-/// a manager — used by the accept / reject / end / hold /
+/// a manager - used by the accept / reject / end / hold /
 /// resume actions. The caller of a queued call (the waiter)
 /// acts through the participant row created at answer time.
 pub(crate) fn load_actionable_call(
@@ -403,9 +401,7 @@ pub(crate) fn load_participant(
         })
 }
 
-// ---------------------------------------------------------------------------
 // Views and events
-// ---------------------------------------------------------------------------
 
 /// Call view with its participants, signalling inbox size, and
 /// recordings attached, so a single read shows the whole call.

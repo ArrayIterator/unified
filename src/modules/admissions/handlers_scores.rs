@@ -1,4 +1,4 @@
-// admissions module — Score handlers.
+// admissions module - Score handlers.
 //
 // Split from the former single-file module `src/modules/admissions.rs`.
 // The module root (`admissions.rs`) re-exports the public items, so the
@@ -26,9 +26,7 @@ use super::helpers::{
 use super::state::AdmissionsState;
 use super::types::{ApplicationScore, CreateScore, ScoreTotal, UpdateScore};
 
-// ---------------------------------------------------------------------------
 // Handlers: scores
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_scores(
     ctx: web::Data<Arc<AppContext>>,

@@ -15,9 +15,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 use super::{constants::*, helpers::*, types::*, state::*, handlers_pools::*, handlers_plans::*, events::*, module::*};
 
-// ---------------------------------------------------------------------------
 // Forecast.
-// ---------------------------------------------------------------------------
 
 /// Least-squares linear trend over (days, value) points. Returns
 /// (slope per day, intercept, R-squared), or `None` when fewer than two
@@ -71,7 +69,7 @@ pub(crate) fn confidence_for(samples: usize, r_squared: f64) -> &'static str {
 /// `exhaustion_date` is the date the trend reaches capacity: a future
 /// date while usage is still below capacity, and the last sample date
 /// when usage has already reached or passed capacity while still
-/// rising (`current >= capacity` with a positive slope) — exhaustion
+/// rising (`current >= capacity` with a positive slope) - exhaustion
 /// has already happened by then, so there is no future date to
 /// report. It stays `None` when the trend is flat or falling, or when
 /// the projected crossing is unreasonably far out (> 10 years).
@@ -215,9 +213,7 @@ pub(crate) async fn get_forecast(
     json::respond(result, debug)
 }
 
-// ---------------------------------------------------------------------------
 // Overcommit report.
-// ---------------------------------------------------------------------------
 
 pub(crate) fn overcommit_entry(state: &PlannerState, pool: &CapacityPool) -> OvercommitReportEntry {
     let allocated = state.allocated(&pool.id, now());

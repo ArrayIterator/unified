@@ -33,9 +33,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One support department (CORE).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS departments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR NOT NULL,
@@ -66,9 +64,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_departments_single_default
 CREATE INDEX IF NOT EXISTS idx_departments_status
     ON departments (status);
 
--- ---------------------------------------------------------------------------
 -- One ticket routing rule: which department receives a ticket.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS department_routing_rules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     department_id UUID NOT NULL REFERENCES departments (id)

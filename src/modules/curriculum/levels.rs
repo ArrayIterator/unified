@@ -1,4 +1,4 @@
-//! Curriculum module — competency-based school curricula. — School level handlers.
+//! Curriculum module - competency-based school curricula. - School level handlers.
 //!
 //! Split from `src/modules/curriculum.rs`; behaviour unchanged.
 

@@ -9,9 +9,7 @@ use super::{rules::*, types::*, helpers::*, handlers_suggestions::*, handlers_ru
 
 
 
-// ---------------------------------------------------------------------------
 // State
-// ---------------------------------------------------------------------------
 pub struct AdvisorState {
     pub(crate) hooks: RwLock<Arc<HookBus>>,
     pub(crate) suggestions: DashMap<String, Suggestion>,

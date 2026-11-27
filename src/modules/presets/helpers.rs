@@ -1,4 +1,4 @@
-//! Presets + Setup Wizard module. — Helpers.
+//! Presets + Setup Wizard module. - Helpers.
 //!
 //! Split from `src/modules/presets.rs`; behaviour unchanged.
 

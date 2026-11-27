@@ -1,4 +1,4 @@
-// Community / Forum module — discussion categories, topics, posts with
+// Community / Forum module - discussion categories, topics, posts with
 // one-level nested replies, votes, flags and moderation, a member
 // directory, announcements, and badge counts fed by the gamification
 // module.
@@ -6,44 +6,44 @@
 // Routes live under `/api/v1/community`:
 //
 //   Categories:
-//     GET/POST /categories — list categories / create a category.
+//     GET/POST /categories - list categories / create a category.
 //     GET/PATCH/DELETE /categories/{id}.
 //   Topics:
-//     GET/POST /topics — list topics / create a topic.
+//     GET/POST /topics - list topics / create a topic.
 //     GET/PATCH/DELETE /topics/{id}.
 //     POST /topics/{id}/pin, /topics/{id}/lock.
 //   Posts and replies:
-//     GET/POST /topics/{id}/posts — list posts of a topic / reply
+//     GET/POST /topics/{id}/posts - list posts of a topic / reply
 //       to the topic (a reply names `parent_post_id` to answer one
 //       post; replies are one level deep only).
 //     GET/PATCH/DELETE /posts/{id}.
-//     POST /posts/{id}/vote — up (+1) or down (-1); one vote per
+//     POST /posts/{id}/vote - up (+1) or down (-1); one vote per
 //       user per post, changing a vote updates it.
-//     GET  /posts/{id}/votes — vote totals plus the caller's vote.
-//     POST /posts/{id}/flag — flag a post with a reason.
+//     GET  /posts/{id}/votes - vote totals plus the caller's vote.
+//     POST /posts/{id}/flag - flag a post with a reason.
 //     POST /posts/{id}/hide, /posts/{id}/unhide (moderators).
 //   Flags and moderation audit:
-//     GET  /flags — open flags first (moderators).
-//     POST /flags/{id}/review — dismiss a flag or hide the post.
-//     GET  /moderation-actions — audited moderator actions.
+//     GET  /flags - open flags first (moderators).
+//     POST /flags/{id}/review - dismiss a flag or hide the post.
+//     GET  /moderation-actions - audited moderator actions.
 //   Members:
-//     GET  /members — member directory (display name, join date,
+//     GET  /members - member directory (display name, join date,
 //       badge counts; never emails or private data).
-//     POST /members — join the community (one row per user).
-//     GET  /members/{user_id} — one member.
+//     POST /members - join the community (one row per user).
+//     GET  /members/{user_id} - one member.
 //   Announcements:
-//     GET/POST /announcements — list / create (draft until
+//     GET/POST /announcements - list / create (draft until
 //       published).
 //     GET/PATCH/DELETE /announcements/{id}.
-//     POST /announcements/{id}/publish — publish + notify members.
+//     POST /announcements/{id}/publish - publish + notify members.
 //   Settings:
-//     GET  /settings — rate limits and spam threshold.
+//     GET  /settings - rate limits and spam threshold.
 //     PATCH /settings (moderators).
 //   Public (no auth; see the public-access note below):
-//     GET  /public/topics — topics in public categories.
-//     GET  /public/topics/{id} — one public topic with its posts.
+//     GET  /public/topics - topics in public categories.
+//     GET  /public/topics/{id} - one public topic with its posts.
 //
-// HONESTY — READ THIS FIRST. What is real in this module:
+// HONESTY - READ THIS FIRST. What is real in this module:
 // in-memory category, topic, post, vote, flag, announcement,
 // member, moderation-action, and post-edit-history management;
 // one vote per user per post enforced by upsert; edit history kept
@@ -56,11 +56,11 @@
 // manage capability); and announcement publishing that notifies
 // every member through `notification.requested`. What is NOT built
 // here: badge definitions and badge awarding (the gamification
-// module owns badges — this module only listens to
+// module owns badges - this module only listens to
 // `gamification.badge.awarded` to keep member badge counts, and
 // emits community events so gamification can award points for
 // community help); actual email / push delivery (the notifications
-// module owns delivery — this module only emits
+// module owns delivery - this module only emits
 // `notification.requested`); full-text search (list endpoints
 // filter by exact fields and substring-match title/body only);
 // and durable storage (the DashMap stores are authoritative;
@@ -72,9 +72,9 @@
 // an endpoint is public only when a rule exists with
 // `public_access: true`, and denied outright when a rule exists
 // with `allowed: false`). There is no reusable per-request
-// "is this endpoint public?" helper to call from a handler — the
+// "is this endpoint public?" helper to call from a handler - the
 // check lives in the API Manager middleware / `resolve_public`
-// path — so the public routes below rely on that gate: an
+// path - so the public routes below rely on that gate: an
 // administrator must create the matching `ApiAccessRule` rows for
 // `GET /api/v1/community/public/*`. The routes are registered in
 // `route_info()` with `route_version_support()` defaulting to
@@ -107,7 +107,7 @@
 //   - `notification.requested` (announcement published, in the
 //     notifications module's payload shape).
 // Events this module listens to:
-//   - `gamification.badge.awarded` — increments the member's
+//   - `gamification.badge.awarded` - increments the member's
 //     badge count (badges themselves are owned by gamification;
 //     this module never awards a badge).
 

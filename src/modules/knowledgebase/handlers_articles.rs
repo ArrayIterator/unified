@@ -18,9 +18,7 @@ use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 use super::{constants::*, types::*, state::*, helpers::*, module::*, handlers_tickets::*, handlers_categories::*};
 
-// ---------------------------------------------------------------------------
 // Article handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn create_article(
     ctx: web::Data<Arc<AppContext>>,
@@ -361,9 +359,7 @@ pub(crate) async fn get_version(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Search handler
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn search_endpoint(
     ctx: web::Data<Arc<AppContext>>,
@@ -681,7 +677,7 @@ mod tests {
         assert_eq!(resp.status(), StatusCode::CREATED);
         assert_eq!(state.articles.len(), 3);
         // A company-A caller lists its own article plus the
-        // global one — never company B's.
+        // global one - never company B's.
         let resp = list_articles(
             ctx.clone(),
             state.clone(),

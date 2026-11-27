@@ -1,5 +1,5 @@
 //! Provider adapter interface: sending goes through one
-//! of two adapters, chosen by the provider's kind — the
+//! of two adapters, chosen by the provider's kind - the
 //! generic HTTP adapter (POST JSON to the configured
 //! endpoint with the configured auth) or the log-only test
 //! provider (records a send without any network call).
@@ -234,7 +234,7 @@ pub(crate) fn truncate_error(text: &str) -> String {
     if text.len() <= 500 {
         text.to_string()
     } else {
-        format!("{}…", &text[..500])
+        format!("{}...", &text[..500])
     }
 }
 

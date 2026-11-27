@@ -18,9 +18,7 @@ use uuid::Uuid;
 use super::*;
 
 
-// ---------------------------------------------------------------------------
 // Handlers: employees
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_employees(
     ctx: web::Data<Arc<AppContext>>,

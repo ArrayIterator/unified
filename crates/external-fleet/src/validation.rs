@@ -219,7 +219,7 @@ pub fn trip_status_transition(from: &str, to: &str) -> UnifiedResult<()> {
 /// distance driven since the previous fill-up divided by the litres
 /// taken at this fill-up. The overall figure is total distance over
 /// total litres across all intervals. Returns `None` when there are
-/// fewer than two fill-ups or the total distance is not positive —
+/// fewer than two fill-ups or the total distance is not positive -
 /// callers must surface null, never a fabricated number.
 pub fn fuel_efficiency_km_per_litre(
     fill_ups: &[(f64, f64)], // (odometer_km, litres), oldest first

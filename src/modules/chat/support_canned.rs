@@ -11,9 +11,7 @@ use super::{limits::*, types::*, hub::*, state::*, helpers::*, module::*, handle
 
 
 
-// ---------------------------------------------------------------------------
 // Live support: canned responses
-// ---------------------------------------------------------------------------
 pub(crate) async fn list_canned(
     state: web::Data<ChatState>,
     req: HttpRequest,

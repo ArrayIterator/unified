@@ -8,9 +8,7 @@ use uuid::Uuid;
 
 use super::types::*;
 
-// ---------------------------------------------------------------------------
 // In-memory stores.
-// ---------------------------------------------------------------------------
 
 pub(crate) static BALANCERS: OnceLock<DashMap<Uuid, LoadBalancer>> = OnceLock::new();
 
@@ -89,7 +87,7 @@ pub(crate) fn routed_requests(id: Uuid) -> u64 {
 /// real proxy path may call this: it must call
 /// `note_backend_connection_closed` when the connection ends, so
 /// the counter tracks live load. The simulated `/route` endpoint
-/// deliberately does NOT call this — a simulated request has no
+/// deliberately does NOT call this - a simulated request has no
 /// close event, so booking it here would turn the counter into a
 /// cumulative routed total that only ever grows. Simulated routing
 /// counts toward `BackendStats::requests_routed` instead (see

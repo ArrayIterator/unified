@@ -1,4 +1,4 @@
-// todos — handlers subtasks.
+// todos - handlers subtasks.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -26,9 +26,7 @@ use super::handlers_todos::*;
 use super::handlers_ai::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Subtask handlers (one level only).
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn add_subtask(
     ctx: web::Data<Arc<AppContext>>,
@@ -224,9 +222,7 @@ pub(crate) async fn delete_subtask(
     }
 }
 
-// ---------------------------------------------------------------------------
-// Attachment handlers (metadata only — bytes live in storage).
-// ---------------------------------------------------------------------------
+// Attachment handlers (metadata only - bytes live in storage).
 
 pub(crate) async fn add_attachment(
     ctx: web::Data<Arc<AppContext>>,
@@ -328,9 +324,7 @@ pub(crate) async fn delete_attachment(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Reminder handlers.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn create_todo_reminder(
     ctx: web::Data<Arc<AppContext>>,

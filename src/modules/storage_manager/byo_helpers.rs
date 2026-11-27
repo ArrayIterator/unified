@@ -15,10 +15,8 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // BYO helpers: loaders (404 on cross-owner access), provider build,
 // validation probe, health checks, prefix scoping, rule checks.
-// ---------------------------------------------------------------------------
 
 pub(crate) fn load_byo_connection(
     state: &StorageManagerState,
@@ -33,9 +31,9 @@ pub(crate) fn load_byo_connection(
 }
 
 /// Load a BYO connection as one caller may see it. The admin arm
-/// is platform-only (C3 task 315, decision (a)): the `is_admin`
+/// is platform-only (C3, decision (a)): the `is_admin`
 /// flag must come from `is_platform_admin`, never from the bare
-/// `manage_byo` capability — a non-admin caller who does not own
+/// `manage_byo` capability - a non-admin caller who does not own
 /// the connection gets the same 404 as for a missing connection,
 /// so existence never leaks across owners (the per-user 404
 /// pattern the todos module uses).

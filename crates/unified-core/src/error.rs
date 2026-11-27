@@ -66,8 +66,8 @@ impl UnifiedError {
 
     /// Render the error as the standard error envelope.
     ///
-    /// The object has exactly three keys — `message`, `code`, and
-    /// `metadata` — plus an optional `trace` that is only included when
+    /// The object has exactly three keys - `message`, `code`, and
+    /// `metadata` - plus an optional `trace` that is only included when
     /// `debug` is true.
     pub fn to_json(&self, debug: bool) -> Value {
         let mut error = Map::new();

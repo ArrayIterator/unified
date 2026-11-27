@@ -94,9 +94,7 @@ use super::{ApiManagerState, PublicApiAccessMiddleware, create_access_rule, crea
     on_apikey_revoked, on_apikey_rotated, resolve_handler, resolve_public, revoke_key,
     update_access_rule, update_api_version, update_endpoint, update_key_access, update_prefix};
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct ApiManagerModule {
     pub(crate) state: ApiManagerState,

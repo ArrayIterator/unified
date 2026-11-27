@@ -57,9 +57,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One stored AI provider connection. Credentials are write-only.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS ai_provider_connections (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR NOT NULL,
@@ -83,10 +81,8 @@ CREATE INDEX IF NOT EXISTS idx_ai_provider_connections_kind
 CREATE INDEX IF NOT EXISTS idx_ai_provider_connections_enabled
     ON ai_provider_connections (enabled);
 
--- ---------------------------------------------------------------------------
 -- One provider call, recorded whether it succeeded or failed, so
 -- cost and rate-limit questions have an audit trail.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS ai_usage_records (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     provider_id UUID NOT NULL,
@@ -116,10 +112,8 @@ CREATE INDEX IF NOT EXISTS idx_ai_usage_records_status
 CREATE INDEX IF NOT EXISTS idx_ai_usage_records_created_at
     ON ai_usage_records (created_at);
 
--- ---------------------------------------------------------------------------
 -- One AI-generated draft. A human must approve it before anything is
 -- sent or published; approval only flips the status.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS ai_drafts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     kind VARCHAR NOT NULL

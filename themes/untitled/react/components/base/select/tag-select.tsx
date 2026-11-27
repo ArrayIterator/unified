@@ -25,13 +25,13 @@ import { SelectItem } from "./select-item";
 interface TagSelectValueProps extends AriaGroupProps {
     /** Controls the height, padding, and text size of the input group, as well as how compact the selected tags are. */
     size: "sm" | "md" | "lg";
-    /** Whether to show the ⌘K hint at the end of the input on medium screens and up. It also reserves a minimum width for the text input. */
+    /** Whether to show the Cmd+K hint at the end of the input on medium screens and up. It also reserves a minimum width for the text input. */
     shortcut?: boolean;
-    /** Whether the tags are disabled. This value is not forwarded to the DOM — the group's own disabled styling comes from the enclosing combo box state. */
+    /** Whether the tags are disabled. This value is not forwarded to the DOM - the group's own disabled styling comes from the enclosing combo box state. */
     isDisabled?: boolean;
     /** The placeholder text shown in the search input. */
     placeholder?: string;
-    /** Additional CSS classes merged onto the container of the ⌘K hint. */
+    /** Additional CSS classes merged onto the container of the Cmd+K hint. */
     shortcutClassName?: string;
     /** The icon component rendered at the start of the input group. Pass `null` to render no icon. */
     icon?: IconComponentType | null;
@@ -67,13 +67,13 @@ interface TagSelectProps extends Omit<AriaComboBoxProps<SelectItemType>, "childr
     size?: "sm" | "md" | "lg";
     /** The placeholder text shown in the search input. */
     placeholder?: string;
-    /** Whether to show the ⌘K hint at the end of the input on medium screens and up. */
+    /** Whether to show the Cmd+K hint at the end of the input on medium screens and up. */
     shortcut?: boolean;
     /** The full set of options offered in the dropdown. They are filtered as the user types, and already selected items are hidden from the list. */
     items?: SelectItemType[];
     /** Additional CSS classes merged onto the dropdown popover. */
     popoverClassName?: string;
-    /** Additional CSS classes merged onto the container of the ⌘K hint. */
+    /** Additional CSS classes merged onto the container of the Cmd+K hint. */
     shortcutClassName?: string;
     /** The list state holding the selected items, typically created with `useListData`. The component appends to it on selection and removes from it when a tag is dismissed. */
     selectedItems: ListData<SelectItemType>;
@@ -362,7 +362,7 @@ const InnerTagSelect = ({ isDisabled, shortcut, shortcutClassName, placeholder, 
                                 isDisabled && "bg-transparent",
                             )}
                         >
-                            ⌘K
+                            Cmd+K
                         </span>
                     </div>
                 )}

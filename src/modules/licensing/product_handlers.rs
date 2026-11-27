@@ -31,9 +31,7 @@ use std::time::{Duration, Instant};
 use uuid::Uuid;
 use super::{keys::*, expiry::*, store::*, hooks::*, types::*, validation::*, handlers::*, products::*, helpers::*, verify::*, offline::*, distribution::*, releases::*, module::*};
 
-// ---------------------------------------------------------------------------
 // SaaS request types.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct CreateLicenseProductRequest {
@@ -268,9 +266,7 @@ pub(crate) fn validate_prefix(prefix: &Option<String>) -> UnifiedResult<Option<S
     Ok(Some(prefix))
 }
 
-// ---------------------------------------------------------------------------
 // SaaS handlers: license products.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_license_products(
     ctx: web::Data<Arc<AppContext>>,

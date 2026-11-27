@@ -52,9 +52,7 @@ use super::public::get_public_portal;
 use super::state::PortalsState;
 use super::ai_capabilities::AI_CAPABILITIES;
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct PortalsModule {
     state: PortalsState,

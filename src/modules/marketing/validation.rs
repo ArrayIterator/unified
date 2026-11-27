@@ -1,4 +1,4 @@
-// Marketing Automation — Input validation and pure value checks.
+// Marketing Automation - Input validation and pure value checks.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -63,9 +63,7 @@ pub(crate) fn valid_email(email: &str) -> bool {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Segment rule evaluation (rules are data, evaluated server-side).
-// ---------------------------------------------------------------------------
 
 /// Validate a segment rule tree against the configured field and
 /// operator allowlists. Returns the number of leaf rules found.

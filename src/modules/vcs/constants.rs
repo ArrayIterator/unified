@@ -1,4 +1,4 @@
-// Third-party VCS integrations — Event names, permission strings, limits, and other constants.
+// Third-party VCS integrations - Event names, permission strings, limits, and other constants.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -46,7 +46,6 @@ pub(crate) const USER_AGENT: &str = concat!("unified/", env!("CARGO_PKG_VERSION"
 /// Per-request timeout for provider API calls and asset downloads.
 pub(crate) const HTTP_TIMEOUT_SECS: u64 = 30;
 
-/// Maximum release-asset download size (512 MiB).
 pub(crate) const MAX_ASSET_BYTES: u64 = 512 * 1024 * 1024;
 
 /// Maximum redirects followed when downloading a release asset.

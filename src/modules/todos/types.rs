@@ -1,6 +1,6 @@
-// Todos module — personal, per-user todos.
+// Todos module - personal, per-user todos.
 //
-// BOUNDARY VS THE TASKS MODULE (`src/modules/tasks.rs`) — READ THIS FIRST.
+// BOUNDARY VS THE TASKS MODULE (`src/modules/tasks.rs`) - READ THIS FIRST.
 // Tasks are shared, assigned work items: they have an assignee and a
 // reporter, a company / project linkage, a multi-step status workflow
 // (`todo -> in_progress -> review -> done`, plus `blocked` and
@@ -17,7 +17,7 @@
 //
 // Ownership rules (enforced server-side on every handler):
 //   - Every list and every todo belongs to exactly one user
-//     (`owner_id`, taken from the `X-User-Id` header — never from a
+//     (`owner_id`, taken from the `X-User-Id` header - never from a
 //     client-supplied `user_id` field).
 //   - A user can only list, read, update, or delete their own lists
 //     and todos, plus lists explicitly shared with them (see
@@ -28,36 +28,36 @@
 //
 // Routes live under `/api/v1/todos`:
 //   Lists:
-//     GET/POST /lists — own lists / create a list.
+//     GET/POST /lists - own lists / create a list.
 //     GET/PATCH/DELETE /lists/{id}.
 //     POST /lists/{id}/archive, /lists/{id}/unarchive.
-//     GET  /lists/{id}/shares — who a list is shared with (owner only).
-//     POST /lists/{id}/share — share with a user (read or edit).
-//     DELETE /lists/{id}/share/{user_id} — revoke sharing.
-//     GET  /shared-with-me — lists shared with the caller.
+//     GET  /lists/{id}/shares - who a list is shared with (owner only).
+//     POST /lists/{id}/share - share with a user (read or edit).
+//     DELETE /lists/{id}/share/{user_id} - revoke sharing.
+//     GET  /shared-with-me - lists shared with the caller.
 //   Todos:
-//     GET/POST /todos — own + shared todos (paginated, filtered) /
+//     GET/POST /todos - own + shared todos (paginated, filtered) /
 //       create, including quick capture (title only; defaults apply).
-//     GET  /todos/completed — completed view (paginated).
-//     GET  /todos/overdue — open todos past their due time.
-//     GET  /todos/streaks — computed completion streaks.
+//     GET  /todos/completed - completed view (paginated).
+//     GET  /todos/overdue - open todos past their due time.
+//     GET  /todos/streaks - computed completion streaks.
 //     GET/PATCH/DELETE /todos/{id}.
 //     POST /todos/{id}/complete, /todos/{id}/reopen.
-//     GET  /todos/{id}/history — completion log for one todo.
-//     POST /todos/{id}/subtasks — add a subtask (one level only).
-//     PATCH /todos/{id}/subtasks/{subtask_id} — rename a subtask.
-//     POST /todos/{id}/subtasks/{subtask_id}/toggle — check/uncheck.
+//     GET  /todos/{id}/history - completion log for one todo.
+//     POST /todos/{id}/subtasks - add a subtask (one level only).
+//     PATCH /todos/{id}/subtasks/{subtask_id} - rename a subtask.
+//     POST /todos/{id}/subtasks/{subtask_id}/toggle - check/uncheck.
 //     DELETE /todos/{id}/subtasks/{subtask_id}.
-//     POST /todos/{id}/attachments — attach by storage key (metadata
+//     POST /todos/{id}/attachments - attach by storage key (metadata
 //       only; bytes live in the storage module).
 //     DELETE /todos/{id}/attachments/{attachment_id}.
-//     POST /todos/{id}/reminders — add a due-date reminder offset.
-//     GET  /todos/{id}/reminders — list reminders for a todo.
-//     DELETE /todos/{id}/reminders/{reminder_id} — cancel a reminder.
-//   AI (drafts only — the AI never creates, completes, reorders, or
+//     POST /todos/{id}/reminders - add a due-date reminder offset.
+//     GET  /todos/{id}/reminders - list reminders for a todo.
+//     DELETE /todos/{id}/reminders/{reminder_id} - cancel a reminder.
+//   AI (drafts only - the AI never creates, completes, reorders, or
 //     deletes a todo):
-//     POST /ai/summarize — draft summary of the caller's own todos.
-//     POST /ai/plan-day — draft day plan from the caller's own todos.
+//     POST /ai/summarize - draft summary of the caller's own todos.
+//     POST /ai/plan-day - draft day plan from the caller's own todos.
 //
 // Events emitted on the hook bus:
 //   - `todos.list.created`, `todos.list.updated`, `todos.list.deleted`,
@@ -66,7 +66,7 @@
 //   - `todos.todo.created`, `todos.todo.updated`, `todos.todo.deleted`
 //   - `todos.todo.completed`, `todos.todo.reopened`
 //   - `todos.todo.overdue` (emitted by the reminder job, once per
-//     todo per UTC day — see `on_reminders_send_requested`)
+//     todo per UTC day - see `on_reminders_send_requested`)
 //   - `todos.subtask.created`, `todos.subtask.updated`,
 //     `todos.subtask.toggled`, `todos.subtask.deleted`
 //   - `todos.attachment.added`, `todos.attachment.removed`
@@ -88,11 +88,11 @@
 //     The todo and the reminder are still created and stay usable
 //     even when a job is declined (it can be sent manually).
 // Events this module listens to:
-//   - `todos.reminders.send_requested` — the event the scheduler
+//   - `todos.reminders.send_requested` - the event the scheduler
 //     emits when a `todos.reminders.send` job fires (naming rule:
 //     `backup.run` -> `backup.run_requested`). The handler sends due
 //     reminders, marks them sent, and runs the overdue sweep.
-//   - `todos.context_requested` — answered with the subject user's
+//   - `todos.context_requested` - answered with the subject user's
 //     own todos, so an AI draft flow can ground on them. This mirrors
 //     the `ticket.context_requested` / `chat.context_requested`
 //     pattern the AI module already uses: the AI module gathers
@@ -102,7 +102,7 @@
 //     payload is the subject the (trusted, in-process) requester
 //     asked about.
 //
-// AI wiring — READ THIS BEFORE CHANGING IT. The AI module
+// AI wiring - READ THIS BEFORE CHANGING IT. The AI module
 // (`src/modules/ai.rs`) has NO generic draft-request event and no
 // endpoint a module can call to ask for an arbitrary draft: its draft
 // endpoints are fixed (`/complete`, `/support-draft`, `/chat-draft`,
@@ -157,7 +157,7 @@
 // yet, so it compiles against the current schema. The in-memory
 // stores stay authoritative until that wiring lands.
 
-// todos — types.
+// todos - types.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -185,9 +185,7 @@ use super::handlers_subtasks::*;
 use super::handlers_ai::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Events.
-// ---------------------------------------------------------------------------
 
 pub const EVENT_LIST_CREATED: &str = "todos.list.created";
 
@@ -244,12 +242,10 @@ pub const EVENT_TODOS_CONTEXT_REQUESTED: &str = "todos.context_requested";
 pub const EVENT_REMINDERS_SEND_REQUESTED: &str = "todos.reminders.send_requested";
 
 /// Scheduler job kind for due-date reminders (not yet in the
-/// scheduler's `KNOWN_KINDS` — see the module header).
+/// scheduler's `KNOWN_KINDS` - see the module header).
 pub const SCHEDULER_JOB_KIND_REMINDERS: &str = "todos.reminders.send";
 
-// ---------------------------------------------------------------------------
 // Permissions (checked through the `role.check` hook; fail closed).
-// ---------------------------------------------------------------------------
 
 /// May read own lists and todos (and lists shared with the caller).
 pub const PERM_TODOS_READ: &str = "todos:read";
@@ -264,9 +260,7 @@ pub const PERM_TODOS_SHARE: &str = "todos:share";
 /// module itself when it answers `todos.ai.draft_requested`).
 pub const PERM_AI_USE: &str = "ai:use";
 
-// ---------------------------------------------------------------------------
 // Limits and allowlists.
-// ---------------------------------------------------------------------------
 
 pub(crate) const MAX_TITLE_LEN: usize = 200;
 
@@ -298,7 +292,7 @@ pub(crate) const MAX_AI_TODOS: usize = 100;
 /// time) up to 30 days.
 pub(crate) const MAX_REMINDER_OFFSET_MINUTES: i64 = 43_200;
 
-/// List colours. Plain string fields, validated against this list —
+/// List colours. Plain string fields, validated against this list -
 /// never a free-form colour value, so clients cannot inject arbitrary
 /// styles through a list.
 pub const LIST_COLORS: &[&str] = &[
@@ -316,9 +310,7 @@ pub const LIST_ICONS: &[&str] = &[
 /// Default list name, created lazily for a user on first use.
 pub const DEFAULT_LIST_NAME: &str = "Inbox";
 
-// ---------------------------------------------------------------------------
 // Types.
-// ---------------------------------------------------------------------------
 
 /// Todo priority. `normal` is the default; there is no `medium` here
 /// (unlike tasks, which use `low/medium/high/urgent`).
@@ -358,7 +350,7 @@ impl TodoPriority {
 }
 
 /// Todo status. Only two states: `open` or `done`. There is no
-/// in-progress / review / blocked workflow — that is the tasks
+/// in-progress / review / blocked workflow - that is the tasks
 /// module's job.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -626,9 +618,7 @@ pub struct AiDraftResponse {
     pub requested_at: DateTime<Utc>,
 }
 
-// ---------------------------------------------------------------------------
 // Request bodies.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct CreateListRequest {

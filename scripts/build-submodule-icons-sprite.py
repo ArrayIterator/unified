@@ -3,14 +3,14 @@
 files in assets/icons/submodules/.
 
 Sub-modules are the Rust `mod` declarations inside the module roots
-(`src/modules/<module>.rs`, plus a few deeper declarations) — 582
+(`src/modules/<module>.rs`, plus a few deeper declarations) - 582
 distinct names, one icon each, keyed by the sub-module name
 (`submodules/<name>.svg`). Names that share a concept share an icon;
 see docs/integration/SUBMODULE_ICONS.md for the definition and the
 full name -> Tabler icon mapping.
 
 One <symbol id="submodule-icon-<name>" viewBox="0 0 24 24"> per icon.
-Icons are Tabler 2.11.0 outline icons (MIT — see
+Icons are Tabler 2.11.0 outline icons (MIT - see
 assets/icons/LICENSE.tabler), 24x24 grid, stroke width 2,
 single-colour strokes that inherit the surrounding text colour
 (`stroke="currentColor" fill="none"`, round caps and joins). Each

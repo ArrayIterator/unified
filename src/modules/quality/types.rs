@@ -4,9 +4,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Configurable settings (admin-editable; defaults are defaults only)
-// ---------------------------------------------------------------------------
 
 /// All behaviour-shaping lists and defaults of this module. An
 /// administrator edits these through `PUT /settings`; every
@@ -134,9 +132,7 @@ impl Default for QualitySettings {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// One quality point: a control-point definition attached to a
 /// scope (product, operation, supplier, incoming goods, work
@@ -234,7 +230,7 @@ pub struct Measurement {
 /// `completed` when measurements are submitted, and may be
 /// `cancelled` while still requested. `result` is set on
 /// completion. `evidence_refs` are opaque storage / document
-/// references only — the bytes live in the storage and documents
+/// references only - the bytes live in the storage and documents
 /// modules, never here.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Inspection {
@@ -328,9 +324,7 @@ pub struct Capa {
     pub updated_at: DateTime<Utc>,
 }
 
-// ---------------------------------------------------------------------------
 // Request bodies
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct CreatePointInput {
@@ -352,7 +346,7 @@ pub struct CreatePointInput {
 }
 
 /// Nullable-update semantics: every clearable field is
-/// `Option<Option<T>>` — absent means "leave unchanged", `null`
+/// `Option<Option<T>>` - absent means "leave unchanged", `null`
 /// means "clear this value", a value means "set it". Plain
 /// `Option<T>` could only set, never clear, so changing a
 /// criterion's kind (for example numeric to boolean) used to fail
@@ -412,7 +406,7 @@ pub(crate) fn default_required() -> bool {
 /// Nullable-update semantics, as on `UpdatePointInput`: absent
 /// means "leave unchanged", `null` means "clear this value", a
 /// value means "set it". Clearing is what makes a kind change
-/// possible — a numeric criterion becoming boolean must clear
+/// possible - a numeric criterion becoming boolean must clear
 /// `min_value` / `max_value`, and a boolean one becoming numeric
 /// must clear `expected_bool`.
 #[derive(Debug, Deserialize)]

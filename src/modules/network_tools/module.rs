@@ -16,9 +16,7 @@ use super::handlers_monitors::{check_cert_watches_handler, check_uptime_monitor,
 use super::hooks::{on_cert_check_requested, on_sharing_allow_check, on_uptime_check_requested};
 use super::ai_capabilities::AI_CAPABILITIES;
 
-// ---------------------------------------------------------------------------
 // Module definition.
-// ---------------------------------------------------------------------------
 
 pub struct NetworkToolsModule;
 

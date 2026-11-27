@@ -13,9 +13,7 @@ use super::handlers_routing::{create_rule, delete_rule, get_rule, list_rules, li
 use super::hooks::{on_department_agents_requested, on_department_membership_check, on_department_sla_requested, on_ticket_created, on_ticket_route_requested};
 use super::ai_capabilities::AI_CAPABILITIES;
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct DepartmentsModule {
     pub(crate) state: Arc<DepartmentsState>,

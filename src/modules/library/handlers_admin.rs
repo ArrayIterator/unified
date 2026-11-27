@@ -22,9 +22,7 @@ use super::{AUDIT_COMPLETED, AUDIT_OPEN, COPY_AVAILABLE, COPY_DAMAGED, COPY_LOST
     require_in_list, require_non_negative, require_permission, require_positive, require_tenant,
     require_text};
 
-// ---------------------------------------------------------------------------
 // Digital access handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn issue_digital_access(
     ctx: web::Data<Arc<AppContext>>,
@@ -220,9 +218,7 @@ pub(crate) async fn get_item_digital(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Inventory audit handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn create_audit(
     ctx: web::Data<Arc<AppContext>>,
@@ -613,9 +609,7 @@ pub(crate) async fn audit_report(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Reminder handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn send_due_soon_reminders(
     ctx: web::Data<Arc<AppContext>>,
@@ -741,9 +735,7 @@ pub(crate) async fn send_overdue_reminders(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Settings handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn get_settings(
     ctx: web::Data<Arc<AppContext>>,
@@ -889,9 +881,7 @@ pub(crate) async fn update_settings(
     }
 }
 
-// ---------------------------------------------------------------------------
 // AI handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn ai_search_assist(
     ctx: web::Data<Arc<AppContext>>,

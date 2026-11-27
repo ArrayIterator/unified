@@ -12,9 +12,7 @@ use super::{events::*, paper::*, thermal::*, profiles::*, jobs::*, state::*, aut
 
 
 
-// ---------------------------------------------------------------------------
 // Print-job handlers
-// ---------------------------------------------------------------------------
 pub(crate) async fn list_print_jobs(
     state: web::Data<Arc<PrintingState>>,
     ctx: web::Data<Arc<AppContext>>,
@@ -188,7 +186,7 @@ pub(crate) async fn complete_print_job(
 
 /// Dispatch a queued job to the deployment-side dispatcher: the
 /// job moves to `printing` and stays there. It is NOT marked done
-/// here — delivery is unconfirmed until the dispatcher reports
+/// here - delivery is unconfirmed until the dispatcher reports
 /// back through `/complete` (printed) or `/fail` (failed).
 /// Marking it done at dispatch time emitted
 /// `printing.job.completed` and notified the user of a print that

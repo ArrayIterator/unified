@@ -3,9 +3,7 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Studio customizer (migration 000090_studio).
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     studio_record_types (record_type) {

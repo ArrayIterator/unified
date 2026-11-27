@@ -4,9 +4,7 @@
 
 use unified_core::hooks::events;
 
-// ---------------------------------------------------------------------------
 // State
-// ---------------------------------------------------------------------------
 
 /// Events the audit log subscribes to. Well-known core events use the
 /// constants from `unified_core::hooks::events`; the rest are the
@@ -23,7 +21,7 @@ pub(crate) const AUDITED_EVENTS: &[&str] = &[
     "invoice.paid",
     // Financial lifecycle (billing/store modules): an invoice is
     // issued, an order is paid, a store order completes. Added
-    // during the final inspection — these events were emitted but
+    // during the final inspection - these events were emitted but
     // never audited, so a money movement left no audit trail.
     // Payloads carry invoice/order ids and amounts, never PAN.
     "invoice.created",

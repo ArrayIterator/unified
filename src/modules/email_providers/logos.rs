@@ -7,13 +7,13 @@
 //! no external fetches, no strokes. The files are the source of
 //! truth; the sprite (`logos/sprite.svg`, symbols
 //! `provider-logo-email-<id>`) is generated from them by
-//! `scripts/build-provider-logos-sprite.py` — re-run that script
+//! `scripts/build-provider-logos-sprite.py` - re-run that script
 //! after adding or changing a logo.
 //!
-//! Lettermark exception (task 354): the 43 providers added in task
-//! 354 use simple lettermark SVGs — a rounded rect plus a `<text>`
+//! Lettermark exception: the 43 providers added in task
+//! 354 use simple lettermark SVGs - a rounded rect plus a `<text>`
 //! element with the provider's initials (Arial/Helvetica, bold,
-//! 7–8pt). That is the ONE deviation from the "no text elements"
+//! 7-8pt). That is the ONE deviation from the "no text elements"
 //! rule: lettermarks are clean initial monograms, not trademarked
 //! artwork redrawn in detail, and the 13 original logos already
 //! use letterforms as paths (Yahoo Y!, Mailchimp M). No other text
@@ -60,7 +60,7 @@ pub fn provider_logo_exists(logo_id: &str) -> bool {
 ///
 /// The `data-logo` attribute on the emitted `<svg>` names the logo
 /// shown. Returns an empty string for an invalid id or a missing
-/// logo — brand logos have no placeholder (unlike module icons,
+/// logo - brand logos have no placeholder (unlike module icons,
 /// where an unknown-but-valid name renders the placeholder).
 pub fn provider_logo_use(logo_id: &str) -> String {
     if !provider_logo_exists(logo_id) {
@@ -91,7 +91,7 @@ mod tests {
             "email-yahoo",
             "email-outlook",
             "email-sendmail",
-            // Task 354: 26 mailbox SMTP presets.
+            // 26 mailbox SMTP presets.
             "email-zoho",
             "email-zoho-eu",
             "email-proton",
@@ -118,7 +118,7 @@ mod tests {
             "email-namecheap",
             "email-dreamhost",
             "email-mxroute",
-            // Task 354: 13 dual API/SMTP relays via SMTP.
+            // 13 dual API/SMTP relays via SMTP.
             "email-sender-net",
             "email-sendpulse",
             "email-mailjet",
@@ -131,7 +131,7 @@ mod tests {
             "email-socketlabs",
             "email-smtp-com",
             "email-campaign-monitor",
-            // Task 354: 4 generic HTTP providers.
+            // 4 generic HTTP providers.
             "email-plunk",
             "email-courier",
             "email-loops",

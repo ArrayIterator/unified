@@ -18,9 +18,7 @@ use uuid::Uuid;
 use super::config::{backup_settings, redact_value};
 use super::types::{BackupJob, BackupRun, BackupSettings, DbSnapshot};
 
-// ---------------------------------------------------------------------------
 // State.
-// ---------------------------------------------------------------------------
 
 pub struct BackupState {
     pub(crate) jobs: DashMap<String, BackupJob>,
@@ -137,9 +135,7 @@ impl BackupExecutor {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Helpers: ids, hashing, cron validation.
-// ---------------------------------------------------------------------------
 
 pub(crate) fn new_id() -> String {
     Uuid::new_v4().to_string()

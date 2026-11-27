@@ -19,9 +19,7 @@ use super::types::{DownloadEntitlement, DownloadRecord, HmacSha256};
 /// random value on every start. See `signing_secret`.
 pub(crate) static STORE_CONFIG: OnceLock<Arc<RwLock<AppConfig>>> = OnceLock::new();
 
-// ---------------------------------------------------------------------------
 // Signed download links (HMAC-SHA256, expiring)
-// ---------------------------------------------------------------------------
 
 /// HMAC key for signed download links. When
 /// `store.download_signing_secret` is configured, that value is used,

@@ -10,9 +10,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Documents (migration 000065_documents; metadata columns 000124_documents_metadata).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = documents)]
@@ -223,9 +221,7 @@ pub struct NewDocumentQuota {
     pub bytes_limit: Option<i64>,
 }
 
-// ---------------------------------------------------------------------------
 // Finalize jobs (migration 000123_storage_public_private).
-// ---------------------------------------------------------------------------
 
 /// One lazy-finalize job: the durable record of a pending whole-file
 /// SHA-256 hash. Created when a chunked session completes (all parts
@@ -233,7 +229,7 @@ pub struct NewDocumentQuota {
 /// object, and marks it `verified` (checksum stored on the document)
 /// or `failed` (mismatch). The runtime `FinalizeJob` in
 /// `src/modules/documents/` writes through to this table (see
-/// `finalize.rs`, C11 task 271); the in-memory map stays the
+/// `finalize.rs`, C11); the in-memory map stays the
 /// runtime cache, the row is the restart-surviving record.
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = finalize_jobs)]

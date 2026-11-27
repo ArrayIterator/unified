@@ -1,4 +1,4 @@
-// Tickets module — ticket, comment, note, attachment, and link handlers.
+// Tickets module - ticket, comment, note, attachment, and link handlers.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use unified_core::context::AppContext;
@@ -17,9 +17,7 @@ use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) fn ticket_visible_to(ticket: &Ticket, scope: &(String, bool, Vec<String>)) -> bool {
     let (viewer_id, view_all, departments) = scope;
@@ -1337,10 +1335,10 @@ mod tests {
         web::Data::new(state.clone())
     }
 
-    /// The company the mutation tests act as (C3 task 315).
+    /// The company the mutation tests act as (C3).
     const TEST_COMPANY: &str = "company-a";
 
-    /// A request scoped to the test company (C3 task 315): mutation
+    /// A request scoped to the test company (C3): mutation
     /// handlers require a resolved company, so the happy-path tests
     /// carry one on both the tenant context and the verified caller.
     fn authed_request() -> HttpRequest {
@@ -1382,7 +1380,7 @@ mod tests {
     }
 
     /// Like `seed_ticket`, but the ticket belongs to the test
-    /// company (C3 task 315): the (a)-pattern handlers
+    /// company (C3): the (a)-pattern handlers
     /// (update/merge/escalate/assign) refuse global tickets, so
     /// their tests seed scoped ones. The reply tests keep the
     /// global seeder: a resolved company caller still reads a

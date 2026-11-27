@@ -298,7 +298,7 @@ impl BillingState {
 /// Convert major units to integer minor units.
 ///
 /// Returns `None` for non-finite values and for magnitudes that
-/// would overflow `i64` — the old unchecked `as i64` cast silently
+/// would overflow `i64` - the old unchecked `as i64` cast silently
 /// saturated `1e17` to `i64::MAX`. Callers must handle `None`
 /// (reject the amount, skip the record) instead of assuming a
 /// conversion always succeeds.

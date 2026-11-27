@@ -1,47 +1,47 @@
-// Rental module — rentable products with data-driven per-period
+// Rental module - rentable products with data-driven per-period
 // pricing, orders with a status machine, hand-out / return
 // flows, damage reports, and deposit handling.
 //
 // Routes live under `/api/v1/rental`:
 //
 //   Public (no auth; see the public-access note below):
-//     GET  /public/listings — active listings with their rates.
-//     GET  /public/listings/{slug} — one active listing.
+//     GET  /public/listings - active listings with their rates.
+//     GET  /public/listings/{slug} - one active listing.
 //   Listings:
-//     GET/POST /listings — list listings / create a listing.
+//     GET/POST /listings - list listings / create a listing.
 //     GET/PATCH/DELETE /listings/{listing_id}.
-//     GET/POST /listings/{listing_id}/rates — list / create.
+//     GET/POST /listings/{listing_id}/rates - list / create.
 //     PATCH/DELETE /listings/{listing_id}/rates/{rate_id}.
 //     GET  /listings/{listing_id}/availability
-//       — ?starts_at=, ends_at=, quantity=.
+//       - ?starts_at=, ends_at=, quantity=.
 //   Orders:
-//     GET/POST /orders — list orders / create a draft order.
+//     GET/POST /orders - list orders / create a draft order.
 //     GET/PATCH/DELETE /orders/{order_id}.
-//     POST /orders/{order_id}/reserve — draft -> reserved.
-//     POST /orders/{order_id}/cancel — draft/reserved ->
+//     POST /orders/{order_id}/reserve - draft -> reserved.
+//     POST /orders/{order_id}/cancel - draft/reserved ->
 //       cancelled.
-//     POST /orders/{order_id}/complete — returned -> completed
+//     POST /orders/{order_id}/complete - returned -> completed
 //       (manager).
-//     POST /orders/{order_id}/deposit — refund or deduct the
+//     POST /orders/{order_id}/deposit - refund or deduct the
 //       held deposit (manager).
 //   Hand-out and return:
-//     POST /orders/{order_id}/handover — reserved -> out, with
+//     POST /orders/{order_id}/handover - reserved -> out, with
 //       condition notes and photo metadata (manager).
-//     POST /orders/{order_id}/return — out -> returned, late
+//     POST /orders/{order_id}/return - out -> returned, late
 //       fee computed from the listing rule (manager).
 //   Deliveries and damage:
-//     GET  /orders/{order_id}/deliveries — hand-out and return
+//     GET  /orders/{order_id}/deliveries - hand-out and return
 //       records.
 //     GET  /orders/{order_id}/deliveries/{delivery_id}.
-//     GET/POST /orders/{order_id}/damage-reports — list / report.
+//     GET/POST /orders/{order_id}/damage-reports - list / report.
 //     GET  /orders/{order_id}/damage-reports/{report_id}.
 //     POST /orders/{order_id}/damage-reports/{report_id}/resolve
-//       — resolved (charges the order once) or dismissed.
+//       - resolved (charges the order once) or dismissed.
 //   Settings:
-//     GET  /settings — per-tenant rental settings.
+//     GET  /settings - per-tenant rental settings.
 //     PATCH /settings (manager).
 //
-// HONESTY — READ THIS FIRST. What is real in this module:
+// HONESTY - READ THIS FIRST. What is real in this module:
 // in-memory listing, rate, order, delivery, damage-report, and
 // settings management; per-period pricing as data (each rate
 // names its own period unit and length, so hourly, daily,
@@ -67,15 +67,15 @@
 // DashMap stores are authoritative; migration
 // `2026-11-22-000111_rental` is the persistence target);
 // money movement (the payments module owns capture and refund
-// — this module only records deposit state from
+// - this module only records deposit state from
 // `payment.captured` / `payment.refunded`); shipment creation
-// (the logistics module owns shipments — this module only
+// (the logistics module owns shipments - this module only
 // records the shipment id from
 // `logistics.shipment.delivered`); the rental agreement
-// document itself (the contracts module owns it — this module
+// document itself (the contracts module owns it - this module
 // links it by id and marks it signed from
 // `contracts.signed`); and email / push delivery (the
-// notifications module owns delivery — this module only emits
+// notifications module owns delivery - this module only emits
 // `notification.requested`).
 //
 // Public-access gate: the API Manager module enforces public
@@ -84,8 +84,8 @@
 // with `public_access: true`, and denied outright when a rule
 // exists with `allowed: false`). There is no reusable
 // per-request "is this endpoint public?" helper to call from a
-// handler — the check lives in the API Manager middleware /
-// `resolve_public` path — so the public routes below rely on
+// handler - the check lives in the API Manager middleware /
+// `resolve_public` path - so the public routes below rely on
 // that gate: an administrator must create the matching
 // `ApiAccessRule` rows for `GET /api/v1/rental/public/*`. The
 // routes are registered in `route_info()` with
@@ -116,16 +116,16 @@
 //   - `notification.requested` (order created, out, returned,
 //     in the notifications module's payload shape).
 // Events this module listens to:
-//   - `user.deleted` — anonymizes the user's orders, damage
+//   - `user.deleted` - anonymizes the user's orders, damage
 //     reports, and deliveries to `deleted-user`.
-//   - `payment.captured` — marks the referenced order's
+//   - `payment.captured` - marks the referenced order's
 //     deposit held.
-//   - `payment.refunded` — marks the referenced order's
+//   - `payment.refunded` - marks the referenced order's
 //     deposit refunded (or partially refunded when the payload
 //     amount is below the held deposit).
-//   - `logistics.shipment.delivered` — records the shipment id
+//   - `logistics.shipment.delivered` - records the shipment id
 //     on the referenced order.
-//   - `contracts.signed` — marks the rental agreement signed
+//   - `contracts.signed` - marks the rental agreement signed
 //     on every order linked to that contract id.
 
 pub mod ai_capabilities;

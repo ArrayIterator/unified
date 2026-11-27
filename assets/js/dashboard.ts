@@ -31,7 +31,7 @@
 (function () {
   "use strict";
 
-  /* ---------- Types (compile-time only; erased by the transpiler) ---------- */
+  /* Types (compile-time only; erased by the transpiler) */
 
   type Theme = "dark" | "light";
 
@@ -133,7 +133,7 @@
   var SIDEBAR_KEY = "unified-sidebar-collapsed";
   var root = document.documentElement;
 
-  /* ---------- Small helpers ---------- */
+  /* Small helpers */
 
   function escapeHtml(value: unknown): string {
     return String(value)
@@ -172,7 +172,7 @@
       });
   }
 
-  /* ---------- CSRF protection ---------- */
+  /* CSRF protection */
   // Cookie-authenticated mutations require a valid `X-CSRF-Token`
   // header: the server answers 403 without one. The token is bound
   // to the session, fetched from `GET /api/v1/security/csrf-token`,
@@ -340,7 +340,7 @@
     );
   }
 
-  /* ---------- Module icons (sprite + placeholder fallback) ----------
+  /* Module icons (sprite + placeholder fallback)
    * The module sprite is embedded in the page by the server
    * ({{{module_icons_sprite}}} in dashboard.hbs). When a module has no
    * symbol yet, the placeholder is shown instead of an empty <use>. */
@@ -359,7 +359,7 @@
     );
   }
 
-  /* ---------- Theme: dark / light ---------- */
+  /* Theme: dark / light */
 
   function storedTheme(): Theme | null {
     try {
@@ -442,7 +442,7 @@
     });
   });
 
-  /* ---------- Sidebar: drawer (small screens) + collapse (desktop) ---------- */
+  /* Sidebar: drawer (small screens) + collapse (desktop) */
 
   var shell = document.querySelector(".dashboard-shell");
   var backdrop = document.querySelector("[data-sidebar-backdrop]") as HTMLElement | null;
@@ -516,7 +516,7 @@
     }
   })();
 
-  /* ---------- Flash messages ---------- */
+  /* Flash messages */
 
   document.querySelectorAll("[data-flash]").forEach(function (flash) {
     window.setTimeout(function () {
@@ -541,7 +541,7 @@
     }, 6000);
   }
 
-  /* ---------- Toasts ---------- */
+  /* Toasts */
 
   function toastRegion(): HTMLElement {
     var region = document.getElementById("toast-region");
@@ -577,7 +577,7 @@
     return toast;
   }
 
-  /* ---------- Dropdown menus ---------- */
+  /* Dropdown menus */
 
   document.querySelectorAll("[data-menu-toggle]").forEach(function (toggle) {
     const menu = document.getElementById(toggle.getAttribute("aria-controls") ?? "");
@@ -626,7 +626,7 @@
     }
   });
 
-  /* ---------- Tabs ---------- */
+  /* Tabs */
 
   document.querySelectorAll("[data-tabs]").forEach(function (tablist) {
     var tabs = tablist.querySelectorAll("[data-tab]");
@@ -645,7 +645,7 @@
     });
   });
 
-  /* ---------- Modals (Esc, overlay click, focus return) ---------- */
+  /* Modals (Esc, overlay click, focus return) */
 
   var lastModalOpener: Element | null = null;
 
@@ -730,7 +730,7 @@
     });
   });
 
-  /* ---------- Module list from /api/v1/extensions ---------- */
+  /* Module list from /api/v1/extensions */
 
   function modulesFromEnvelope(data: unknown): ModuleItem[] {
     return itemsFromEnvelope<ModuleItem>(data);
@@ -842,7 +842,7 @@
       });
   }
 
-  /* ---------- Dashboard search (filters the module grid) ---------- */
+  /* Dashboard search (filters the module grid) */
 
   const searchInput = document.querySelector("[data-dashboard-search]") as HTMLInputElement | null;
   if (searchInput) {
@@ -856,7 +856,7 @@
     });
   }
 
-  /* ---------- System status widget: GET /api/v1/service-monitor/status ---------- */
+  /* System status widget: GET /api/v1/service-monitor/status */
 
   function statusBadge(status?: string): string {
     if (status === "ok") {
@@ -927,7 +927,7 @@
       });
   }
 
-  /* ---------- Tasks widget: GET /api/v1/tasks ---------- */
+  /* Tasks widget: GET /api/v1/tasks */
 
   var TASK_STATUS_LABELS: Record<string, string> = {
     todo: "To do",
@@ -1025,7 +1025,7 @@
       });
   }
 
-  /* ---------- Notifications widget: GET /api/v1/notifications ---------- */
+  /* Notifications widget: GET /api/v1/notifications */
 
   function notificationKindBadge(kind?: string): string {
     var map: Record<string, string> = {
@@ -1095,7 +1095,7 @@
             // data-mark-read is always set by the render above, so this is never null.
             var id = button.getAttribute("data-mark-read") as string;
             button.disabled = true;
-            button.textContent = "Saving…";
+            button.textContent = "Saving...";
             fetchWithCsrf(
               "/api/v1/notifications/" + encodeURIComponent(id) + "/read",
               "POST"
@@ -1126,7 +1126,7 @@
       });
   }
 
-  /* ---------- Command palette ---------- */
+  /* Command palette */
 
   var paletteOverlay = document.getElementById("command-palette");
   const paletteInput = document.querySelector("[data-palette-input]") as HTMLInputElement | null;
@@ -1320,7 +1320,7 @@
     }
   });
 
-  /* ---------- Dashboard section tables ---------- */
+  /* Dashboard section tables */
   // Section pages render their panel server-side (see the
   // `section_*` flags) and fill their table from the matching
   // dashboards API endpoint. The endpoints are the same ones the
@@ -1369,7 +1369,7 @@
       "/api/v1/dashboards/user/licenses?per_page=20",
       ["Product", "Status", "Expires", "Created"],
       function (item: LicenseItem) {
-        return [item.product, item.status, item.expires_at || "—", item.created_at];
+        return [item.product, item.status, item.expires_at || "-", item.created_at];
       }
     );
     loadSectionTable(
@@ -1377,7 +1377,7 @@
       "/api/v1/dashboards/user/downloads?per_page=20",
       ["Software", "Downloaded"],
       function (item: DownloadItem) {
-        return [item.software_slug || "—", item.downloaded_at];
+        return [item.software_slug || "-", item.downloaded_at];
       }
     );
     loadSectionTable(
@@ -1445,7 +1445,7 @@
     );
   }
 
-  /* ---------- Boot ---------- */
+  /* Boot */
 
   initTheme();
   loadModules();

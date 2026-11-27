@@ -51,9 +51,7 @@ use super::hooks::on_user_created;
 use super::types::LoyaltyState;
 use super::ai_capabilities::AI_CAPABILITIES;
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct LoyaltyModule {
     state: LoyaltyState,

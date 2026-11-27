@@ -1,12 +1,10 @@
-// Projects module — methodology profiles, submodules, and product flags.
+// Projects module - methodology profiles, submodules, and product flags.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use super::*;
 use serde::Serialize;
 
-// ---------------------------------------------------------------------------
 // Methodologies
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize)]
 pub struct MethodologyProfile {
@@ -245,9 +243,7 @@ pub fn valid_methodology(id: &str) -> bool {
     methodology_profile(id).is_some()
 }
 
-// ---------------------------------------------------------------------------
 // Submodule declarations and product flag
-// ---------------------------------------------------------------------------
 //
 // The core registry currently has no submodule mechanism and no
 // available-as-product flag, so both are declared here in plain data

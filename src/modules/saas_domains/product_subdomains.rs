@@ -49,9 +49,7 @@ use super::store::settings;
 use super::types::ProductSubdomain;
 use super::validation::validate_label;
 
-// ---------------------------------------------------------------------------
 // Product-subdomain helpers.
-// ---------------------------------------------------------------------------
 
 /// Validate a product or package identifier: 1-128 characters,
 /// lowercase letters, digits, hyphens, and underscores, starting
@@ -335,9 +333,7 @@ pub(crate) fn finalize_expired_graces_hook() -> Vec<Uuid> {
         .collect()
 }
 
-// ---------------------------------------------------------------------------
 // Product-subdomain handlers.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn check_product_subdomain(
     ctx: web::Data<Arc<AppContext>>,

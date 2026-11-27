@@ -1,4 +1,4 @@
-//! Fleet state (split from state.rs; moved verbatim).
+//! Fleet state.
 
 use super::*;
 

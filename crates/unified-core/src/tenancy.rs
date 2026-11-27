@@ -17,17 +17,17 @@
 // context and NEVER queries the control-plane database directly for
 // tenant business data. The ONLY sanctioned path to tenant data is:
 //
-//   1. `TenantContext` (the extractor below) — the tenant id (uuidv7),
+//   1. `TenantContext` (the extractor below) - the tenant id (uuidv7),
 //      the derived schema name, and the company/site scope for this
 //      request, read from the context the tenant-resolution middleware
 //      attached. No handler invents, guesses, or defaults a tenant.
-//   2. `with_tenant_connection` — the ONLY sanctioned way module code
+//   2. `with_tenant_connection` - the ONLY sanctioned way module code
 //      touches a tenant schema through Diesel. It checks a connection
 //      out of the pool, opens a transaction, sets a transaction-scoped
 //      search path to the tenant schema, runs the caller's closure,
 //      and commits. A pooled connection is never left pointing at a
 //      tenant schema after checkout returns it.
-//   3. An entitlement check — the purchased package determines which
+//   3. An entitlement check - the purchased package determines which
 //      modules and data the tenant may see. The check is resolved at
 //      request time from the tenant context against the subscription /
 //      package record held by the control plane (read through the
@@ -58,8 +58,8 @@
 //
 // # Fail closed
 //
-// If the plumbing is not yet wired for a module — no resolved tenant
-// context on the request, no entitlement answer, no tenant schema —
+// If the plumbing is not yet wired for a module - no resolved tenant
+// context on the request, no entitlement answer, no tenant schema -
 // the module REJECTS the request. It never falls back to `public`
 // tenant data, never serves cross-tenant data, and never serves a
 // tenant's data to an unresolved host. The convergence point (what is
@@ -173,7 +173,7 @@ fn schema_name_pattern() -> &'static Regex {
 ///
 /// THE ONLY place a tenant schema name is ever built. Every DDL call
 /// in the whole codebase must go through this helper (or
-/// `schema_name_for_str()` for external input) — never build a
+/// `schema_name_for_str()` for external input) - never build a
 /// `tenant_...` name inline anywhere else.
 ///
 /// The name is `tenant_` + the uuidv7's simple hex form (32 lowercase
@@ -194,7 +194,7 @@ pub fn schema_name(tenant_id: Uuid) -> String {
 /// The nil-derived name `tenant_000...0` is rejected even though it
 /// matches the pattern: a nil UUID is never a tenant id, so the name
 /// it derives to is never a valid tenant schema. This is the choke
-/// point — every validator call site inherits the fix.
+/// point - every validator call site inherits the fix.
 pub fn is_valid_schema_name(name: &str) -> bool {
     name != NIL_TENANT_SCHEMA_NAME && schema_name_pattern().is_match(name)
 }
@@ -329,8 +329,8 @@ impl FromRequest for TenantContext {
 /// subscriptions, domains, billing, licensing in the `public`
 /// schema) extracts `ControlPlaneGuard` instead of `TenantContext`.
 /// The guard succeeds ONLY when the request carries NO resolved
-/// tenant context — that is, the request arrived on the control
-/// plane — and rejects (403) any request that resolved to a tenant,
+/// tenant context - that is, the request arrived on the control
+/// plane - and rejects (403) any request that resolved to a tenant,
 /// so a tenant host can never reach a control-plane handler through
 /// this guard, and a tenant module cannot accidentally use the
 /// control-plane path. A handler holding this guard uses a plain
@@ -372,7 +372,7 @@ impl FromRequest for ControlPlaneGuard {
 ///
 /// A caller may read any company's records ONLY when the scope is
 /// the explicitly-decided `Platform` variant. The absence of a
-/// company — a caller no source resolves a company for — is
+/// company - a caller no source resolves a company for - is
 /// `Unresolved`, never platform: an unresolved caller reads global
 /// (unscoped, empty-company) rows only and is denied every
 /// company-owned record. There is no "no company means platform"
@@ -385,7 +385,7 @@ impl FromRequest for ControlPlaneGuard {
 ///
 /// 1. no company resolves from any source (verified caller company,
 ///    tenant-context company, `user.company_requested` hook answer);
-/// 2. the request is a control-plane request — no resolved tenant
+/// 2. the request is a control-plane request - no resolved tenant
 ///    context is attached (`ControlPlaneGuard::is_control_plane_request`);
 /// 3. the verified caller holds an admin role (`admin` or
 ///    `super_admin`, server-resolved only, never a header).
@@ -395,7 +395,7 @@ impl FromRequest for ControlPlaneGuard {
 /// authoritative first: verified caller company
 /// (`caller::caller_from(req).company_id`), then the tenant-context
 /// company, then the `user.company_requested` hook answer. A
-/// body/query `company_id` is NEVER a source — it is verified
+/// body/query `company_id` is NEVER a source - it is verified
 /// against the scope instead.
 ///
 /// # Adopted rules (C3 tasks 315/320, 2026-11-23)
@@ -407,16 +407,16 @@ impl FromRequest for ControlPlaneGuard {
 /// - Write rule (315, strict by default): writes require a resolved
 ///   company and a match, 403 otherwise. `require_company_scope`
 ///   below is the shared write guard: `Platform` may write any
-///   scope; `Company(c)` writes its own company only — the global
+///   scope; `Company(c)` writes its own company only - the global
 ///   scope is platform-only; `Unresolved` writes nothing. Named
 ///   carve-outs only, listed in the C3 guard map
 ///   (`docs/integration/C3_MODULE_GUARD_MAP.md`): (1) self-service
 ///   writes (applicant submit/withdraw, consent grant/withdraw,
 ///   own notifications); (2) platform-scope writes through an
 ///   explicit, audited platform scope (`ControlPlaneGuard` +
-///   `CallerScope::decide` — never silent, never by default);
+///   `CallerScope::decide` - never silent, never by default);
 ///   (3) genuinely tenant-scoped writes where the record carries
-///   no company field yet — tenant-gate-only until C11 lands.
+///   no company field yet - tenant-gate-only until C11 lands.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CallerScope {
     /// The caller acts for one company: reads that company's rows
@@ -489,7 +489,7 @@ impl CallerScope {
     /// `record_company` (empty means a global/shared row).
     /// Platform reads any record; a company caller reads their own
     /// company's rows plus global rows; an unresolved caller reads
-    /// global rows ONLY — every company-owned record is denied.
+    /// global rows ONLY - every company-owned record is denied.
     /// A manage capability deliberately does NOT widen this scope.
     pub fn can_access_record(&self, record_company: &str) -> bool {
         match self {
@@ -499,11 +499,11 @@ impl CallerScope {
         }
     }
 
-    /// Write scope (C3 task 315, strict by default — the shared
+    /// Write scope (C3, strict by default - the shared
     /// write guard): a caller may only write rows of the target
     /// company. Platform may write any scope, including the global
     /// (empty) scope. A company caller may write only their own
-    /// company — the global scope is platform-only, because writing
+    /// company - the global scope is platform-only, because writing
     /// it would change shared data for every company. An
     /// unresolved caller may write nothing.
     pub fn require_company_scope(&self, target_company: &str) -> UnifiedResult<()> {
@@ -554,7 +554,7 @@ impl CallerScope {
 /// Runs `SET LOCAL search_path = "<validated schema>", public` (the
 /// schema name is validated by `is_valid_schema_name()` first and
 /// still double-quoted; it contains only `tenant_` + 32 lowercase
-/// hex characters, so no quoting escape is possible — and no
+/// hex characters, so no quoting escape is possible - and no
 /// unvalidated string is ever interpolated into SQL here).
 ///
 /// `SET LOCAL` is transaction-scoped, not per-connection pool setup,
@@ -564,7 +564,7 @@ impl CallerScope {
 /// next, unrelated request that reuses the connection. `SET LOCAL`
 /// dies with the transaction instead, so a connection returned to the
 /// pool is always back to the default search path. Callers MUST call
-/// this inside a transaction — `with_tenant_connection` guarantees
+/// this inside a transaction - `with_tenant_connection` guarantees
 /// that; calling it outside a transaction leaves the setting without
 /// effect (PostgreSQL warns and discards it), so direct callers that
 /// ignore the transaction requirement fail open and must not exist.
@@ -589,7 +589,7 @@ pub fn set_tenant_search_path(conn: &mut PgConnection, schema: &str) -> UnifiedR
 ///
 /// The closure runs entirely inside the transaction, so either all
 /// of its tenant writes land or none do, and the `SET LOCAL` search
-/// path dies with the transaction — the pooled connection is never
+/// path dies with the transaction - the pooled connection is never
 /// left pointing at a tenant schema. The closure receives the
 /// connection with the search path already set; it must not call
 /// `set_tenant_search_path` again and must not run DDL. Capability
@@ -600,7 +600,7 @@ pub fn set_tenant_search_path(conn: &mut PgConnection, schema: &str) -> UnifiedR
 /// Fail closed at this choke point: the nil UUID is never a tenant
 /// id. Without this check `schema_name(Uuid::nil())` builds the
 /// syntactically valid `tenant_000...0` name and the call would
-/// silently query an empty schema instead of failing — so a caller
+/// silently query an empty schema instead of failing - so a caller
 /// that lost its tenant id would read nothing (and believe it read
 /// the tenant) rather than erroring. A nil id is rejected before any
 /// connection is checked out.
@@ -671,7 +671,7 @@ pub fn run_tenant_migrations(pool: &DbPool, tenant_id: Uuid) -> UnifiedResult<()
 /// A nil tenant id is rejected before any database access: it is
 /// never a tenant, so there is no schema whose existence to check.
 /// (`crate::db::schema_exists` also validates the derived name,
-/// which `is_valid_schema_name()` now rejects for the nil UUID —
+/// which `is_valid_schema_name()` now rejects for the nil UUID -
 /// this explicit check is the first layer.)
 pub fn schema_exists(pool: &DbPool, tenant_id: Uuid) -> UnifiedResult<bool> {
     if tenant_id.is_nil() {
@@ -718,7 +718,7 @@ mod tests {
     /// A pool that never connects: `Pool::builder().build()` opens
     /// one connection eagerly to validate the manager, so it fails
     /// against an unreachable URL. `build_unchecked` skips that
-    /// probe — the nil checks under test reject before any checkout
+    /// probe - the nil checks under test reject before any checkout
     /// is attempted, so no connection is ever opened.
     fn dead_pool() -> DbPool {
         Pool::builder()
@@ -884,7 +884,7 @@ mod tests {
             CallerScope::Unresolved
         );
         // No company, admin caller, but a tenant host resolved:
-        // NOT platform — the tenant context makes it unresolved.
+        // NOT platform - the tenant context makes it unresolved.
         assert_eq!(
             CallerScope::decide(None, &tenant_request(), true),
             CallerScope::Unresolved

@@ -21,42 +21,42 @@ use tokio::sync::broadcast;
 use uuid::Uuid;
 
 use super::*;
-// Meetings module — Zoom-like video meetings over WebRTC.
+// Meetings module - Zoom-like video meetings over WebRTC.
 //
 // Routes live under `/api/v1/meetings`:
 //
 //   Rooms:
-//     GET/POST /rooms — list rooms / create a room (scheduled or instant).
+//     GET/POST /rooms - list rooms / create a room (scheduled or instant).
 //     GET/PATCH/DELETE /rooms/{id}.
 //     POST /rooms/{id}/start, /end, /cancel, /regenerate-token.
-//     GET  /join/{token} — resolve a join link token to its room.
+//     GET  /join/{token} - resolve a join link token to its room.
 //     POST /rooms/{id}/join, /leave.
 //   People:
-//     GET  /rooms/{id}/participants — paginated, filter by status / role.
+//     GET  /rooms/{id}/participants - paginated, filter by status / role.
 //     POST /rooms/{id}/participants/{user_id}/promote, /demote, /remove.
 //     POST /rooms/{id}/waiting/{user_id}/admit, /deny.
-//     GET/POST /rooms/{id}/presence — live presence + heartbeat.
-//     POST /rooms/{id}/screen-share — start / stop sharing a screen.
+//     GET/POST /rooms/{id}/presence - live presence + heartbeat.
+//     POST /rooms/{id}/screen-share - start / stop sharing a screen.
 //   In-meeting:
-//     GET/POST /rooms/{id}/messages — chat inside the meeting.
-//     POST /rooms/{id}/signal — WebRTC signalling relay (offer /
+//     GET/POST /rooms/{id}/messages - chat inside the meeting.
+//     POST /rooms/{id}/signal - WebRTC signalling relay (offer /
 //       answer / ICE candidate) over the shared WebSocket hub.
-//     GET  /ws?room={id} — WebSocket feed of this room's events.
+//     GET  /ws?room={id} - WebSocket feed of this room's events.
 //   Recordings:
 //     POST /rooms/{id}/recordings/start.
 //     POST /rooms/{id}/recordings/{recording_id}/stop, /attach.
 //     GET  /rooms/{id}/recordings.
 //   History:
-//     GET  /rooms/{id}/attendance — who joined, when, for how long.
-//     GET  /history — ended and cancelled rooms.
+//     GET  /rooms/{id}/attendance - who joined, when, for how long.
+//     GET  /history - ended and cancelled rooms.
 //
-// HONESTY — READ THIS FIRST. What is real in this module:
+// HONESTY - READ THIS FIRST. What is real in this module:
 // in-app room management (create / schedule / join / leave / waiting
 // room / roles / presence), WebRTC *signalling* (offer / answer / ICE
 // exchange relayed through the existing WebSocket hub), in-meeting
 // chat, screen-share state events, and recording bookkeeping whose
 // bytes live in the existing storage module. What is NOT built here:
-// the actual media transport is browser-to-browser WebRTC — there is
+// the actual media transport is browser-to-browser WebRTC - there is
 // NO media server and NO SFU (Selective Forwarding Unit) in this
 // round, so there is no server-side mixing, transcoding, or recording
 // of media streams. A group call therefore depends on every
@@ -111,9 +111,7 @@ use super::*;
 //     `check_entitlement`.
 
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct MeetingsModule {
     state: MeetingsState,

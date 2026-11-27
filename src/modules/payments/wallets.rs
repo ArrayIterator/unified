@@ -8,14 +8,12 @@ use super::{events::*, card_validation::*, card_settings::*, limits::*, provider
 
 
 
-// ---------------------------------------------------------------------------
 // Wallet providers (Google Pay / Apple Pay) and local schedules.
-// ---------------------------------------------------------------------------
 impl ProviderAdapter {
     /// Wallet charge: the wallet payment token is forwarded to the
     /// delegate gateway, which performs the charge. The delegate's
     /// currency list applies (checked in `wallet_currency` by the
-    /// caller path through `charge` — see `wallet_charge`).
+    /// caller path through `charge` - see `wallet_charge`).
     pub(crate) async fn wallet_charge(&self, input: &ChargeInput) -> UnifiedResult<ChargeResult> {
         let delegate = self.delegate()?;
         let mut input = input.clone();
@@ -41,7 +39,6 @@ impl ProviderAdapter {
         ))
     }
 
-    // ------------------------------------------------------------------
     // Bank transfer (manual verification): no provider API is ever
     // called. A charge / authorization only records a pending manual
     // verification: the shopper transfers the money to a configured
@@ -51,7 +48,6 @@ impl ProviderAdapter {
     // provider-side capture to call. Refund and void are manual
     // operations: the adapter records the request with an audit note
     // and the administrator moves the money through their own bank.
-    // ------------------------------------------------------------------
 
     pub(crate) async fn bank_transfer_test(&self) -> UnifiedResult<String> {
         Ok("Bank transfer is a manual method: no provider API to test. Verification is done by an administrator against the configured bank accounts.".to_string())
@@ -93,7 +89,7 @@ impl ProviderAdapter {
         // Honest caveat: the refund endpoint marks the original
         // transaction refunded and emits `payment.refunded` as soon
         // as this call succeeds, even though the money only moves
-        // when the administrator sends it — the refund record stays
+        // when the administrator sends it - the refund record stays
         // in status `pending` until then, so the administrator must
         // complete the bank transfer promptly. The integrator should
         // gate the original-transaction status change on a
@@ -309,7 +305,7 @@ mod tests {
     #[test]
     fn calendar_months_do_not_drift_from_the_calendar() {
         // 31 January + 1 month ends in February, clamped to the
-        // month's last day — never 3 March (the old +30 days).
+        // month's last day - never 3 March (the old +30 days).
         assert_eq!(
             add_calendar_months(utc(2026, 1, 31), 1),
             utc(2026, 2, 28)

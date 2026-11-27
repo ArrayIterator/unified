@@ -1,9 +1,9 @@
-// cloud module — virtualization grouping (view only).
+// cloud module - virtualization grouping (view only).
 //
 // This endpoint groups the virtualization connectors (Proxmox VE,
 // KVM via Proxmox, XenServer / XCP-ng, Virtualizor) and their cached
 // inventory counts. It is a grouping VIEW over the connector
-// adapters — it does NOT provision VMs, manage templates or images,
+// adapters - it does NOT provision VMs, manage templates or images,
 // or talk to a hypervisor directly. Unified is a cloud connector:
 // it connects to external platforms, it does not build or reimplement
 // the VPS/VM panel (that is a separate external project). QEMU is

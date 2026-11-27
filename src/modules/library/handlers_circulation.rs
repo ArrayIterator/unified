@@ -20,9 +20,7 @@ use super::{COPY_AVAILABLE, COPY_DAMAGED, COPY_LOST, COPY_ON_LOAN, COPY_RESERVED
     require_currency, require_in_list, require_non_negative, require_permission, require_tenant,
     require_text, resolve_policy};
 
-// ---------------------------------------------------------------------------
 // Member handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_members(
     ctx: web::Data<Arc<AppContext>>,
@@ -376,9 +374,7 @@ pub(crate) async fn list_my_loans(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Loan handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn create_loan(
     ctx: web::Data<Arc<AppContext>>,
@@ -505,8 +501,8 @@ pub(crate) async fn create_loan(
                 ));
             }
         }
-        // The racy tail — concurrent-loan count, copy status, loan
-        // insert, copy mark — runs atomically in `checkout_copy`
+        // The racy tail - concurrent-loan count, copy status, loan
+        // insert, copy mark - runs atomically in `checkout_copy`
         // (member checkout lock + held copy entry); the pre-checks
         // above are a fast path and the checks inside are
         // authoritative.

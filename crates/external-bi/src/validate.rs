@@ -1,11 +1,9 @@
-//! BI external module (split from lib.rs; moved verbatim).
+//! BI external module.
 
 use super::*;
 
 
-// ---------------------------------------------------------------------------
 // Validation helpers (pure, unit-tested)
-// ---------------------------------------------------------------------------
 
 /// Field names: 1-64 chars, start with a letter or `_`, then letters,
 /// digits, or `_`.
@@ -121,9 +119,7 @@ pub fn validate_row(fields: &[FieldDef], row: &Value) -> Result<Value, String> {
     Ok(Value::Object(clean))
 }
 
-// ---------------------------------------------------------------------------
 // Cron expressions (shape validation + minute matching; no daemon)
-// ---------------------------------------------------------------------------
 
 const CRON_RANGES: [(u32, u32); 5] = [(0, 59), (0, 23), (1, 31), (1, 12), (0, 7)];
 

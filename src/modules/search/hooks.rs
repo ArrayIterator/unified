@@ -1,4 +1,4 @@
-// Global Search — Hook-bus listeners.
+// Global Search - Hook-bus listeners.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -21,9 +21,7 @@ use super::service::*;
 use super::handlers::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Hook handlers.
-// ---------------------------------------------------------------------------
 
 pub(crate) fn on_search_index(state: Arc<SearchState>, ctx: &mut HookContext) {
     let data = ctx.data.clone();

@@ -1,4 +1,4 @@
-//! Documents state (split from state.rs; moved verbatim).
+//! Documents state.
 
 use super::super::types::{
     MAX_CUSTOM_METADATA_KEYS, MAX_METADATA_ALT_TEXT_LEN, MAX_METADATA_CAPTION_LEN,
@@ -16,7 +16,7 @@ impl DocumentsState {
     /// optimistic version number) so the lock is never held across
     /// a scan or an emit. `target_id` is the document id the
     /// caller already allocated (the scan event and the rows must
-    /// agree on it — it is never re-allocated here). `checksum` is
+    /// agree on it - it is never re-allocated here). `checksum` is
     /// `Some` for the single-shot path (hashed in memory) and
     /// `None` for the chunked path (the lazy-finalize worker fills
     /// it in after hashing the stored object). `visibility` is the
@@ -158,7 +158,7 @@ impl DocumentsState {
 
 
     /// Streaming finalize for a completed chunked session: the
-    /// assembled file stays on disk for every step — MIME sniffing
+    /// assembled file stays on disk for every step - MIME sniffing
     /// reads only the file head, the object is copied into the
     /// store chunk by chunk, and the virus scan reads the file
     /// (skipped without touching it when no scanner is configured).
@@ -397,7 +397,7 @@ impl DocumentsState {
     /// versions' usage. `scope` is the request's resolved scope
     /// (the tenant the caller was authorized in): stored keys are
     /// scope-free, so the provider root is re-resolved from it
-    /// here — a delete can never address another scope's tree.
+    /// here - a delete can never address another scope's tree.
     /// Version objects are deleted from the document's visibility
     /// area (every version lives in the same area).
     pub(crate) async fn delete_document(
@@ -469,7 +469,7 @@ impl DocumentsState {
     /// between the public and private areas, then update the row.
     /// The stored keys never change, so the file URL never
     /// changes. All versions move because the public route serves
-    /// ANY key under the public area with zero checks — a
+    /// ANY key under the public area with zero checks - a
     /// flipped-to-private document must not leave an old version
     /// behind there. A flip to `public` is refused unless the
     /// document's scan is clean (the scan gate); a flip to
@@ -478,7 +478,7 @@ impl DocumentsState {
     /// that already landed are rolled back and the row keeps the
     /// old visibility; a copy left behind by a failed rollback is
     /// an orphan for the storage sweeper (residual risk of the
-    /// copy+delete move on remote providers — the local rename is
+    /// copy+delete move on remote providers - the local rename is
     /// atomic). Emits `document.visibility.flipped`.
     pub(crate) async fn flip_visibility(
         &self,

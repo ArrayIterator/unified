@@ -1,4 +1,4 @@
-// field_service module — Maintenance plan handlers.
+// field_service module - Maintenance plan handlers.
 //
 // Split from the former single-file module `src/modules/field_service.rs`.
 // The module root (`field_service.rs`) re-exports the public items, so the
@@ -29,9 +29,7 @@ use super::helpers::{
 };
 use super::handlers_templates::validate_interval;
 
-// ---------------------------------------------------------------------------
 // Maintenance plan handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_plans(
     ctx: web::Data<Arc<AppContext>>,

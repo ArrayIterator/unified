@@ -335,7 +335,7 @@ pub(crate) fn verify_token(
     // Second opinion from the durable revocation table: the
     // in-memory map above only knows rows it wrote itself (or the
     // once-per-process hydration), so a revocation written by
-    // another process — logout, another instance — would be
+    // another process - logout, another instance - would be
     // invisible here until a restart. When a pool is attached the
     // table is consulted directly; a lookup failure fails closed
     // (the token cannot be proven unrevoked), and without a pool

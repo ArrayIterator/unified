@@ -182,9 +182,7 @@ pub(crate) fn send_digest_for_user(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Handlers
-// ---------------------------------------------------------------------------
 
 /// Ownership check for single-notification actions. The acting
 /// user is the authenticated caller (`X-User-Id` header, see
@@ -681,9 +679,7 @@ pub(crate) async fn send_digest(
     json::respond(result, debug)
 }
 
-// ---------------------------------------------------------------------------
 // Delivery and audience handlers.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_deliveries(
     ctx: web::Data<Arc<AppContext>>,
@@ -1085,9 +1081,7 @@ pub(crate) async fn delete_audience(
     json::respond(result, debug)
 }
 
-// ---------------------------------------------------------------------------
 // Notification template handlers.
-// ---------------------------------------------------------------------------
 
 /// Templates are operator configuration: every template endpoint
 /// requires the admin capability.
@@ -1419,9 +1413,7 @@ pub(crate) async fn test_template(
     json::respond(result, debug)
 }
 
-// ---------------------------------------------------------------------------
 // Hook handlers
-// ---------------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {

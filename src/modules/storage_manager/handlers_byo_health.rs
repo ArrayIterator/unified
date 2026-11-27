@@ -12,9 +12,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // BYO health checks.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn health_byo_connection(
     state: web::Data<StorageManagerState>,

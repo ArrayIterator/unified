@@ -1,4 +1,4 @@
-//! Cloudflare connector module. — Cloudflare API client.
+//! Cloudflare connector module. - Cloudflare API client.
 //!
 //! Split from `src/modules/cloudflare.rs`; behaviour unchanged.
 

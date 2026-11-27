@@ -4,9 +4,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-// ---------------------------------------------------------------------------
 // Constants and configurable defaults.
-// ---------------------------------------------------------------------------
 
 /// Prefix every custom field key must start with, so custom fields
 /// can never collide with a system field. Configurable default:
@@ -145,9 +143,7 @@ pub const DEFAULT_SYSTEM_FIELDS: [(&str, &str, &str, &str, bool, bool); 10] = [
     ("hr.employee", "name", "Name", "text", true, false),
 ];
 
-// ---------------------------------------------------------------------------
 // Types.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FieldValidation {

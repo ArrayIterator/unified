@@ -11,9 +11,7 @@ use uuid::Uuid;
 
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(default)]
-// ---------------------------------------------------------------------------
 // Credentials and connections.
-// ---------------------------------------------------------------------------
 /// Credentials for one connection. Every field is optional at the type
 /// level; `validate_connection` enforces the per-kind required set.
 /// Values are write-only: they are never serialized into a view, never
@@ -22,7 +20,7 @@ use uuid::Uuid;
 /// Two generations live side by side here. The pre-existing API
 /// fields (`api_key`, `access_key_id`, `secret_access_key`,
 /// `webhook_secret`) keep their original write-only treatment. The
-/// secrets added by task 350 (`password`, `client_secret`,
+/// secrets (`password`, `client_secret`,
 /// `refresh_token`, `access_token`) are stored ENCRYPTED (see
 /// `crypto.rs`, `v1.` format, key `app.secret_key`); adapters
 /// decrypt them at use time and fail closed when no secret is
@@ -126,7 +124,7 @@ pub struct EmailConnection {
     /// Exact public webhook URL (needed to verify Mandrill signatures).
     pub webhook_url: Option<String>,
     /// Optional public unsubscribe page, used for the https half of
-    /// the List-Unsubscribe header (task 354, `deliverability.rs`).
+    /// the List-Unsubscribe header (`deliverability.rs`).
     /// Empty means mailto only; no URL is ever invented. Validated
     /// as an http(s) URL at write time.
     pub unsubscribe_url: Option<String>,
@@ -423,7 +421,7 @@ pub(crate) fn validate_connection(
             }
         }
         // Generic SMTP: the connection carries the whole server
-        // configuration now (host, port, TLS mode, auth, from) —
+        // configuration now (host, port, TLS mode, auth, from) -
         // the adapter delivers directly instead of delegating to
         // the Mail Manager. A port of 0 is never valid; the TLS
         // mode must be one of the three supported values.
@@ -453,7 +451,7 @@ pub(crate) fn validate_connection(
                 ));
             }
         }
-        // SMTP presets (task 354): the relay host, port, and TLS
+        // SMTP presets: the relay host, port, and TLS
         // mode come from the catalog definition, so the connection
         // carries only the auth and the sender. A supplied
         // smtp_host/port/tls overrides the preset and is validated
@@ -511,7 +509,7 @@ pub(crate) fn validate_connection(
             }
             validate_smtp_override(input)?;
         }
-        // Generic HTTP providers (task 354): one API key. Loops
+        // Generic HTTP providers: one API key. Loops
         // needs a template at send time, not connection time.
         EmailProviderKind::Plunk | EmailProviderKind::Courier | EmailProviderKind::Loops => {
             if !has(&input.api_key) {
@@ -531,7 +529,7 @@ pub(crate) fn validate_connection(
             }
         }
         // Local sendmail: no credentials at all. The sender address
-        // is optional — the adapter falls back to unified@localhost.
+        // is optional - the adapter falls back to unified@localhost.
         EmailProviderKind::Sendmail => {}
     }
     if let Some(email) = &input.sender_email {
@@ -541,7 +539,7 @@ pub(crate) fn validate_connection(
             ));
         }
     }
-    // The unsubscribe URL (task 354) is the https half of
+    // The unsubscribe URL is the https half of
     // List-Unsubscribe: it must be an http(s) URL with a host and
     // no embedded credentials, so it can never smuggle a secret
     // into a header.

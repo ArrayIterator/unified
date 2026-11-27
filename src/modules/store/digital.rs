@@ -12,9 +12,7 @@ use super::helpers::{div_rounded, saturating_i64};
 use super::state::{StoreState, new_id, now};
 use super::types::{DEFAULT_DIGITAL_DOWNLOAD_LIMIT, DEFAULT_SAMPLE_RATE_LIMIT_PER_HOUR, DEFAULT_SAMPLE_RATE_LIMIT_WINDOW_MINUTES, DigitalProduct, DigitalProductFile, DigitalProductType, DigitalRoyalty, DownloadEntitlement, Order, OrderItem, PERM_DIGITAL_MANAGE, PERM_DIGITAL_READ, WatermarkFormat, default_proration_policy};
 
-// ---------------------------------------------------------------------------
 // Digital products: seeds, capability checks, validation, watermarking
-// ---------------------------------------------------------------------------
 
 /// Seed rows for the digital type registry. Configurable defaults
 /// only: administrators can add, rename, disable, or remove types

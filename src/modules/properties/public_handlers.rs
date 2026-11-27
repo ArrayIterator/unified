@@ -1,4 +1,4 @@
-// Properties — Public handlers (no auth; gated by the API Manager ApiAccessRule).
+// Properties - Public handlers (no auth; gated by the API Manager ApiAccessRule).
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -19,9 +19,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Public handlers (no auth; gated by the API Manager ApiAccessRule)
-// ---------------------------------------------------------------------------
 
 /// Public list view: the property plus a plan count. Never
 /// exposes buyer or order data (blocks are not listed here).
@@ -124,7 +122,7 @@ pub(crate) async fn get_public_plan_svg(
         Err(error) => return err(error, false),
     };
     let blocks = state.blocks_of_plan(plan.id);
-    match render_plan_svg(&plan, &blocks, &format!("{} — {}", property.title, plan.name)) {
+    match render_plan_svg(&plan, &blocks, &format!("{} - {}", property.title, plan.name)) {
         Ok(svg) => HttpResponse::Ok()
             .content_type("image/svg+xml; charset=utf-8")
             .body(svg),
@@ -152,7 +150,7 @@ pub(crate) async fn get_public_plan_print(
         Err(error) => return err(error, false),
     };
     let blocks = state.blocks_of_plan(plan.id);
-    match render_plan_svg(&plan, &blocks, &format!("{} — {}", property.title, plan.name)) {
+    match render_plan_svg(&plan, &blocks, &format!("{} - {}", property.title, plan.name)) {
         Ok(svg) => {
             let html = render_print_html(&property, &plan, &blocks, &svg, false);
             HttpResponse::Ok()

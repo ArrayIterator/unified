@@ -14,9 +14,7 @@ use super::{constants::*, settings::*, types::*, module::*, inputs::*, handlers_
 
 
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 /// Caller identity: the server-verified caller (user id plus
 /// server-resolved role, both required for capability checks),
 /// exactly like the e-learning module.
@@ -58,19 +56,17 @@ pub(crate) fn require_tenant(req: &HttpRequest) -> UnifiedResult<tenancy::Tenant
     tenancy::TenantContext::from_http_request(req)
 }
 
-// ---------------------------------------------------------------------------
-// Tenant edge guard (C3 pilot 5, task 319, group B).
-// ---------------------------------------------------------------------------
+// Tenant edge guard (C3 pilot 5, group B).
 
 /// The company scope the caller acts in: the tenant context's
 /// company first, the verified caller's server-resolved company
 /// otherwise. Fails closed (403) when both are present and disagree
-/// — a request must not carry one company in its tenant context and
+/// - a request must not carry one company in its tenant context and
 /// another in its verified identity. The `X-Company-Id` header is
 /// NEVER trusted here: only the verified caller (company resolved
 /// from the database at authentication time) and the
 /// middleware-resolved tenant context are sources (header trust
-/// removal is task 317's job elsewhere).
+/// removal is handled elsewhere).
 pub(crate) fn caller_company(
     tenant: &unified_core::tenancy::TenantContext,
     req: &HttpRequest,
@@ -91,7 +87,7 @@ pub(crate) fn caller_company(
     }
 }
 
-/// Resolve the caller's company for a WRITE (C3 task 315, strict by
+/// Resolve the caller's company for a WRITE (C3, strict by
 /// default): a write requires a resolved company scope, so an
 /// unresolved caller is refused with 403 instead of silently
 /// writing a global (unscoped) record. Mutation handlers call
@@ -119,7 +115,7 @@ pub(crate) fn require_company_for_write(
 /// so the record is never stored unscoped under a scoped caller.
 /// When no caller scope is known, a body company is refused: an
 /// unresolved caller may not claim a company (the shared
-/// `CallerScope::Unresolved` rule); omitting the company is refused (C3 task 315):
+/// `CallerScope::Unresolved` rule); omitting the company is refused (C3):
 /// a write requires a resolved company scope.
 pub(crate) fn require_company_match(
     tenant: &unified_core::tenancy::TenantContext,
@@ -157,11 +153,11 @@ pub(crate) fn require_company_match_for(
 /// company-owned record is denied (the shared
 /// `CallerScope::Unresolved` rule). With a scope, only records
 /// carrying that company match, plus unscoped (global/legacy) records,
-/// which are shared content visible to any resolved scope (C3 task 320, rule A). Write strictness here is
+/// which are shared content visible to any resolved scope (C3, rule A). Write strictness here is
 /// mismatch-only (the pilot-3 elearning model): updates carry no
 /// company field in this module, so there is no company change to
 /// verify, and an unresolved caller may still write a global row
-/// — requiring a resolved company on every write is a task-315
+/// - requiring a resolved company on every write is a task-315
 /// decision, not a C3 gate decision.
 pub(crate) fn in_company_scope(
     record_company_id: &Option<String>,
@@ -192,11 +188,11 @@ pub(crate) fn require_record_in_company_scope(
 }
 
 /// Fail closed (403) when a stored record is outside the caller's
-/// company scope FOR A WRITE (C3 task 315, strict by default).
+/// company scope FOR A WRITE (C3, strict by default).
 /// Unlike the read check above (rule A), a write requires an exact
 /// company match: a company caller may write only their own
-/// company's records — global (unscoped) records are platform-only
-/// — and an unresolved caller may write nothing. Mutation handlers
+/// company's records - global (unscoped) records are platform-only
+/// - and an unresolved caller may write nothing. Mutation handlers
 /// call this right after loading the record they mutate; handlers
 /// that only read the record, or load a parent to scope a child
 /// write, keep the read check.
@@ -276,7 +272,7 @@ pub(crate) fn require_exam_by_id_in_scope(
 }
 
 /// Load an exam by id for a WRITE and fail closed (403) when it is
-/// outside the caller scope (C3 task 315, strict by default).
+/// outside the caller scope (C3, strict by default).
 /// Unlike `require_exam_by_id_in_scope` (rule A reads), a write
 /// requires an exact company match: a global exam is platform-only.
 /// Mutation-only loaders call this; read handlers keep
@@ -331,9 +327,9 @@ pub(crate) fn require_attempt_in_scope(
 }
 
 /// Load an attempt by id for a WRITE and fail closed (403) when its
-/// parent exam is outside the caller scope (C3 task 315, strict by
+/// parent exam is outside the caller scope (C3, strict by
 /// default: the parent exam must match the caller's company exactly
-/// — an attempt under a global exam is platform-only). Mutation-only;
+/// - an attempt under a global exam is platform-only). Mutation-only;
 /// read handlers keep `require_attempt_in_scope`.
 pub(crate) fn require_attempt_writable_in_scope(
     state: &ExamsState,
@@ -369,7 +365,7 @@ pub(crate) fn require_rubric_in_scope(
 /// Load a manual grade by id for a WRITE and fail closed (403) when
 /// its parent attempt's exam is outside the caller scope (C3 task
 /// 315, strict by default: the parent exam must match the caller's
-/// company exactly — a grade under a global exam is platform-only).
+/// company exactly - a grade under a global exam is platform-only).
 /// Mutation-only.
 pub(crate) fn require_grade_in_scope(
     state: &ExamsState,

@@ -3,9 +3,7 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Providers (2026-11-22-000010_providers).
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     provider_connections (id) {
@@ -48,9 +46,7 @@ diesel::table! {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Panels (2026-11-22-000013_panels).
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     panel_connections (id) {

@@ -9,9 +9,7 @@ use std::sync::Arc;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
-// Handlers: AI (suggestion only — never purchases anything).
-// ---------------------------------------------------------------------------
+// Handlers: AI (suggestion only - never purchases anything).
 
 pub(crate) async fn ai_suggest(
     req: HttpRequest,
@@ -45,7 +43,7 @@ pub(crate) async fn ai_suggest(
         }
         // Let the AI module ground or enrich the suggestion. When
         // nothing answers, the suggestion stands on the denied
-        // log alone and `ai_grounded` is false — the response says
+        // log alone and `ai_grounded` is false - the response says
         // so instead of pretending an AI weighed in.
         let denied_modules: Vec<Value> = denied
             .iter()

@@ -1,4 +1,4 @@
-// Contracts — Token-gated signing links (no capability check — the token is the.
+// Contracts - Token-gated signing links (no capability check - the token is the.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -19,10 +19,8 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
-// Token-gated signing links (no capability check — the token is the
+// Token-gated signing links (no capability check - the token is the
 // credential; see the public-access note in the module header)
-// ---------------------------------------------------------------------------
 
 /// Resolve a raw signing token to its signer. Unknown, expired,
 /// and revoked tokens all answer 404 with the same message, so
@@ -164,7 +162,7 @@ pub(crate) async fn sign_via_link(
         }
         if !body.confirm {
             return Err(UnifiedError::bad_request(
-                "Signing requires \"confirm\": true — the signer must confirm they reviewed the terms",
+                "Signing requires \"confirm\": true - the signer must confirm they reviewed the terms",
             ));
         }
         // Sequential order: every lower order_index must have

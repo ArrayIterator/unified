@@ -12,9 +12,7 @@ use super::helpers::{matches_search, paginate};
 use super::state::{AuditState};
 use super::types::{AuditEntry, ChainVerification};
 
-// ---------------------------------------------------------------------------
 // Handlers (read-only: entries are immutable)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_entries(
     state: web::Data<Arc<AuditState>>,

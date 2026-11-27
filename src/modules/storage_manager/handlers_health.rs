@@ -13,9 +13,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Health checks.
-// ---------------------------------------------------------------------------
 
 /// Run one health check: connectivity plus a write / read / delete
 /// probe on a scratch key, then cleanup. The scratch object is

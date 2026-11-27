@@ -10,9 +10,7 @@ use super::{limits::*, types::*, hub::*, state::*, helpers::*, module::*, handle
 
 
 
-// ---------------------------------------------------------------------------
 // Live support: sessions
-// ---------------------------------------------------------------------------
 pub(crate) async fn list_support_sessions(
     state: web::Data<ChatState>,
     req: HttpRequest,
@@ -590,8 +588,8 @@ pub(crate) async fn get_queue_position(
 
 
 /// Read scope for a support session: its visitor, its assigned
-/// agent, or any agent on the support roster. Anyone else — even
-/// authenticated — sees nothing: no list rows, no session, no
+/// agent, or any agent on the support roster. Anyone else - even
+/// authenticated - sees nothing: no list rows, no session, no
 /// transcript.
 pub(crate) fn can_read_support_session(
     session: &SupportSession,
@@ -653,8 +651,8 @@ mod tests {
         assert!(can_read_support_session(&session, "visitor-1", false));
         assert!(can_read_support_session(&session, "agent-1", false));
         assert!(can_read_support_session(&session, "agent-2", true));
-        // Any other authenticated caller — another visitor, a
-        // stranger — sees nothing.
+        // Any other authenticated caller - another visitor, a
+        // stranger - sees nothing.
         assert!(!can_read_support_session(&session, "visitor-2", false));
         assert!(!can_read_support_session(&session, "stranger", false));
     }

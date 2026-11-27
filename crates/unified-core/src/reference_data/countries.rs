@@ -1,4 +1,4 @@
-// Reference data -- ISO 3166-1 country registry (task 361).
+// Reference data -- ISO 3166-1 country registry.
 //
 // The single central country list for the whole platform, with the
 // flag file for every country. No module keeps its own country

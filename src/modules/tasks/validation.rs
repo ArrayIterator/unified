@@ -1,4 +1,4 @@
-// tasks — Validation helpers and small pure utilities.
+// tasks - Validation helpers and small pure utilities.
 
 use super::types::{TASK_ASSIGNED, TASK_UNASSIGNED};
 use super::*;
@@ -10,12 +10,10 @@ use chrono::{DateTime, Utc};
 use serde_json::{Value, json};
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Caller identity and capability checks (same shape as the cards and
 // documents modules: `X-User-Id` identifies the actor, `X-Role`
 // carries the role slug the capability check runs against, `role.check`
-// answers; no answer means not allowed — fail closed).
-// ---------------------------------------------------------------------------
+// answers; no answer means not allowed - fail closed).
 
 pub(crate) struct Caller {
     pub(crate) actor: String,
@@ -50,7 +48,7 @@ pub(crate) fn require_tenant(
 /// The company scope the caller acts in: the tenant context's
 /// company first, the verified caller's server-resolved company
 /// otherwise. Fails closed (403) when both are present and disagree
-/// — a request must not carry one company in its tenant context and
+/// - a request must not carry one company in its tenant context and
 /// another in its verified identity. The `X-Company-Id` header is
 /// NEVER trusted here: only the verified caller (company resolved
 /// from the database at authentication time) and the
@@ -75,7 +73,7 @@ pub(crate) fn caller_company(
     }
 }
 
-/// Resolve the caller's company for a WRITE (C3 task 315, strict by
+/// Resolve the caller's company for a WRITE (C3, strict by
 /// default): a write requires a resolved company scope, so an
 /// unresolved caller is refused with 403 instead of silently
 /// writing a global (unscoped) record. Mutation handlers call
@@ -104,7 +102,7 @@ pub(crate) fn require_company_for_write(
 /// When no caller scope is known (neither the tenant context nor
 /// the verified caller carries a company), a body company is refused:
 /// an unresolved caller may not claim a company (the shared
-/// `CallerScope::Unresolved` rule); omitting the company is refused (C3 task 315):
+/// `CallerScope::Unresolved` rule); omitting the company is refused (C3):
 /// a write requires a resolved company scope.
 pub(crate) fn require_company_match(
     tenant: &unified_core::tenancy::TenantContext,
@@ -140,7 +138,7 @@ pub(crate) fn require_company_match_for(
 /// company is stored as `Option<Uuid>` (tasks) rather than a
 /// string. The body company must equal the caller's scope when
 /// both are present; when the body omits the company, the caller's
-/// scope is adopted (parsed as a UUID — a non-UUID caller scope
+/// scope is adopted (parsed as a UUID - a non-UUID caller scope
 /// fails closed, because it cannot be stored on a task).
 /// When no caller scope is known, a body company is refused: an
 /// unresolved caller may not claim a company (the shared
@@ -213,11 +211,11 @@ pub(crate) fn require_record_in_company_scope(
 }
 
 /// Fail closed (403) when a stored record is outside the caller's
-/// company scope FOR A WRITE (C3 task 315, strict by default).
+/// company scope FOR A WRITE (C3, strict by default).
 /// Unlike the read check above (rule A), a write requires an exact
 /// company match: a company caller may write only their own
-/// company's records — global (unscoped) records are platform-only
-/// — and an unresolved caller may write nothing. Mutation handlers
+/// company's records - global (unscoped) records are platform-only
+/// - and an unresolved caller may write nothing. Mutation handlers
 /// call this right after loading the record they mutate; handlers
 /// that only read the record, or load a parent to scope a child
 /// write, keep the read check.
@@ -283,9 +281,7 @@ pub(crate) fn assign_event_for(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Validation.
-// ---------------------------------------------------------------------------
 
 pub(crate) fn validate_title(title: &str) -> UnifiedResult<String> {
     let title = title.trim();
@@ -346,9 +342,7 @@ pub(crate) fn client_ip(req: &HttpRequest) -> Option<String> {
         .map(str::to_string)
 }
 
-// ---------------------------------------------------------------------------
 // Helpers.
-// ---------------------------------------------------------------------------
 
 pub(crate) fn task_event_payload(task: &Task, ip: Option<&str>) -> Value {
     let mut payload = serde_json::json!({

@@ -7,9 +7,7 @@ use super::{events::*, card_validation::*, card_settings::*, limits::*, provider
 
 
 
-// ---------------------------------------------------------------------------
 // Module state.
-// ---------------------------------------------------------------------------
 pub struct PaymentsState {
     pub(crate) hooks: RwLock<Arc<HookBus>>,
 }

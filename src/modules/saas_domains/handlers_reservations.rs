@@ -38,9 +38,7 @@ use super::store::settings;
 use super::types::DomainReservation;
 use super::validation::normalize_domain;
 
-// ---------------------------------------------------------------------------
 // Reservation handlers.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn create_reservation(
     ctx: web::Data<Arc<AppContext>>,

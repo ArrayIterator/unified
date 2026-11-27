@@ -27,9 +27,7 @@ use super::helpers::ok;
 use super::types::AiProviderConnection;
 use super::types::AiProviderKind;
 
-// ---------------------------------------------------------------------------
 // Provider registry: the plug-in point for adapters.
-// ---------------------------------------------------------------------------
 
 /// One completion call to a provider adapter.
 #[derive(Debug, Clone)]
@@ -82,7 +80,7 @@ pub type AiProviderFactory = Arc<
 
 pub struct AiProviderRegistry {
     pub(crate) factories: RwLock<HashMap<AiProviderKind, AiProviderFactory>>,
-    /// Factories keyed by registry definition id (C12, task 269):
+    /// Factories keyed by registry definition id (C12):
     /// the extension point for a provider an admin registered
     /// through the provider registry, which has no enum variant.
     /// The factory receives the connection plus its decrypted key
@@ -109,8 +107,8 @@ impl AiProviderRegistry {
     }
 
     /// Register (or replace) the factory for a registry definition id
-    /// (C12, task 269). This is how a provider added through the
-    /// provider registry — no code change, no enum variant — gets an
+    /// (C12). This is how a provider added through the
+    /// provider registry - no code change, no enum variant - gets an
     /// adapter: register its definition, then register its factory
     /// under the same id, once at startup or from an extension.
     pub fn register_factory_by_id(
@@ -239,9 +237,7 @@ pub fn ai_provider_registry() -> &'static AiProviderRegistry {
     })
 }
 
-// ---------------------------------------------------------------------------
 // Shared HTTP helpers.
-// ---------------------------------------------------------------------------
 
 pub(crate) fn build_client() -> UnifiedResult<reqwest::Client> {
     reqwest::Client::builder()

@@ -1,4 +1,4 @@
-// Events Manager — Public feed and calendar handlers.
+// Events Manager - Public feed and calendar handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -27,9 +27,7 @@ use super::handlers_reminders::*;
 use super::hooks::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Calendar feed handlers (authenticated)
-// ---------------------------------------------------------------------------
 
 pub(crate) fn feed_events(state: &EventsState, public_only: bool) -> Vec<(Event, Option<EventOccurrence>)> {
     let now = Utc::now();
@@ -231,10 +229,8 @@ pub(crate) async fn calendar_json(
     ok(calendar_json_payload_for_scope(&state, &_scope))
 }
 
-// ---------------------------------------------------------------------------
-// Public handlers (no auth — gated by the API Manager's ApiAccessRule
+// Public handlers (no auth - gated by the API Manager's ApiAccessRule
 // for each path; default deny. See the module header.)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_public_events(
     state: web::Data<EventsState>,

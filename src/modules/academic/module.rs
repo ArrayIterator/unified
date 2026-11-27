@@ -4,7 +4,7 @@
 // schedules and rooms, course registration with advisor approval,
 // attendance, grades and GPA, grade appeals, official transcripts,
 // academic calendar, thesis / final-project tracking, and academic
-// standing. Interconnection happens only through the hook bus — no
+// standing. Interconnection happens only through the hook bus - no
 // module calls another module directly.
 //
 // Identity rule: a student or lecturer record stores the linked user
@@ -32,20 +32,20 @@
 // the transcript payload travels inside the event.
 //
 // Role-based access (enforced server-side on every handler):
-//   - `academic:read`       — read academic records (own records
+//   - `academic:read`       - read academic records (own records
 //                             for students; own classes for
 //                             lecturers).
-//   - `academic:read_all`   — read every student's academic data.
-//   - `academic:manage`     — create/update/delete programs,
+//   - `academic:read_all`   - read every student's academic data.
+//   - `academic:manage`     - create/update/delete programs,
 //                             subjects, schedules, rooms, semesters,
 //                             calendar entries, definitions, and
 //                             settings; approve or reject
 //                             registrations; issue transcripts.
-//   - `academic:advise`     — advisor approval of registrations and
+//   - `academic:advise`     - advisor approval of registrations and
 //                             thesis advising for assigned students.
-//   - `academic:grade`      — record grades for subjects the caller
+//   - `academic:grade`      - record grades for subjects the caller
 //                             teaches.
-//   - `academic:transcript` — issue official transcripts.
+//   - `academic:transcript` - issue official transcripts.
 // Capabilities are checked through the `role.check` hook and fail
 // closed: no answer means not allowed. The admin role holds `"*":
 // ["*"]`, so it passes every check. No `academic:*` capability is
@@ -116,14 +116,14 @@
 //     `elearning.course.deleted`        refresh the verified flag of
 //                                       linked subjects.
 //   - `elearning.enrollment.completed`  `{enrollment_id, course_id,
-//                                       user_id}` — marks a linked
+//                                       user_id}` - marks a linked
 //                                       academic enrollment completed.
 //   - `academic.student.create_requested` `{application_id,
 //                                       period_id, applicant_user_id
 //                                       (or `user_id`), full_name,
 //                                       email, phone, program_id,
 //                                       level, academic_year, term,
-//                                       enrollment_year?}` — sent by
+//                                       enrollment_year?}` - sent by
 //                                       admissions when an accepted
 //                                       application is enrolled; this
 //                                       module creates the student
@@ -133,7 +133,7 @@
 //                                       `application_id`.
 //   - `academic.student.lookup`         `{student_ref}` (also
 //                                       accepts `student_id` /
-//                                       `user_id`) — hook query
+//                                       `user_id`) - hook query
 //                                       answered with one result
 //                                       `{exists, student_id?,
 //                                       user_id?, program_id?}`; the
@@ -143,7 +143,7 @@
 //   - `calendar.items_requested`        `{tenant_id, company_id,
 //                                       user_id, start, end,
 //                                       modules?}` (RFC 3339 UTC
-//                                       bounds) — answered with the
+//                                       bounds) - answered with the
 //                                       academic calendar events,
 //                                       class-schedule occurrences,
 //                                       and thesis defenses in the
@@ -158,7 +158,7 @@
 //                                       module never renders a
 //                                       calendar view of its own.
 // Hook queries emitted (answers read, never subscribed):
-//   - `elearning.course.requested`      `{course_id}` — expects
+//   - `elearning.course.requested`      `{course_id}` - expects
 //                                       results shaped `{exists,
 //                                       course_id, title, status}`.
 //   - `role.check`                      capability checks (fail
@@ -179,7 +179,7 @@
 //      The printing module should answer it and, when it prints,
 //      may emit `print.job.completed` with `{transcript_id}`.
 //   3. `src/modules/mod.rs` must gain `pub mod academic;` and an
-//      `academic::register(registry);` line in `register_all` — this
+//      `academic::register(registry);` line in `register_all` - this
 //      file cannot do that itself (mod.rs is owned by the
 //      integrator). Until then the module compiles but is not wired
 //      into the binary.
@@ -312,9 +312,7 @@ use super::hooks::on_elearning_enrollment_completed;
 use super::hooks::on_timetracker_entry;
 use super::state::AcademicState;
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct AcademicModule {
     state: Arc<AcademicState>,
@@ -434,7 +432,7 @@ impl Module for AcademicModule {
         // is in-memory with no tenant partition yet; when batch 17
         // persistence lands, this handler must only ground students
         // of the calling tenant, keyed by the caller company id in
-        // the payload — the endpoint already enforces the module's
+        // the payload - the endpoint already enforces the module's
         // own read scoping for the named student.
         let state = self.state.clone();
         bus.register(

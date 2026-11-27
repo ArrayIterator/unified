@@ -1,4 +1,4 @@
-// TimeTracker module — Time Doctor-style time tracking, activity
+// TimeTracker module - Time Doctor-style time tracking, activity
 // monitoring, screenshots, payroll, and timesheet approvals.
 
 // Full module notes (routes, auth, money, storage) live at

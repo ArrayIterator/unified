@@ -1,4 +1,4 @@
-//! Curriculum module — competency-based school curricula. — Settings handlers.
+//! Curriculum module - competency-based school curricula. - Settings handlers.
 //!
 //! Split from `src/modules/curriculum.rs`; behaviour unchanged.
 

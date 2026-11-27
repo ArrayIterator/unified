@@ -27,9 +27,7 @@ pub struct NewStorageTarget {
     pub kind: String,
 }
 
-// ---------------------------------------------------------------------------
 // Planner and analytics (2026-11-22-000015_planner_analytics).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = capacity_pools)]

@@ -765,9 +765,7 @@ pub(crate) async fn usage_by_company(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Shared-context handler.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn get_context(
     ctx: web::Data<Arc<AppContext>>,

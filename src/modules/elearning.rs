@@ -1,61 +1,61 @@
-// E-learning module — courses, modules, lessons, enrollments,
+// E-learning module - courses, modules, lessons, enrollments,
 // quizzes, progress, certificates, reviews, and learning paths.
 //
 // Routes live under `/api/v1/elearning`:
 //
 //   Courses:
-//     GET/POST /courses — list (published only for learners) / create.
+//     GET/POST /courses - list (published only for learners) / create.
 //     GET/PATCH/DELETE /courses/{id}.
-//     POST /courses/{id}/publish — draft -> published (manage or owner).
-//     POST /courses/{id}/archive — published/draft -> archived.
+//     POST /courses/{id}/publish - draft -> published (manage or owner).
+//     POST /courses/{id}/archive - published/draft -> archived.
 //   Course modules:
-//     GET/POST /courses/{id}/modules — list / add a module.
+//     GET/POST /courses/{id}/modules - list / add a module.
 //     GET/PATCH/DELETE /modules/{id}.
 //   Lessons:
-//     GET/POST /modules/{id}/lessons — list / add a lesson.
+//     GET/POST /modules/{id}/lessons - list / add a lesson.
 //     GET/PATCH/DELETE /lessons/{id}.
 //   Enrollment:
-//     POST /courses/{id}/enroll — enroll (free: active at once;
+//     POST /courses/{id}/enroll - enroll (free: active at once;
 //          paid: pending_payment plus a purchase event for the
 //          store/billing flow; activation happens on `order.paid`).
-//     GET  /enrollments — enrollments (own only unless manager).
+//     GET  /enrollments - enrollments (own only unless manager).
 //     GET  /enrollments/{id}.
 //     POST /enrollments/{id}/cancel.
-//     GET  /my/enrollments — the caller's enrollments.
+//     GET  /my/enrollments - the caller's enrollments.
 //   Progress:
-//     POST /lessons/{id}/complete — mark a lesson complete.
-//     GET  /courses/{id}/progress — the caller's course progress.
-//     GET  /courses/{id}/progress/{user_id} — one learner's progress
+//     POST /lessons/{id}/complete - mark a lesson complete.
+//     GET  /courses/{id}/progress - the caller's course progress.
+//     GET  /courses/{id}/progress/{user_id} - one learner's progress
 //          (own or manager/instructor).
-//     GET  /my/progress — the caller's progress across courses.
+//     GET  /my/progress - the caller's progress across courses.
 //   Quizzes:
-//     GET/POST /lessons/{id}/quiz — the quiz of a lesson / define it.
-//     PATCH /lessons/{id}/quiz — update the quiz.
-//     GET/POST /lessons/{id}/quiz/questions — list / add a question.
+//     GET/POST /lessons/{id}/quiz - the quiz of a lesson / define it.
+//     PATCH /lessons/{id}/quiz - update the quiz.
+//     GET/POST /lessons/{id}/quiz/questions - list / add a question.
 //     PATCH/DELETE /questions/{id}.
-//     POST /lessons/{id}/quiz/attempts — submit an attempt (auto-graded).
-//     GET  /quiz-attempts — attempts (own only unless manager).
+//     POST /lessons/{id}/quiz/attempts - submit an attempt (auto-graded).
+//     GET  /quiz-attempts - attempts (own only unless manager).
 //     GET  /quiz-attempts/{id}.
 //   Certificates:
-//     GET  /certificates — certificates (own only unless manager).
+//     GET  /certificates - certificates (own only unless manager).
 //     GET  /certificates/{id}.
-//     GET  /certificates/verify/{code} — PUBLIC verification endpoint
+//     GET  /certificates/verify/{code} - PUBLIC verification endpoint
 //          (no caller headers; verification must be public).
-//     POST /certificates/{id}/revoke — revoke (manager).
-//     POST /certificates/{id}/anchor — request tamper-evidence
+//     POST /certificates/{id}/revoke - revoke (manager).
+//     POST /certificates/{id}/anchor - request tamper-evidence
 //          anchoring through the Web3 flow (events only).
 //   Reviews:
-//     GET/POST /courses/{id}/reviews — list / leave a review.
+//     GET/POST /courses/{id}/reviews - list / leave a review.
 //     GET/PATCH/DELETE /reviews/{id}.
 //   Learning paths:
-//     GET/POST /learning-paths — list / create a path.
+//     GET/POST /learning-paths - list / create a path.
 //     GET/PATCH/DELETE /learning-paths/{id}.
-//     POST /learning-paths/{id}/courses — append a course.
-//     DELETE /learning-paths/{id}/courses/{course_id} — remove one.
-//     GET  /learning-paths/{id}/progress — the caller's path progress.
-//     GET  /my/learning-paths — paths the caller is progressing in.
+//     POST /learning-paths/{id}/courses - append a course.
+//     DELETE /learning-paths/{id}/courses/{course_id} - remove one.
+//     GET  /learning-paths/{id}/progress - the caller's path progress.
+//     GET  /my/learning-paths - paths the caller is progressing in.
 //   Settings:
-//     GET/PUT /settings — the configurable defaults (manager).
+//     GET/PUT /settings - the configurable defaults (manager).
 //
 //
 // Honesty, configuration, and event notes that followed the

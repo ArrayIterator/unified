@@ -1,4 +1,4 @@
-// API Keys module — enterprise API key management.
+// API Keys module - enterprise API key management.
 //
 // Routes under `/api/v1/apikeys`:
 //

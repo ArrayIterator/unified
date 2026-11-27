@@ -9,9 +9,7 @@ use super::{events::*, card_validation::*, card_settings::*, limits::*, provider
 
 
 
-// ---------------------------------------------------------------------------
 // Generic card processing.
-// ---------------------------------------------------------------------------
 impl ProviderAdapter {
     /// Generic card processor contract (documented, so any processor
     /// can implement it):

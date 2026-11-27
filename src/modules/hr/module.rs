@@ -22,7 +22,7 @@ use super::*;
 // Employees, positions, contracts, leave, attendance, payroll runs,
 // performance reviews, onboarding/offboarding checklists, employee
 // documents, org-chart data, and HR reports. Interconnection happens
-// only through the hook bus — no module calls another module directly.
+// only through the hook bus - no module calls another module directly.
 //
 // Identity rule: an employee record stores the linked user id ONLY.
 // Names, emails, and all other profile data live in the Users module
@@ -44,11 +44,11 @@ use super::*;
 // `hr.payroll_run_completed` for the billing module.
 //
 // Role-based access (enforced server-side on every handler):
-//   - `hr:read`       — read HR records (own records for employees).
-//   - `hr:read_all`   — read every employee's HR records.
-//   - `hr:manage`     — create/update/delete HR records, approve or
+//   - `hr:read`       - read HR records (own records for employees).
+//   - `hr:read_all`   - read every employee's HR records.
+//   - `hr:manage`     - create/update/delete HR records, approve or
 //                       reject leave, manage reviews and checklists.
-//   - `hr:payroll`    — create/compute/finalize payroll runs and read
+//   - `hr:payroll`    - create/compute/finalize payroll runs and read
 //                       payroll amounts (also granted by `hr:manage`).
 // Capabilities are checked through the `role.check` hook and fail
 // closed: no answer means not allowed. The admin role holds `"*":
@@ -97,7 +97,7 @@ use super::*;
 //                                  the approvals module then leaves the
 //                                  manager slot unresolved.
 //
-// CONVERGENCE (for the integrator — see docs/integration/INTEGRATION_NOTES_BATCH3_B2.md):
+// CONVERGENCE (for the integrator - see docs/integration/INTEGRATION_NOTES_BATCH3_B2.md):
 //   1. TimeTracker event name: the brief names `timetracker.entry_logged`
 //      with `{user_id, date, minutes, source}`; the TimeTracker module
 //      already in this tree emits `timetracker.time.logged` with
@@ -120,9 +120,7 @@ use super::*;
 //      for HR actions to appear in the audit trail.
 
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct HrModule {
     state: Arc<HrState>,

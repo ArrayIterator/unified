@@ -11,12 +11,10 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
-// Properties (migration 000061_properties; batch 5 notes §d). The notes
+// Properties (migration 000061_properties; batch 5 notes sec. d). The notes
 // give Queryable structs only; `New*` structs are added per the file
 // convention (id carried, created_at/updated_at and DB-defaulted
 // columns omitted). Money structs carry no serde derives.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable)]
 #[diesel(table_name = properties)]

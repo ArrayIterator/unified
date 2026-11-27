@@ -1,4 +1,4 @@
-// Events Manager — Input validation and pure value checks.
+// Events Manager - Input validation and pure value checks.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};

@@ -1,4 +1,4 @@
-// admissions module — Document checklist handlers.
+// admissions module - Document checklist handlers.
 //
 // Split from the former single-file module `src/modules/admissions.rs`.
 // The module root (`admissions.rs`) re-exports the public items, so the
@@ -26,9 +26,7 @@ use super::helpers::{
     paginate, require_id, require_permission, require_tenant, require_text,
 };
 
-// ---------------------------------------------------------------------------
 // Handlers: document checklist
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn get_checklist(
     ctx: web::Data<Arc<AppContext>>,

@@ -24,9 +24,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Handlers: holidays (shared reference data, tenant-scoped reads).
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_holidays(
     ctx: web::Data<Arc<AppContext>>,
@@ -198,9 +196,7 @@ pub(crate) async fn get_non_working_days(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Handlers: manual overrides (tenant business data).
-// ---------------------------------------------------------------------------
 
 fn load_override_for_tenant(
     state: &HolidaysState,

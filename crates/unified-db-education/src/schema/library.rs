@@ -3,10 +3,8 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Library (migration 000097_library).
 // No FKs by design (see migration notes): no joinable!s.
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     library_categories (id) {

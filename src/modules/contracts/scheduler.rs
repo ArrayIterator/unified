@@ -1,4 +1,4 @@
-// Contracts — Scheduler listener.
+// Contracts - Scheduler listener.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -19,9 +19,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Scheduler listener
-// ---------------------------------------------------------------------------
 
 /// Handle `contracts.expiry_alert_requested`: send the due alert
 /// through `notification.requested`, and mark the contract expired

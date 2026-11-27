@@ -1,12 +1,10 @@
-// bank_transfer — Shared types: constants, enums, records, and request/response shapes.
+// bank_transfer - Shared types: constants, enums, records, and request/response shapes.
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Events.
-// ---------------------------------------------------------------------------
 
 /// Emitted when a transfer verification is opened.
 pub const BANK_TRANSFER_VERIFICATION_CREATED: &str = "bank_transfer.verification.created";
@@ -35,9 +33,7 @@ pub(crate) const STATUS_REJECTED: &str = "rejected";
 
 pub(crate) const STATUS_CANCELLED: &str = "cancelled";
 
-// ---------------------------------------------------------------------------
 // Settings.
-// ---------------------------------------------------------------------------
 
 fn default_proof_expiry_days() -> u32 {
     7
@@ -84,9 +80,7 @@ pub struct UpdateBankTransferSettings {
     pub require_reference_number: Option<bool>,
 }
 
-// ---------------------------------------------------------------------------
 // Bank accounts.
-// ---------------------------------------------------------------------------
 
 /// One bank account that can receive transfers. The full account
 /// number is stored on the record but is never serialized: every
@@ -206,13 +200,11 @@ pub struct UpdateBankAccountRequest {
     pub active: Option<bool>,
 }
 
-// ---------------------------------------------------------------------------
 // Verifications, proofs, audit trail.
-// ---------------------------------------------------------------------------
 
 /// Payment proof uploaded by the shopper. Only a reference to the
 /// uploaded file is stored (storage key plus the uploader-provided
-/// checksum) — never raw file bytes. The checksum is the content
+/// checksum) - never raw file bytes. The checksum is the content
 /// hash supplied with the upload; this module never sees the file
 /// bytes, so it cannot recompute it, it only records it for the
 /// administrator to compare against the stored file.
@@ -372,10 +364,8 @@ pub struct CancelVerificationRequest {
     pub reason: Option<String>,
 }
 
-// ---------------------------------------------------------------------------
 // Verification creation (shared by the HTTP handler and the hook
 // listeners).
-// ---------------------------------------------------------------------------
 
 pub(crate) struct NewVerification {
     pub(crate) order_id: String,

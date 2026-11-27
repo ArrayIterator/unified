@@ -18,7 +18,7 @@
 --     primary key, but the projects module's in-memory ids are
 --     strings and this module must never assume the UUID form).
 --     The projects module stays the source of truth for project
---     data; deleting a project does not delete supervision rows —
+--     data; deleting a project does not delete supervision rows -
 --     the supervision history is kept for audit. `milestone_id`
 --     and `task_id` are the same kind of opaque TEXT reference
 --     to the projects module, also with no foreign key.
@@ -59,10 +59,8 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One supervision assignment: a user assigned to a project site with
 -- a role (supervisor / inspector / approver) for a period.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS supervision_assignments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     project_id TEXT NOT NULL,
@@ -89,10 +87,8 @@ CREATE INDEX IF NOT EXISTS idx_supervision_assignments_user_id
 CREATE INDEX IF NOT EXISTS idx_supervision_assignments_company_id_status
     ON supervision_assignments (company_id, status);
 
--- ---------------------------------------------------------------------------
 -- One inspection template: a reusable checklist. `project_id` NULL
 -- means a shared template usable for any project.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS supervision_inspection_templates (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     project_id TEXT,
@@ -111,9 +107,7 @@ CREATE INDEX IF NOT EXISTS idx_supervision_templates_project_id
 CREATE INDEX IF NOT EXISTS idx_supervision_templates_category
     ON supervision_inspection_templates (category);
 
--- ---------------------------------------------------------------------------
 -- One checklist item inside an inspection template.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS supervision_template_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     template_id UUID NOT NULL REFERENCES supervision_inspection_templates (id)
@@ -130,9 +124,7 @@ CREATE TABLE IF NOT EXISTS supervision_template_items (
 CREATE INDEX IF NOT EXISTS idx_supervision_template_items_template_id
     ON supervision_template_items (template_id);
 
--- ---------------------------------------------------------------------------
 -- One conducted site inspection.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS supervision_inspections (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     project_id TEXT NOT NULL,
@@ -166,10 +158,8 @@ CREATE INDEX IF NOT EXISTS idx_supervision_inspections_inspector_id
 CREATE INDEX IF NOT EXISTS idx_supervision_inspections_template_id
     ON supervision_inspections (template_id);
 
--- ---------------------------------------------------------------------------
 -- One checklist item result inside a conducted inspection. The
 -- title is copied from the template at creation time.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS supervision_inspection_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     inspection_id UUID NOT NULL REFERENCES supervision_inspections (id)
@@ -188,10 +178,8 @@ CREATE TABLE IF NOT EXISTS supervision_inspection_items (
 CREATE INDEX IF NOT EXISTS idx_supervision_inspection_items_inspection_id
     ON supervision_inspection_items (inspection_id);
 
--- ---------------------------------------------------------------------------
 -- One progress report snapshot for a project (optionally one
 -- milestone) over a period.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS supervision_progress_reports (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     project_id TEXT NOT NULL,
@@ -228,9 +216,7 @@ CREATE INDEX IF NOT EXISTS idx_supervision_progress_reports_milestone_id
 CREATE INDEX IF NOT EXISTS idx_supervision_progress_reports_status
     ON supervision_progress_reports (status);
 
--- ---------------------------------------------------------------------------
 -- One defect found on site.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS supervision_defects (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     project_id TEXT NOT NULL,
@@ -268,11 +254,9 @@ CREATE INDEX IF NOT EXISTS idx_supervision_defects_severity
 CREATE INDEX IF NOT EXISTS idx_supervision_defects_task_id
     ON supervision_defects (task_id);
 
--- ---------------------------------------------------------------------------
 -- One approval step: the append-only audit trail for progress
 -- reports and inspections. `target_kind` is 'progress_report' or
 -- 'inspection'; `target_id` is the report / inspection id.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS supervision_approvals (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     target_kind TEXT NOT NULL
@@ -296,9 +280,7 @@ CREATE INDEX IF NOT EXISTS idx_supervision_approvals_project_id
 CREATE INDEX IF NOT EXISTS idx_supervision_approvals_approver_id
     ON supervision_approvals (approver_id);
 
--- ---------------------------------------------------------------------------
 -- One site daily log. One log per project per day.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS supervision_daily_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     project_id TEXT NOT NULL,
@@ -326,10 +308,8 @@ CREATE INDEX IF NOT EXISTS idx_supervision_daily_logs_project_id_log_date
 CREATE INDEX IF NOT EXISTS idx_supervision_daily_logs_supervisor_id
     ON supervision_daily_logs (supervisor_id);
 
--- ---------------------------------------------------------------------------
 -- One photo evidence record. Metadata only: the bytes live in the
 -- storage module under (storage_target, storage_key).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS supervision_photos (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     project_id TEXT NOT NULL,

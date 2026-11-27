@@ -1,4 +1,4 @@
-// admissions module — Application handlers.
+// admissions module - Application handlers.
 //
 // Split from the former single-file module `src/modules/admissions.rs`.
 // The module root (`admissions.rs`) re-exports the public items, so the
@@ -27,9 +27,7 @@ use super::helpers::{
     valid_email,
 };
 
-// ---------------------------------------------------------------------------
 // Handlers: applications
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_applications(
     ctx: web::Data<Arc<AppContext>>,

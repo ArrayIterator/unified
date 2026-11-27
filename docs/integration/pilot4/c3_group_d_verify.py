@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""C3 pilot 4 group D verification (task 316): field_service, admissions,
+"""C3 pilot 4 group D verification: field_service, admissions,
 privacy, recruitment, newsletter, notifications, bank_transfer, storage.
 
 For each module, per routed handler (names appearing in `.to(name)` in
@@ -8,7 +8,7 @@ the module):
     `caller_company(&_tenant, &req)` (gate-only idiom: gate first, then
     verified-caller company resolution for the mismatch 403)
 
-Task 315 (2026-11-23): these modules' records carry no company
+These modules' records carry no company
 field, so under carve-out 3 their writes stay tenant-gate-only
 (the strict `require_company_for_write` gate does not apply here).
 The self-service writes (admissions submit/withdraw, privacy

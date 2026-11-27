@@ -1,4 +1,4 @@
-// Generic Approvals — Dashboard, delegation, and settings handlers.
+// Generic Approvals - Dashboard, delegation, and settings handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -27,9 +27,7 @@ use super::handlers_requests::*;
 use super::hooks::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Dashboards
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn my_pending(
     ctx: web::Data<Arc<AppContext>>,
@@ -112,9 +110,7 @@ pub(crate) async fn by_record(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Delegations
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_delegations(
     ctx: web::Data<Arc<AppContext>>,
@@ -243,9 +239,7 @@ pub(crate) async fn delete_delegation(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Settings
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn get_settings(
     ctx: web::Data<Arc<AppContext>>,

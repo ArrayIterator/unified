@@ -12,7 +12,7 @@
 //! posts (type, text, media references, link, hashtags),
 //! campaigns (goal as data), and metric names are all data
 //! rows an administrator enters. No real network name or
-//! credential is baked in — the only provider kinds are
+//! credential is baked in - the only provider kinds are
 //! the generic `http` adapter (POST JSON to the configured
 //! endpoint with the configured auth) and the `log_only`
 //! test provider, which records a publish without any
@@ -109,9 +109,7 @@ pub(crate) const METRIC_SOURCE_MANUAL: &str = "manual";
 /// this list roll up into `other`.
 pub(crate) const KNOWN_METRICS: &[&str] = &["impressions", "likes", "shares", "comments", "clicks"];
 
-// ---------------------------------------------------------------------------
 // Status machines (pure functions, unit-tested below)
-// ---------------------------------------------------------------------------
 
 /// Post status: `draft` -> `scheduled` -> `publishing` ->
 /// `published`, with `failed` and `cancelled` as side
@@ -223,9 +221,7 @@ pub fn campaign_can_transition(from: CampaignStatus, to: CampaignStatus) -> bool
     )
 }
 
-// ---------------------------------------------------------------------------
 // Schedule and token validation (pure functions)
-// ---------------------------------------------------------------------------
 
 /// True when `send_at` is strictly in the future relative
 /// to `now`. A scheduled post must name a future time;
@@ -308,9 +304,7 @@ pub fn post_type_allowed(post_type: &str, allowed: &[String]) -> bool {
     allowed.iter().any(|allowed| allowed == post_type)
 }
 
-// ---------------------------------------------------------------------------
 // Hashtag and media validation (pure functions)
-// ---------------------------------------------------------------------------
 
 /// Normalize one hashtag: strip a leading `#`, trim, and
 /// lower-case. Returns `None` when nothing valid remains
@@ -364,7 +358,7 @@ pub fn text_fits_limit(text: &str, max_len: i64) -> bool {
 /// True when every media id parses as a UUID and the list
 /// fits the network's media bound. Media are references by
 /// id only: this module never stores or fetches the bytes,
-/// and it never checks that an id names a real document —
+/// and it never checks that an id names a real document -
 /// documents live in the documents / storage modules.
 pub fn media_ids_valid(media_ids: &[String], max_items: i64) -> bool {
     if max_items < 0 || (media_ids.len() as i64) > max_items {
@@ -373,9 +367,7 @@ pub fn media_ids_valid(media_ids: &[String], max_items: i64) -> bool {
     media_ids.iter().all(|id| Uuid::parse_str(id).is_ok())
 }
 
-// ---------------------------------------------------------------------------
 // Rate-limit math (pure functions, unit-tested below)
-// ---------------------------------------------------------------------------
 
 /// True when another publish fits inside the per-minute
 /// limit. A limit of zero or less blocks everything.
@@ -393,15 +385,13 @@ pub fn remaining_publishes(published_in_window: i64, limit_per_minute: i64) -> i
     (limit_per_minute - published_in_window).max(0)
 }
 
-// ---------------------------------------------------------------------------
 // Metric rollups (pure functions, unit-tested below)
-// ---------------------------------------------------------------------------
 
 /// Summed per-post metrics. The named fields cover the
 /// conventional metric names; any other metric name a
 /// tenant ingests rolls up into `other`, so the rollup
 /// never drops data it does not recognize. All values are
-/// integer counts — no money and no floating point anywhere.
+/// integer counts - no money and no floating point anywhere.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MetricTotals {
     #[serde(default)]
@@ -476,12 +466,10 @@ pub fn engagement_bps(totals: &MetricTotals) -> i64 {
     totals.engagement() * 10_000 / totals.impressions
 }
 
-// ---------------------------------------------------------------------------
-// Enumerations (fixed vocabulary — the shape, not the content)
-// ---------------------------------------------------------------------------
+// Enumerations (fixed vocabulary - the shape, not the content)
 
 /// Provider kind: the generic HTTP adapter or the log-only
-/// test provider. No real network is named anywhere — a
+/// test provider. No real network is named anywhere - a
 /// tenant points the HTTP adapter at whatever network API
 /// it uses by entering the API base as data.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -547,9 +535,7 @@ impl AuthType {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Stored types
-// ---------------------------------------------------------------------------
 
 /// One admin-defined social network. `api_base_url` is
 /// empty for the log-only kind. `publish_path` is the path
@@ -744,7 +730,7 @@ pub struct CampaignPostCounts {
 /// One social campaign: a named group of posts over a date
 /// range with a goal as data. `goal` is a free-text goal
 /// label; `goal_metric` names the metric the goal is
-/// measured in (any metric slug, data — never a hard-coded
+/// measured in (any metric slug, data - never a hard-coded
 /// list) and `goal_target` is the integer count the
 /// campaign aims for. `status` is `draft`, `active`,
 /// `paused`, `completed`, or `cancelled`.
@@ -772,7 +758,7 @@ pub struct SocialCampaign {
 
 /// One recorded metric value for one post. Metrics arrive
 /// only through the provider verification-token webhook or
-/// through manual entry — this module never fetches live
+/// through manual entry - this module never fetches live
 /// numbers from a network, so a metric row is always a
 /// reported value, never a scraped one. One row per
 /// (post, metric, source): re-ingesting the same metric
@@ -812,9 +798,7 @@ pub struct AuditRecord {
     pub created_at: DateTime<Utc>,
 }
 
-// ---------------------------------------------------------------------------
 // Request bodies
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct CreateNetworkRequest {

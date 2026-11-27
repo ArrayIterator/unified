@@ -1,4 +1,4 @@
-// logs — redaction.
+// logs - redaction.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -28,9 +28,7 @@ use super::handlers::*;
 use super::hooks::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Constants and redaction
-// ---------------------------------------------------------------------------
 
 /// Valid log levels, lowest to highest severity.
 pub const LOG_LEVELS: &[&str] = &["trace", "debug", "info", "warn", "error"];
@@ -47,8 +45,8 @@ pub const DEFAULT_MAX_ENTRIES: usize = 10_000;
 /// Context keys that name credentials. A key is sensitive when one
 /// of these keywords appears as a whole token (or run of tokens) in
 /// the key, splitting on `_`, `-` and lower-to-upper case
-/// transitions, case-insensitively. Token matching — not raw
-/// substring matching — so `author` and `author_name` stay readable
+/// transitions, case-insensitively. Token matching - not raw
+/// substring matching - so `author` and `author_name` stay readable
 /// while `password`, `PasswordHash` and `X-Auth-Token` are redacted.
 pub(crate) const SENSITIVE_KEYS: &[&str] = &[
     "password",

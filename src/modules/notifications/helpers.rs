@@ -13,9 +13,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 pub(crate) fn new_id() -> String {
     Uuid::new_v4().to_string()
@@ -53,12 +51,11 @@ pub(crate) fn respond_created<T: Serialize>(result: UnifiedResult<T>, debug: boo
     }
 }
 
-// ---------------------------------------------------------------------------
 // Caller identity and capabilities (N1).
 //
 // Every HTTP handler authenticates the caller from the
 // server-verified `unified_core::caller::Caller` the auth middleware
-// inserts into request extensions after verifying the JWT/session —
+// inserts into request extensions after verifying the JWT/session -
 // never from the `X-User-Id` / `X-Role` headers: no verified caller,
 // no access. The acting user id is the identity all per-user reads
 // and writes are scoped to; a caller may only reach another user's
@@ -67,7 +64,6 @@ pub(crate) fn respond_created<T: Serialize>(result: UnifiedResult<T>, debug: boo
 // not allowed). The admin role's `"*": ["*"]` wildcard grants it;
 // grant it to any other role through the roles module to delegate
 // notification administration.
-// ---------------------------------------------------------------------------
 
 /// Admin capability: cross-user access to notifications, delivery
 /// attempts and preferences, and administration of templates and
@@ -97,9 +93,7 @@ pub(crate) fn authenticate(ctx: &AppContext, req: &HttpRequest) -> UnifiedResult
     let is_admin = check_capability(ctx, &caller.role, PERM_NOTIFICATIONS_MANAGE);
     Ok((caller, is_admin))
 }
-// ---------------------------------------------------------------------------
 // Tenant edge guard (C3 pilot 4, gate-only).
-// ---------------------------------------------------------------------------
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request

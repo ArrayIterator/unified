@@ -40,9 +40,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One stored email provider connection.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS email_connections (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR NOT NULL,
@@ -68,9 +66,7 @@ CREATE INDEX IF NOT EXISTS idx_email_connections_kind
 CREATE INDEX IF NOT EXISTS idx_email_connections_enabled
     ON email_connections (enabled);
 
--- ---------------------------------------------------------------------------
 -- One entry of the provider send log.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS email_send_log (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     connection_id UUID REFERENCES email_connections (id) ON DELETE SET NULL ON UPDATE NO ACTION,
@@ -92,9 +88,7 @@ CREATE INDEX IF NOT EXISTS idx_email_send_log_status
 CREATE INDEX IF NOT EXISTS idx_email_send_log_created_at
     ON email_send_log (created_at);
 
--- ---------------------------------------------------------------------------
 -- SMTP settings (singleton row).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS mail_smtp_settings (
     key VARCHAR PRIMARY KEY CHECK (key = 'global'),
     host VARCHAR NOT NULL DEFAULT '',
@@ -109,10 +103,8 @@ CREATE TABLE IF NOT EXISTS mail_smtp_settings (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- ---------------------------------------------------------------------------
 -- One entry of the mail send log. `status` is `queued`, `sent`, or
 -- `failed`.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS mail_log (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     "to" VARCHAR NOT NULL,
@@ -132,9 +124,7 @@ CREATE INDEX IF NOT EXISTS idx_mail_log_status
 CREATE INDEX IF NOT EXISTS idx_mail_log_created_at
     ON mail_log (created_at);
 
--- ---------------------------------------------------------------------------
 -- One email template (GrapeJS design + subject + category).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS email_templates (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR NOT NULL,
@@ -150,9 +140,7 @@ CREATE TABLE IF NOT EXISTS email_templates (
 CREATE INDEX IF NOT EXISTS idx_email_templates_category
     ON email_templates (category);
 
--- ---------------------------------------------------------------------------
 -- One stored version of a template.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS email_template_versions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     template_id UUID NOT NULL REFERENCES email_templates (id) ON DELETE CASCADE ON UPDATE NO ACTION,
@@ -168,11 +156,9 @@ CREATE TABLE IF NOT EXISTS email_template_versions (
 CREATE INDEX IF NOT EXISTS idx_email_template_versions_template_id
     ON email_template_versions (template_id);
 
--- ---------------------------------------------------------------------------
 -- One newsletter list. `default_connection_id` is the default email
 -- provider connection for the list's campaigns; a campaign may
 -- override it with its own connection id.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS newsletter_lists (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR NOT NULL,
@@ -186,9 +172,7 @@ CREATE TABLE IF NOT EXISTS newsletter_lists (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- ---------------------------------------------------------------------------
 -- One subscriber of a list.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS newsletter_subscribers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     list_id UUID NOT NULL REFERENCES newsletter_lists (id) ON DELETE CASCADE ON UPDATE NO ACTION,
@@ -209,10 +193,8 @@ CREATE INDEX IF NOT EXISTS idx_newsletter_subscribers_list_id
 CREATE INDEX IF NOT EXISTS idx_newsletter_subscribers_status
     ON newsletter_subscribers (status);
 
--- ---------------------------------------------------------------------------
 -- One campaign: a template sent to a list through a provider
 -- connection, with denormalized send statistics.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS newsletter_campaigns (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     list_id UUID NOT NULL REFERENCES newsletter_lists (id) ON DELETE CASCADE ON UPDATE NO ACTION,
@@ -242,9 +224,7 @@ CREATE INDEX IF NOT EXISTS idx_newsletter_campaigns_list_id
 CREATE INDEX IF NOT EXISTS idx_newsletter_campaigns_status
     ON newsletter_campaigns (status);
 
--- ---------------------------------------------------------------------------
 -- One tracking event: an open or a click on a campaign email.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS newsletter_tracking_events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     campaign_id UUID NOT NULL REFERENCES newsletter_campaigns (id) ON DELETE CASCADE ON UPDATE NO ACTION,

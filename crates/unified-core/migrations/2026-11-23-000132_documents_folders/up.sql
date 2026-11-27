@@ -1,4 +1,4 @@
--- Documents folders (task 355): hierarchical folders for the
+-- Documents folders: hierarchical folders for the
 -- documents media library, plus `documents.folder_id` linking each
 -- document to its folder ('' = library root).
 --

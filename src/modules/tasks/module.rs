@@ -1,4 +1,4 @@
-// tasks — Module registration: struct, defaults, routes, and hooks.
+// tasks - Module registration: struct, defaults, routes, and hooks.
 
 use super::*;
 use unified_core::modules::{Module, ModuleRegistry, RouteInfo};
@@ -9,9 +9,7 @@ use actix_web::web;
 use dashmap::DashMap;
 use std::sync::Arc;
 
-// ---------------------------------------------------------------------------
 // Module.
-// ---------------------------------------------------------------------------
 
 pub struct TasksModule {
     store: TasksStore,

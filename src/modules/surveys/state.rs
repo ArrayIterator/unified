@@ -1,4 +1,4 @@
-// surveys module — Shared state.
+// surveys module - Shared state.
 //
 // Split from the former single-file module `src/modules/surveys.rs`.
 // The module root (`surveys.rs`) re-exports the public items, so the
@@ -24,9 +24,7 @@ use super::types::{Survey, SurveyAnswer, SurveyDistribution, SurveyQuestion, Sur
 use super::requests::DistributionRecipient;
 use super::helpers::created;
 
-// ---------------------------------------------------------------------------
 // Shared state
-// ---------------------------------------------------------------------------
 
 /// In-memory stores for surveys. The hook bus is attached in `init`
 /// (the bus lives in `AppContext`); handlers tolerate a missing bus

@@ -12,9 +12,7 @@ use uuid::Uuid;
 
 use super::types::MAX_FOLDER_NAME_LEN;
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 /// Fail-closed tenant gate: no resolved tenant context -> error, never
 /// fall back to `public`. Records in this module carry no `tenant_id`

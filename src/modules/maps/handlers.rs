@@ -1,4 +1,4 @@
-// Map & Tagging — HTTP handlers.
+// Map & Tagging - HTTP handlers.
 //
 // Auth follows the widgets / saved_views shape: the caller is the
 // server-verified JWT identity and every route asks the roles
@@ -7,8 +7,8 @@
 // recording GPS positions needs `maps.track`.
 //
 // C3 guards (see docs/integration/C3_MODULE_GUARD_MAP.md): every
-// handler resolves the tenant FIRST (`require_tenant`) — before
-// caller identity or any capability check — then verifies the
+// handler resolves the tenant FIRST (`require_tenant`) - before
+// caller identity or any capability check - then verifies the
 // caller's company agrees with the tenant context, and only then
 // checks the capability. All reads and writes filter on the
 // resolved tenant id, so a tenant can never see or touch another
@@ -58,9 +58,7 @@ fn parse_id(raw: &str, what: &str) -> UnifiedResult<Uuid> {
     Uuid::parse_str(raw).map_err(|_| UnifiedError::bad_request(format!("{what} must be a UUID")))
 }
 
-// ---------------------------------------------------------------------------
 // Locations.
-// ---------------------------------------------------------------------------
 
 /// `GET /api/v1/maps/locations?page&per_page&kind&layer_id`:
 /// this tenant's locations, newest first. Requires `maps.view`.
@@ -162,9 +160,7 @@ pub(crate) async fn delete_location_handler(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Location links.
-// ---------------------------------------------------------------------------
 
 /// `POST /api/v1/maps/links`: attach a location to a record.
 /// Requires `maps.manage`.
@@ -242,9 +238,7 @@ pub(crate) async fn entity_locations_handler(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Nearby search.
-// ---------------------------------------------------------------------------
 
 /// `GET /api/v1/maps/nearby?latitude&longitude&radius_km&kind`.
 #[derive(Debug, Deserialize)]
@@ -285,9 +279,7 @@ pub(crate) async fn nearby_handler(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Layers.
-// ---------------------------------------------------------------------------
 
 /// `GET /api/v1/maps/layers`. Requires `maps.view`.
 pub(crate) async fn list_layers_handler(
@@ -359,9 +351,7 @@ pub(crate) async fn delete_layer_handler(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Geofences.
-// ---------------------------------------------------------------------------
 
 /// `GET /api/v1/maps/geofences`. Requires `maps.view`.
 pub(crate) async fn list_geofences_handler(
@@ -480,9 +470,7 @@ pub(crate) async fn contains_handler(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Positions.
-// ---------------------------------------------------------------------------
 
 /// `POST /api/v1/maps/positions`: record one GPS position.
 /// Requires `maps.track`.
@@ -543,9 +531,7 @@ pub(crate) async fn list_positions_handler(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Kinds and roles (admin-definable definitions).
-// ---------------------------------------------------------------------------
 
 /// `GET /api/v1/maps/kinds`. Requires `maps.view`.
 pub(crate) async fn list_kinds_handler(
@@ -687,9 +673,7 @@ pub(crate) async fn delete_role_handler(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Providers and settings.
-// ---------------------------------------------------------------------------
 
 /// `GET /api/v1/maps/providers`. Requires `maps.view`.
 pub(crate) async fn list_providers_handler(

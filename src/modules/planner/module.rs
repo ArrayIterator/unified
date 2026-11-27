@@ -17,9 +17,7 @@ use uuid::Uuid;
 use super::{constants::*, helpers::*, types::*, state::*, handlers_pools::*, forecast::*, handlers_plans::*, events::*};
 use super::ai_capabilities::AI_CAPABILITIES;
 
-// ---------------------------------------------------------------------------
 // Module definition.
-// ---------------------------------------------------------------------------
 
 pub struct PlannerModule {
     pub(crate) state: Arc<PlannerState>,

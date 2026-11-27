@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// --- Handlers: adjustments ---------------------------------------------------
+// Handlers: adjustments
 
 pub(crate) async fn list_adjustments(
     ctx: web::Data<Arc<AppContext>>,
@@ -102,7 +102,7 @@ pub(crate) async fn create_adjustment(
         // Apply the adjustment to the payable: a pending
         // reimbursement is reduced by the adjustment (see
         // `apply_adjustment_to_payable`). The report total and
-        // the expense lines are never mutated — the submitted
+        // the expense lines are never mutated - the submitted
         // history stays intact.
         let payable_after = apply_adjustment_to_payable(&state, &report, &adjustment);
         state.emit(
@@ -124,14 +124,14 @@ pub(crate) async fn create_adjustment(
     }
 }
 
-// --- Adjustment application (unit-testable) ---------------------------------
+// Adjustment application (unit-testable)
 
 /// Apply an adjustment to the report's payable: when the report
 /// has a reimbursement that is still `pending` and in the same
 /// currency, the adjustment reduces its amount (floored at
 /// zero) and the new amount is returned. When there is no
-/// pending reimbursement — the reimbursement is already paid,
-/// the report never produced one, or the currencies differ —
+/// pending reimbursement - the reimbursement is already paid,
+/// the report never produced one, or the currencies differ -
 /// there is nothing to reduce and `None` is returned: the
 /// adjustment stays record-only and is netted in spend
 /// analytics. The report total and the expense lines are never

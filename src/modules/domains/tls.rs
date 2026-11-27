@@ -10,7 +10,6 @@ use rustls::{ClientConfig, ClientConnection, DigitallySignedStruct, SignatureSch
 use std::sync::Arc;
 use std::time::Duration;
 
-// ---------------------------------------------------------------------------
 // TLS probe: connect to port 443, complete a TLS handshake, and read the
 // leaf certificate's expiry date.
 //
@@ -18,7 +17,6 @@ use std::time::Duration;
 // domain may be mid-renewal), so it uses a verifier that accepts any
 // certificate and then parses the presented leaf certificate itself.
 // The blocking socket work runs in `spawn_blocking`.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug)]
 pub(crate) struct AcceptAnyCertificate;

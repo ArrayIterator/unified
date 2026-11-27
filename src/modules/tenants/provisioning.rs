@@ -15,9 +15,7 @@ use super::{constants::*, vocabulary::*, events::*, settings::*, records::*, sta
 
 
 
-// ---------------------------------------------------------------------------
 // Provisioning pipeline (idempotent, resumable, audit-logged).
-// ---------------------------------------------------------------------------
 /// Record a step row for (tenant, step) if none exists yet, and
 /// return it. Re-running a provision never duplicates step rows:
 /// the (tenant, step) key is unique in the store and in the
@@ -248,7 +246,7 @@ pub(crate) fn grant_one_module(
     let company_id = tenant.id.to_string();
     // The entitlement check is the gate (see the doc above): a
     // module the tenant is not entitled to is never recorded as
-    // granted. Grace is not an entitlement here either — the gate
+    // granted. Grace is not an entitlement here either - the gate
     // consults only live sources, so a grace-state module is
     // refused exactly as `enable_module` refuses it (single grace
     // policy, see `EntitlementsState::grace_applies`).
@@ -263,7 +261,7 @@ pub(crate) fn grant_one_module(
     // subscription id is a string, so it only fits
     // `granted_via_id` when it parses as a UUID. The raw id
     // always rides the grant event as `source_ref`, which is what
-    // the entitlements mirror stores on the row — and what a
+    // the entitlements mirror stores on the row - and what a
     // later subscription-cancel lapses the row through.
     let subscription_id = if granted_via == "subscription" {
         subscription_entitlement_id(ctx, &company_id, module_id)
@@ -540,7 +538,7 @@ pub(crate) fn run_provisioning_pipeline(
 
 
 /// Load a tenant by id only (the pipeline's internal lookup; the
-/// public lookup also accepts slugs — see `get_tenant`).
+/// public lookup also accepts slugs - see `get_tenant`).
 pub(crate) fn get_tenant_by_id(state: &TenantsState, tenant_id: Uuid) -> UnifiedResult<Tenant> {
     state
         .tenants
@@ -563,7 +561,7 @@ pub(crate) fn get_tenant_by_id(state: &TenantsState, tenant_id: Uuid) -> Unified
 /// from every status to `provision_failed`, which would let any
 /// failure silently demote a live tenant through the normal
 /// transition path. Instead the failure is logged and the status
-/// is set explicitly here — and the event + audit record the
+/// is set explicitly here - and the event + audit record the
 /// machine transition would have emitted are still emitted below,
 /// so observers see exactly the same failure signal.
 pub(crate) fn mark_provision_failed(
@@ -607,10 +605,8 @@ pub(crate) fn mark_provision_failed(
 
 
 
-// ---------------------------------------------------------------------------
 // Shared grant helper (used by the provisioning step and by the
 // grant endpoint, so the entitlement gate lives in one place).
-// ---------------------------------------------------------------------------
 /// Grant several modules to one tenant, entitlement-checking each
 /// one. Returns the grants that succeeded and the skips (recorded
 /// with reasons, never silent). A failed entitlement never blocks

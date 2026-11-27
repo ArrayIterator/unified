@@ -11,7 +11,7 @@
 //! fixed lists are the ones that are pure state machines with
 //! no tenant meaning of their own: the ECO status machine and
 //! the approval decision values. Money is always integer minor
-//! units; this module carries no money fields at all — cost
+//! units; this module carries no money fields at all - cost
 //! impact on an ECO is recorded as a free-text assessment plus
 //! an impact level, never as a price.
 //!
@@ -97,9 +97,7 @@ pub(crate) const DEFAULT_ECO_TYPES: &[&str] = &[
 /// validated on write so a typo never becomes a level.
 pub(crate) const IMPACT_LEVELS: &[&str] = &["low", "medium", "high", "critical"];
 
-// ---------------------------------------------------------------------------
 // Pure domain functions (unit-tested below)
-// ---------------------------------------------------------------------------
 
 /// One default lifecycle stage definition. The default set is
 /// seed data, not an enum: an admin may rename, reorder,
@@ -330,9 +328,7 @@ pub fn diff_versions(a: &PlmVersion, b: &PlmVersion) -> Vec<Value> {
     changes
 }
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// One lifecycle stage, defined as data. `allowed_transitions`
 /// names the stage slugs a version may move to from here;
@@ -364,7 +360,7 @@ pub struct PlmStage {
 /// product in the products module by id only (no foreign key).
 /// The revision is three integers rendered as
 /// `major.minor.patch`; `status` is the slug of the lifecycle
-/// stage this version is in (data, not an enum — it must match
+/// stage this version is in (data, not an enum - it must match
 /// an existing stage of the tenant). `supersedes_version_id`
 /// links to the previous revision of the same product.
 /// `is_current` marks the revision customers and manufacturing
@@ -562,7 +558,7 @@ pub struct PlmApproval {
 /// One BOM snapshot. `bom_id` references a manufacturing BOM
 /// by id only (no foreign key); `version_number` is strictly
 /// increasing per BOM. `eco_id` links the snapshot to the ECO
-/// that drove the change, when there is one — an ECO must be
+/// that drove the change, when there is one - an ECO must be
 /// approved or implemented before it may be linked.
 /// `snapshot` is the component/line snapshot as stored at
 /// versioning time; `effective_from` is when the snapshot
@@ -628,9 +624,7 @@ impl Default for PlmSettings {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Request bodies
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct CreateStageRequest {

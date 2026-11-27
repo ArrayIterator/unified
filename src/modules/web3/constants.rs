@@ -80,9 +80,7 @@
 // admin enabled the public ledger in settings, and the API Management
 // module's allowed-public-access controls are the outer gate for it.
 
-// ---------------------------------------------------------------------------
 // Constants
-// ---------------------------------------------------------------------------
 
 /// Capabilities enforced on the handlers.
 pub const PERM_WEB3_READ: &str = "web3:read";

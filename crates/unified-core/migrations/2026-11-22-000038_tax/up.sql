@@ -67,9 +67,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One tax rule for one jurisdiction of one company.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS tax_rules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id UUID NOT NULL,
@@ -105,9 +103,7 @@ CREATE INDEX IF NOT EXISTS idx_tax_rules_enabled
 CREATE INDEX IF NOT EXISTS idx_tax_rules_effective_from
     ON tax_rules (effective_from);
 
--- ---------------------------------------------------------------------------
 -- One tax settings row per company.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS tax_settings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id UUID NOT NULL UNIQUE,
@@ -132,10 +128,8 @@ CREATE TABLE IF NOT EXISTS tax_settings (
 CREATE INDEX IF NOT EXISTS idx_tax_settings_company_id
     ON tax_settings (company_id);
 
--- ---------------------------------------------------------------------------
 -- One stored tax computation for an invoice, an order, or a manual
 -- compute call. The source document is never mutated.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS tax_computations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id UUID NOT NULL,
@@ -166,9 +160,7 @@ CREATE INDEX IF NOT EXISTS idx_tax_computations_country_code
 CREATE INDEX IF NOT EXISTS idx_tax_computations_computed_at
     ON tax_computations (computed_at);
 
--- ---------------------------------------------------------------------------
 -- One filing period for one jurisdiction of one company.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS tax_filings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id UUID NOT NULL,
@@ -201,10 +193,8 @@ CREATE INDEX IF NOT EXISTS idx_tax_filings_status
 CREATE INDEX IF NOT EXISTS idx_tax_filings_due_date
     ON tax_filings (due_date);
 
--- ---------------------------------------------------------------------------
 -- One tax reporting / filing provider connection. Credentials are
 -- write-only (ciphertext + fingerprint only).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS tax_connectors (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id UUID NOT NULL,
@@ -239,10 +229,8 @@ CREATE INDEX IF NOT EXISTS idx_tax_connectors_kind
 CREATE INDEX IF NOT EXISTS idx_tax_connectors_enabled
     ON tax_connectors (enabled);
 
--- ---------------------------------------------------------------------------
 -- This module's own audit trail: every tax record change, recorded
 -- whether or not the audit module lists the `tax.*` events.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS tax_audit (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id UUID NOT NULL,

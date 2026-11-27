@@ -1,7 +1,7 @@
 // Diesel schema for the forums domain of the unified-db-platform bounded context.
 //
 // Tables are defined by migration 2026-11-22-000110_forums. They had
-// no Diesel bindings before C11 (task 271): the forums module kept
+// no Diesel bindings before C11: the forums module kept
 // its live data in memory and the tables were persistence targets
 // only. The columns below are byte-identical to that migration.
 // No foreign keys: forum rows reference users and documents by
@@ -9,9 +9,7 @@
 // declarations belong here; the hydrate path in
 // `src/modules/forums/state.rs` loads each table on its own.
 
-// ---------------------------------------------------------------------------
 // Forums (migration 000110_forums).
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     forums (id) {

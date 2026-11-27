@@ -25,8 +25,8 @@
 --   - `survey_questions.question_type` is `nps`, `csat`, `rating`,
 --     `text`, or `multiple_choice`. `options` (JSONB) applies to
 --     `multiple_choice` only. `min_value` / `max_value` record the
---     score bounds the question was created with (NPS 0–10, CSAT
---     and rating 1–5). `position` orders the questions inside one
+--     score bounds the question was created with (NPS 0-10, CSAT
+--     and rating 1-5). `position` orders the questions inside one
 --     survey version; the unique index on (survey_id, position)
 --     keeps positions distinct per version.
 --   - `survey_distributions.trigger` is `manual`, `ticket_closed`,
@@ -53,13 +53,13 @@
 --     foreign key: the tasks module owns tasks).
 --     `recipient_id`, `agent_id`, `department_id`, and
 --     `product_id` are plain VARCHAR references (no foreign keys).
---   - `survey_answers.score` holds NPS (0–10), CSAT (1–5), and
---     rating (1–5) answers; `text` holds free-text answers;
+--   - `survey_answers.score` holds NPS (0-10), CSAT (1-5), and
+--     rating (1-5) answers; `text` holds free-text answers;
 --     `choice` holds multiple-choice answers. The CHECK enforces
 --     the score ranges and that a `choice` is only stored when a
 --     score is not. NPS and CSAT are computed on read, never
 --     stored: NPS is %promoters minus %detractors, CSAT is
---     % satisfied (score 4–5).
+--     % satisfied (score 4-5).
 
 CREATE TABLE IF NOT EXISTS surveys (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

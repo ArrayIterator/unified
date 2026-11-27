@@ -1,4 +1,4 @@
-// risk — handlers templates.
+// risk - handlers templates.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -22,9 +22,7 @@ use super::handlers_plans::*;
 use super::handlers_instances::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Handlers: compliance checklists
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_templates(
     state: web::Data<Arc<RiskState>>,

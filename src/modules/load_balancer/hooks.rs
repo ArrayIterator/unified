@@ -14,14 +14,12 @@ use super::selection::*;
 use super::store::*;
 use super::types::*;
 
-// ---------------------------------------------------------------------------
 // Caller identity and capabilities.
 //
 // Every handler gates on these first, exactly like the web3 and
 // procurement modules: `X-User-Id` (required) plus `X-Role`
 // (required), then a `role.check` hook lookup for the permission.
 // Fails closed: no answer from the roles module means not allowed.
-// ---------------------------------------------------------------------------
 
 pub(crate) struct Caller {
     pub(crate) actor: String,
@@ -62,9 +60,7 @@ pub(crate) fn require_permission(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Hook emission.
-// ---------------------------------------------------------------------------
 
 pub(crate) fn emit(event: &str, payload: Value) {
     if let Some(bus) = HOOK_BUS.get() {
@@ -76,9 +72,7 @@ pub(crate) fn emit_ctx(ctx: &AppContext, event: &str, payload: Value) {
     ctx.hooks.emit(event, payload);
 }
 
-// ---------------------------------------------------------------------------
 // Hook listeners (registered through `register_hooks`).
-// ---------------------------------------------------------------------------
 
 /// A completed renewal / swap refreshes the cached TLS status for
 /// the domain so the TLS endpoint reports the new expiry without a

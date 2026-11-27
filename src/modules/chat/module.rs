@@ -7,36 +7,36 @@
 // hub backed by a tokio broadcast channel.
 //
 // Routes live under `/api/v1/chat`:
-//   - `GET/POST  /channels` — list visible channels / create.
+//   - `GET/POST  /channels` - list visible channels / create.
 //   - `GET/PATCH/DELETE /channels/{id}`.
 //   - `POST /channels/{id}/members`, `DELETE /channels/{id}/members/{user_id}`.
-//   - `GET/POST  /channels/{id}/messages` — newest first, paginated.
+//   - `GET/POST  /channels/{id}/messages` - newest first, paginated.
 //   - `PATCH/DELETE /channels/{id}/messages/{message_id}`.
 //   - `POST /channels/{id}/messages/{message_id}/reactions` (toggle).
-//   - `POST /channels/{id}/messages/{message_id}/escalate` — turn a
+//   - `POST /channels/{id}/messages/{message_id}/escalate` - turn a
 //     message into a support ticket via the `ticket.create_requested` hook.
-//   - `GET/POST  /channels/{id}/files` — register a shared file.
-//   - `GET/POST  /dm` — list / find-or-create a 1:1 channel.
-//   - `GET/POST  /presence` — presence with last-seen timestamps.
-//   - `GET /ws?channel={id}` — WebSocket feed of broadcast chat events.
+//   - `GET/POST  /channels/{id}/files` - register a shared file.
+//   - `GET/POST  /dm` - list / find-or-create a 1:1 channel.
+//   - `GET/POST  /presence` - presence with last-seen timestamps.
+//   - `GET /ws?channel={id}` - WebSocket feed of broadcast chat events.
 //
 // Live support chat lives under `/api/v1/chat/support`:
-//   - `GET/PUT /support/widget/config` — website widget configuration.
-//   - `POST    /support/widget/sessions` — visitor bootstrap (creates a
+//   - `GET/PUT /support/widget/config` - website widget configuration.
+//   - `POST    /support/widget/sessions` - visitor bootstrap (creates a
 //     backing private channel and routes the session to an agent).
-//   - `GET     /support/widget/sessions/{id}` — visitor polling.
-//   - `GET/POST /support/sessions` — list / staff-create a session.
+//   - `GET     /support/widget/sessions/{id}` - visitor polling.
+//   - `GET/POST /support/sessions` - list / staff-create a session.
 //   - `GET     /support/sessions/{id}`.
 //   - `POST    /support/sessions/{id}/accept|close|transfer|escalate`.
 //   - `GET     /support/sessions/{id}/transcript?format=json|text`.
-//   - `GET     /support/sessions/{id}/position` — queue position.
+//   - `GET     /support/sessions/{id}/position` - queue position.
 //   - `POST    /support/sessions/{id}/rating`, `GET .../rating`.
-//   - `GET     /support/ratings` — all ratings, paginated.
-//   - `GET     /support/queue` — waiting visitors.
+//   - `GET     /support/ratings` - all ratings, paginated.
+//   - `GET     /support/queue` - waiting visitors.
 //   - `GET/POST /support/agents`, `GET/PATCH/DELETE /support/agents/{user_id}`.
 //   - `GET/POST /support/canned`, `GET/PATCH/DELETE /support/canned/{id}`,
 //     `POST /support/canned/{id}/use`.
-//   - `GET/POST /support/offline-messages` — offline message to ticket.
+//   - `GET/POST /support/offline-messages` - offline message to ticket.
 //
 // Visitor-facing widget endpoints (`/support/widget/*` bootstrap and
 // polling, offline messages, session rating) deliberately do not require
@@ -47,7 +47,7 @@
 // opaque identifier owned by the Departments module). Chat asks the
 // Departments module for the department's agents through the real
 // `department.agents_requested` event (payload `{"department_id": ...}`,
-// answer: a result carrying an `agent_ids` array — see
+// answer: a result carrying an `agent_ids` array - see
 // `tickets.rs`, `agents_for_department`), then picks the least busy,
 // effectively available agent among them using presence plus the
 // agent's own availability toggle and concurrent-chat limit. When the
@@ -59,7 +59,7 @@
 //
 // Canned responses: no other module in this tree owns canned responses
 // (the tickets module has none), so chat is the canonical store. The
-// tickets module — or any other module — can reuse them by listening to
+// tickets module - or any other module - can reuse them by listening to
 // `chat.canned_response.created/updated/deleted` or by reading them
 // through `GET /api/v1/chat/support/canned`.
 //
@@ -75,8 +75,8 @@
 // only admit members when no roles header is supplied.
 //
 // SECURITY: role-restricted channels are NOT a security boundary.
-// `X-User-Roles` is self-asserted — any caller can claim `admin`
-// and pass `can_view` on a role-restricted public channel — and
+// `X-User-Roles` is self-asserted - any caller can claim `admin`
+// and pass `can_view` on a role-restricted public channel - and
 // the roles module offers no server-side user-to-roles lookup to
 // replace it with (only the `role.check` permission hook, which
 // checks a role slug, not a user). Treat a role-restricted public
@@ -113,9 +113,7 @@ use super::ai_capabilities::AI_CAPABILITIES;
 
 
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 pub struct ChatModule {
     pub(crate) state: ChatState,
 }

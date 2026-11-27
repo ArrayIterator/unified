@@ -5,9 +5,7 @@ use serde::Serialize;
 
 
 #[derive(Debug, Clone, Serialize)]
-// ---------------------------------------------------------------------------
 // Rule definitions (the single source of truth, also served at runtime)
-// ---------------------------------------------------------------------------
 /// One rule, with its condition and severity formula written out in
 /// plain language so the formula is visible next to the code that
 /// implements it. `data_gap` names the missing source data when the

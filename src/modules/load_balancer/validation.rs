@@ -6,9 +6,7 @@ use unified_core::error::{UnifiedError, UnifiedResult};
 use super::constants::*;
 use super::types::*;
 
-// ---------------------------------------------------------------------------
 // Validation.
-// ---------------------------------------------------------------------------
 
 /// Split a `host:port` (or `[ipv6]:port`) value. Returns
 /// `(host, port)` or `None` when the value is malformed.

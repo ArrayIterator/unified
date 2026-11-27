@@ -1,7 +1,7 @@
 // Audit Log module.
 //
 // Append-only log of major events. Entries are created by this module
-// itself from hook subscriptions — there is no public create endpoint —
+// itself from hook subscriptions - there is no public create endpoint -
 // and are immutable: no update or delete endpoints exist. Interconnection
 // happens only through the hook bus.
 

@@ -20,9 +20,7 @@ use unified_core::json;
 use unified_core::pagination::PaginationParams;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Member handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_members(
     ctx: web::Data<Arc<AppContext>>,
@@ -157,9 +155,7 @@ pub(crate) async fn get_member(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Announcement handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_announcements(
     ctx: web::Data<Arc<AppContext>>,
@@ -404,9 +400,7 @@ pub(crate) async fn publish_announcement(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Settings handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn get_settings(
     ctx: web::Data<Arc<AppContext>>,
@@ -477,10 +471,8 @@ pub(crate) async fn update_settings(
     }
 }
 
-// ---------------------------------------------------------------------------
-// Public handlers (no auth — gated by the API Manager's ApiAccessRule
+// Public handlers (no auth - gated by the API Manager's ApiAccessRule
 // for each path; default deny. See the module header.)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_public_topics(
     state: web::Data<CommunityState>,

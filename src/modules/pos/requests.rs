@@ -1,4 +1,4 @@
-// Pos module — request bodies.
+// Pos module - request bodies.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use unified_core::context::AppContext;
@@ -19,9 +19,7 @@ use std::sync::{
 use uuid::Uuid;
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Request bodies
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct CreateRegisterRequest {

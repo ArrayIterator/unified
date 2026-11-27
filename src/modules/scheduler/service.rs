@@ -88,7 +88,7 @@ pub(crate) fn dispatch(state: &Arc<SchedulerState>, kind: &str, payload: &Value)
             // asking the scheduler to run it again (it re-emits
             // `scheduler.enqueue` with this same kind), so emitting
             // the event unconditionally would spawn an unbounded
-            // chain of queue items — one per dispatch, forever — and
+            // chain of queue items - one per dispatch, forever - and
             // never charge anything. Two guards break the chain:
             // the emitted event carries `via_scheduler: true` so the
             // handler can tell a scheduler-dispatched request apart
@@ -170,9 +170,9 @@ pub(crate) fn dispatch(state: &Arc<SchedulerState>, kind: &str, payload: &Value)
             // `notification.digest.send` is the alias that spells the
             // event name out. The payload is forwarded unchanged.
             // Note: `notification.digest.requested` is a different
-            // event — the module emits it when a user saves a
+            // event - the module emits it when a user saves a
             // non-immediate digest preference, and nothing listens to
-            // it — so this arm never emits it.
+            // it - so this arm never emits it.
             state.emit("notification.digest.send", payload.clone());
             Ok(json!({ "dispatched": true, "event": "notification.digest.send" }))
         }
@@ -289,7 +289,7 @@ pub(crate) fn dispatch(state: &Arc<SchedulerState>, kind: &str, payload: &Value)
             // `tenant_destroy::process_due_destroys`, which drops
             // every grace-expired tenant's schema and returns the
             // destroyed request ids. Without a stored context the
-            // arm fails closed — returning `dispatched: true`
+            // arm fails closed - returning `dispatched: true`
             // for work that never ran would silently drop the
             // sweep.
             state.emit("tenant.destroy_due", payload.clone());
@@ -333,7 +333,7 @@ pub(crate) fn dispatch(state: &Arc<SchedulerState>, kind: &str, payload: &Value)
             // polls every watched address on a background thread
             // (see `on_poll_requested` in `src/modules/web3.rs`).
             // The poll itself is async network work, so the hook
-            // only starts it — the dispatch result is honest about
+            // only starts it - the dispatch result is honest about
             // that: the listener exists and the poll is running.
             state.emit("web3.poll_requested", payload.clone());
             Ok(json!({ "dispatched": true, "event": "web3.poll_requested" }))
@@ -444,7 +444,7 @@ pub(crate) fn dispatch(state: &Arc<SchedulerState>, kind: &str, payload: &Value)
 /// Claim one queue item for dispatch, atomically: the status check
 /// and the move to `processing` happen under the same DashMap shard
 /// lock (`get_mut`), so two workers racing for the same item id
-/// cannot both win — the loser sees `processing` (or `done` /
+/// cannot both win - the loser sees `processing` (or `done` /
 /// `failed`) instead of `queued` and returns without dispatching.
 /// Returns the claimed item, or `None` when the item is gone or
 /// already claimed / finished.
@@ -524,9 +524,7 @@ pub(crate) fn spawn_queue_worker(state: Arc<SchedulerState>, item_id: String) {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Built-in jobs seeded at startup
-// ---------------------------------------------------------------------------
 
 /// Id of the built-in `tenant.destroy_due` job seeded by
 /// `seed_builtin_jobs`. A fixed id keeps the seeded job
@@ -536,13 +534,13 @@ pub(crate) const DESTROY_DUE_JOB_ID: &str = "builtin-tenant-destroy-due";
 
 /// Default interval (seconds) of the built-in `tenant.destroy_due`
 /// job: grace-expired destroy requests are swept once an hour.
-/// The interval is only the seeded default — the job remains
+/// The interval is only the seeded default - the job remains
 /// editable through `PUT /api/v1/scheduler/jobs/{id}`.
 pub(crate) const DESTROY_DUE_INTERVAL_SECS: u64 = 3600;
 
 /// Seed the built-in jobs. Idempotent: when a job of kind
-/// `tenant.destroy_due` already exists — seeded on an earlier
-/// start, or created by an admin — nothing is added, so restarts
+/// `tenant.destroy_due` already exists - seeded on an earlier
+/// start, or created by an admin - nothing is added, so restarts
 /// never duplicate the sweep. Called from `Module::init` before
 /// the ticker starts, so the first tick already has the job.
 pub(crate) fn seed_builtin_jobs(state: &Arc<SchedulerState>) {
@@ -575,9 +573,7 @@ pub(crate) fn seed_builtin_jobs(state: &Arc<SchedulerState>) {
     state.jobs.insert(id, job);
 }
 
-// ---------------------------------------------------------------------------
 // Ticker: scheduled jobs actually fire
-// ---------------------------------------------------------------------------
 
 /// Jobs due at `at`, in creation order. An interval job (`"300"`)
 /// is due once its interval elapsed since its last fire, or since
@@ -816,7 +812,7 @@ mod tests {
     fn dispatch_auditors_expire_forwards_payload_unchanged() {
         // A listener on the bus records the exact payload the arm
         // emitted, proving the expiry payload (`auditor_id`,
-        // `run_at`) reaches the Auditors module unchanged — the
+        // `run_at`) reaches the Auditors module unchanged - the
         // event name and payload the `auditors.expire_requested`
         // listener expects.
         let state = state();

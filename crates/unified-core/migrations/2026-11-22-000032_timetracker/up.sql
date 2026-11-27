@@ -60,12 +60,10 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One tracked block of time: created manually, or created by
 -- stopping a timer. `duration_secs` always equals
 -- `ended_at - started_at`. Created before `timetracker_timers`
 -- because timers reference it (`entry_id`).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS timetracker_entries (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id TEXT NOT NULL,
@@ -101,10 +99,8 @@ CREATE INDEX IF NOT EXISTS idx_timetracker_entries_approval
 CREATE INDEX IF NOT EXISTS idx_timetracker_entries_timer_id
     ON timetracker_entries (timer_id);
 
--- ---------------------------------------------------------------------------
 -- One timer: the live counterpart of a time entry. Stopping it
 -- creates the entry (`entry_id`).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS timetracker_timers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id TEXT NOT NULL,
@@ -134,11 +130,9 @@ CREATE INDEX IF NOT EXISTS idx_timetracker_timers_project_id
 CREATE INDEX IF NOT EXISTS idx_timetracker_timers_task_id
     ON timetracker_timers (task_id);
 
--- ---------------------------------------------------------------------------
 -- One agent-reported activity sample: score 0-100 for one
 -- interval, plus the idle seconds observed in that interval.
 -- Idle time is recorded, never silently discarded.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS timetracker_activity (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id TEXT NOT NULL,
@@ -163,10 +157,8 @@ CREATE INDEX IF NOT EXISTS idx_timetracker_activity_user_id_interval_start
 CREATE INDEX IF NOT EXISTS idx_timetracker_activity_timer_id
     ON timetracker_activity (timer_id);
 
--- ---------------------------------------------------------------------------
 -- One agent-reported application / website usage interval. Only
 -- the hash of the window title is stored, never the raw title.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS timetracker_app_usage (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id TEXT NOT NULL,
@@ -188,10 +180,8 @@ CREATE INDEX IF NOT EXISTS idx_timetracker_app_usage_user_id_interval_start
 CREATE INDEX IF NOT EXISTS idx_timetracker_app_usage_category
     ON timetracker_app_usage (category);
 
--- ---------------------------------------------------------------------------
 -- One screenshot. Metadata only: the bytes live in the storage
 -- module under (`storage_target`, `storage_key`).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS timetracker_screenshots (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id TEXT NOT NULL,
@@ -218,9 +208,7 @@ CREATE INDEX IF NOT EXISTS idx_timetracker_screenshots_user_id_captured_at
 CREATE INDEX IF NOT EXISTS idx_timetracker_screenshots_timer_id
     ON timetracker_screenshots (timer_id);
 
--- ---------------------------------------------------------------------------
 -- One hourly rate for one user. Money is NUMERIC(19,4).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS timetracker_rates (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id TEXT NOT NULL,
@@ -236,10 +224,8 @@ CREATE TABLE IF NOT EXISTS timetracker_rates (
 CREATE INDEX IF NOT EXISTS idx_timetracker_rates_user_id_effective_from
     ON timetracker_rates (user_id, effective_from);
 
--- ---------------------------------------------------------------------------
 -- One timesheet: a set of entries for one user over one period.
 -- Approving a sheet approves its still-pending entries.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS timetracker_timesheets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id TEXT NOT NULL,
@@ -262,10 +248,8 @@ CREATE INDEX IF NOT EXISTS idx_timetracker_timesheets_user_id_period_start
 CREATE INDEX IF NOT EXISTS idx_timetracker_timesheets_status
     ON timetracker_timesheets (status);
 
--- ---------------------------------------------------------------------------
 -- Global product-default settings (one row, scope = 'global').
 -- Per-buyer overrides live in timetracker_buyer_settings.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS timetracker_settings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     scope TEXT NOT NULL DEFAULT 'global',
@@ -282,10 +266,8 @@ CREATE TABLE IF NOT EXISTS timetracker_settings (
     UNIQUE (scope)
 );
 
--- ---------------------------------------------------------------------------
 -- One user's own tracking settings, including screenshot consent.
 -- Screenshots stay disabled until the user opts in.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS timetracker_user_settings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id TEXT NOT NULL,
@@ -300,9 +282,7 @@ CREATE TABLE IF NOT EXISTS timetracker_user_settings (
 CREATE INDEX IF NOT EXISTS idx_timetracker_user_settings_user_id
     ON timetracker_user_settings (user_id);
 
--- ---------------------------------------------------------------------------
 -- One team (group) inside one company.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS timetracker_teams (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id UUID NOT NULL REFERENCES companies (id)
@@ -317,9 +297,7 @@ CREATE TABLE IF NOT EXISTS timetracker_teams (
 CREATE INDEX IF NOT EXISTS idx_timetracker_teams_company_id
     ON timetracker_teams (company_id);
 
--- ---------------------------------------------------------------------------
 -- One membership of a user in a team, with a tracker-scoped role.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS timetracker_team_members (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     team_id UUID NOT NULL REFERENCES timetracker_teams (id)
@@ -338,11 +316,9 @@ CREATE INDEX IF NOT EXISTS idx_timetracker_team_members_team_id
 CREATE INDEX IF NOT EXISTS idx_timetracker_team_members_user_id
     ON timetracker_team_members (user_id);
 
--- ---------------------------------------------------------------------------
 -- One staff record: a user attached to one company for tracking,
 -- with their tracker-scoped role, direct manager, and per-staff
 -- setting overrides. One row per user.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS timetracker_staff_settings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id TEXT NOT NULL,
@@ -366,11 +342,9 @@ CREATE TABLE IF NOT EXISTS timetracker_staff_settings (
 CREATE INDEX IF NOT EXISTS idx_timetracker_staff_settings_company_id
     ON timetracker_staff_settings (company_id);
 
--- ---------------------------------------------------------------------------
 -- One invitation to join a company as tracker staff. Only the
 -- SHA-256 hash of the token is stored; the raw token is shown
 -- once at creation time.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS timetracker_staff_invites (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id UUID NOT NULL REFERENCES companies (id)
@@ -396,11 +370,9 @@ CREATE INDEX IF NOT EXISTS idx_timetracker_staff_invites_company_id_status
 CREATE INDEX IF NOT EXISTS idx_timetracker_staff_invites_email
     ON timetracker_staff_invites (email);
 
--- ---------------------------------------------------------------------------
 -- Per-buyer (per purchasing company) settings. Every column is an
 -- override: NULL (or an empty list) falls back to the global
 -- product default in timetracker_settings. One row per company.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS timetracker_buyer_settings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id UUID NOT NULL REFERENCES companies (id)

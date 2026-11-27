@@ -1,7 +1,6 @@
-// service — loading.
+// service - loading.
 // Loading timesheets, teams, and staff company info.
 //
-// Split from `src/modules/timetracker/service.rs`; moved verbatim, no behaviour changes.
 
 use super::super::*;
 use super::*;
@@ -26,9 +25,7 @@ pub(crate) fn load_timesheet(state: &TimeTrackerState, raw_id: &str) -> UnifiedR
         .ok_or_else(|| UnifiedError::not_found(format!("Timesheet not found: {id}")))
 }
 
-// ---------------------------------------------------------------------------
 // Handlers: staff management and teams
-// ---------------------------------------------------------------------------
 
 /// The company a staff call acts on: the `X-Company-Id` claim,
 /// verified to exist and to contain the caller. Every staff and

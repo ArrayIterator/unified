@@ -18,9 +18,7 @@ use super::state::{WhitelabelState};
 use super::types::{BrandingProfile, PutBrandingInput, ResolvedBranding};
 use super::validation::{apply_storage_pair, require_domain, require_email, require_hex_color, require_storage_pair, require_text};
 
-// ---------------------------------------------------------------------------
 // Tenant handlers
-// ---------------------------------------------------------------------------
 
 /// The caller's own effective allowance. Tenant read capability.
 pub(crate) async fn get_my_allowance(
@@ -73,7 +71,7 @@ pub(crate) async fn get_my_branding(
 /// Save the caller's own branding profile. When white labelling is
 /// NOT allowed for the tenant, the write is rejected with 403 and a
 /// `whitelabel.branding.denied` audit event is emitted plus a history
-/// entry — the attempt itself is part of the audit trail. A new
+/// entry - the attempt itself is part of the audit trail. A new
 /// custom domain is stored as `requested` and a
 /// `whitelabel.domain.requested` event is emitted for the domains
 /// module; only a VERIFIED domain is ever attached as the resolved
@@ -462,16 +460,14 @@ pub(crate) async fn list_my_history(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Public handler (API Manager ApiAccessRule gated, like portals)
-// ---------------------------------------------------------------------------
 
 /// Server-resolved branding for one company's login / portal page
 /// render. No capability check on purpose: the API Manager denies
 /// the call unless an administrator created the matching
 /// `ApiAccessRule` for `GET /api/v1/whitelabel/public/*` (default
-/// deny). Only resolved branding is returned — never allowance
-/// settings, history, or another tenant's data — and a tenant that
+/// deny). Only resolved branding is returned - never allowance
+/// settings, history, or another tenant's data - and a tenant that
 /// is not allowed resolves to the platform defaults.
 pub(crate) async fn get_public_branding(
     state: web::Data<WhitelabelState>,

@@ -1,4 +1,4 @@
-// admissions module — Required document handlers.
+// admissions module - Required document handlers.
 //
 // Split from the former single-file module `src/modules/admissions.rs`.
 // The module root (`admissions.rs`) re-exports the public items, so the
@@ -26,9 +26,7 @@ use super::helpers::{
 use super::state::AdmissionsState;
 use super::types::{CreateRequiredDocument, RequiredDocument, UpdateRequiredDocument};
 
-// ---------------------------------------------------------------------------
 // Handlers: required documents
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_required_documents(
     ctx: web::Data<Arc<AppContext>>,

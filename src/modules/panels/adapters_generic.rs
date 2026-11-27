@@ -37,9 +37,7 @@ use super::types::generic_capabilities;
 use super::types::validate_generic_config;
 use super::types::validate_panel_endpoint;
 
-// ---------------------------------------------------------------------------
 // Generic adapter.
-// ---------------------------------------------------------------------------
 
 /// Configuration-driven adapter for any panel that answers JSON over
 /// HTTP: the connection's `generic_config` supplies the auth type, a

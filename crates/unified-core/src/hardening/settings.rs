@@ -1,7 +1,6 @@
-// hardening — settings.
+// hardening - settings.
 // Security settings, defaults, and updates.
 //
-// Split from `crates/unified-core/src/hardening.rs`; moved verbatim, no behaviour changes.
 
 use super::*;
 use crate::error::UnifiedError;

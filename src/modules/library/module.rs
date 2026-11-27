@@ -1,92 +1,92 @@
 // Library - Module struct, route table and registration.
 
-// Library module — catalog, copies, members, loans, holds, fines,
+// Library module - catalog, copies, members, loans, holds, fines,
 // digital access, inventory audits, reminders, and AI-assisted
 // search and recommendations.
 //
 // Routes live under `/api/v1/library`:
 //
 //   Catalog items:
-//     GET/POST /items — list (paginated, filtered) / create.
+//     GET/POST /items - list (paginated, filtered) / create.
 //     GET/PATCH/DELETE /items/{id}.
-//     POST /items/{id}/withdraw — active -> withdrawn.
+//     POST /items/{id}/withdraw - active -> withdrawn.
 //   Copies:
-//     GET/POST /items/{id}/copies — list / add a copy.
+//     GET/POST /items/{id}/copies - list / add a copy.
 //     GET/PATCH/DELETE /copies/{id}.
 //   Public catalog:
-//     GET /catalog/search — read-only catalog search (rate-limited).
-//     GET /catalog/{id} — one catalog entry with its copies.
+//     GET /catalog/search - read-only catalog search (rate-limited).
+//     GET /catalog/{id} - one catalog entry with its copies.
 //   Categories (data-driven taxonomy, admin-editable):
-//     GET/POST /categories — list / create.
+//     GET/POST /categories - list / create.
 //     GET/PATCH/DELETE /categories/{id}.
 //   Members (store only `user_id` plus a member type and a status;
 //   user records themselves live in the users module):
-//     GET/POST /members — list / register.
+//     GET/POST /members - list / register.
 //     GET/PATCH/DELETE /members/{id}.
-//     GET /members/{id}/loans — the member's loans.
-//     GET /members/{id}/history — loan history of the member.
-//     GET /my/loans — the caller's loans.
+//     GET /members/{id}/loans - the member's loans.
+//     GET /members/{id}/history - loan history of the member.
+//     GET /my/loans - the caller's loans.
 //   Loans and returns:
-//     POST /loans — checkout (physical copy or digital item).
-//     GET /loans — list (filter by member, item, copy, status).
+//     POST /loans - checkout (physical copy or digital item).
+//     GET /loans - list (filter by member, item, copy, status).
 //     GET /loans/{id}.
-//     POST /loans/{id}/renew — renew (blocked by a hold or by an
+//     POST /loans/{id}/renew - renew (blocked by a hold or by an
 //          overdue loan, per the active loan policy).
-//     POST /loans/{id}/return — check-in; overdue returns raise a
+//     POST /loans/{id}/return - check-in; overdue returns raise a
 //          fine through a billing event, never a direct charge.
-//     POST /loans/{id}/mark-lost — lost handling with a replacement
+//     POST /loans/{id}/mark-lost - lost handling with a replacement
 //          charge requested through billing.
-//     POST /loans/{id}/mark-damaged — damaged handling, same flow.
-//     GET /loans/overdue — overdue loans.
-//     POST /loans/scan-overdue — sweep: mark overdue loans, raise
+//     POST /loans/{id}/mark-damaged - damaged handling, same flow.
+//     GET /loans/overdue - overdue loans.
+//     POST /loans/scan-overdue - sweep: mark overdue loans, raise
 //          fines, notify members.
 //   Holds (FIFO queue):
-//     POST /holds — reserve an item.
-//     GET /holds — list (filter by member, item, status).
+//     POST /holds - reserve an item.
+//     GET /holds - list (filter by member, item, status).
 //     GET /holds/{id}.
 //     POST /holds/{id}/cancel.
-//     POST /holds/{id}/fulfill — staff marks a hold ready and the
+//     POST /holds/{id}/fulfill - staff marks a hold ready and the
 //          member is notified.
-//     POST /holds/{id}/expire — expire a ready hold and offer the
+//     POST /holds/{id}/expire - expire a ready hold and offer the
 //          item to the next hold in the queue.
 //   Fines (billing owns the money; this module only requests):
-//     GET /fines — list (filter by member, loan, status).
+//     GET /fines - list (filter by member, loan, status).
 //     GET /fines/{id}.
-//     POST /fines/{id}/waive — waive a pending fine (manager).
+//     POST /fines/{id}/waive - waive a pending fine (manager).
 //   Loan policies (all loan numbers are data, never constants):
-//     GET/POST /policies — list / create.
+//     GET/POST /policies - list / create.
 //     GET/PATCH/DELETE /policies/{id}.
-//   Digital collection (references only — bytes live in the
+//   Digital collection (references only - bytes live in the
 //   documents / storage modules):
-//     POST /items/{id}/digital-access — issue a signed expiring
+//     POST /items/{id}/digital-access - issue a signed expiring
 //          access token for an active digital loan.
-//     GET /digital-access/{token} — redeem a token (validates the
+//     GET /digital-access/{token} - redeem a token (validates the
 //          signature and the expiry, then returns the stored
 //          document / storage reference, never bytes).
-//     GET /items/{id}/digital — the digital references of an item.
+//     GET /items/{id}/digital - the digital references of an item.
 //   Inventory audits:
-//     POST /inventory-audits — open an audit.
-//     GET /inventory-audits — list.
+//     POST /inventory-audits - open an audit.
+//     GET /inventory-audits - list.
 //     GET /inventory-audits/{id}.
-//     POST /inventory-audits/{id}/complete — close the audit and
+//     POST /inventory-audits/{id}/complete - close the audit and
 //          emit the completion event with the discrepancy report.
-//     POST /inventory-audits/{id}/discrepancies — record one.
+//     POST /inventory-audits/{id}/discrepancies - record one.
 //     POST /inventory-audits/{id}/discrepancies/{discrepancy_id}/resolve
-//          — resolve (write-off needs an explicit approval flag).
-//     GET /inventory-audits/{id}/report — the discrepancy report.
+//          - resolve (write-off needs an explicit approval flag).
+//     GET /inventory-audits/{id}/report - the discrepancy report.
 //   Reminders (delivery belongs to the notifications module):
-//     POST /reminders/send-due-soon — notify members whose loans
+//     POST /reminders/send-due-soon - notify members whose loans
 //          fall due inside the configured reminder window.
-//     POST /reminders/send-overdue — notify members with overdue
+//     POST /reminders/send-overdue - notify members with overdue
 //          loans (skips loans already reminded in this overdue run).
 //   Settings:
-//     GET/PUT /settings — the configurable lists and defaults.
+//     GET/PUT /settings - the configurable lists and defaults.
 //   AI (smart module; the AI gate in the ai module owns the call):
-//     POST /ai/search-assist — grounded catalog search help.
-//     POST /ai/recommendations — suggestions only; never loans or
+//     POST /ai/search-assist - grounded catalog search help.
+//     POST /ai/recommendations - suggestions only; never loans or
 //          reserves anything.
 //
-// HONESTY — READ THIS FIRST. What is real in this module:
+// HONESTY - READ THIS FIRST. What is real in this module:
 // in-memory catalog / copy / member / loan / hold / fine / policy /
 // audit management with ISBN-10/13 checksum validation, per-copy
 // barcodes, data-driven loan policies (loan period, concurrent
@@ -99,15 +99,15 @@
 // reminders emitted as notification events. What is NOT built
 // here: durable storage (the DashMap stores are authoritative;
 // migration `2026-11-22-000091_library` is the persistence
-// target); money movement itself (billing owns it — this module
+// target); money movement itself (billing owns it - this module
 // only emits `library.fine.requested` and listens for the billing
 // paid events); file bytes (ebook files are document / storage
 // references only); notification delivery (the notifications
-// module owns it — this module only emits
+// module owns it - this module only emits
 // `notification.requested`); and user records (members store only
 // `user_id` plus a member type and a status).
 //
-// CONFIG-DRIVEN — READ THIS FIRST. Nothing behavioural is
+// CONFIG-DRIVEN - READ THIS FIRST. Nothing behavioural is
 // hard-coded: categories, languages, member types, item types,
 // copy conditions, and every status vocabulary live in
 // `LibrarySettings`, editable through `PUT /settings`. Loan
@@ -120,14 +120,14 @@
 // Languages are ISO codes stored as data, never a fixed list in
 // logic; the default list only seeds the admin-editable setting.
 //
-// TENANT SCOPING — READ THIS FIRST (integration round, 2026-11-22).
+// TENANT SCOPING - READ THIS FIRST (integration round, 2026-11-22).
 // Every tenant-data handler in this module resolves the tenant
 // FIRST via `tenancy::TenantContext::from_http_request` (see
 // `require_tenant` below): no resolved tenant context means the
 // request is rejected (401 missing context / 403 invalid tenant
 // id), before caller identity, capability checks, store access,
 // or any emit. No handler falls back to `public` and no tenant
-// id, schema name, or package id is hard-coded — all are resolved
+// id, schema name, or package id is hard-coded - all are resolved
 // at request time from the tenant context, per
 // `unified_core::tenancy::TENANT_SCOPE_CONTRACT`. Company scoping
 // is enforced at the handler level on top of that guard
@@ -146,7 +146,7 @@
 // the tenant context) is OPEN for the integrator. Likewise the
 // stores are still in-memory DashMaps with no `DbPool`, so
 // `with_tenant_connection` has no call site here yet and the maps
-// are not partitioned by tenant — the handler checks above
+// are not partitioned by tenant - the handler checks above
 // partition by `company_id`, not by tenant, so a tenant whose
 // context carries no company scope sees unfiltered records, and
 // hook listeners (which take no `HttpRequest`) carry no scope
@@ -183,7 +183,7 @@
 //     `library.hold.expired`, `library.hold.cancelled`
 //   - `library.fine.requested` (`{"fine_id", "loan_id",
 //     "member_id", "user_id", "amount_minor", "currency",
-//     "reason", "module": "library"}` — the billing module owns
+//     "reason", "module": "library"}` - the billing module owns
 //     the charge itself), `library.fine.waived`,
 //     `library.fine.paid`
 //   - `library.policy.created`, `library.policy.updated`,
@@ -194,19 +194,19 @@
 //     `library.inventory.discrepancy.recorded`,
 //     `library.inventory.discrepancy.resolved`
 //   - `library.settings.updated`
-//   - `notification.requested` (hold ready, due-soon, overdue —
+//   - `notification.requested` (hold ready, due-soon, overdue -
 //     in the notifications module's payload shape).
-// Events this module listens to (all read defensively — a missing
+// Events this module listens to (all read defensively - a missing
 // field or an unknown record is skipped, never an error):
-//   - `invoice.paid`, `payment.completed` — the names billing
+//   - `invoice.paid`, `payment.completed` - the names billing
 //     and the store actually emit. A payment whose payload names
 //     a library fine (`fine_id`, or `reference_type` =
 //     `"library.fine"` with `reference_id`, read from the nested
 //     `invoice` record when one is present) marks that fine paid.
-//   - `user.deleted` — suspends the library members tied to that
+//   - `user.deleted` - suspends the library members tied to that
 //     user id.
 //   - `library.ai.search_assist_requested`,
-//     `library.ai.recommendations_requested` — grounding hooks:
+//     `library.ai.recommendations_requested` - grounding hooks:
 //     handlers add catalog matches (search) or anonymised
 //     loan-history category counts (recommendations) via
 //     `ctx.add_result(...)`; no member personal data is ever
@@ -234,9 +234,7 @@ use super::{AI_CAPABILITIES, LibraryState, add_discrepancy, ai_recommendations, 
     search_catalog, send_due_soon_reminders, send_overdue_reminders, update_category, update_copy,
     update_item, update_member, update_policy, update_settings, waive_fine, withdraw_item};
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct LibraryModule {
     state: LibraryState,

@@ -201,9 +201,7 @@ pub struct NewLicenseActivation {
     pub hostname: Option<String>,
 }
 
-// ---------------------------------------------------------------------------
 // User / role assignments (many-to-many).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = user_roles)]

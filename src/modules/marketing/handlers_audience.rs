@@ -1,4 +1,4 @@
-// Marketing Automation — Audience, suppression, send, and settings handlers.
+// Marketing Automation - Audience, suppression, send, and settings handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -30,9 +30,7 @@ use super::handlers_scores::*;
 use super::hooks::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Audience, unsubscribe, suppressions, sends, settings.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct AudienceSyncInput {

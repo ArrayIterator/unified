@@ -59,9 +59,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One branded client portal, owned by one company.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS portals (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id VARCHAR(128) NOT NULL,
@@ -98,9 +96,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_portals_custom_domain ON portals (custom_do
 CREATE INDEX IF NOT EXISTS idx_portals_company_id ON portals (company_id);
 CREATE INDEX IF NOT EXISTS idx_portals_status ON portals (status);
 
--- ---------------------------------------------------------------------------
 -- One menu entry of a portal.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS portal_menus (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     portal_id UUID NOT NULL REFERENCES portals (id) ON DELETE CASCADE,
@@ -121,9 +117,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_portal_menus_portal_position
     ON portal_menus (portal_id, position);
 CREATE INDEX IF NOT EXISTS idx_portal_menus_portal_id ON portal_menus (portal_id);
 
--- ---------------------------------------------------------------------------
 -- One recorded portal page view.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS portal_views (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     portal_id UUID NOT NULL REFERENCES portals (id) ON DELETE CASCADE,

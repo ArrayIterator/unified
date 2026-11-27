@@ -1,5 +1,5 @@
 // Diesel schema for the Map & Tagging domain of the
-// unified-db-platform bounded context (task 358).
+// unified-db-platform bounded context.
 //
 // Byte-identical to migration
 // 2026-11-23-000134_map_tagging. The file is named `maps.rs`

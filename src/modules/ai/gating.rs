@@ -57,7 +57,7 @@ pub struct AiCallRequest<'a> {
     /// Requested completion budget (the call's `max_tokens`):
     /// the completion side of the cost estimate. The cost cap is
     /// checked against prompt tokens at the prompt price plus
-    /// this many tokens at the completion price — never against
+    /// this many tokens at the completion price - never against
     /// the prompt price alone.
     pub estimated_completion_tokens: u32,
     pub use_personal_key: bool,
@@ -95,8 +95,8 @@ pub struct AuthorizedPersonalKey {
 
 /// Map a personal-key load failure to a denial: a 403 carries its
 /// reason code into the denial recorder (so the attempt is recorded
-/// and audited like every other denial); anything else — a stored
-/// key that cannot be decrypted — propagates unchanged.
+/// and audited like every other denial); anything else - a stored
+/// key that cannot be decrypted - propagates unchanged.
 pub(crate) fn map_personal_key_denial(
     state: &AiState,
     deny: &dyn Fn(&AiState, &str) -> UnifiedError,
@@ -118,7 +118,7 @@ pub(crate) fn map_personal_key_denial(
 /// enforcement is ON unless an admin explicitly opted into legacy
 /// open mode (`AiGlobalSettings::open_mode`) AND no company or
 /// user policy exists anywhere. With no policies at all and no
-/// opt-in, calls are denied — a fresh install is closed until an
+/// opt-in, calls are denied - a fresh install is closed until an
 /// admin creates a policy or explicitly turns open mode on. Once
 /// any policy exists, enforcement is strict regardless of the
 /// open-mode flag.
@@ -393,7 +393,7 @@ pub(crate) fn release_cap_reservation(state: &AiState, reservation_id: Option<Uu
 
 /// Check the company caps, the user caps, and the personal-key
 /// quota against recorded monthly usage PLUS live reservations,
-/// and — when every cap passes — insert a reservation for this
+/// and - when every cap passes - insert a reservation for this
 /// call's estimate. The check and the insert run under the cap
 /// ledger lock, so two concurrent calls cannot both pass against
 /// the same pre-call usage. Returns the reservation id, or the
@@ -556,9 +556,7 @@ pub(crate) fn key_quota(state: &AiState, user_id: Uuid) -> Option<u64> {
         .filter(|cap| *cap > 0)
 }
 
-// ---------------------------------------------------------------------------
 // Personal MCP endpoint validation (SSRF guard).
-// ---------------------------------------------------------------------------
 
 /// True when the address must never be an MCP target: private,
 /// link-local, unspecified, broadcast, multicast, documentation,
@@ -718,7 +716,6 @@ pub(crate) fn require_allowed_user(state: &AiState, user_id: Uuid) -> UnifiedRes
     }
 }
 
-// ---------------------------------------------------------------------------
 // Layered AI gating.
 //
 // Effective access is the AND of four layers; any layer can disable
@@ -763,7 +760,6 @@ pub(crate) fn require_allowed_user(state: &AiState, user_id: Uuid) -> UnifiedRes
 // `ai.gating.changed` with the old -> new values through
 // `emit_gating_change`, on top of the policy-change audit the
 // policy endpoints already emit.
-// ---------------------------------------------------------------------------
 
 /// Canonical feature (use-case) names the gate understands, plus
 /// the friendly aliases admins may use in gating requests.
@@ -1201,10 +1197,8 @@ pub(crate) fn emit_gating_change(
     );
 }
 
-// ---------------------------------------------------------------------------
 // Layered-gate admin endpoints (all admin-only:
 // `ai:manage_providers`, same capability as the policy endpoints).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct EffectiveGateQuery {

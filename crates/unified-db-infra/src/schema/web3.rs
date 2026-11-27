@@ -3,13 +3,11 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Web3 (migration 000067_web3). `Web3Transaction` and `Web3Balance`
 // carry NUMERIC columns, so they skip ALL serde derives per the
 // repo header rule. `api_key_encrypted` / `anchoring_key_encrypted`
 // are write-only ciphertext and get `#[serde(skip_serializing)]`
 // on the read structs.
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     web3_networks (id) {

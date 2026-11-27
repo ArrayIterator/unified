@@ -19,10 +19,8 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One audit entry: who did what, on which resource, with the event
 -- payload and the actor IP.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS audit_entries (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     seq BIGINT NOT NULL,

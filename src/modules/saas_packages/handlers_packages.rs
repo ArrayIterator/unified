@@ -20,9 +20,7 @@ use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 use super::{constants::*, types::*, state::*, seed::*, auth::*, helpers::*, provisioning::*, handlers_purchases::*, handlers_ai::*, events::*, module::*};
 
-// ---------------------------------------------------------------------------
 // HTTP handlers -- packages.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_packages(
     ctx: web::Data<Arc<AppContext>>,

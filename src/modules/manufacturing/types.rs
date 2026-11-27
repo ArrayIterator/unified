@@ -15,9 +15,7 @@ use super::{constants::*, inputs::*, helpers::*, store::*, validation::*, stock:
 
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 /// One component line of a BOM version: how much of a component
 /// product goes into one unit of the manufactured product.
 /// `component_product_id` may itself be a manufactured product

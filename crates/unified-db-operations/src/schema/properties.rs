@@ -3,9 +3,7 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
-// Properties (migration 000061_properties; batch 5 notes §c).
-// ---------------------------------------------------------------------------
+// Properties (migration 000061_properties; batch 5 notes sec. c).
 
 diesel::table! {
     properties (id) {

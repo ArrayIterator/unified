@@ -39,9 +39,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One calculation a company saved for later reuse.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS calculator_saved_calculations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id UUID NOT NULL,
@@ -64,9 +62,7 @@ CREATE INDEX IF NOT EXISTS idx_calculator_saved_calculations_created_by
 CREATE INDEX IF NOT EXISTS idx_calculator_saved_calculations_created_at
     ON calculator_saved_calculations (created_at);
 
--- ---------------------------------------------------------------------------
 -- One shareable report built on a saved calculation.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS calculator_reports (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     calculation_id UUID NOT NULL REFERENCES calculator_saved_calculations (id)
@@ -92,9 +88,7 @@ CREATE INDEX IF NOT EXISTS idx_calculator_reports_visibility
 CREATE INDEX IF NOT EXISTS idx_calculator_reports_created_by
     ON calculator_reports (created_by);
 
--- ---------------------------------------------------------------------------
 -- One history entry per calculation run (append-only audit trail).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS calculator_history (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id UUID NOT NULL,
@@ -116,9 +110,7 @@ CREATE INDEX IF NOT EXISTS idx_calculator_history_actor
 CREATE INDEX IF NOT EXISTS idx_calculator_history_created_at
     ON calculator_history (created_at);
 
--- ---------------------------------------------------------------------------
 -- One stored exchange rate (ratio, not money: DOUBLE PRECISION).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS calculator_currency_rates (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     base_currency CHAR(3) NOT NULL

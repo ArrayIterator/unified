@@ -1,4 +1,4 @@
-// risk — handlers risks.
+// risk - handlers risks.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -22,9 +22,7 @@ use super::handlers_templates::*;
 use super::handlers_instances::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Handlers: risks
-// ---------------------------------------------------------------------------
 
 /// Parse the `min_score` list filter up front: an unparsable
 /// value is a 400, never a silently ignored filter.
@@ -428,13 +426,13 @@ pub(crate) async fn risk_matrix(
         Ok(scope) => scope,
         Err(error) => return json::error_response(&error, false),
     };
-    // Read-side company filter (C3 task 320, rule A — the shared
+    // Read-side company filter (C3, rule A - the shared
     // `CallerScope::scoped_read_company` rule, not the write helper:
     // `require_company_match_for` is a write verify and refuses an
     // unresolved caller with no body company). The query filter names
     // a company only when it equals the caller scope; a scoped
     // caller without a filter sees their own company's risks plus
-    // global ones, an unresolved caller only global ones — never
+    // global ones, an unresolved caller only global ones - never
     // another company's risk ids.
     let company_filter = {
         let requested = params

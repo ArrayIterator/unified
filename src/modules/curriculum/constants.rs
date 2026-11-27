@@ -1,4 +1,4 @@
-//! Curriculum module — competency-based school curricula. — Module constants.
+//! Curriculum module - competency-based school curricula. - Module constants.
 //!
 //! Split from `src/modules/curriculum.rs`; behaviour unchanged.
 

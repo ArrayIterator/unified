@@ -1,4 +1,4 @@
-// todos — handlers lists.
+// todos - handlers lists.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -26,9 +26,7 @@ use super::handlers_subtasks::*;
 use super::handlers_ai::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // List handlers.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_lists(
     ctx: web::Data<Arc<AppContext>>,

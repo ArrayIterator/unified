@@ -27,10 +27,8 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- A load balancer: a listen address and port, TLS mode, routing
 -- strategy, and health-check configuration.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS load_balancers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR NOT NULL,
@@ -51,10 +49,8 @@ CREATE TABLE IF NOT EXISTS load_balancers (
 CREATE INDEX IF NOT EXISTS idx_load_balancers_status
     ON load_balancers (status);
 
--- ---------------------------------------------------------------------------
 -- One backend of a balancer: a provider server, a cluster node, or
 -- a plain address.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS lb_backends (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     balancer_id UUID NOT NULL REFERENCES load_balancers (id) ON DELETE CASCADE ON UPDATE NO ACTION,
@@ -79,9 +75,7 @@ CREATE INDEX IF NOT EXISTS idx_lb_backends_balancer_id
 CREATE INDEX IF NOT EXISTS idx_lb_backends_health
     ON lb_backends (health);
 
--- ---------------------------------------------------------------------------
 -- Per-backend routing statistics, keyed by backend.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS lb_backend_stats (
     backend_id UUID PRIMARY KEY REFERENCES lb_backends (id) ON DELETE CASCADE ON UPDATE NO ACTION,
     requests_routed BIGINT NOT NULL DEFAULT 0 CHECK (requests_routed >= 0),

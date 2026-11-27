@@ -8,9 +8,7 @@ use super::helpers::*;
 use super::state::*;
 use super::types::*;
 
-// ---------------------------------------------------------------------------
 // Config handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn get_config(state: web::Data<WebinarsState>, req: HttpRequest) -> HttpResponse {
     if let Err(error) = require_tenant(&req) {

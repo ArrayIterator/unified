@@ -1,13 +1,11 @@
-// timetracker — Request shapes for the HTTP handlers.
+// timetracker - Request shapes for the HTTP handlers.
 
 use super::*;
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Request bodies
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct StartTimerRequest {

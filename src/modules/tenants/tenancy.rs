@@ -7,8 +7,7 @@ use super::{constants::*, vocabulary::*, events::*, settings::*, records::*, sta
 
 
 
-// ---------------------------------------------------------------------------
-// Tenancy integration seam (B1 — `unified_core::tenancy`).
+// Tenancy integration seam (B1 - `unified_core::tenancy`).
 //
 // Every call into the B1-owned tenancy helpers goes through these
 // functions and nowhere else, so a signature change in
@@ -32,7 +31,6 @@ use super::{constants::*, vocabulary::*, events::*, settings::*, records::*, sta
 //     `run_tenant_migrations(pool, schema)` form.
 // No statement that creates or removes a schema is built anywhere
 // in this file: all of that lives behind these helpers.
-// ---------------------------------------------------------------------------
 /// Schema name for a tenant id, through the B1 helper.
 pub fn tenant_schema_name(tenant_id: Uuid) -> String {
     schema_name(tenant_id)

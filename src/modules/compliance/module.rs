@@ -1,4 +1,4 @@
-// Compliance Center module — GDPR / ISO support: data export
+// Compliance Center module - GDPR / ISO support: data export
 // requests, data deletion requests with an approval step, an
 // append-only consent log, retention policies, processing-activity
 // records (RoPA), compliance checklists with evidence, and a breach
@@ -7,46 +7,46 @@
 // Routes live under `/api/v1/compliance`:
 //
 //   Exports:
-//     GET/POST /exports — list / request an export.
+//     GET/POST /exports - list / request an export.
 //     GET  /exports/{id}.
-//     POST /exports/{id}/start — mark processing (manager).
-//     POST /exports/{id}/complete — attach the storage link with
+//     POST /exports/{id}/start - mark processing (manager).
+//     POST /exports/{id}/complete - attach the storage link with
 //          expiry (manager).
-//     GET  /exports/{id}/download — the storage link while it is
+//     GET  /exports/{id}/download - the storage link while it is
 //          still valid.
 //   Deletions:
-//     GET/POST /deletions — list / request a deletion.
+//     GET/POST /deletions - list / request a deletion.
 //     GET  /deletions/{id}.
 //     POST /deletions/{id}/approve, /deletions/{id}/reject.
-//     POST /deletions/{id}/execute — dispatch per-module execution
+//     POST /deletions/{id}/execute - dispatch per-module execution
 //          (manager, only after approval).
 //     GET  /deletions/{id}/items.
-//     POST /deletions/{id}/items/{item_id}/mark-executed — confirm
+//     POST /deletions/{id}/items/{item_id}/mark-executed - confirm
 //          one item executed (manager; for owning modules without
 //          a hook listener).
 //   Consents (append-only):
-//     GET/POST /consents — list / record consent or withdrawal.
+//     GET/POST /consents - list / record consent or withdrawal.
 //     GET  /consents/{id}.
 //   Retention policies:
-//     GET/POST /retention-policies — list / create.
+//     GET/POST /retention-policies - list / create.
 //     GET/PATCH/DELETE /retention-policies/{id}.
-//     POST /retention-policies/{id}/review — enqueue the
+//     POST /retention-policies/{id}/review - enqueue the
 //          retention-review scheduler job (flags items, never
 //          deletes).
-//     GET  /retention-reviews — review runs and their flags.
+//     GET  /retention-reviews - review runs and their flags.
 //   Processing-activity records (RoPA):
-//     GET/POST /processing-records — list / create.
+//     GET/POST /processing-records - list / create.
 //     GET/PATCH/DELETE /processing-records/{id}.
 //   Checklists:
-//     GET/POST /checklists — list / create.
+//     GET/POST /checklists - list / create.
 //     GET/PATCH/DELETE /checklists/{id}.
 //   Breach log:
-//     GET/POST /breaches — list / report a breach.
+//     GET/POST /breaches - list / report a breach.
 //     GET/PATCH /breaches/{id}.
-//     POST /breaches/{id}/timeline — append a timeline entry.
+//     POST /breaches/{id}/timeline - append a timeline entry.
 //     GET  /breaches/{id}/timeline.
 //
-// HONESTY — READ THIS FIRST. What is real in this module:
+// HONESTY - READ THIS FIRST. What is real in this module:
 // in-memory export, deletion, consent, retention-policy,
 // processing-record, checklist, and breach-log management; the
 // export state machine (requested -> processing -> ready, with a
@@ -60,17 +60,17 @@
 // (withdrawal is a new row, never an overwrite, and there is no
 // update or delete route); retention policies whose enforcement is
 // a scheduler job (`compliance.retention.review`) that only flags
-// items — nothing in this module ever auto-deletes data; RoPA
+// items - nothing in this module ever auto-deletes data; RoPA
 // records; checklists with storage references for evidence; and a
 // breach log with an append-only timeline and notification status.
 // What is NOT built here: the export file itself (assembly belongs
-// to the owning modules — this module requests it through
+// to the owning modules - this module requests it through
 // `compliance.export.requested` and records the storage link the
 // assembler returns through the complete endpoint); actual
 // deletion of other modules' rows (this module tracks and audits
-// only — owning modules delete their own rows when they answer
+// only - owning modules delete their own rows when they answer
 // the execute event); actual delivery of breach notifications
-// (the notifications module owns delivery — this module only
+// (the notifications module owns delivery - this module only
 // records notification status and emits
 // `notification.requested`); and durable storage (the DashMap
 // stores are authoritative; migration
@@ -123,17 +123,17 @@
 //     "compliance.retention.review", "payload": {"policy_id",
 //     "review_id", ...}}` when a retention review is requested.
 // Events this module listens to:
-//   - `compliance.deletion.item.executed` — confirms one deletion
+//   - `compliance.deletion.item.executed` - confirms one deletion
 //     item as executed; when every item of a request is executed,
 //     the request moves to `executed`.
-//   - `compliance.retention.review_requested` — the event the
+//   - `compliance.retention.review_requested` - the event the
 //     scheduler emits when a `compliance.retention.review` job
 //     fires; records the review run as completed with the flag
 //     counts the job payload carries. Only reviews the scheduler
 //     actually queued (`scheduler_status == "queued"`) are
 //     completed; a declined or already-completed review is skipped.
 
-//! Compliance Center module — GDPR / ISO support: data export — Module.
+//! Compliance Center module - GDPR / ISO support: data export - Module.
 //!
 //! Split from `src/modules/compliance.rs`; behaviour unchanged.
 

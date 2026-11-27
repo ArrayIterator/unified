@@ -18,7 +18,7 @@
 // for `project.task_from_ticket_requested`,
 // `project.ticket_from_task_requested`, and
 // `project.billable_hours_requested`, but no module in the codebase
-// emits those event names today — the emitters belong to the tickets
+// emits those event names today - the emitters belong to the tickets
 // and billing modules, which are owned by other builders. The
 // listeners stay registered so the wiring works the moment the
 // emitters land; wiring them is integrator work, out of scope for

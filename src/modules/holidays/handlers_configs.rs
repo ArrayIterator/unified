@@ -24,9 +24,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Handlers: sync configs (tenant business data).
-// ---------------------------------------------------------------------------
 
 fn load_config_for_tenant(
     state: &HolidaysState,
@@ -329,9 +327,7 @@ pub(crate) async fn delete_config(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Handlers: sync triggers and runs (tenant business data).
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn sync_config(
     ctx: web::Data<Arc<AppContext>>,

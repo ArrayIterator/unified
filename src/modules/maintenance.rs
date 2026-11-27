@@ -22,12 +22,12 @@
 //     in the coordinator report.
 //
 // Events emitted on the hook bus:
-//   - `maintenance.scheduled` — a window was created.
-//   - `maintenance.started`   — a window became active.
-//   - `maintenance.ended`     — a window finished (time or manual).
-//   - `maintenance.cancelled` — a window was cancelled.
-//   - `maintenance.check`     — listened to; runs a refresh.
-//   - `app.maintenance` (core event) — the global flag changed.
+//   - `maintenance.scheduled` - a window was created.
+//   - `maintenance.started`   - a window became active.
+//   - `maintenance.ended`     - a window finished (time or manual).
+//   - `maintenance.cancelled` - a window was cancelled.
+//   - `maintenance.check`     - listened to; runs a refresh.
+//   - `app.maintenance` (core event) - the global flag changed.
 //
 // Subscriber notification: the notifications module listens to
 // `maintenance.scheduled`, `maintenance.started`, and

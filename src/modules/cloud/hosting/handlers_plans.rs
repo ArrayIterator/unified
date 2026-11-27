@@ -1,4 +1,4 @@
-// hosting module — Plan handlers.
+// hosting module - Plan handlers.
 //
 // Split from the former single-file module `src/modules/hosting.rs`.
 // The module root (`hosting.rs`) re-exports the public items, so the
@@ -26,9 +26,7 @@ use super::types::{HostingPlan, HostingState};
 use super::requests::{CreatePlanRequest, UpdatePlanRequest};
 use super::helpers::{PERM_HOSTING_MANAGE, PERM_HOSTING_VIEW, caller, paginate, require_permission, require_tenant, validate_billing_cycle, validate_currency, validate_plan_resources};
 
-// ---------------------------------------------------------------------------
 // Plan handlers.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_plans(
     ctx: web::Data<Arc<AppContext>>,

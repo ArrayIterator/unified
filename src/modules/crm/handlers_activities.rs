@@ -1,4 +1,4 @@
-// crm — handlers activities.
+// crm - handlers activities.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -21,9 +21,7 @@ use super::handlers_contacts::*;
 use super::handlers_leads::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Activity handlers
-// ---------------------------------------------------------------------------
 
 /// Remove every activity attached to `record_id`. Called from the
 /// contact/lead delete handlers so deletes leave no orphans.
@@ -135,10 +133,8 @@ pub(crate) async fn list_activities(
     json::success_response(page, 200)
 }
 
-// ---------------------------------------------------------------------------
 // Hook handler: `crm.activity.requested` (emitted by appointments when
 // an appointment completes).
-// ---------------------------------------------------------------------------
 
 /// Record a completed visit as an activity on the matching contact
 /// (preferred) or lead, matched by `customer_email`

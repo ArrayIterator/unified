@@ -26,9 +26,7 @@ struct BomVersionPath {
     bom_version_id: String,
 }
 
-// ---------------------------------------------------------------------------
 // BOM version handlers (authenticated)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_bom_versions(
     state: web::Data<PlmState>,
@@ -83,7 +81,7 @@ pub(crate) async fn list_bom_versions(
 /// increasing per BOM: when omitted it is the next number
 /// after the current maximum (starting at 1); when supplied
 /// it must be above the current maximum. A linked ECO, when
-/// given, must be approved or implemented — a draft ECO may
+/// given, must be approved or implemented - a draft ECO may
 /// not drive a BOM version. When the tenant settings require
 /// an ECO for BOM versions, the link is mandatory.
 pub(crate) async fn create_bom_version(

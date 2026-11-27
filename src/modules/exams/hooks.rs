@@ -9,9 +9,7 @@ use super::{constants::*, settings::*, types::*, module::*, helpers::*, inputs::
 
 
 
-// ---------------------------------------------------------------------------
 // Hook handlers
-// ---------------------------------------------------------------------------
 pub(crate) fn on_ai_draft_grounding(state: ExamsStateRef, ctx: &mut HookContext) {
     let topic = ctx
         .get("topic")

@@ -14,9 +14,7 @@ use super::handlers_inventory::{adjust_inventory, attach_product_tag, create_pro
 use super::hooks::on_product_entitlement_check;
 use super::ai_capabilities::{AI_CAPABILITIES};
 
-// ---------------------------------------------------------------------------
 // Module definition.
-// ---------------------------------------------------------------------------
 
 pub struct ProductsModule {
     pub(crate) state: Arc<ProductsState>,

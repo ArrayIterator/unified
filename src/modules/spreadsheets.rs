@@ -1,4 +1,4 @@
-// Spreadsheets module — spreadsheet workbooks with multiple
+// Spreadsheets module - spreadsheet workbooks with multiple
 // sheets, each a grid of cells (A1 notation; text, number,
 // boolean, date, empty, formula, and error values), a small
 // server-side formula evaluator, per-workbook sharing,
@@ -6,61 +6,61 @@
 //
 // Routes live under `/api/v1/spreadsheets`:
 //
-//   Public (token-gated — the token is the credential; see the
+//   Public (token-gated - the token is the credential; see the
 //   public-access note below):
-//     GET  /public/{token} — read a workbook through its
+//     GET  /public/{token} - read a workbook through its
 //       public link (read-only).
 //   Workbooks:
-//     GET/POST /workbooks — list workbooks / create one.
+//     GET/POST /workbooks - list workbooks / create one.
 //     GET/PATCH/DELETE /workbooks/{workbook_id}.
 //   Sheets:
-//     GET/POST /workbooks/{workbook_id}/sheets — list / add.
+//     GET/POST /workbooks/{workbook_id}/sheets - list / add.
 //     GET/PATCH/DELETE
 //       /workbooks/{workbook_id}/sheets/{sheet_id}.
 //   Cells:
 //     GET  /workbooks/{workbook_id}/sheets/{sheet_id}/cells
-//       — list cells (paginated, filter by kind, address,
+//       - list cells (paginated, filter by kind, address,
 //       row; search raw/computed values).
 //     GET/PATCH
 //       /workbooks/{workbook_id}/sheets/{sheet_id}/cells/{address}
-//       — get / set one cell (a value starting with `=` is a
+//       - get / set one cell (a value starting with `=` is a
 //       formula; empty clears the cell).
 //     POST /workbooks/{workbook_id}/sheets/{sheet_id}/cells/batch
-//       — set up to 1000 cells at once.
+//       - set up to 1000 cells at once.
 //     POST /workbooks/{workbook_id}/sheets/{sheet_id}/evaluate
-//       — evaluate a formula string without saving it.
+//       - evaluate a formula string without saving it.
 //   Versions:
 //     GET  /workbooks/{workbook_id}/sheets/{sheet_id}/versions
-//       — version history, newest first.
+//       - version history, newest first.
 //     GET  /workbooks/{workbook_id}/sheets/{sheet_id}/versions/{version_id}.
 //     POST /workbooks/{workbook_id}/sheets/{sheet_id}/versions/{version_id}/restore.
 //   Shares:
-//     GET/POST /workbooks/{workbook_id}/shares — list / share.
+//     GET/POST /workbooks/{workbook_id}/shares - list / share.
 //     GET/PATCH/DELETE
 //       /workbooks/{workbook_id}/shares/{share_id}.
 //   Export / import:
 //     GET  /workbooks/{workbook_id}/sheets/{sheet_id}/export.csv
-//       — one sheet as CSV.
-//     GET  /workbooks/{workbook_id}/export.csv — whole
+//       - one sheet as CSV.
+//     GET  /workbooks/{workbook_id}/export.csv - whole
 //       workbook as CSV.
-//     GET  /workbooks/{workbook_id}/export.json — workbook as
+//     GET  /workbooks/{workbook_id}/export.json - workbook as
 //       JSON.
 //     POST /workbooks/{workbook_id}/sheets/{sheet_id}/import.csv
-//       — import CSV text into a sheet.
+//       - import CSV text into a sheet.
 //   Settings:
-//     GET  /settings — per-tenant settings.
+//     GET  /settings - per-tenant settings.
 //     PATCH /settings (manager).
 //   AI:
-//     POST /ai/{capability} — one registered capability
+//     POST /ai/{capability} - one registered capability
 //       through the AI module's gated runner.
 //
-// HONESTY — READ THIS FIRST. What is real in this module:
+// HONESTY - READ THIS FIRST. What is real in this module:
 // in-memory workbook, sheet, cell, share, version, and
 // settings management; the formula evaluator (arithmetic with
 // precedence, cell references and ranges, comparisons, and a
-// data-driven function registry — SUM, AVERAGE, COUNT, COUNTA,
+// data-driven function registry - SUM, AVERAGE, COUNT, COUNTA,
 // MIN, MAX, PRODUCT, IF, ROUND, ABS, CONCAT, TODAY, LEN,
-// UPPER, LOWER, TRIM, NOT, AND, OR — with circular-reference
+// UPPER, LOWER, TRIM, NOT, AND, OR - with circular-reference
 // detection and topological recalculation on every cell-write
 // batch); numbers as decimal strings computed on an
 // integer-mantissa decimal type, so `f64` is never used for a
@@ -76,12 +76,12 @@
 // 404, never 403. What is NOT built here: durable storage
 // until the migration runs (the DashMap stores are
 // authoritative; migration `2026-11-22-000118_spreadsheets`
-// is the persistence target); XLSX export — no XLSX crate is
+// is the persistence target); XLSX export - no XLSX crate is
 // in the workspace `Cargo.toml` / `Cargo.lock` (checked
 // before writing this module; only the transitive `zip` crate
 // is present) and no heavy new dependency was added, so CSV +
 // JSON only; email / push delivery (the notifications module
-// owns delivery — this module only emits
+// owns delivery - this module only emits
 // `notification.requested` when a workbook is shared).
 //
 // Public-access gate: the API Manager module enforces public
@@ -90,8 +90,8 @@
 // with `public_access: true`, and denied outright when a rule
 // exists with `allowed: false`). There is no reusable
 // per-request "is this endpoint public?" helper to call from a
-// handler — the check lives in the API Manager middleware /
-// `resolve_public` path — so the public route below relies on
+// handler - the check lives in the API Manager middleware /
+// `resolve_public` path - so the public route below relies on
 // that gate: an administrator must create the matching
 // `ApiAccessRule` row for `GET /api/v1/spreadsheets/public/*`.
 // The route is registered in `route_info()` with
@@ -123,7 +123,7 @@
 //   - `notification.requested` (workbook shared, in the
 //     notifications module's payload shape).
 // Events this module listens to:
-//   - `user.deleted` — anonymizes the user's workbooks,
+//   - `user.deleted` - anonymizes the user's workbooks,
 //     shares, and versions to `deleted-user`; workbooks are
 //     never deleted.
 

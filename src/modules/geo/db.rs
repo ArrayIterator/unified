@@ -7,9 +7,7 @@ use diesel::prelude::*;
 
 
 
-// ---------------------------------------------------------------------------
 // Database helpers (only used when a pool is attached to the context).
-// ---------------------------------------------------------------------------
 pub(crate) fn db_pool(ctx: &AppContext) -> Option<unified_core::db::DbPool> {
     ctx.db.read().expect("db lock poisoned").clone()
 }

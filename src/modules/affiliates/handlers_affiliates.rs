@@ -1,4 +1,4 @@
-// affiliates module — Affiliate and link handlers.
+// affiliates module - Affiliate and link handlers.
 //
 // Split from the former single-file module `src/modules/affiliates.rs`.
 // The module root (`affiliates.rs`) re-exports the public items, so the
@@ -30,9 +30,7 @@ use super::helpers::{
     validate_commission,
 };
 
-// ---------------------------------------------------------------------------
 // Handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_affiliates(
     ctx: web::Data<Arc<AppContext>>,

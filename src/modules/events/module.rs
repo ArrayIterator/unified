@@ -1,4 +1,4 @@
-// Events Manager module — conferences, workshops, meetups, and
+// Events Manager module - conferences, workshops, meetups, and
 // other scheduled gatherings, with recurring events, ticket types,
 // registrations, waitlists, attendee check-in, reminders, and
 // calendar feeds.
@@ -6,10 +6,10 @@
 // Routes live under `/api/v1/events`:
 //
 //   Events:
-//     GET/POST / — list events / create an event.
+//     GET/POST / - list events / create an event.
 //     GET/PATCH/DELETE /{id}.
 //     POST /{id}/publish, /{id}/cancel, /{id}/complete.
-//     GET  /{id}/occurrences — expanded occurrences (recurrence
+//     GET  /{id}/occurrences - expanded occurrences (recurrence
 //       rules applied on read, overrides applied on top).
 //     POST /{id}/occurrences/{occurrence_id}/cancel,
 //          /{id}/occurrences/{occurrence_id}/override.
@@ -17,31 +17,31 @@
 //     GET/POST /{id}/ticket-types.
 //     GET/PATCH/DELETE /{id}/ticket-types/{ticket_type_id}.
 //   Registrations:
-//     POST /{id}/register — register the caller (or, with the
+//     POST /{id}/register - register the caller (or, with the
 //       manage capability, another user).
-//     GET  /{id}/registrations — paginated, filter by status.
+//     GET  /{id}/registrations - paginated, filter by status.
 //     GET  /registrations/{registration_id}.
 //     POST /registrations/{registration_id}/cancel.
 //     POST /registrations/{registration_id}/refund-request.
 //     POST /registrations/{registration_id}/check-in.
 //   Attendees / waitlist:
-//     GET  /{id}/attendees — paginated, filter by check-in status.
+//     GET  /{id}/attendees - paginated, filter by check-in status.
 //     GET  /{id}/attendees/export?format=csv|json.
 //     GET  /{id}/waitlist.
 //   Reminders:
 //     GET/POST /{id}/reminders.
 //     DELETE /{id}/reminders/{reminder_id}.
 //   Calendar feeds:
-//     GET  /{id}/ics — one event as an RFC 5545 .ics file.
-//     GET  /calendar.ics — public calendar feed.
-//     GET  /calendar.json — public JSON feed.
+//     GET  /{id}/ics - one event as an RFC 5545 .ics file.
+//     GET  /calendar.ics - public calendar feed.
+//     GET  /calendar.json - public JSON feed.
 //   Public (no auth; see the public-access note below):
-//     GET  /public — published events only.
-//     GET  /public/{slug} — one published event + ticket types.
+//     GET  /public - published events only.
+//     GET  /public/{slug} - one published event + ticket types.
 //     GET  /public/{slug}/ics.
 //     GET  /public/calendar.ics, /public/calendar.json.
 //
-// HONESTY — READ THIS FIRST. What is real in this module:
+// HONESTY - READ THIS FIRST. What is real in this module:
 // in-memory event, occurrence, ticket-type, registration, attendee,
 // waitlist, and reminder management; recurrence expansion on read
 // plus materialised occurrence rows for registration; the
@@ -50,16 +50,16 @@
 // `pending_verification` on `bank_transfer.verification.created`,
 // mirroring the store module); waitlist auto-promotion with a
 // `notification.requested` emit; attendee check-in by code (the
-// code value only — no QR image is generated here); reminder rows
+// code value only - no QR image is generated here); reminder rows
 // with configurable offsets, queued through `scheduler.enqueue`
 // with kind `events.reminders.send`; hand-built RFC 5545 .ics
 // output (no calendar crate is in Cargo.toml) and a public JSON
 // feed. What is NOT built here: refunds (only a
 // `events.registration.refund_requested` event is emitted for the
 // billing / store side); payment collection itself (the payments,
-// store, and billing modules own it — this module only reacts to
+// store, and billing modules own it - this module only reacts to
 // their hook events); QR image rendering; and actual email / push
-// delivery (the notifications module owns delivery — this module
+// delivery (the notifications module owns delivery - this module
 // only emits `notification.requested`).
 //
 // Public-access gate: the API Manager module enforces public access
@@ -67,9 +67,9 @@
 // an endpoint is public only when a rule exists with
 // `public_access: true`, and denied outright when a rule exists
 // with `allowed: false`). There is no reusable per-request
-// "is this endpoint public?" helper to call from a handler — the
+// "is this endpoint public?" helper to call from a handler - the
 // check lives in the API Manager middleware / `resolve_public`
-// path — so the public routes below rely on that gate: an
+// path - so the public routes below rely on that gate: an
 // administrator must create the matching `ApiAccessRule` rows for
 // `GET /api/v1/events/public/*` (and for `/calendar.ics` /
 // `/calendar.json` when those are meant to be public). The routes
@@ -107,18 +107,18 @@
 //     "payload": {"event_id", "reminder_id", ...}}` when a reminder
 //     is created.
 // Events this module listens to:
-//   - `payment.captured` — confirms a paid registration whose
+//   - `payment.captured` - confirms a paid registration whose
 //     `order_id` (or `registration_id`) matches, mirroring the
 //     store module's listener (status must be `captured` when
 //     present; bank-transfer captures skip the amount check;
 //     gateway captures must cover the registration total; only
 //     `pending_payment` / `pending_verification` may move to
 //     confirmed; already-confirmed is a safe no-op).
-//   - `bank_transfer.verification.created` — moves a
+//   - `bank_transfer.verification.created` - moves a
 //     `pending_payment` registration to `pending_verification`.
-//   - `bank_transfer.rejected` — cancels a `pending_verification`
+//   - `bank_transfer.rejected` - cancels a `pending_verification`
 //     (or `pending_payment`) registration.
-//   - `events.reminders.send_requested` — the event the scheduler
+//   - `events.reminders.send_requested` - the event the scheduler
 //     emits when an `events.reminders.send` job fires, following
 //     its naming rule (`backup.run` -> `backup.run_requested`);
 //     sends the due reminder through `notification.requested`.
@@ -164,9 +164,7 @@ use super::handlers_public::*;
 use super::hooks::*;
 use super::ai_capabilities::AI_CAPABILITIES;
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct EventsModule {
     state: EventsState,

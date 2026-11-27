@@ -765,7 +765,7 @@ pub(crate) async fn generate_fee_charges(
         // carried on the charge so the linked invoice can be routed
         // through pricing reconciliation. A context with no company
         // falls back to the tenant id itself, exactly as before;
-        // the silent `.ok()` fallback to no company is gone — the
+        // the silent `.ok()` fallback to no company is gone - the
         // guard already rejected context-less requests.
         let company_id = _tenant
             .company_id

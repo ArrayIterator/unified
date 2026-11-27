@@ -1,4 +1,4 @@
-//! Presets + Setup Wizard module. — Caller identity and capability checks.
+//! Presets + Setup Wizard module. - Caller identity and capability checks.
 //!
 //! Caller identity comes from the request headers, exactly like the
 //! logistics, curriculum, and compliance modules: `X-User-Id`
@@ -114,9 +114,7 @@ pub(super) fn parse_company_id(value: &str) -> UnifiedResult<Uuid> {
     })
 }
 
-// ---------------------------------------------------------------------------
 // Tenant edge guard (C3 pilot 3).
-// ---------------------------------------------------------------------------
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request
@@ -134,7 +132,7 @@ pub(super) fn require_tenant(
 /// The company scope the caller acts in: the tenant context's
 /// company first, the verified caller's server-resolved company
 /// otherwise. Fails closed (403) when both are present and disagree
-/// — a request must not carry one company in its tenant context and
+/// - a request must not carry one company in its tenant context and
 /// another in its verified identity. The `X-Company-Id` header is
 /// NEVER trusted here: only the verified caller (company resolved
 /// from the database at authentication time) and the
@@ -168,7 +166,7 @@ pub(super) fn caller_company(
 /// so the record is never stored unscoped under a scoped caller.
 /// When no caller scope is known, a body company is refused: an
 /// unresolved caller may not claim a company (the shared
-/// `CallerScope::Unresolved` rule); omitting the company is refused (C3 task 315):
+/// `CallerScope::Unresolved` rule); omitting the company is refused (C3):
 /// a write requires a resolved company scope. A caller scope that is not a UUID is refused the
 /// same way (fail closed: application / wizard company ids are UUIDs).
 pub(super) fn require_company_match_uuid(
@@ -254,11 +252,11 @@ pub(super) fn require_record_in_company_scope_uuid(
 }
 
 /// Fail closed (403) when a stored record is outside the caller's
-/// company scope FOR A WRITE (C3 task 315, strict by default).
+/// company scope FOR A WRITE (C3, strict by default).
 /// Unlike the read check above (rule A), a write requires an exact
 /// company match: a company caller may write only their own
-/// company's records — global (unscoped) records are platform-only
-/// — and an unresolved caller may write nothing. Mutation handlers
+/// company's records - global (unscoped) records are platform-only
+/// - and an unresolved caller may write nothing. Mutation handlers
 /// call this right after loading the record they mutate; handlers
 /// that only read the record, or load a parent to scope a child
 /// write, keep the read check.

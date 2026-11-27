@@ -17,9 +17,7 @@ use unified_core::error::{UnifiedError, UnifiedResult};
 use unified_core::hooks::HookBus;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Shared state
-// ---------------------------------------------------------------------------
 
 /// In-memory stores for the ESG module. The hook bus is
 /// attached in `init` (the bus lives in `AppContext`);
@@ -200,7 +198,7 @@ impl EsgState {
     }
 
     /// Hydrate the in-memory ESG maps from the database (C11,
-    /// task 271): frameworks, metrics, periods, entries, entry
+    /// frameworks, metrics, periods, entries, entry
     /// history, targets, and audit rows are loaded from the
     /// `esg_*` tables and replace the map contents, so a restart
     /// restores the reporting state instead of losing it. Every

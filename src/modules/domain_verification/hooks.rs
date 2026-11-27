@@ -1,4 +1,4 @@
-// Domain Verification — Hook support: answer `domain.verification.status_requested`.
+// Domain Verification - Hook support: answer `domain.verification.status_requested`.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -20,7 +20,6 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Hook support: answer `domain.verification.status_requested`.
 //
 // Synchronous handler (the stores are in-memory DashMaps): payload
@@ -28,7 +27,6 @@ use super::*;
 // "verified_at"}` when the domain is known, and no result when it is
 // unknown, so resolvers/middleware treat unknown as "not verified"
 // and never serve the domain.
-// ---------------------------------------------------------------------------
 
 pub(crate) fn on_status_requested(ctx: &mut HookContext) {
     let Some(domain) = ctx
@@ -52,7 +50,6 @@ pub(crate) fn on_status_requested(ctx: &mut HookContext) {
     }));
 }
 
-// ---------------------------------------------------------------------------
 // Scheduler retry sweep: re-check pending tokens out of band.
 //
 // The verify HTTP handler performs exactly one DNS check per call;
@@ -66,7 +63,6 @@ pub(crate) fn on_status_requested(ctx: &mut HookContext) {
 // with the same events (`attempted` / `completed` / `failed`) so
 // the SaaS Domains module reacts exactly as it does to a manual
 // verify call.
-// ---------------------------------------------------------------------------
 
 /// Stashed application context, following the same pattern as the
 /// users / network-tools / licensing modules: rebuilt from the

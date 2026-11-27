@@ -9,9 +9,7 @@ use super::{events::*, thermal::*, profiles::*, jobs::*, state::*, auth::*, hook
 
 
 #[derive(Debug, Clone, Copy)]
-// ---------------------------------------------------------------------------
 // Paper sizes
-// ---------------------------------------------------------------------------
 /// One standard paper size, as a compile-time constant. See the
 /// module docs for why standards are constants while custom sizes
 /// are data.

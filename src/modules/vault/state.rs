@@ -17,9 +17,7 @@ use super::types::VaultDocumentVersion;
 use super::types::VaultFolder;
 use super::types::VaultShareLink;
 
-// ---------------------------------------------------------------------------
 // Shared state
-// ---------------------------------------------------------------------------
 
 /// In-memory stores for the vault. The hook bus is attached in
 /// `init` (the bus lives in `AppContext`); handlers tolerate a

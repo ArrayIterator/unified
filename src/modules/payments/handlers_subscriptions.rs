@@ -14,9 +14,7 @@ use super::{events::*, card_validation::*, card_settings::*, limits::*, provider
 
 
 
-// ---------------------------------------------------------------------------
 // Handlers: subscriptions.
-// ---------------------------------------------------------------------------
 /// What one renewal charge means for the subscription. Only a
 /// captured charge advances the period: a pending charge has moved
 /// no money, so the period stays put and no captured event is
@@ -481,7 +479,7 @@ pub(crate) async fn create_subscription(
             &input.customer_id,
         )?;
         // Batch 18 (S6): validate the card before the provider
-        // call — `subscription_create` can charge immediately.
+        // call - `subscription_create` can charge immediately.
         // Raw details run in `full` mode; a stored method id runs
         // in `method` mode; an opaque token alone skips the gate.
         request_card_validation(&state, &req, input.card.as_ref(), input.payment_method_id, None, &connection, &input.customer_id, input.order_id.as_deref(), None)?;
@@ -1028,7 +1026,7 @@ mod tests {
     fn renewal_failed_counts_failures_and_enforces_dunning() {
         let state = PaymentsState::new();
         // Below the cap: past_due, failure counted, next retry
-        // spaced by the retry interval — not retried on every
+        // spaced by the retry interval - not retried on every
         // sweep.
         let subscription = stored_subscription(0, 0, 3, 3);
         subscriptions_store().insert(subscription.id, subscription.clone());
@@ -1060,7 +1058,7 @@ mod tests {
         subscriptions_store().remove(&subscription.id);
 
         // At the cap with a grace period: past_due through the
-        // grace period, expiring after it — never charged again.
+        // grace period, expiring after it - never charged again.
         let subscription = stored_subscription(2, 5, 3, 3);
         subscriptions_store().insert(subscription.id, subscription.clone());
         renewal_failed(&state, &subscription, "declined");

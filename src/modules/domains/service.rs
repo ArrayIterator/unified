@@ -15,9 +15,7 @@ use uuid::Uuid;
 use super::state::{cached_db_pool, cached_hooks, db_pool, domains_store};
 use super::tls::probe_tls;
 
-// ---------------------------------------------------------------------------
 // SSL status values.
-// ---------------------------------------------------------------------------
 
 /// Canonical `ssl_status` values. Anything else is rejected on
 /// update; the probe only ever produces values from this set.
@@ -61,9 +59,7 @@ pub(crate) fn ssl_status_for_probe(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Loading and existence checks (database first, store fallback).
-// ---------------------------------------------------------------------------
 
 /// Load one domain: the database row when a pool is attached,
 /// otherwise (or when the row is absent) the in-memory store entry.
@@ -139,11 +135,9 @@ pub(crate) fn is_unique_violation(error: &diesel::result::Error) -> bool {
     )
 }
 
-// ---------------------------------------------------------------------------
 // Persistence. Database errors are propagated, never swallowed: a
 // failed write must surface instead of silently diverging the
 // in-memory store from the database.
-// ---------------------------------------------------------------------------
 
 /// Persist `domain` to the database (when a pool is attached) and
 /// then to the in-memory store. The store is only updated after a
@@ -223,10 +217,8 @@ pub(crate) fn apply_ssl_event(domain_id: Option<Uuid>, domain_name: Option<&str>
     }
 }
 
-// ---------------------------------------------------------------------------
 // Verification (shared by the HTTP handler and the whitelabel
 // request listener).
-// ---------------------------------------------------------------------------
 
 /// Run the DNS + TLS verification for one domain record and return
 /// the outcome payload. When `persist` is true the updated record

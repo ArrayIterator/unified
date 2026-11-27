@@ -1,4 +1,4 @@
-// Gamification — shared constants.
+// Gamification - shared constants.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};

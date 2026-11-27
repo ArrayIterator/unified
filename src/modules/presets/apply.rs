@@ -1,4 +1,4 @@
-//! Presets + Setup Wizard module. — Applying a preset. Only ever enables and configures: nothing here disables a module, and modules the tenant already uses are reported as `already_enabled`, never touched. A module the tenant is not entitled to is reported as `skipped_not_entitled` and never enabled; a module whose dependency graph is broken is reported as `skipped_dependency_missing` with the missing ids in `reason`.
+//! Presets + Setup Wizard module. - Applying a preset. Only ever enables and configures: nothing here disables a module, and modules the tenant already uses are reported as `already_enabled`, never touched. A module the tenant is not entitled to is reported as `skipped_not_entitled` and never enabled; a module whose dependency graph is broken is reported as `skipped_dependency_missing` with the missing ids in `reason`.
 //!
 //! Split from `src/modules/presets.rs`; behaviour unchanged.
 
@@ -284,10 +284,10 @@ pub(super) fn finish_application(
     // found already enabled), in preset order, including the
     // transitive dependencies recorded on each outcome's
     // `auto_activated` list. Emitted on the dedicated
-    // `presets.preset.modules_applied` event — never on the
+    // `presets.preset.modules_applied` event - never on the
     // `presets.preset.modules_requested` query, which stays a
     // query only (the tenants provisioning flow asks it for a
-    // preset's stored module list) — so no consumer can mistake a
+    // preset's stored module list) - so no consumer can mistake a
     // query answer for the applied set, or vice versa. Skipped and
     // failed modules are never listed here.
     let mut module_ids: Vec<String> = Vec::new();

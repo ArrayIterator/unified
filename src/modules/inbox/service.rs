@@ -150,9 +150,7 @@ pub(crate) fn assignments_for(
     items
 }
 
-// ---------------------------------------------------------------------------
-// Ingestion — maintain the thread index from other modules' events
-// ---------------------------------------------------------------------------
+// Ingestion - maintain the thread index from other modules' events
 
 /// Create or refresh the thread for one source reference. Never
 /// duplicates message stores: only the reference row is kept. New
@@ -167,7 +165,7 @@ pub(crate) fn assignments_for(
 /// `tenant_id` / `company_id` stamp the new thread's ownership;
 /// event ingestion passes the payload's tenant when present, or
 /// the nil UUID (unscoped, never served via the API) when the
-/// payload carries none — see the module header.
+/// payload carries none - see the module header.
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn upsert_thread(
     state: &InboxState,

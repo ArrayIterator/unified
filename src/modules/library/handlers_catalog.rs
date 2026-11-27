@@ -19,9 +19,7 @@ use super::{COPY_AVAILABLE, COPY_ON_LOAN, COPY_WITHDRAWN, CreateCategoryRequest,
     parse_uuid, require_catalog, require_in_list, require_non_negative, require_permission,
     require_tenant, require_text, slugify};
 
-// ---------------------------------------------------------------------------
 // Item handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_items(
     ctx: web::Data<Arc<AppContext>>,
@@ -553,9 +551,7 @@ pub(crate) async fn withdraw_item(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Copy handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_item_copies(
     ctx: web::Data<Arc<AppContext>>,
@@ -826,9 +822,7 @@ pub(crate) async fn delete_copy(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Catalog search handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn search_catalog(
     ctx: web::Data<Arc<AppContext>>,
@@ -958,9 +952,7 @@ pub(crate) async fn get_catalog_item(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Category handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_categories(
     ctx: web::Data<Arc<AppContext>>,

@@ -1,4 +1,4 @@
-//! Content Management module. — Tag handlers (task 356).
+//! Content Management module. - Tag handlers.
 //!
 //! Tags are a free-form taxonomy usable by built-in posts AND
 //! custom entries. Attachment goes through the `post_tags` join
@@ -36,9 +36,7 @@ use unified_core::json as api_json;
 use unified_core::pagination::PaginationParams;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Shared join helpers (also used by `custom_types.rs`).
-// ---------------------------------------------------------------------------
 
 /// All tags attached to one target, in tag-name order.
 pub(super) fn tags_for_target(
@@ -218,9 +216,7 @@ pub(super) fn assigned_tag_ids(input: &AssignTagsInput) -> Vec<Uuid> {
     ids
 }
 
-// ---------------------------------------------------------------------------
 // Tag CRUD.
-// ---------------------------------------------------------------------------
 
 pub(super) async fn list_tags(
     state: web::Data<ContentState>,
@@ -458,9 +454,7 @@ pub(super) async fn delete_tag(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Tags on a post.
-// ---------------------------------------------------------------------------
 
 pub(super) async fn list_post_tags(
     state: web::Data<ContentState>,

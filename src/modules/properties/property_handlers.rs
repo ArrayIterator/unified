@@ -1,4 +1,4 @@
-// Properties — Property handlers.
+// Properties - Property handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -19,9 +19,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Property handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_properties(
     ctx: web::Data<Arc<AppContext>>,

@@ -19,9 +19,7 @@ use super::pricing::{coupon_discount, resolve_tier, valid_billing_period, valid_
 use super::state::{StoreState, new_id, now};
 use super::types::{Coupon, CreateCoupon, CreateProduct, CreateTier, PriceCalculateRequest, PricingTier, Product, UpdateCoupon, UpdateProduct, UpdateTier, default_download_limit, default_dunning_max_retries, default_dunning_retry_interval_days, default_pricing_model, default_product_status, default_proration_policy};
 
-// ---------------------------------------------------------------------------
 // Product handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_products(
     state: web::Data<Arc<StoreState>>,
@@ -482,9 +480,7 @@ pub(crate) async fn unpublish_product(
     json::respond(result, false)
 }
 
-// ---------------------------------------------------------------------------
 // Pricing tier handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_tiers(
     state: web::Data<Arc<StoreState>>,
@@ -747,9 +743,7 @@ pub(crate) async fn delete_tier(
     json::respond(result, false)
 }
 
-// ---------------------------------------------------------------------------
 // Coupon handlers and price calculation
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_coupons(
     state: web::Data<Arc<StoreState>>,

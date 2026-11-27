@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""C3 pilot 4 group A verification (task 316): academic, compliance,
+"""C3 pilot 4 group A verification: academic, compliance,
 incidents, surveys, announcements, providers, email_templates,
 app_sync.
 
@@ -13,7 +13,7 @@ For each module, per routed handler (same routed-set rule as
     POST/PUT/PATCH/DELETE handlers resolve `require_company`
     (writes require a resolved company)
 
-Task 315 (2026-11-23): `require_company` is the pre-315 strict
+`require_company` is the pre-315 strict
 write gate, equivalent to the newer `require_company_for_write`;
 these modules already used it, so the C.3 rename left them
 untouched and this rule is unchanged.

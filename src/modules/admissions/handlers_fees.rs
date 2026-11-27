@@ -1,4 +1,4 @@
-// admissions module — Fee, result, decision, enrolment handlers.
+// admissions module - Fee, result, decision, enrolment handlers.
 //
 // Split from the former single-file module `src/modules/admissions.rs`.
 // The module root (`admissions.rs`) re-exports the public items, so the
@@ -26,9 +26,7 @@ use super::helpers::{
     optional_text, require_id, require_permission, require_tenant,
 };
 
-// ---------------------------------------------------------------------------
 // Handlers: fee, result, decision, enrolment
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn request_fee_invoice(
     ctx: web::Data<Arc<AppContext>>,

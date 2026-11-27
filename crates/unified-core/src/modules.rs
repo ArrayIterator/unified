@@ -2,7 +2,7 @@
 //
 // A module is a self-contained unit of functionality that plugs into the
 // core engine. Every core module is registered in the binary, and every
-// module — core or extension — is fully hookable: it can register hook
+// module - core or extension - is fully hookable: it can register hook
 // handlers, CLI commands, middleware, and HTTP routes, and core behaviour
 // can be changed by code through the hook bus.
 //
@@ -16,7 +16,7 @@
 // `Module::requires_external_libraries` (see `ExternalLibraryRequirement`);
 // the Service Monitor checks those against the host and reports
 // missing or outdated ones. The registry validates the resulting
-// graph — missing dependencies and cycles — with
+// graph - missing dependencies and cycles - with
 // `ModuleRegistry::validate_dependencies`, and the Extensions Manager
 // auto-activates required modules when a module is enabled (emitting
 // `module.auto_activated` per auto-activated module) and refuses to
@@ -197,7 +197,7 @@ impl ProductCategory {
 /// One external tool the Service Monitor is allowed to probe with a
 /// version flag. This is a closed allowlist on purpose: the checker
 /// never runs an arbitrary command from configuration or from a module
-/// declaration — it only ever runs the fixed binary and arguments
+/// declaration - it only ever runs the fixed binary and arguments
 /// mapped to one of these variants (see
 /// `the server modules::service_monitor::probe_commands`). A module that
 /// needs a tool not listed here declares the requirement with
@@ -335,8 +335,8 @@ pub trait Module: Send + Sync {
     }
     /// External system libraries / binaries this module needs on the
     /// host (for example ImageMagick for image processing). The
-    /// Service Monitor checks each declared requirement — presence
-    /// plus installed version against `minimum_version` — locally
+    /// Service Monitor checks each declared requirement - presence
+    /// plus installed version against `minimum_version` - locally
     /// and, on request, on remote servers over SSH, and the
     /// Extensions Manager surfaces a notice per module when a
     /// required library is missing or outdated. Defaults to an empty

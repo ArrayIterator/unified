@@ -25,9 +25,7 @@ use super::settings::SaasDomainsSettings;
 use super::store::settings;
 use super::store::settings_store;
 
-// ---------------------------------------------------------------------------
 // Resolve-debug and settings handlers.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn resolve_debug(
     ctx: web::Data<Arc<AppContext>>,

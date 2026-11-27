@@ -58,9 +58,7 @@ use super::types::UpdateProgram;
 use super::types::UpdateStudent;
 use super::types::UpdateSubject;
 
-// ---------------------------------------------------------------------------
 // Handlers: programs
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_programs(
     ctx: web::Data<Arc<AppContext>>,
@@ -258,9 +256,7 @@ pub(crate) async fn delete_program(
     json::respond(result, debug)
 }
 
-// ---------------------------------------------------------------------------
 // Handlers: students
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_students(
     ctx: web::Data<Arc<AppContext>>,
@@ -561,9 +557,7 @@ pub(crate) async fn get_student_gpa(
     json::respond(result, debug)
 }
 
-// ---------------------------------------------------------------------------
 // Handlers: lecturers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_lecturers(
     ctx: web::Data<Arc<AppContext>>,
@@ -813,9 +807,7 @@ pub(crate) async fn list_lecturer_classes(
     json::respond(result, debug)
 }
 
-// ---------------------------------------------------------------------------
 // Handlers: subjects
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_subjects(
     ctx: web::Data<Arc<AppContext>>,

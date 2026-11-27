@@ -9,9 +9,7 @@ use super::{constants::*, types::*, inputs::*, helpers::*, store::*, validation:
 
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
-// ---------------------------------------------------------------------------
 // Stock and cost hooks (request / response over the bus)
-// ---------------------------------------------------------------------------
 /// One product's stock level as answered by the inventory side.
 pub struct StockLevel {
     #[serde(default)]

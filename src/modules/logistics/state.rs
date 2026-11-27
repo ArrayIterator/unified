@@ -1,4 +1,4 @@
-//! Logistics module — shipments, fleet, warehouses, delivery — Shared state.
+//! Logistics module - shipments, fleet, warehouses, delivery - Shared state.
 //!
 //! Split from `src/modules/logistics.rs`; behaviour unchanged.
 

@@ -45,9 +45,7 @@ use super::types::ApiKeyRecord;
 use super::types::ApiKeyStatus;
 use super::types::ApiKeyView;
 
-// ---------------------------------------------------------------------------
 // Request types.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct CreateKeyRequest {
@@ -117,9 +115,7 @@ pub(crate) fn find_key(id: Uuid) -> UnifiedResult<ApiKeyRecord> {
         .ok_or_else(|| UnifiedError::not_found("API key not found"))
 }
 
-// ---------------------------------------------------------------------------
 // Caller authentication (calculator/bi/supervision pattern).
-// ---------------------------------------------------------------------------
 
 /// The server-verified caller (see `unified_core::caller::Caller`):
 /// the user id identifies the actor, the server-resolved role is the
@@ -176,9 +172,7 @@ pub(crate) fn require_admin(
     Ok(found)
 }
 
-// ---------------------------------------------------------------------------
 // Handlers.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn create_key(
     ctx: web::Data<Arc<AppContext>>,

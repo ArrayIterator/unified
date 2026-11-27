@@ -3,11 +3,9 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // School fees (migration 000096_school_fees). Ids are TEXT (not UUID)
 // and all money amounts are NUMERIC, so these structs skip serde
 // derives (PgNumeric has no serde implementation).
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     school_fee_types (id) {

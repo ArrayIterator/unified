@@ -437,9 +437,7 @@ pub(crate) fn finish_run_sync(
     run
 }
 
-// ---------------------------------------------------------------------------
 // Trigger subscriptions + scheduler
-// ---------------------------------------------------------------------------
 
 /// Subscribe one workflow's event trigger: register a bus handler
 /// for the workflow's event name. The handler is registered per

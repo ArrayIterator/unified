@@ -11,9 +11,7 @@ use super::{events::*, card_validation::*, card_settings::*, limits::*, provider
 
 
 
-// ---------------------------------------------------------------------------
 // Mastercard gateway (MPGS).
-// ---------------------------------------------------------------------------
 impl ProviderAdapter {
     /// Mastercard gateway transaction. `operation` is one of `PAY`,
     /// `AUTHORIZE`, `CAPTURE`, `REFUND`, `VOID`. Amounts are major

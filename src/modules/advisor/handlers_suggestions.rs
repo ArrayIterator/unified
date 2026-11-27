@@ -11,9 +11,7 @@ use super::{rules::*, types::*, state::*, helpers::*, handlers_rules::*, hooks::
 
 
 
-// ---------------------------------------------------------------------------
 // Handlers: suggestions
-// ---------------------------------------------------------------------------
 pub(crate) async fn list_suggestions(
     state: web::Data<Arc<AdvisorState>>,
     req: HttpRequest,
@@ -128,7 +126,7 @@ pub(crate) async fn re_evaluate(
         Err(error) => return json::error_response(&error, false),
     };
     let input = body.into_inner();
-    // `evaluate` treats a missing company as "all companies" — the
+    // `evaluate` treats a missing company as "all companies" - the
     // system-wide licensing-expiry sweep in `hooks.rs` relies on
     // that shape, so the gate lives HERE, at the handler: the
     // company to evaluate is resolved from the caller scope first,

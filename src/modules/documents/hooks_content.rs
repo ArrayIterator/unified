@@ -1,10 +1,10 @@
-// documents — hook listeners for content publish state.
+// documents - hook listeners for content publish state.
 //
 // When a post/page is published, its attached media flips public
 // (so anonymous readers can load it); when it returns to draft,
 // the media flips back private. The flips run as detached tasks:
 // the hook bus is synchronous and the flip is async. Best-effort
-// by design — the explicit POST /{id}/flip endpoint is the
+// by design - the explicit POST /{id}/flip endpoint is the
 // reliable, user-visible path, and the media picker shows the
 // live visibility. A flip is skipped when the attachment's scan
 // is not clean (the scan gate) or when the payload carries no

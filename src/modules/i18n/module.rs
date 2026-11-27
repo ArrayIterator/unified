@@ -11,9 +11,7 @@ use super::handlers::*;
 use super::state::*;
 use super::ai_capabilities::AI_CAPABILITIES;
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct I18nModule {
     state: I18nState,

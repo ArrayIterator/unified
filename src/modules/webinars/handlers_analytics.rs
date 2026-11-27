@@ -8,9 +8,7 @@ use super::helpers::*;
 use super::state::*;
 use super::types::*;
 
-// ---------------------------------------------------------------------------
 // Analytics handler
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn get_analytics(
     state: web::Data<WebinarsState>,

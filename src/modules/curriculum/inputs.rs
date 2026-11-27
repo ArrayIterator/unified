@@ -1,4 +1,4 @@
-//! Curriculum module — competency-based school curricula. — Input shapes.
+//! Curriculum module - competency-based school curricula. - Input shapes.
 //!
 //! Split from `src/modules/curriculum.rs`; behaviour unchanged.
 

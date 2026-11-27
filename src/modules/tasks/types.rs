@@ -1,4 +1,4 @@
-// tasks — Shared types: constants, enums, records, and request/response shapes.
+// tasks - Shared types: constants, enums, records, and request/response shapes.
 
 use chrono::{DateTime, Utc};
 use dashmap::DashMap;
@@ -6,9 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Event names emitted by this module.
-// ---------------------------------------------------------------------------
 
 pub const TASK_CREATED: &str = "task.created";
 
@@ -32,9 +30,7 @@ pub const TASK_DELETED: &str = "task.deleted";
 /// unassigning an already unassigned task emits nothing.
 pub const TASK_UNASSIGNED: &str = "task.unassigned";
 
-// ---------------------------------------------------------------------------
 // Permissions.
-// ---------------------------------------------------------------------------
 
 /// List tasks, get one task, and list task comments.
 pub const PERM_TASKS_READ: &str = "tasks:read";
@@ -43,9 +39,7 @@ pub const PERM_TASKS_READ: &str = "tasks:read";
 /// on, comment on, and manage checklist items of tasks.
 pub const PERM_TASKS_MANAGE: &str = "tasks:manage";
 
-// ---------------------------------------------------------------------------
 // Types.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

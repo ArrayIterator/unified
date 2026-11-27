@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""C3 pilot 4 group B verification (task 316): curriculum, supervision,
+"""C3 pilot 4 group B verification: curriculum, supervision,
 community, todos, contracts, departments, email_providers, mail.
 
 Adapted from docs/integration/pilot3/c3_group_a_verify.py:
@@ -16,7 +16,7 @@ For each module, per routed handler (names appearing in `.to(name)`):
   - order: the guard precedes the first identity/capability call
   - scope-checked: body mentions a scope marker; otherwise gate-only
     (all group-B modules are gate-only: records carry no company field,
-    so under task 315 carve-out 3 their writes stay tenant-gate-only
+so under carve-out 3 their writes stay tenant-gate-only
     until C11 lands; the strict write gate does not apply here)
   - excluded: names passed on the command line after the module
 
@@ -33,7 +33,7 @@ SCOPE_MARKERS = (
     "in_company_scope",
     "require_record_in_company_scope",
     "require_company_match",
-    # Task 315/320 (2026-11-23): the strict write gate and the
+    # The strict write gate and the
     # writable record checks count as scope markers too.
     "require_company_for_write",
     "require_record_writable_in_company_scope",

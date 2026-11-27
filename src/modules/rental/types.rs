@@ -3,7 +3,7 @@
 //! per-tenant settings.
 //!
 //! A store product becomes rentable through a rental listing: the
-//! listing references the product by id only (no foreign key —
+//! listing references the product by id only (no foreign key -
 //! products live in the store/products modules and this module
 //! must not assume their tables or migration order). Prices are
 //! data, not code: every listing carries one or more rates, each
@@ -67,9 +67,7 @@ pub(crate) const EVENT_CONTRACT_SIGNED: &str = "contracts.signed";
 /// anonymized.
 pub(crate) const DELETED_USER_ID: &str = "deleted-user";
 
-// ---------------------------------------------------------------------------
 // Pure domain functions (unit-tested below)
-// ---------------------------------------------------------------------------
 
 /// Half-open range overlap: `[a_start, a_end)` overlaps
 /// `[b_start, b_end)` when each starts before the other ends.
@@ -157,7 +155,7 @@ pub fn compute_rental_amount(
 /// window after `due_at`; afterwards the fee accrues per whole
 /// unit of the rule's basis (`per_day`, `per_hour`, or a single
 /// `flat` fee), rounded up, and is capped at `cap_minor` when
-/// the rule carries one. An unknown basis accrues nothing — the
+/// the rule carries one. An unknown basis accrues nothing - the
 /// rule is data, and an unrecognized basis must not invent a
 /// charge.
 pub fn compute_late_fee(
@@ -213,9 +211,7 @@ pub fn status_holds_units(status: RentalOrderStatus) -> bool {
     )
 }
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// Order status. Serialized snake_case.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -366,7 +362,7 @@ pub struct RentalRate {
 /// priced amount for the range at booking time;
 /// `late_fee_minor` and `damage_total_minor` are computed at
 /// return; `total_minor` is rental + late fee + damage minus
-/// nothing — the deposit is handled separately through
+/// nothing - the deposit is handled separately through
 /// `deposit_status` and `deposit_deducted_minor`.
 /// `contract_id` references a contracts-module agreement by id
 /// only (no foreign key); `agreement_signed` is set by the
@@ -405,7 +401,7 @@ pub struct RentalOrder {
 /// `handover` (the unit goes out) or `return` (the unit comes
 /// back). `condition_notes` records the unit's condition at
 /// that moment; `photo_ids` holds document/storage references
-/// only — metadata, never file bytes.
+/// only - metadata, never file bytes.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RentalDelivery {
     pub id: Uuid,
@@ -422,7 +418,7 @@ pub struct RentalDelivery {
 
 /// One damage report against an order. `status` is `open`,
 /// `resolved`, or `dismissed`; resolving a report adds its
-/// `estimated_cost_minor` to the order's damage total (once —
+/// `estimated_cost_minor` to the order's damage total (once -
 /// the resolved report is marked so a second resolve is a
 /// no-op for the total).
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -463,9 +459,7 @@ impl Default for RentalSettings {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Request bodies
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct CreateListingRequest {

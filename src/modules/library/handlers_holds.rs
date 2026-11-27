@@ -19,9 +19,7 @@ use super::{COPY_AVAILABLE, CreateHoldRequest, CreatePolicyRequest, FINE_PENDING
     require_in_list, require_non_negative, require_permission, require_positive, require_tenant,
     require_text};
 
-// ---------------------------------------------------------------------------
 // Hold handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn create_hold(
     ctx: web::Data<Arc<AppContext>>,
@@ -331,9 +329,7 @@ pub(crate) async fn expire_hold(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Fine handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_fines(
     ctx: web::Data<Arc<AppContext>>,
@@ -451,9 +447,7 @@ pub(crate) async fn waive_fine(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Loan policy handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_policies(
     ctx: web::Data<Arc<AppContext>>,

@@ -20,7 +20,6 @@ use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 use super::{constants::*, types::*, state::*, seed::*, auth::*, helpers::*, handlers_packages::*, handlers_purchases::*, handlers_ai::*, events::*, module::*};
 
-// ---------------------------------------------------------------------------
 // Provisioning.
 //
 // The pipeline runs six steps in order. Two execution contexts
@@ -35,7 +34,6 @@ use super::{constants::*, types::*, state::*, seed::*, auth::*, helpers::*, hand
 // skipped. A step that cannot be decided on the hook path is
 // recorded as `blocked` (not failed) and the purchase stays in
 // `provisioning` until an admin retries through the HTTP endpoint.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum ProvisionMode {

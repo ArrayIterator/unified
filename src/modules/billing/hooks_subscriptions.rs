@@ -72,8 +72,8 @@ pub(crate) fn on_subscription_synced(state: Arc<BillingState>, ctx: &mut HookCon
     // module listens for (`billing.plan.changed`): the license ids
     // are not known here, so the handler resolves them from the
     // order through the store (`store.order.licenses`). Emitted
-    // before proration invoicing so a `no_prorate` upgrade — which
-    // invoices nothing — still reaches licensing.
+    // before proration invoicing so a `no_prorate` upgrade - which
+    // invoices nothing - still reaches licensing.
     let previous_product_id = ctx
         .get("previous_product_id")
         .and_then(|value| value.as_str())
@@ -249,7 +249,7 @@ pub(crate) fn on_payment_failed(state: Arc<BillingState>, ctx: &mut HookContext)
     if exhausted {
         state.request_notification(
             &mirror.user_id,
-            "Subscription payment failed — no retries left",
+            "Subscription payment failed - no retries left",
             &format!(
                 "The renewal payment for your subscription (product {}) failed: {reason}. All {} retry attempt(s) are exhausted; the subscription will be cancelled when its grace period ends on {}. Please update your payment method.",
                 mirror.product_id,

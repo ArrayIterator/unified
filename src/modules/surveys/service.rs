@@ -1,4 +1,4 @@
-// surveys module — Invitations, follow-ups, scoring.
+// surveys module - Invitations, follow-ups, scoring.
 //
 // Split from the former single-file module `src/modules/surveys.rs`.
 // The module root (`surveys.rs`) re-exports the public items, so the
@@ -26,9 +26,7 @@ use super::requests::DistributionRecipient;
 use super::state::SurveysState;
 use super::helpers::{answers_for_response, caller, created, generate_token, valid_email};
 
-// ---------------------------------------------------------------------------
 // Invitations, follow-ups, scoring
-// ---------------------------------------------------------------------------
 
 /// Issue one invitation (response row) for a recipient on one
 /// survey version. Enforces one response per recipient per survey
@@ -106,7 +104,7 @@ pub(crate) fn invite_recipient(
 /// pending recipients (supplied at creation) plus any extra
 /// recipients passed by the caller. For trigger distributions
 /// (`ticket_closed`, `purchase`) this only sends explicitly passed
-/// recipients — their real invitations are created by the trigger
+/// recipients - their real invitations are created by the trigger
 /// listeners. Returns how many invitations were newly issued.
 pub(crate) fn send_distribution_invitations(
     state: &SurveysState,
@@ -188,7 +186,7 @@ pub(crate) fn send_distribution_invitations(
 }
 
 /// Handle a low score on a submitted response: an NPS detractor
-/// (0–6) or a CSAT score of 1–2. Requests a follow-up task from
+/// (0-6) or a CSAT score of 1-2. Requests a follow-up task from
 /// the tasks module via `task.create_requested` (request/response:
 /// a handler that answers contributes a `task_id` / `id` result),
 /// stores the follow-up link on the response, notifies the
@@ -309,7 +307,7 @@ pub(crate) fn maybe_create_followup(state: &SurveysState, survey: &Survey, respo
 
 /// Per-question score summary, computed on read from the submitted
 /// responses. `nps` is %promoters minus %detractors; `csat` is
-/// % satisfied (score 4–5). Counts, averages, and the score
+/// % satisfied (score 4-5). Counts, averages, and the score
 /// distribution are included for every scored question.
 pub(crate) fn question_stats(
     state: &SurveysState,

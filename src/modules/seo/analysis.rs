@@ -6,9 +6,7 @@ use super::{types::*, state::*, handlers::*, module::*};
 
 
 
-// ---------------------------------------------------------------------------
 // Analysis engine
-// ---------------------------------------------------------------------------
 pub(crate) fn count_word_chars(text: &str) -> Vec<String> {
     text.split_whitespace().map(str::to_string).collect()
 }

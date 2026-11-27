@@ -3,8 +3,8 @@
 //
 // A module registers a template from an in-code source with
 // `ThemeEngine::register_module_template(module, name, source)`.
-// Templates are addressed as `module:<module>/<name>` — for example
-// `module:billing/invoice` — and rendered with
+// Templates are addressed as `module:<module>/<name>` - for example
+// `module:billing/invoice` - and rendered with
 // `ThemeEngine::render_module_template(module, name, data, ...)`,
 // which resolves registry variables (`{{site.name}}`, `{{#if
 // is_admin}}`, ...) exactly like `render` does.
@@ -221,7 +221,7 @@ impl ModuleTemplateRegistry {
 
     /// Register the stored module defaults into a fresh Handlebars
     /// registry, skipping every key in `skip` (theme overrides the
-    /// fresh registry already contains — theme wins). Returns the keys
+    /// fresh registry already contains - theme wins). Returns the keys
     /// actually registered. Sources were compiled at registration
     /// time, so a failure here is unexpected: the offending template
     /// is logged and skipped instead of breaking theme activation.

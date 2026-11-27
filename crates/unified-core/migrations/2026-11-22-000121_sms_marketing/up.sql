@@ -51,7 +51,7 @@
 --     `cancelled`), the message status (`queued`, `sent`,
 --     `delivered`, `failed`, `undelivered`, `skipped`), the
 --     keyword kind (`opt_out`, `opt_in`), and the segment
---     encoding (`gsm7`, `ucs2`) — those are the shape of
+--     encoding (`gsm7`, `ucs2`) - those are the shape of
 --     the module, not its content.
 --   - No money is stored anywhere in this module: no price,
 --     cost, or charge column exists, and `f64` is never used
@@ -107,7 +107,6 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- SMS providers: one admin-configured sending provider per
 -- tenant. `kind` is `http` (generic adapter: POST JSON to
 -- `endpoint_url` with the configured auth) or `log_only`
@@ -124,7 +123,6 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- per-provider rate limit. `request_fields` is an optional
 -- JSON object of extra fields merged into every HTTP
 -- adapter request body.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS sms_providers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -151,11 +149,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_sms_providers_tenant_name ON sms_providers
 CREATE INDEX IF NOT EXISTS idx_sms_providers_tenant_kind ON sms_providers (tenant_id, kind, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_sms_providers_tenant_enabled ON sms_providers (tenant_id, enabled, created_at DESC);
 
--- ---------------------------------------------------------------------------
 -- SMS templates: one plain-text template per tenant. `body`
 -- holds `{{variable}}` placeholders; `variables` lists the
 -- placeholder names derived from the body at write time.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS sms_templates (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -169,10 +165,8 @@ CREATE TABLE IF NOT EXISTS sms_templates (
 );
 CREATE INDEX IF NOT EXISTS idx_sms_templates_tenant_created ON sms_templates (tenant_id, created_at DESC);
 
--- ---------------------------------------------------------------------------
 -- Contact lists: one named audience per tenant. Members live
 -- in `sms_contacts`.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS sms_contact_lists (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -184,12 +178,10 @@ CREATE TABLE IF NOT EXISTS sms_contact_lists (
 );
 CREATE INDEX IF NOT EXISTS idx_sms_contact_lists_tenant_created ON sms_contact_lists (tenant_id, created_at DESC);
 
--- ---------------------------------------------------------------------------
 -- Contacts: one member of a contact list. `phone_number` is
 -- the normalized E.164 number; `tags` drive segment
 -- filters and `variables` drive template substitution.
 -- One number per list.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS sms_contacts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -205,7 +197,6 @@ CREATE TABLE IF NOT EXISTS sms_contacts (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_sms_contacts_list_number ON sms_contacts (list_id, phone_number);
 CREATE INDEX IF NOT EXISTS idx_sms_contacts_tenant_list ON sms_contacts (tenant_id, list_id, created_at ASC);
 
--- ---------------------------------------------------------------------------
 -- Campaigns: one SMS campaign per tenant. `template_id` and
 -- `provider_id` are plain references (no foreign key).
 -- `contact_list_ids` is a JSON array of list ids by
@@ -219,7 +210,6 @@ CREATE INDEX IF NOT EXISTS idx_sms_contacts_tenant_list ON sms_contacts (tenant_
 -- scheduled send time and `sent_at` is when the send pass
 -- ran. `stats_*` are the send counts kept on the campaign
 -- row.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS sms_campaigns (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -246,7 +236,6 @@ CREATE INDEX IF NOT EXISTS idx_sms_campaigns_tenant_status ON sms_campaigns (ten
 CREATE INDEX IF NOT EXISTS idx_sms_campaigns_tenant_provider ON sms_campaigns (tenant_id, provider_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_sms_campaigns_tenant_template ON sms_campaigns (tenant_id, template_id, created_at DESC);
 
--- ---------------------------------------------------------------------------
 -- Messages: one outbound SMS per recipient of a campaign.
 -- `body` is the rendered text stored at send time.
 -- `segments` and `encoding` are the GSM-7 / UCS-2 segment
@@ -257,7 +246,6 @@ CREATE INDEX IF NOT EXISTS idx_sms_campaigns_tenant_template ON sms_campaigns (t
 -- `provider_message_id` is the id the provider returned,
 -- when it returned one; `error` is the provider's failure
 -- text truncated to 500 characters, never a credential.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS sms_messages (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -281,13 +269,11 @@ CREATE INDEX IF NOT EXISTS idx_sms_messages_tenant_provider ON sms_messages (ten
 CREATE INDEX IF NOT EXISTS idx_sms_messages_tenant_status ON sms_messages (tenant_id, status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_sms_messages_provider_message ON sms_messages (provider_message_id);
 
--- ---------------------------------------------------------------------------
 -- Opt-outs: one opted-out number per tenant. Sends to a
 -- listed number are blocked at send time. `keyword` is the
 -- matched inbound keyword, or `manual` / `api` for rows
 -- added by hand; `source` names how the row arrived
 -- (`keyword`, `manual`, `api`).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS sms_opt_outs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -301,13 +287,11 @@ CREATE TABLE IF NOT EXISTS sms_opt_outs (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_sms_opt_outs_tenant_number ON sms_opt_outs (tenant_id, phone_number);
 CREATE INDEX IF NOT EXISTS idx_sms_opt_outs_tenant_created ON sms_opt_outs (tenant_id, created_at DESC);
 
--- ---------------------------------------------------------------------------
 -- Opt-out keywords: one keyword row per tenant. `kind` is
 -- `opt_out` (adds the sender to the opt-out list) or
 -- `opt_in` (removes them). Matching reads these rows, so a
 -- tenant with no rows has no keyword handling until it adds
 -- (or the application seeds) some.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS sms_opt_out_keywords (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -321,12 +305,10 @@ CREATE TABLE IF NOT EXISTS sms_opt_out_keywords (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_sms_keywords_tenant_keyword_kind ON sms_opt_out_keywords (tenant_id, keyword, kind);
 CREATE INDEX IF NOT EXISTS idx_sms_keywords_tenant_kind ON sms_opt_out_keywords (tenant_id, kind, created_at ASC);
 
--- ---------------------------------------------------------------------------
 -- Rate limits: one per-tenant send rate limit (sends per
 -- minute for the whole tenant), enforced at enqueue time
 -- alongside the per-provider limit. A tenant with no row
 -- uses the application default of 60.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS sms_rate_limits (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -337,7 +319,6 @@ CREATE TABLE IF NOT EXISTS sms_rate_limits (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_sms_rate_limits_tenant ON sms_rate_limits (tenant_id);
 
--- ---------------------------------------------------------------------------
 -- Audit trail: one row per change to a provider, a template,
 -- a contact list, a contact, a campaign, a message, an
 -- opt-out, a keyword, or a rate limit (creates, updates,
@@ -347,7 +328,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_sms_rate_limits_tenant ON sms_rate_limits 
 -- the change; `before` / `after` are the serialized rows
 -- (or NULL for creates / deletes). Audit rows are never
 -- updated or deleted through the API.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS sms_audit (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),

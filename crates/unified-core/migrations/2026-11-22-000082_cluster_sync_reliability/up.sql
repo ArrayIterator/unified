@@ -28,9 +28,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One sync conflict an admin can see and resolve.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS cluster_sync_conflicts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     log_id UUID REFERENCES cluster_sync_logs (id) ON DELETE SET NULL ON UPDATE NO ACTION,
@@ -62,9 +60,7 @@ CREATE INDEX IF NOT EXISTS idx_cluster_sync_conflicts_status
 CREATE INDEX IF NOT EXISTS idx_cluster_sync_conflicts_domain
     ON cluster_sync_conflicts (domain);
 
--- ---------------------------------------------------------------------------
 -- One failed sync domain waiting for retry, or dead-lettered.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS cluster_sync_retries (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     plan_id UUID NOT NULL REFERENCES cluster_sync_plans (id) ON DELETE CASCADE ON UPDATE NO ACTION,
@@ -90,9 +86,7 @@ CREATE INDEX IF NOT EXISTS idx_cluster_sync_retries_status
 CREATE INDEX IF NOT EXISTS idx_cluster_sync_retries_next_retry_at
     ON cluster_sync_retries (next_retry_at);
 
--- ---------------------------------------------------------------------------
 -- One stored idempotent response, keyed by (scope, key).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS cluster_sync_idempotency_keys (
     scope VARCHAR NOT NULL,
     key VARCHAR NOT NULL,
@@ -106,11 +100,9 @@ CREATE TABLE IF NOT EXISTS cluster_sync_idempotency_keys (
 CREATE INDEX IF NOT EXISTS idx_cluster_sync_idempotency_keys_expires_at
     ON cluster_sync_idempotency_keys (expires_at);
 
--- ---------------------------------------------------------------------------
 -- Admin-editable sync settings, one row per key. Values are JSON so
 -- numbers, strings and booleans all fit; the code seeds these from its
 -- configurable defaults.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS cluster_sync_settings (
     key VARCHAR PRIMARY KEY,
     value JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -135,9 +127,7 @@ INSERT INTO cluster_sync_settings (key, value) VALUES
     ('idempotency_ttl_secs', '86400'::jsonb)
 ON CONFLICT (key) DO NOTHING;
 
--- ---------------------------------------------------------------------------
 -- Registered sync domains. Seeded with the configurable defaults.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS cluster_sync_domains (
     domain VARCHAR PRIMARY KEY,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),

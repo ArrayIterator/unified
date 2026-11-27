@@ -1,4 +1,4 @@
-// Payment Gateway module — a wrapper / framework, not a single provider.
+// Payment Gateway module - a wrapper / framework, not a single provider.
 
 // Split into one file per concern under `src/modules/payments/`;
 // this root only declares the submodules and re-exports the

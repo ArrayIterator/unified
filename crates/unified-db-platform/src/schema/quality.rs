@@ -3,11 +3,9 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Import / export hardening (migration 000083_import_export_hardening).
 // The `import_jobs` / `export_jobs` ALTERs from the same migration
 // are applied to the existing `table!` blocks above.
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     mapping_templates (id) {
@@ -22,9 +20,7 @@ diesel::table! {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Quality management (migration 000087_quality).
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     quality_points (id) {

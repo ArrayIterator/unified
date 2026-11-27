@@ -11,13 +11,13 @@ use std::sync::Arc;
 
 use super::*;
 
-// --- Handlers: analytics ------------------------------------------------------
+// Handlers: analytics
 
 /// Spend totals grouped by `group_by` (`category`, `employee`,
 /// `period`) and currency: amounts in different currencies are
 /// never summed together, so each row names its currency.
 /// Included statuses are `submitted`, `approved`, and
-/// `reimbursed` — spend that is in flight or settled. `draft`
+/// `reimbursed` - spend that is in flight or settled. `draft`
 /// reports never left the employee, and `rejected` reports were
 /// denied, so neither counts as spend. Refunds net against the
 /// same (group, currency) row where they can be attributed:

@@ -14,9 +14,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 use super::{constants::*, helpers::*, types::*, state::*, handlers_pools::*, forecast::*, handlers_plans::*, module::*};
 
-// ---------------------------------------------------------------------------
 // Hook listeners.
-// ---------------------------------------------------------------------------
 
 /// Provider sync completed: refresh the last-sync information of every
 /// pool that draws from this connection. The sync payload carries no

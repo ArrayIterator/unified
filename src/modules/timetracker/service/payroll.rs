@@ -1,7 +1,6 @@
-// service — payroll.
+// service - payroll.
 // Week helpers, payroll computation, and report rows.
 //
-// Split from `src/modules/timetracker/service.rs`; moved verbatim, no behaviour changes.
 
 use super::super::*;
 use super::*;
@@ -22,7 +21,7 @@ use uuid::Uuid;
 /// not passed. Falls back to the buyer's default rate when the
 /// user has no rate row. Buyer default rates carry no currency
 /// field (`BuyerSettings` has none), so the fallback is labelled
-/// with the global default currency — the amount is the buyer's,
+/// with the global default currency - the amount is the buyer's,
 /// the currency label is the product default, and callers that
 /// need a per-buyer currency must add one to `BuyerSettings`
 /// first.
@@ -111,7 +110,7 @@ pub(crate) fn split_entry_into_weeks(
 /// `[from, to]`. Only approved entries are payable; pending and
 /// rejected entries are ignored.
 ///
-/// Window: an entry is clipped to the window — the part before
+/// Window: an entry is clipped to the window - the part before
 /// `from` or after `to` is not counted, and an entry starting
 /// before `from` still contributes its overlapping part. The
 /// clipped seconds are the entry's `duration_secs` scaled by the

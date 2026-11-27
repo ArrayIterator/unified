@@ -1,4 +1,4 @@
-// Data Tools module — orphaned-data resolver, expired-data purging,
+// Data Tools module - orphaned-data resolver, expired-data purging,
 // and cleanup rules + runs.
 //
 // Full module notes (routes, ownership, hook contract) live at

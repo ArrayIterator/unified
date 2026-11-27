@@ -17,9 +17,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Hook handlers
-// ---------------------------------------------------------------------------
 
 /// Consume TimeTracker entries and record one attendance row per entry.
 /// Accepts BOTH payload shapes (see the module header):
@@ -35,7 +33,7 @@ use super::*;
 ///
 /// The approvals module asks for `{"user_id": "..."}` and reads the
 /// `manager_id` key from the answer, comparing it against the
-/// deciding caller's user id — so the answer must be the manager's
+/// deciding caller's user id - so the answer must be the manager's
 /// USER id, not the manager's employee id. The employee record
 /// stores `manager_id` as an employee id, so this handler resolves
 /// it one step further: employee (by `user_id`) -> manager employee
@@ -244,7 +242,7 @@ mod tests {
     fn timetracker_entry_date_survives_multibyte_timestamp() {
         // Full-width digits: byte-slicing the first 10 bytes would
         // panic mid-character. Parsing must return None, not panic.
-        assert_eq!(timetracker_entry_date("２０２６-11-22T10:00:00Z"), None);
+        assert_eq!(timetracker_entry_date("2026-11-22T10:00:00Z"), None);
         assert_eq!(timetracker_entry_date("éééé-11-22"), None);
     }
 

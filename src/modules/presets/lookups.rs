@@ -1,4 +1,4 @@
-//! Presets + Setup Wizard module. — Shared lookups.
+//! Presets + Setup Wizard module. - Shared lookups.
 //!
 //! Split from `src/modules/presets.rs`; behaviour unchanged.
 

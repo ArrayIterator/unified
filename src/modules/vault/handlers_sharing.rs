@@ -44,9 +44,7 @@ use super::types::VaultAccessRequest;
 use super::types::VaultDocument;
 use super::types::VaultShareLink;
 
-// ---------------------------------------------------------------------------
 // Share-link handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn create_share_link(
     ctx: web::Data<Arc<AppContext>>,
@@ -310,9 +308,7 @@ pub(crate) async fn resolve_shared_link(
     }))
 }
 
-// ---------------------------------------------------------------------------
 // Access-request handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn request_access(
     ctx: web::Data<Arc<AppContext>>,
@@ -327,7 +323,7 @@ pub(crate) async fn request_access(
         require_permission(&ctx, &caller.role, PERM_VAULT_VIEW)?;
         let raw_id = path.into_inner();
         let document = load_visible_document(&ctx, &state, &raw_id, &caller).or_else(|_| {
-            // DELIBERATE TRADE-OFF (kept intentionally — see below):
+            // DELIBERATE TRADE-OFF (kept intentionally - see below):
             // a requester who cannot see the document yet may still
             // request access, so the document is loaded without the
             // visibility gate. The cost is that document existence
@@ -339,7 +335,7 @@ pub(crate) async fn request_access(
             // impossible to request access to exactly the documents
             // one cannot see yet, and answering 201 unconditionally
             // would create phantom requests for ids that do not
-            // exist. The leak is narrow — only existence, never
+            // exist. The leak is narrow - only existence, never
             // metadata: no name, owner, or content is returned, the
             // owner alone is notified, and the request itself is
             // still decided by the owner. Tenant scope is NOT part
@@ -624,9 +620,7 @@ pub(crate) async fn deny_access_request(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Retention handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn flag_document_review(
     ctx: web::Data<Arc<AppContext>>,

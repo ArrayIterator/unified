@@ -1,4 +1,4 @@
-// cloud module — hook event names.
+// cloud module - hook event names.
 //
 // These are additive. The `hosting.*` and `provider.*` event names
 // are unchanged; existing subscribers keep working.

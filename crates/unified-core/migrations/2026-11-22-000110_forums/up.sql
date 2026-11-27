@@ -35,9 +35,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- Forums: public / members-only / staff-only discussion spaces.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS forums (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -53,9 +51,7 @@ CREATE TABLE IF NOT EXISTS forums (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_forums_tenant_slug ON forums (tenant_id, slug);
 CREATE INDEX IF NOT EXISTS idx_forums_tenant_visibility ON forums (tenant_id, visibility, sort_order);
 
--- ---------------------------------------------------------------------------
 -- Categories inside a forum.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS forum_categories (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -70,10 +66,8 @@ CREATE TABLE IF NOT EXISTS forum_categories (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_forum_categories_forum_slug ON forum_categories (forum_id, slug);
 CREATE INDEX IF NOT EXISTS idx_forum_categories_forum ON forum_categories (forum_id, sort_order);
 
--- ---------------------------------------------------------------------------
 -- Threads: one discussion per row; the opening post is a forum_posts
 -- row with depth 0 created together with the thread.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS forum_threads (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -96,9 +90,7 @@ CREATE INDEX IF NOT EXISTS idx_forum_threads_category ON forum_threads (category
 CREATE INDEX IF NOT EXISTS idx_forum_threads_author ON forum_threads (author_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_forum_threads_solved ON forum_threads (solved) WHERE solved;
 
--- ---------------------------------------------------------------------------
 -- Posts: replies nest at most two levels deep (depth 0/1/2).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS forum_posts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -120,9 +112,7 @@ CREATE INDEX IF NOT EXISTS idx_forum_posts_thread ON forum_posts (thread_id, cre
 CREATE INDEX IF NOT EXISTS idx_forum_posts_parent ON forum_posts (parent_post_id, created_at ASC);
 CREATE INDEX IF NOT EXISTS idx_forum_posts_author ON forum_posts (author_id, created_at DESC);
 
--- ---------------------------------------------------------------------------
 -- Kept edit history: the previous body, who edited it, and when.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS forum_post_edits (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -133,9 +123,7 @@ CREATE TABLE IF NOT EXISTS forum_post_edits (
 );
 CREATE INDEX IF NOT EXISTS idx_forum_post_edits_post ON forum_post_edits (post_id, edited_at ASC);
 
--- ---------------------------------------------------------------------------
 -- Votes: +1 or -1, one row per (post, user).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS forum_votes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -148,9 +136,7 @@ CREATE TABLE IF NOT EXISTS forum_votes (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_forum_votes_post_user ON forum_votes (post_id, user_id);
 CREATE INDEX IF NOT EXISTS idx_forum_votes_post ON forum_votes (post_id, value);
 
--- ---------------------------------------------------------------------------
 -- Reports: flags against a post or a thread, reviewed by moderators.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS forum_reports (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -167,9 +153,7 @@ CREATE TABLE IF NOT EXISTS forum_reports (
 CREATE INDEX IF NOT EXISTS idx_forum_reports_status ON forum_reports (status, created_at ASC);
 CREATE INDEX IF NOT EXISTS idx_forum_reports_target ON forum_reports (target_type, target_id);
 
--- ---------------------------------------------------------------------------
 -- Audited moderator actions.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS forum_moderation_actions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -182,9 +166,7 @@ CREATE TABLE IF NOT EXISTS forum_moderation_actions (
 );
 CREATE INDEX IF NOT EXISTS idx_forum_moderation_actions_target ON forum_moderation_actions (target_type, target_id, created_at DESC);
 
--- ---------------------------------------------------------------------------
 -- Subscriptions: watch a thread or a whole forum.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS forum_subscriptions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -196,9 +178,7 @@ CREATE TABLE IF NOT EXISTS forum_subscriptions (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_forum_subscriptions_user_target ON forum_subscriptions (tenant_id, user_id, target_type, target_id);
 CREATE INDEX IF NOT EXISTS idx_forum_subscriptions_target ON forum_subscriptions (target_type, target_id);
 
--- ---------------------------------------------------------------------------
 -- Polls: at most one poll per thread; one vote per (poll, user).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS forum_polls (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -233,10 +213,8 @@ CREATE TABLE IF NOT EXISTS forum_poll_votes (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_forum_poll_votes_poll_user ON forum_poll_votes (poll_id, user_id);
 CREATE INDEX IF NOT EXISTS idx_forum_poll_votes_option ON forum_poll_votes (option_id);
 
--- ---------------------------------------------------------------------------
 -- Reputation: one row per (tenant, user); score is derived as
 -- 10 * upvotes_received - 2 * downvotes_received + 15 * best_answers.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS forum_reputation (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -251,9 +229,7 @@ CREATE TABLE IF NOT EXISTS forum_reputation (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_forum_reputation_tenant_user ON forum_reputation (tenant_id, user_id);
 CREATE INDEX IF NOT EXISTS idx_forum_reputation_score ON forum_reputation (tenant_id, score DESC);
 
--- ---------------------------------------------------------------------------
 -- Per-tenant forum settings (rate limits, spam controls).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS forum_settings (
     tenant_id TEXT PRIMARY KEY CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
     max_threads_per_hour BIGINT NOT NULL DEFAULT 10 CHECK (max_threads_per_hour > 0),

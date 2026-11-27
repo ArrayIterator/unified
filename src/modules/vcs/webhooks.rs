@@ -1,4 +1,4 @@
-// Third-party VCS integrations — Inbound webhook verification and handling.
+// Third-party VCS integrations - Inbound webhook verification and handling.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -33,9 +33,7 @@ use super::handlers_connections::*;
 use super::handlers_drafts::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Webhook receivers.
-// ---------------------------------------------------------------------------
 
 /// Verify a webhook signature for the provider. Returns 401 when no
 /// secret is configured or the payload cannot be verified. The secret

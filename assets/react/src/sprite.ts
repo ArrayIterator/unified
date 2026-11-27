@@ -2,7 +2,7 @@
 //
 // The Handlebars track embeds the same sprite server-side
 // ({{{module_icons_sprite}}} in templates/default/dashboard.hbs,
-// built from assets/icons/modules-sprite.svg — see
+// built from assets/icons/modules-sprite.svg - see
 // src/themes/module_icons.rs). There is no sprite endpoint, but the
 // file itself is served as a static asset: GET
 // /assets/icons/modules-sprite.svg (src/http/server.rs:390,
@@ -11,7 +11,7 @@
 // resolves exactly like in the Handlebars track.
 //
 // When the sprite cannot be fetched, or a module has no symbol,
-// callers fall back to a neutral tile with the module's initials —
+// callers fall back to a neutral tile with the module's initials -
 // icon art is never invented.
 
 import { useEffect, useState } from "react";

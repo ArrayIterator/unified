@@ -23,9 +23,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Background download worker.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn run_download(ctx: Arc<AppContext>, job: Arc<DownloadJobState>) {
     ctx.hooks.emit(
@@ -167,7 +165,7 @@ async fn download_attempt(job: &DownloadJobState) -> Result<(), AttemptError> {
     let status = response.status();
 
     if status == reqwest::StatusCode::RANGE_NOT_SATISFIABLE {
-        // The server says the range is already complete — but that
+        // The server says the range is already complete - but that
         // only proves the server thinks so. With a configured
         // checksum the partial file is verified below before it is
         // finalised; without one there is nothing to prove the
@@ -283,7 +281,7 @@ async fn download_attempt(job: &DownloadJobState) -> Result<(), AttemptError> {
 
     let mut hashers = ChecksumHashers::for_algorithm(job.checksum_algorithm.as_deref());
     // When resuming, the checksum must cover the whole file, so hash the
-    // existing prefix first — streamed, never loaded into memory.
+    // existing prefix first - streamed, never loaded into memory.
     if resumed && hashers.is_active() {
         hash_file(&job.part_path, Some(start_offset), &mut hashers)?;
     }

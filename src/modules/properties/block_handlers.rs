@@ -1,4 +1,4 @@
-// Properties — Block handlers.
+// Properties - Block handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -20,9 +20,7 @@ use uuid::Uuid;
 use super::*;
 use super::helpers::{round_measure};
 
-// ---------------------------------------------------------------------------
 // Block handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_blocks(
     ctx: web::Data<Arc<AppContext>>,
@@ -207,7 +205,7 @@ pub(crate) async fn update_block(
         let mut block = load_block(&state, property.id, plan.id, &block_id)?;
         let input = body.into_inner();
         // Edit rules by status: a sold / assigned block is a sale
-        // record — only its notes may change. A reserved block may
+        // record - only its notes may change. A reserved block may
         // change title, notes, and click behaviour, but not its
         // geometry or price. An available / blocked block may
         // change everything.

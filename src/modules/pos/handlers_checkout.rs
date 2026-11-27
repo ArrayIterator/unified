@@ -1,4 +1,4 @@
-// Pos module — checkout, void, refund, and hold handlers.
+// Pos module - checkout, void, refund, and hold handlers.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use unified_core::context::AppContext;
@@ -650,9 +650,7 @@ pub(crate) async fn resume_sale(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Receipt handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) fn load_receipt_by_sale(state: &PosState, sale_id: &str) -> UnifiedResult<PosReceipt> {
     state
@@ -663,9 +661,7 @@ pub(crate) fn load_receipt_by_sale(state: &PosState, sale_id: &str) -> UnifiedRe
         .ok_or_else(|| UnifiedError::not_found(format!("Receipt not found for sale: {sale_id}")))
 }
 
-// ---------------------------------------------------------------------------
 // Checkout helpers (pure, unit-tested below)
-// ---------------------------------------------------------------------------
 
 /// Change is cash only: a non-cash payment must tender exactly its
 /// applied amount. `tendered` is documented as cash-only in

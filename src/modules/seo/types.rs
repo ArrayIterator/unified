@@ -10,9 +10,7 @@ use super::{state::*, analysis::*, handlers::*, module::*};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 pub struct SeoSettings {
     pub site_title: String,
     pub site_description: String,

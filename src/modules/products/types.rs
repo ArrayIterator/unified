@@ -65,9 +65,7 @@ pub const PERM_PRODUCTS_CREATE: &str = "products:create";
 /// `role.check` hook; fail closed.
 pub const PERM_PRODUCTS_MANAGE: &str = "products:manage";
 
-// ---------------------------------------------------------------------------
 // Products
-// ---------------------------------------------------------------------------
 
 /// License terms a licensed product declares. The licensing module
 /// reads these through `GET /api/v1/products/{id}/license-template`
@@ -364,9 +362,7 @@ pub struct ProductDetail {
     pub inventory: Option<InventorySummary>,
 }
 
-// ---------------------------------------------------------------------------
 // Variants and options
-// ---------------------------------------------------------------------------
 
 /// One configurable option of a product, for example `plan` or
 /// `size`, with its allowed values.
@@ -442,9 +438,7 @@ pub struct UpdateProductVariant {
     pub status: Option<String>,
 }
 
-// ---------------------------------------------------------------------------
 // Bundles
-// ---------------------------------------------------------------------------
 
 /// One product contained in a bundle, with its quantity and an
 /// optional per-item price override (minor units) that replaces the
@@ -477,9 +471,7 @@ pub struct UpdateBundleRule {
     pub bundle_discount_bps: Option<i64>,
 }
 
-// ---------------------------------------------------------------------------
 // Pricing: tiers, regional prices, usage prices, tax rules
-// ---------------------------------------------------------------------------
 
 /// One pricing tier / edition of a product, for example
 /// `single-site`, `multi-site`, or `agency`, with its own price,
@@ -701,9 +693,7 @@ pub struct PriceQuoteRequest {
     pub usage_units: Option<u64>,
 }
 
-// ---------------------------------------------------------------------------
 // Inventory
-// ---------------------------------------------------------------------------
 
 /// Stock for a physical product (or one of its variants).
 /// `available` is always `quantity - reserved`.
@@ -739,9 +729,7 @@ pub struct AdjustInventory {
     pub reason: Option<String>,
 }
 
-// ---------------------------------------------------------------------------
 // Product files and versions (references into the Software Manager)
-// ---------------------------------------------------------------------------
 
 /// A file attached to a product version. This record only references
 /// a software release / file owned by the Software Manager; this
@@ -813,10 +801,8 @@ pub struct CreateProductVersion {
     pub changelog: Option<String>,
 }
 
-// ---------------------------------------------------------------------------
-// Taxonomy (groups and categories) and tags — same shapes as the
+// Taxonomy (groups and categories) and tags - same shapes as the
 // software module, in this module's own namespace.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaxonomyNode {
@@ -914,9 +900,7 @@ pub struct AttachTag {
     pub tag_id: String,
 }
 
-// ---------------------------------------------------------------------------
 // Entitlement and support wiring payloads
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct EntitlementCheckRequest {

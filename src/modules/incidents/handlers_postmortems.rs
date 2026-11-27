@@ -11,9 +11,7 @@ use super::{constants::*, types::*, inputs::*, state::*, helpers::*, handlers_in
 
 
 
-// ---------------------------------------------------------------------------
 // Postmortem handlers
-// ---------------------------------------------------------------------------
 pub(crate) fn load_postmortem(state: &IncidentsState, incident_id: Uuid) -> UnifiedResult<IncidentPostmortem> {
     state
         .postmortems

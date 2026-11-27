@@ -1,4 +1,4 @@
-// SMS Marketing module — admin-configurable SMS
+// SMS Marketing module - admin-configurable SMS
 // providers as data (a generic HTTP adapter posting JSON to
 // the configured endpoint with the configured auth, plus a
 // log-only test provider), plain-text templates with
@@ -17,53 +17,53 @@
 // Routes live under `/api/v1/sms-marketing`:
 //
 //   Providers:
-//     GET/POST /providers — list / create.
+//     GET/POST /providers - list / create.
 //     GET/PATCH/DELETE /providers/{provider_id}.
 //     POST /providers/{provider_id}/rotate-webhook-secret.
-//     POST /providers/{provider_id}/test — dry-run config
+//     POST /providers/{provider_id}/test - dry-run config
 //       check, no network call, no message sent.
 //   Templates:
-//     GET/POST /templates — list / create.
+//     GET/POST /templates - list / create.
 //     GET/PATCH/DELETE /templates/{template_id}.
-//     POST /templates/{template_id}/preview — rendered body,
+//     POST /templates/{template_id}/preview - rendered body,
 //       missing variables, segment count.
 //   Contact lists:
-//     GET/POST /contact-lists — list / create.
+//     GET/POST /contact-lists - list / create.
 //     GET/PATCH/DELETE /contact-lists/{list_id}.
 //     GET/POST /contact-lists/{list_id}/contacts.
 //     DELETE /contact-lists/{list_id}/contacts/{contact_id}.
 //   Campaigns:
-//     GET/POST /campaigns — list / create.
+//     GET/POST /campaigns - list / create.
 //     GET/PATCH/DELETE /campaigns/{campaign_id}.
 //     POST /campaigns/{campaign_id}/schedule,
 //       /cancel, /pause, /send-now.
 //   Messages:
-//     GET  /messages — list.
+//     GET  /messages - list.
 //     GET  /messages/{message_id}.
 //     POST /messages/{message_id}/retry.
 //   Opt-outs:
-//     GET/POST /opt-outs — list / add.
-//     DELETE /opt-outs/{opt_out_id} — re-opt-in.
+//     GET/POST /opt-outs - list / add.
+//     DELETE /opt-outs/{opt_out_id} - re-opt-in.
 //   Keywords:
-//     GET/POST /opt-out-keywords — list / create.
+//     GET/POST /opt-out-keywords - list / create.
 //     PATCH/DELETE /opt-out-keywords/{keyword_id}.
 //   Settings:
-//     GET/PUT /settings/rate-limit — per-tenant sends per
+//     GET/PUT /settings/rate-limit - per-tenant sends per
 //       minute.
 //   Webhooks (public, shared-secret gated):
 //     POST /webhooks/delivery/{provider_id}.
 //     POST /webhooks/inbound/{provider_id}.
 //   Audit:
-//     GET  /audit — list the audit trail.
+//     GET  /audit - list the audit trail.
 //   AI:
-//     POST /ai/{capability} — one registered capability
+//     POST /ai/{capability} - one registered capability
 //       through the AI module's gated runner.
 //
-// HONESTY — READ THIS FIRST. What is real in this module:
+// HONESTY - READ THIS FIRST. What is real in this module:
 // in-memory provider, template, contact-list, contact,
 // campaign, message, opt-out, keyword, rate-limit, and
 // audit management; providers as data (no real provider
-// name or credential is baked in — the only kinds are the
+// name or credential is baked in - the only kinds are the
 // generic `http` adapter and the `log_only` test provider);
 // credentials write-only and encrypted with the holidays
 // module's `v1.` HMAC-keystream format under
@@ -91,17 +91,17 @@
 // NOT built here: durable storage until the migration runs
 // (the DashMap stores are authoritative; migration
 // `2026-11-22-000121_sms_marketing` is the persistence
-// target); live delivery — the HTTP adapter really posts to
+// target); live delivery - the HTTP adapter really posts to
 // the configured endpoint, but no provider and no credential
 // is seeded, so nothing can be delivered until a tenant
 // configures a real provider, and the log-only provider
-// never touches the network; a scheduler — `schedule` only
+// never touches the network; a scheduler - `schedule` only
 // records `send_at` and emits `sms.campaign.scheduled` for
 // a scheduler to pick up, and this module runs none;
-// billing — no price, cost, or charge is stored or
+// billing - no price, cost, or charge is stored or
 // returned anywhere, so `f64` never appears; any check that
 // a contact-list id or recipient number names a real person
-// in another module — contacts are this module's own data
+// in another module - contacts are this module's own data
 // rows, and the marketing module's segments are email
 // segments, so SMS audience selection deliberately does not
 // reuse them (the marketing module is not duplicated: it
@@ -140,10 +140,10 @@
 //     `sms.message.failed`
 //   - `sms.optout.added`
 //   - `notification.requested` (helper available; no handler
-//     sends one today — delivery belongs to the notifications
+//     sends one today - delivery belongs to the notifications
 //     module when a future flow needs it).
 // Events this module listens to:
-//   - `user.deleted` — anonymizes the identity fields
+//   - `user.deleted` - anonymizes the identity fields
 //     (`created_by` / `updated_by` / `actor`) of every row
 //     the user owns to `deleted-user`; rows are never
 //     deleted. Recipient phone numbers cannot be attributed
@@ -151,7 +151,7 @@
 //     user id (verified from the users module), and no row
 //     in this module links a user id to a phone number, so
 //     no recipient row is redacted.
-//   - `marketing.campaign.sent` — acknowledges the email
+//   - `marketing.campaign.sent` - acknowledges the email
 //     campaign's completion with its counts; the payload
 //     carries no tenant (verified from the marketing
 //     service), so no tenant-scoped row is written.
@@ -159,7 +159,7 @@
 //     an inner event name carried inside a
 //     `scheduler.enqueue` envelope, not a directly
 //     subscribable hook event.
-//   - `ai.summarize.requested`, `ai.readiness.requested` —
+//   - `ai.summarize.requested`, `ai.readiness.requested` -
 //     answer with the campaign's stored facts.
 
 pub mod adapter;

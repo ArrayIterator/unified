@@ -1,11 +1,10 @@
-// Projects module — time entry and import inputs.
+// Projects module - time entry and import inputs.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use super::*;
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
-// ---------------------------------------------------------------------------
 // Projects module - section S5.
 //
 // Time tracking (entries, timers, billable hours), workload, views
@@ -18,11 +17,8 @@ use serde::Deserialize;
 // state type, shared helpers, and the module wiring live in section S1.
 // Every private helper in this section is prefixed with `s5_` so it
 // cannot collide with helpers from other sections.
-// ---------------------------------------------------------------------------
 
-// ---------------------------------------------------------------------------
 // Input structs
-// ---------------------------------------------------------------------------
 
 /// Body for creating a time entry.
 #[derive(Debug, Clone, Deserialize)]

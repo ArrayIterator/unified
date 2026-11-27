@@ -349,7 +349,7 @@ pub(crate) async fn get_referral(
 
 /// Update a referral (manager): candidate name, phone, and
 /// notes only. The candidate email, job, referrer, and
-/// stage never change here — the stage moves through the
+/// stage never change here - the stage moves through the
 /// transition endpoint so every move is audited.
 pub(crate) async fn update_referral(
     state: web::Data<ReferralState>,
@@ -404,7 +404,7 @@ pub(crate) async fn update_referral(
 }
 
 /// Delete a referral (manager). A referral with a paid
-/// reward cannot be deleted — the payout record must stay.
+/// reward cannot be deleted - the payout record must stay.
 /// Stage history and audit rows are kept.
 pub(crate) async fn delete_referral(
     state: web::Data<ReferralState>,

@@ -3,11 +3,9 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Loyalty (migration 000045_loyalty). Every table here carries a
 // NUMERIC column, so all five pairs skip ALL serde derives per the
 // repo header rule.
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     loyalty_programs (id) {

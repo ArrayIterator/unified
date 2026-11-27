@@ -10,9 +10,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
-// Todos (migration 000035_todos; batch 2 notes §7).
-// ---------------------------------------------------------------------------
+// Todos (migration 000035_todos; batch 2 notes sec. 7).
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = todo_lists)]

@@ -48,15 +48,15 @@
 // Authorisation: every route requires the `X-User-Id` and `X-Role`
 // headers and a capability checked through the `role.check` hook
 // (same pattern as the recruitment module; fails closed when no
-// handler answers). Reads require `planner.view`; all mutations —
+// handler answers). Reads require `planner.view`; all mutations -
 // creating, updating or deleting pools and plans, recording usage,
-// and the approve / activate / expire transitions — require
+// and the approve / activate / expire transitions - require
 // `planner.manage`.
 //
 // Overcommit policy: approve and activate only warn on overcommit.
 // The warning is attached to the plan view and the
 // `planner.overcommit` event is emitted, but the transition is never
-// refused for overcommit alone — a pool may legitimately run
+// refused for overcommit alone - a pool may legitimately run
 // overcommitted while scaling out, and the numbers are reported
 // instead of blocking the workflow.
 //

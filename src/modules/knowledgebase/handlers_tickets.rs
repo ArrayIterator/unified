@@ -18,9 +18,7 @@ use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 use super::{constants::*, types::*, state::*, helpers::*, module::*, handlers_articles::*, handlers_categories::*};
 
-// ---------------------------------------------------------------------------
 // Ticket link handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn link_ticket(
     ctx: web::Data<Arc<AppContext>>,

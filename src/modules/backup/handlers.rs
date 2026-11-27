@@ -22,9 +22,7 @@ use super::state::{BackupExecutor, BackupState, matches_search, new_id, now, pag
 use super::types::{BackupJob, BackupRun, BackupStatus, BackupSummary, CreateBackupJob, DrillView, MaintenancePruneView, MaintenanceVerifyView, RestoreRequest, RestoreView, SchedulingOutcome, UpdateBackupJob, VerifyView};
 use super::validation::{Caller, caller, caller_company, require_company_for_write, job_visible, require_permission, require_tenant, run_visible, valid_schedule, valid_storage_name, visible_job, visible_run};
 
-// ---------------------------------------------------------------------------
 // Handlers.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn get_summary(
     req: HttpRequest,

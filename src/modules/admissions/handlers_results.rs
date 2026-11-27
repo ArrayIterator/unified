@@ -1,4 +1,4 @@
-// admissions module — Result handlers.
+// admissions module - Result handlers.
 //
 // Split from the former single-file module `src/modules/admissions.rs`.
 // The module root (`admissions.rs`) re-exports the public items, so the
@@ -25,9 +25,7 @@ use super::helpers::{
 use super::state::AdmissionsState;
 use super::types::AdmissionResult;
 
-// ---------------------------------------------------------------------------
 // Handlers: results
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_results(
     ctx: web::Data<Arc<AppContext>>,

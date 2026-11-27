@@ -19,9 +19,7 @@ use super::state::{
 };
 use super::types::{NewsletterList, Subscriber};
 
-// ---------------------------------------------------------------------------
 // Subscriber handlers.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct SubscribeInput {

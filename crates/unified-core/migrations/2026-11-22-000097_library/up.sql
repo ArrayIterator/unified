@@ -38,9 +38,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- Catalog items.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS library_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title TEXT NOT NULL CHECK (char_length(title) BETWEEN 1 AND 300),
@@ -76,9 +74,7 @@ CREATE INDEX IF NOT EXISTS idx_library_items_isbn ON library_items (isbn_normali
 CREATE UNIQUE INDEX IF NOT EXISTS idx_library_items_isbn_edition_active
     ON library_items (isbn_normalized, COALESCE(edition, '')) WHERE status = 'active' AND isbn_normalized IS NOT NULL;
 
--- ---------------------------------------------------------------------------
 -- Categories (admin-editable taxonomy).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS library_categories (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL CHECK (char_length(name) BETWEEN 1 AND 300),
@@ -92,9 +88,7 @@ CREATE TABLE IF NOT EXISTS library_categories (
 CREATE INDEX IF NOT EXISTS idx_library_categories_parent ON library_categories (parent_id);
 CREATE INDEX IF NOT EXISTS idx_library_categories_slug ON library_categories (slug);
 
--- ---------------------------------------------------------------------------
 -- Copies (one row per physical copy, tracked by barcode).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS library_copies (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     item_id UUID NOT NULL,
@@ -114,9 +108,7 @@ CREATE INDEX IF NOT EXISTS idx_library_copies_status ON library_copies (status);
 CREATE INDEX IF NOT EXISTS idx_library_copies_shelf ON library_copies (shelf);
 CREATE INDEX IF NOT EXISTS idx_library_copies_barcode ON library_copies (barcode);
 
--- ---------------------------------------------------------------------------
 -- Members (user link only; user records live in the users module).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS library_members (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id TEXT NOT NULL CHECK (char_length(user_id) BETWEEN 1 AND 500),
@@ -135,9 +127,7 @@ CREATE INDEX IF NOT EXISTS idx_library_members_status ON library_members (status
 CREATE UNIQUE INDEX IF NOT EXISTS idx_library_members_user_active
     ON library_members (user_id) WHERE status <> 'expired';
 
--- ---------------------------------------------------------------------------
 -- Loans.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS library_loans (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     member_id UUID NOT NULL,
@@ -162,9 +152,7 @@ CREATE INDEX IF NOT EXISTS idx_library_loans_copy ON library_loans (copy_id);
 CREATE INDEX IF NOT EXISTS idx_library_loans_status ON library_loans (status);
 CREATE INDEX IF NOT EXISTS idx_library_loans_due ON library_loans (due_at);
 
--- ---------------------------------------------------------------------------
 -- Holds (FIFO queue per item).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS library_holds (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     member_id UUID NOT NULL,
@@ -184,9 +172,7 @@ CREATE INDEX IF NOT EXISTS idx_library_holds_item ON library_holds (item_id);
 CREATE INDEX IF NOT EXISTS idx_library_holds_status ON library_holds (status);
 CREATE INDEX IF NOT EXISTS idx_library_holds_queue ON library_holds (item_id, position);
 
--- ---------------------------------------------------------------------------
 -- Fines (billing owns the charge; this table records the request).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS library_fines (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     loan_id UUID NOT NULL,
@@ -207,9 +193,7 @@ CREATE INDEX IF NOT EXISTS idx_library_fines_member ON library_fines (member_id)
 CREATE INDEX IF NOT EXISTS idx_library_fines_status ON library_fines (status);
 CREATE INDEX IF NOT EXISTS idx_library_fines_reason ON library_fines (reason);
 
--- ---------------------------------------------------------------------------
 -- Loan policies (all loan numbers are data).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS library_loan_policies (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL CHECK (char_length(name) BETWEEN 1 AND 300),
@@ -231,9 +215,7 @@ CREATE INDEX IF NOT EXISTS idx_library_policies_item_type ON library_loan_polici
 CREATE UNIQUE INDEX IF NOT EXISTS idx_library_policies_pair_active
     ON library_loan_policies (member_type, item_type) WHERE active = TRUE;
 
--- ---------------------------------------------------------------------------
 -- Inventory audits.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS library_inventory_audits (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL CHECK (char_length(name) BETWEEN 1 AND 300),
@@ -251,9 +233,7 @@ CREATE TABLE IF NOT EXISTS library_inventory_audits (
 CREATE INDEX IF NOT EXISTS idx_library_audits_status ON library_inventory_audits (status);
 CREATE INDEX IF NOT EXISTS idx_library_audits_started_by ON library_inventory_audits (started_by);
 
--- ---------------------------------------------------------------------------
 -- Inventory discrepancies.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS library_inventory_discrepancies (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     audit_id UUID NOT NULL,
@@ -272,9 +252,7 @@ CREATE INDEX IF NOT EXISTS idx_library_discrepancies_copy ON library_inventory_d
 CREATE INDEX IF NOT EXISTS idx_library_discrepancies_item ON library_inventory_discrepancies (item_id);
 CREATE INDEX IF NOT EXISTS idx_library_discrepancies_status ON library_inventory_discrepancies (status);
 
--- ---------------------------------------------------------------------------
 -- Digital-access grants (token itself is never stored).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS library_digital_access (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     loan_id UUID NOT NULL,

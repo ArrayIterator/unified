@@ -9,9 +9,7 @@ use super::{events::*, helpers::*, types::*, inputs::*, state::*, hooks::*, repo
 
 
 #[derive(Debug, Clone, Serialize)]
-// ---------------------------------------------------------------------------
 // Views.
-// ---------------------------------------------------------------------------
 pub(crate) struct DashboardView {
     /// Revenue by currency in major units. The sums are integer
     /// minor units internally and converted per currency at the

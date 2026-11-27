@@ -4,7 +4,7 @@
 //! The summary is a pure computation over the stored rows
 //! ([`build_period_summary`]): metrics by category,
 //! completion, and target attainment. Values are never summed
-//! across scopes — one summary row covers one (metric,
+//! across scopes - one summary row covers one (metric,
 //! scope) combination.
 
 use actix_web::{HttpRequest, HttpResponse, web};
@@ -26,7 +26,7 @@ use super::types::{
 
 /// Build the summary of one reporting period. Pure over the
 /// store: no writes, no events. Metrics that were deleted
-/// since their entries were recorded are skipped — the
+/// since their entries were recorded are skipped - the
 /// summary reports on live definitions only, while the
 /// entries themselves stay in the export.
 pub(crate) fn build_period_summary(

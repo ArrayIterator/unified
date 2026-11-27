@@ -1,4 +1,4 @@
-// Compliance Center module — GDPR / ISO support: data export
+// Compliance Center module - GDPR / ISO support: data export
 // requests, data deletion requests with an approval step, an
 // append-only consent log, retention policies, processing-activity
 // records (RoPA), compliance checklists with evidence, and a breach

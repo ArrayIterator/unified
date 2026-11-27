@@ -13,9 +13,7 @@ use super::providers::*;
 use super::types::*;
 use super::validation::*;
 
-// ---------------------------------------------------------------------------
 // Stellar provider (Horizon API)
-// ---------------------------------------------------------------------------
 
 /// Horizon API provider for Stellar. Balances are read from the
 /// account endpoint; history comes from the account transactions

@@ -38,9 +38,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- Courses.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS courses (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title TEXT NOT NULL CHECK (char_length(title) BETWEEN 1 AND 200),
@@ -62,9 +60,7 @@ CREATE INDEX IF NOT EXISTS idx_courses_status ON courses (status);
 CREATE INDEX IF NOT EXISTS idx_courses_category ON courses (category);
 CREATE INDEX IF NOT EXISTS idx_courses_instructor ON courses (instructor_id);
 
--- ---------------------------------------------------------------------------
 -- Modules inside a course.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS course_modules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     course_id UUID NOT NULL REFERENCES courses (id) ON DELETE CASCADE,
@@ -76,10 +72,8 @@ CREATE TABLE IF NOT EXISTS course_modules (
 );
 CREATE INDEX IF NOT EXISTS idx_course_modules_course ON course_modules (course_id, position);
 
--- ---------------------------------------------------------------------------
 -- Lessons inside a module. `course_id` is denormalized so progress
 -- and drip queries do not need a join through the module.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS lessons (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     module_id UUID NOT NULL REFERENCES course_modules (id) ON DELETE CASCADE,
@@ -99,9 +93,7 @@ CREATE TABLE IF NOT EXISTS lessons (
 CREATE INDEX IF NOT EXISTS idx_lessons_module ON lessons (module_id, position);
 CREATE INDEX IF NOT EXISTS idx_lessons_course ON lessons (course_id);
 
--- ---------------------------------------------------------------------------
 -- Enrollments of users in courses.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS enrollments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     course_id UUID NOT NULL REFERENCES courses (id) ON DELETE CASCADE,
@@ -121,9 +113,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_enrollments_live
 CREATE INDEX IF NOT EXISTS idx_enrollments_user ON enrollments (user_id);
 CREATE INDEX IF NOT EXISTS idx_enrollments_course ON enrollments (course_id, status);
 
--- ---------------------------------------------------------------------------
 -- Per-lesson completion rows.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS lesson_progress (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     enrollment_id UUID NOT NULL REFERENCES enrollments (id) ON DELETE CASCADE,
@@ -139,9 +129,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_lesson_progress_enrollment_lesson
     ON lesson_progress (enrollment_id, lesson_id);
 CREATE INDEX IF NOT EXISTS idx_lesson_progress_user ON lesson_progress (user_id, course_id);
 
--- ---------------------------------------------------------------------------
 -- Quizzes attached to lessons (one quiz per lesson).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS quizzes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     lesson_id UUID NOT NULL REFERENCES lessons (id) ON DELETE CASCADE,
@@ -158,9 +146,7 @@ CREATE TABLE IF NOT EXISTS quizzes (
 CREATE UNIQUE INDEX IF NOT EXISTS uq_quizzes_lesson ON quizzes (lesson_id);
 CREATE INDEX IF NOT EXISTS idx_quizzes_course ON quizzes (course_id);
 
--- ---------------------------------------------------------------------------
 -- Multiple-choice questions of a quiz.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS quiz_questions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     quiz_id UUID NOT NULL REFERENCES quizzes (id) ON DELETE CASCADE,
@@ -174,9 +160,7 @@ CREATE TABLE IF NOT EXISTS quiz_questions (
 );
 CREATE INDEX IF NOT EXISTS idx_quiz_questions_quiz ON quiz_questions (quiz_id, position);
 
--- ---------------------------------------------------------------------------
 -- Quiz attempts (auto-graded at submission).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS quiz_attempts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     quiz_id UUID NOT NULL REFERENCES quizzes (id) ON DELETE CASCADE,
@@ -193,9 +177,7 @@ CREATE TABLE IF NOT EXISTS quiz_attempts (
 CREATE INDEX IF NOT EXISTS idx_quiz_attempts_quiz_user ON quiz_attempts (quiz_id, user_id);
 CREATE INDEX IF NOT EXISTS idx_quiz_attempts_enrollment ON quiz_attempts (enrollment_id);
 
--- ---------------------------------------------------------------------------
 -- Certificates issued on course completion.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS elearning_certificates (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     code TEXT NOT NULL UNIQUE CHECK (char_length(code) BETWEEN 1 AND 64),
@@ -216,9 +198,7 @@ CREATE TABLE IF NOT EXISTS elearning_certificates (
 CREATE INDEX IF NOT EXISTS idx_elearning_certificates_course_user ON elearning_certificates (course_id, user_id);
 CREATE INDEX IF NOT EXISTS idx_elearning_certificates_code ON elearning_certificates (code);
 
--- ---------------------------------------------------------------------------
 -- Course reviews (one per user per course).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS reviews (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     course_id UUID NOT NULL REFERENCES courses (id) ON DELETE CASCADE,
@@ -231,9 +211,7 @@ CREATE TABLE IF NOT EXISTS reviews (
 CREATE UNIQUE INDEX IF NOT EXISTS uq_reviews_course_user ON reviews (course_id, user_id);
 CREATE INDEX IF NOT EXISTS idx_reviews_course ON reviews (course_id);
 
--- ---------------------------------------------------------------------------
 -- Learning paths (ordered sequences of courses).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS learning_paths (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title TEXT NOT NULL CHECK (char_length(title) BETWEEN 1 AND 200),

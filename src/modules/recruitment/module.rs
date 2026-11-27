@@ -153,9 +153,7 @@ use uuid::Uuid;
 use super::{constants::*, types::*, state::*, helpers::*, handlers_jobs::*, handlers_applicants::*, handlers_interviews::*, handlers_evaluations::*, handlers_offers::*};
 use super::ai_capabilities::AI_CAPABILITIES;
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 /// The Recruitment / ATS module.
 pub struct RecruitmentModule {

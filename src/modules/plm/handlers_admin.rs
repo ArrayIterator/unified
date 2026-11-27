@@ -17,9 +17,7 @@ use super::types::{
     PlmAuditEntry, PlmSettings, UpdateSettingsRequest, MAX_ECO_TYPES, PERM_PLM_MANAGE,
 };
 
-// ---------------------------------------------------------------------------
 // Settings handlers (authenticated)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn get_settings(
     state: web::Data<PlmState>,
@@ -81,9 +79,7 @@ pub(crate) async fn update_settings(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Audit handlers (authenticated)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_audit(
     state: web::Data<PlmState>,

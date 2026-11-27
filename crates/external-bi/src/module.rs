@@ -1,11 +1,9 @@
-//! BI external module (split from lib.rs; moved verbatim).
+//! BI external module.
 
 use super::*;
 
 
-// ---------------------------------------------------------------------------
 // Module implementation
-// ---------------------------------------------------------------------------
 
 /// The BI module. One struct holding the shared in-memory state.
 pub struct BiModule {

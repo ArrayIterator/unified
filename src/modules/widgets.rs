@@ -1,4 +1,4 @@
-//! Widgets module — a standalone core module for dashboard widgets.
+//! Widgets module - a standalone core module for dashboard widgets.
 //!
 //! The catalogue and the per-zone layouts live here. Dashboards
 //! (admin, user, tenant, reseller) CONSUME this module through its
@@ -8,7 +8,7 @@
 //!
 //! A zone is the kebab-case id of a widgetized page. Any
 //! dashboard/admin page can declare its own zone (see `module.rs`
-//! for how a page opts in) — zones are not registered here. Layouts
+//! for how a page opts in) - zones are not registered here. Layouts
 //! are keyed per (zone, scope, owner): every user has their OWN
 //! layout per zone, falling back to the zone's shared default, then
 //! to the built-in default.

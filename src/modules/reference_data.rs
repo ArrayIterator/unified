@@ -1,5 +1,5 @@
 // Reference Data -- the single HTTP surface for the platform-shared
-// reference lists (task 361).
+// reference lists.
 //
 // The data itself lives in exactly one place per list; this module only
 // re-exports it and serves it over HTTP:

@@ -13,9 +13,7 @@ pub(crate) const MAX_CONNECTOR_NAME_LEN: usize = 100;
 /// How many knowledgebase articles ground one answer.
 pub(crate) const GROUNDING_LIMIT: u64 = 5;
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// Conversation lifecycle.
 ///
@@ -137,7 +135,7 @@ pub enum ConnectorKind {
 ///
 /// LIMITATION (documented, not implemented): enabling a connector
 /// only stores its configuration. No live connection to the
-/// external chat service is established — bot token validation,
+/// external chat service is established - bot token validation,
 /// webhook registration, and inbound message delivery are a
 /// follow-up milestone, not a silent no-op: nothing here claims a
 /// connector is connected. Until that milestone lands, connectors
@@ -145,8 +143,8 @@ pub enum ConnectorKind {
 /// through the built-in webchat channel.
 ///
 /// Connectors are owned per user, exactly like conversations: the
-/// creator is the owner (`owner_id`) and only the owner — or a
-/// platform admin (`admin` / `super_admin` role) — may read, update
+/// creator is the owner (`owner_id`) and only the owner - or a
+/// platform admin (`admin` / `super_admin` role) - may read, update
 /// or delete one. The stored `config` is kept verbatim internally
 /// but is never returned to callers as-is: every response carries a
 /// redacted copy with secret-bearing fields masked (see
@@ -164,9 +162,7 @@ pub struct Connector {
     pub updated_at: DateTime<Utc>,
 }
 
-// ---------------------------------------------------------------------------
 // Request bodies
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct AskRequest {

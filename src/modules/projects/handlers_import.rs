@@ -1,4 +1,4 @@
-// Projects module — import, export, and activity handlers.
+// Projects module - import, export, and activity handlers.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use super::*;
@@ -10,9 +10,7 @@ use chrono::{DateTime, Utc};
 use serde_json::{Value, json};
 use std::sync::Arc;
 
-// ---------------------------------------------------------------------------
 // Import / export
-// ---------------------------------------------------------------------------
 
 /// Validate one imported row with the same rules the create-task path
 /// applies: a known task type, a status the methodology allows, and a
@@ -314,9 +312,7 @@ pub(crate) async fn import_project(
     s5_respond_created(result)
 }
 
-// ---------------------------------------------------------------------------
 // Activity
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_project_activity(
     req: HttpRequest,

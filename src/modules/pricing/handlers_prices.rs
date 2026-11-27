@@ -1,4 +1,4 @@
-// pricing — handlers prices.
+// pricing - handlers prices.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -31,9 +31,7 @@ use super::handlers_bundles::*;
 use super::handlers_reconciliation::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // HTTP handlers: market reference prices.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_reference_prices(
     ctx: web::Data<Arc<AppContext>>,
@@ -229,9 +227,7 @@ pub(crate) async fn summarize_reference_prices(
     )
 }
 
-// ---------------------------------------------------------------------------
 // HTTP handlers: price versions and approvals.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_price_versions(
     ctx: web::Data<Arc<AppContext>>,
@@ -603,9 +599,7 @@ pub(crate) async fn list_price_approvals(
     json::success_response(paginate(items, &params), 200)
 }
 
-// ---------------------------------------------------------------------------
 // HTTP handlers: tiers and bundles.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_tiers(
     ctx: web::Data<Arc<AppContext>>,

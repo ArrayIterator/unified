@@ -1,6 +1,6 @@
 // Dashboards - Module struct, route table and registration.
 
-// Dashboards module — separate admin, user (client), and reseller dashboards.
+// Dashboards module - separate admin, user (client), and reseller dashboards.
 //
 // Three scopes, one design system:
 //
@@ -19,14 +19,14 @@
 //
 // Enforcement is server-side, in two layers (defence in depth):
 //
-//   Layer 1 — middleware (`DashboardsAuthMiddleware`, registered through
+//   Layer 1 - middleware (`DashboardsAuthMiddleware`, registered through
 //   `Module::register_middleware`, priority 600 so it runs after the
 //   security-hardening middleware). It authenticates every request under
 //   a dashboard prefix and rejects unauthenticated requests with 401 in
 //   the standard error envelope before any handler runs. It also expires
 //   view-as sessions. Non-dashboard paths pass through untouched.
 //
-//   Layer 2 — per-handler capability checks (`require_capability`).
+//   Layer 2 - per-handler capability checks (`require_capability`).
 //   Handlers never trust the middleware alone: they re-authenticate
 //   from the request when no identity is present in the request
 //   extensions, resolve the caller's capabilities, and return 403 in
@@ -35,7 +35,6 @@
 //   route gets 403.
 //
 // Authentication
-// ---------------
 // Bearer tokens issued by the Auth Manager (`POST /api/v1/auth/token`):
 // HS256 JWTs whose `sub` claim is the user's UUID. Verification here
 // mirrors the Auth Manager exactly (base64url without padding,
@@ -59,7 +58,6 @@
 //     read; dashboard authentication then fails closed with 401.
 //
 // Capabilities
-// ------------
 // Capabilities are `resource:action` strings evaluated with the Roles
 // module's `permission_allowed` (see `crate::modules::roles`). The
 // `admin` role carries `"*": ["*"]` and therefore holds every
@@ -84,7 +82,6 @@
 // a valid token is what makes someone a user of their own dashboard.
 //
 // Reseller clients
-// ----------------
 // No reseller-to-client link exists in the schema yet. The working
 // rule is an explicit link store owned by this module (in-memory,
 // like the Roles and Audit stores): a reseller links a client id, and
@@ -93,7 +90,6 @@
 // coordinator report.
 //
 // Overview data
-// -------------
 // Counts and rows that live in Diesel tables are read directly
 // (`users`, `roles`, `licenses`, `store_orders`,
 // `store_entitlements`, `store_downloads`). Sections owned by other
@@ -106,7 +102,6 @@
 // hook to light a section up without any change here.
 //
 // Templates
-// ---------
 // Template names must be flat (`validate_template_name` in the theme
 // engine rejects `/`, so `templates/default/admin/layout.hbs` would
 // break registration of the whole embedded default theme). The pages
@@ -117,7 +112,6 @@
 // `assets/css/admin.css` / `assets/css/client.css`.
 //
 // Customizable dashboard paths
-// ----------------------------
 // The dashboard prefixes come from the single shared route registry
 // (`AppContext.routes`), attached by `init` together with the theme
 // engine's copy of the same handle: `user_dashboard` and
@@ -146,9 +140,7 @@ use super::{DashboardsAuthMiddleware, DashboardsState, admin_page, admin_page_ro
     get_user_orders, get_user_overview, get_view_as, link_reseller_client, start_view_as,
     stop_view_as, unlink_reseller_client, update_dashboard_settings, user_page, user_page_root};
 
-// ---------------------------------------------------------------------------
 // Module definition
-// ---------------------------------------------------------------------------
 
 pub struct DashboardsModule {
     pub(crate) state: Arc<DashboardsState>,

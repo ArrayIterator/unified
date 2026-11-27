@@ -12,9 +12,7 @@ use url::Url;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // OpenStack adapter.
-// ---------------------------------------------------------------------------
 
 /// OpenStack (Keystone v3 + Nova) against a user-supplied cloud
 /// endpoint. Servers list / status / create / delete / start / stop.
@@ -431,9 +429,7 @@ impl CloudProvider for OpenStackAdapter {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Proxmox VE adapter.
-// ---------------------------------------------------------------------------
 
 /// Proxmox VE API against a user-supplied host endpoint. Nodes +
 /// QEMU / LXC guests list / status / start / stop / delete.
@@ -729,9 +725,7 @@ impl CloudProvider for ProxmoxAdapter {
     }
 }
 
-// ---------------------------------------------------------------------------
 // KVM adapter (through Proxmox VE).
-// ---------------------------------------------------------------------------
 
 /// KVM guests, surfaced through a Proxmox VE host: the same ticket
 /// auth and QEMU listing as the Proxmox adapter, filtered to QEMU
@@ -825,9 +819,7 @@ impl CloudProvider for KvmAdapter {
     }
 }
 
-// ---------------------------------------------------------------------------
 // XenServer / XCP-ng adapter (XenAPI XML-RPC).
-// ---------------------------------------------------------------------------
 
 /// Minimal XML-RPC value helpers for XenAPI responses. XenAPI
 /// answers XML-RPC; this codebase has no XML dependency, so these

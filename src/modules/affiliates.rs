@@ -1,4 +1,4 @@
-// Affiliate / Referral module — partner affiliates, referral links
+// Affiliate / Referral module - partner affiliates, referral links
 // and codes, tracked conversions (click -> signup -> purchase),
 // commissions (percent or fixed, per product or global default),
 // payouts (requested through billing events; this module never
@@ -8,33 +8,33 @@
 // Routes live under `/api/v1/affiliates`:
 //
 //   Affiliates:
-//     GET/POST / — list affiliates / apply as an affiliate.
+//     GET/POST / - list affiliates / apply as an affiliate.
 //     GET/PATCH/DELETE /{id}.
 //     POST /{id}/approve, /{id}/reject, /{id}/suspend,
 //          /{id}/reactivate.
 //   Links:
-//     GET/POST /{id}/links — links of one affiliate.
+//     GET/POST /{id}/links - links of one affiliate.
 //     GET/DELETE /links/{link_id}.
 //   Clicks (public tracking endpoint, see the public-access note):
-//     POST /track — record a click on a referral code.
-//     GET  /{id}/clicks — clicks of one affiliate (filter flagged).
+//     POST /track - record a click on a referral code.
+//     GET  /{id}/clicks - clicks of one affiliate (filter flagged).
 //   Conversions:
-//     GET  /{id}/conversions — conversions of one affiliate.
-//     POST /conversions — record a conversion manually (manage).
+//     GET  /{id}/conversions - conversions of one affiliate.
+//     POST /conversions - record a conversion manually (manage).
 //   Commissions:
-//     GET  /{id}/commissions — commissions of one affiliate.
+//     GET  /{id}/commissions - commissions of one affiliate.
 //     POST /commissions/{commission_id}/approve.
 //     POST /commissions/{commission_id}/void.
 //   Payouts:
-//     GET/POST /{id}/payouts — payout history / request a payout.
+//     GET/POST /{id}/payouts - payout history / request a payout.
 //     POST /payouts/{payout_id}/approve.
 //     POST /payouts/{payout_id}/mark-paid.
 //     POST /payouts/{payout_id}/reject.
 //   Dashboard:
-//     GET  /{id}/dashboard — clicks, conversions, earnings, payouts.
-//     GET  /me/dashboard — the caller's own dashboard.
+//     GET  /{id}/dashboard - clicks, conversions, earnings, payouts.
+//     GET  /me/dashboard - the caller's own dashboard.
 //
-// HONESTY — READ THIS FIRST. What is real in this module:
+// HONESTY - READ THIS FIRST. What is real in this module:
 // in-memory affiliate, link, click, conversion, commission, and
 // payout management; the approval state machine (pending ->
 // approved / rejected / suspended, with reactivation back to
@@ -51,15 +51,15 @@
 // `user.created` into signup conversions and
 // `store.order.completed` into purchase conversions. What is NOT
 // built here: actual payment of affiliates (the billing module
-// owns that — this module only emits
+// owns that - this module only emits
 // `affiliates.payout.requested`); automatic approval or payment of
 // anything (every commission approval and every payout step is a
 // manual, capability-checked action); automatic banning or
 // voiding on fraud (flags are advisory only, except that a
-// refunded order voids its still-pending commissions — a refund
+// refunded order voids its still-pending commissions - a refund
 // is a business fact, not a fraud judgement, and it never touches
 // approved or paid commissions); and attribution without a
-// referral signal — a purchase is only attributed when the order
+// referral signal - a purchase is only attributed when the order
 // payload carries a referral code, click id, or affiliate id (the
 // store / checkout must forward the code the visitor arrived
 // with). Without that signal no conversion is guessed.
@@ -69,9 +69,9 @@
 // an endpoint is public only when a rule exists with
 // `public_access: true`, and denied outright when a rule exists
 // with `allowed: false`). There is no reusable per-request
-// "is this endpoint public?" helper to call from a handler — the
+// "is this endpoint public?" helper to call from a handler - the
 // check lives in the API Manager middleware / `resolve_public`
-// path — so the public route below relies on that gate: an
+// path - so the public route below relies on that gate: an
 // administrator must create the matching `ApiAccessRule` row for
 // `POST /api/v1/affiliates/track`. The route is registered in
 // `route_info()` with `route_version_support()` defaulting to
@@ -99,21 +99,21 @@
 //     `affiliates.commission.voided`
 //   - `affiliates.payout.requested` (payload carries `payout_id`,
 //     `affiliate_id`, `amount`, `currency`, `method`, and
-//     `commission_ids` for the billing module — no money moves here)
+//     `commission_ids` for the billing module - no money moves here)
 //   - `affiliates.payout.approved`, `affiliates.payout.paid`,
 //     `affiliates.payout.rejected`
 //   - `affiliates.click.flagged` (advisory only; see fraud note)
 // Events this module listens to:
-//   - `user.created` — signup conversion when the payload carries
+//   - `user.created` - signup conversion when the payload carries
 //     a referral code (`referral_code`), a click id (`click_id`),
 //     or an affiliate id (`affiliate_id`); otherwise skipped.
-//   - `store.order.completed` — purchase conversion when the order
+//   - `store.order.completed` - purchase conversion when the order
 //     payload carries the same referral signal; the order total
 //     and first line-item product id drive the commission. The
 //     `payment.captured` event is deliberately NOT consumed as
 //     well: the store emits both for one purchase and consuming
 //     both would attribute (and pay) the same order twice.
-//   - `store.order.refunded` — voids still-pending commissions of
+//   - `store.order.refunded` - voids still-pending commissions of
 //     the refunded order (approved / paid commissions are never
 //     touched by this listener).
 

@@ -30,9 +30,7 @@ pub const PERM_SOFTWARE_CREATE: &str = "software:create";
 /// Checked through the `role.check` hook; fail closed.
 pub const PERM_SOFTWARE_MANAGE: &str = "software:manage";
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct VersionRequirements {
@@ -111,9 +109,7 @@ pub struct CreateRelease {
     pub notes: Option<String>,
 }
 
-// ---------------------------------------------------------------------------
 // Software records
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Software {
@@ -207,9 +203,7 @@ pub struct SoftwareDetail {
     pub total_downloads: u64,
 }
 
-// ---------------------------------------------------------------------------
 // Release files
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReleaseFile {
@@ -267,9 +261,7 @@ pub struct VerifyFile {
     pub content_base64: String,
 }
 
-// ---------------------------------------------------------------------------
 // Taxonomy (groups and categories) and tags
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaxonomyNode {
@@ -367,9 +359,7 @@ pub struct AttachTag {
     pub tag_id: String,
 }
 
-// ---------------------------------------------------------------------------
 // Discovery views
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize)]
 pub struct LatestRelease {

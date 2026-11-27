@@ -1,4 +1,4 @@
-// Site Builder — Server-side rendering of blocks and pages.
+// Site Builder - Server-side rendering of blocks and pages.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -246,7 +246,7 @@ pub(crate) fn render_block(state: &SiteBuilderState, page: &Page, block: &Block)
 
 /// Answer the `site_builder.render_page` hook: render a page by slug
 /// (or id) to HTML through the block renderer. Only published pages
-/// render — a draft answers `found: false`, so it can never leak to
+/// render - a draft answers `found: false`, so it can never leak to
 /// the public front page. The tagline and description come from the
 /// page's first hero block, so the front page's words are builder
 /// content, not hard-coded strings.

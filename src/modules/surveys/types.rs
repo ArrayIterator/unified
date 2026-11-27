@@ -1,4 +1,4 @@
-// surveys module — Domain types.
+// surveys module - Domain types.
 //
 // Split from the former single-file module `src/modules/surveys.rs`.
 // The module root (`surveys.rs`) re-exports the public items, so the
@@ -22,9 +22,7 @@ use uuid::Uuid;
 
 use super::helpers::created;
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// One survey version. A survey family shares `family_id` across
 /// versions: version 1 has `family_id == id`; editing a published
@@ -51,8 +49,8 @@ pub struct Survey {
 
 /// One question of one survey version. `options` applies to
 /// `multiple_choice` only. `min_value` / `max_value` record the
-/// score bounds the question was created with (NPS 0–10, CSAT and
-/// rating 1–5); answers outside the bounds are rejected.
+/// score bounds the question was created with (NPS 0-10, CSAT and
+/// rating 1-5); answers outside the bounds are rejected.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SurveyQuestion {
     pub id: Uuid,

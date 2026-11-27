@@ -1,4 +1,4 @@
-//! Logistics module — shipments, fleet, warehouses, delivery — Request bodies.
+//! Logistics module - shipments, fleet, warehouses, delivery - Request bodies.
 //!
 //! Split from `src/modules/logistics.rs`; behaviour unchanged.
 

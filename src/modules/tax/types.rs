@@ -1,4 +1,4 @@
-// Tax module — tax types and shared state.
+// Tax module - tax types and shared state.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use super::*;
@@ -23,9 +23,7 @@ use std::time::Duration;
 use url::Url;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// One tax rule for a jurisdiction. `rate_percent` is a percentage
 /// (11.0 means 11%). `threshold_amount` is the minimum base amount
@@ -407,9 +405,7 @@ pub struct TaxAuditEntry {
     pub created_at: DateTime<Utc>,
 }
 
-// ---------------------------------------------------------------------------
 // State
-// ---------------------------------------------------------------------------
 
 pub struct TaxState {
     pub(crate) hooks: RwLock<Arc<HookBus>>,
@@ -509,7 +505,7 @@ impl TaxState {
     /// Region semantics: a national rule (`region_code: None`)
     /// applies everywhere, in every region and when no region is
     /// given. A region-specific rule applies only when the caller
-    /// names that region — a caller with no region never matches
+    /// names that region - a caller with no region never matches
     /// a region-specific rule, and a caller naming another region
     /// never matches it either.
     pub(crate) fn applicable_rules(

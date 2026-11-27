@@ -32,9 +32,7 @@ use super::types::Portal;
 use super::types::PortalRecord;
 use super::types::PortalStatus;
 
-// ---------------------------------------------------------------------------
 // Public portal
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn get_public_portal(
     ctx: web::Data<Arc<AppContext>>,
@@ -45,7 +43,7 @@ pub(crate) async fn get_public_portal(
     // No capability check here on purpose: this is the public
     // portal render. The API Manager gate (ApiAccessRule with
     // public_access for this path, default deny) is what makes it
-    // public — see the module header.
+    // public - see the module header.
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let portal = load_portal_by_slug(&state, &path.into_inner())?;
@@ -72,9 +70,7 @@ pub(crate) async fn get_public_portal(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Client data (scoped server-side)
-// ---------------------------------------------------------------------------
 
 /// Load the portal for a client call and enforce scoping: the
 /// portal must be active, must belong to the caller's company, and

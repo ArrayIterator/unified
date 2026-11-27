@@ -7,9 +7,7 @@ use serde_json::{json, Value};
 use std::sync::{Arc, RwLock};
 use super::types::{Department, RoutingRule};
 
-// ---------------------------------------------------------------------------
 // State
-// ---------------------------------------------------------------------------
 
 pub struct DepartmentsState {
     pub(crate) hooks: RwLock<Arc<HookBus>>,

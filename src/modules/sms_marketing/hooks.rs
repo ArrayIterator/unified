@@ -2,14 +2,14 @@
 //! campaign completion event, and the AI grounding hooks.
 //!
 //! `user.deleted` carries only `{id: user_id}` (verified
-//! from the users module's delete handler — no tenant, no
+//! from the users module's delete handler - no tenant, no
 //! phone number). This module therefore anonymizes the
 //! identity fields it owns (`created_by` / `updated_by` /
 //! `actor` become `deleted-user`) and keeps every row: the
 //! delivery history stays auditable. Recipient phone
 //! numbers cannot be attributed to the deleted user from
-//! this payload — no row in this module links a user id to
-//! a phone number — so no recipient row is redacted, and
+//! this payload - no row in this module links a user id to
+//! a phone number - so no recipient row is redacted, and
 //! this listener never claims otherwise.
 //!
 //! `marketing.campaign.sent` carries `{campaign_id,

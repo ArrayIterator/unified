@@ -26,9 +26,7 @@ use super::{jwt::*, state::*, handlers_providers::*, login::*, tokens::*, recove
 
 pub(crate) type HmacSha256 = Hmac<Sha256>;
 
-// ---------------------------------------------------------------------------
 // Provider definitions
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize)]
 pub struct SettingField {

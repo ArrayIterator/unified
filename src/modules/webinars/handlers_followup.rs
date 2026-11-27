@@ -9,9 +9,7 @@ use super::helpers::*;
 use super::state::*;
 use super::types::*;
 
-// ---------------------------------------------------------------------------
 // Follow-up handler
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn send_follow_up(
     state: web::Data<WebinarsState>,

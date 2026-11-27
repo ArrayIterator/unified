@@ -139,7 +139,7 @@ impl Middleware for PublicApiAccessMiddleware {
             Ok(_) => Box::pin(async move { next(req).await }),
             Err(error) => {
                 // `debug: false` on purpose: this middleware only
-                // holds the `ApiManagerState` — no `AppContext`, so
+                // holds the `ApiManagerState` - no `AppContext`, so
                 // the development mode is unknowable here and the
                 // trace must never render. (The access errors it
                 // renders carry no trace anyway.)

@@ -245,7 +245,6 @@ impl IntoIterator for MiddlewareManager {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Tenant resolution (multi-tenant SaaS, batch 8)
 //
 // The main site is the control plane (admin + user dashboard live
@@ -271,7 +270,7 @@ impl IntoIterator for MiddlewareManager {
 //     even previously-verified custom domains.
 //   - Malformed or absent results and hook errors are treated as
 //     "unresolved" and fall through to the configured fallback policy
-//     (404 by default — fail closed), never as a tenant.
+//     (404 by default - fail closed), never as a tenant.
 //   - Audit: when a control-plane path is blocked on a resolved
 //     tenant host, the middleware emits `tenant.control_plane_blocked`
 //     (fire-and-forget; the request does not fail when no handler
@@ -282,7 +281,7 @@ impl IntoIterator for MiddlewareManager {
 // `TenantResolutionConfig` that can be overridden without a code
 // change, through the builders, or through environment variables that
 // map 1:1 to the `saas.*` config keys; the typed `[saas]` section in
-// the config file is still open — see `TenantResolutionConfig`):
+// the config file is still open - see `TenantResolutionConfig`):
 //
 //   - `saas.main_host` (`UNIFIED_SAAS_MAIN_HOST`): the main-site host.
 //     Requests whose host equals it skip the hook call entirely, so
@@ -315,7 +314,6 @@ impl IntoIterator for MiddlewareManager {
 // Path matching is prefix-based with a segment boundary: a prefix
 // matches a path exactly or followed by `/`, so `/admin` never
 // matches `/administrator`.
-// ---------------------------------------------------------------------------
 
 /// Hook event emitted to resolve a request host to a tenant. Answered
 /// by the domains module; see the section header above for the payload
@@ -444,7 +442,7 @@ fn path_matches_any(path: &str, prefixes: &[String]) -> bool {
 #[serde(rename_all = "snake_case")]
 pub enum UnresolvedHostPolicy {
     /// Serve the request as the control plane. Explicit operator
-    /// opt-in only — never the default (see the enum docs).
+    /// opt-in only - never the default (see the enum docs).
     ControlPlane,
     /// Answer 404 in the standard error envelope. The fail-closed
     /// default.
@@ -528,11 +526,11 @@ impl TenantContext {
 /// Configuration for `TenantResolutionMiddleware`. Every field is a
 /// default that an operator overrides without a code change: through
 /// the builders, through `from_environment` (environment variables
-/// mapping 1:1 to the `saas.*` config keys), or — once the integrator
+/// mapping 1:1 to the `saas.*` config keys), or - once the integrator
 /// adds the typed `[saas]` section to `AppConfig` (open item; the
 /// section does not exist yet, so the server currently builds this
 /// config with `from_environment` and the single construction site in
-/// `src/http/server.rs` is where the typed section plugs in) — from
+/// `src/http/server.rs` is where the typed section plugs in) - from
 /// the config file.
 #[derive(Debug, Clone)]
 pub struct TenantResolutionConfig {
@@ -718,7 +716,7 @@ enum BlockedReason {
     /// (and a `location_hint` pointing at the main host) so the
     /// product flow can serve an export notice instead of the
     /// product. The full export-notice page itself is a follow-up
-    /// for the product/release flow — the middleware only signals
+    /// for the product/release flow - the middleware only signals
     /// the state, it carries no export URL in the contract.
     Released,
 }
@@ -850,7 +848,7 @@ impl TenantResolutionMiddleware {
     /// Defensive by design: no result, a non-object result, a result
     /// missing its tenant ids, a tenant-kind result that is not
     /// `verified: true`, or a result naming a different host all come
-    /// back `Unresolved` — never as a tenant.
+    /// back `Unresolved` - never as a tenant.
     fn resolve(&self, raw_host: &str, normalized_host: &str) -> TenantResolution {
         let context = self.ctx.hooks.emit(
             EVENT_TENANT_RESOLVE_REQUESTED,
@@ -966,7 +964,7 @@ impl TenantResolutionMiddleware {
     }
 
     /// Answer an unresolved host under the configured policy: pass
-    /// through as the control plane (explicit operator opt-in only —
+    /// through as the control plane (explicit operator opt-in only -
     /// logged as a warning every time, so a fail-open deployment is
     /// always visible), or 404 in the standard envelope (the
     /// fail-closed default). `host` is the normalized host when one
@@ -985,7 +983,7 @@ impl TenantResolutionMiddleware {
             UnresolvedHostPolicy::ControlPlane => {
                 // Explicit operator opt-in: the request is served as
                 // the control plane even though its host did not
-                // resolve. Log it — a fail-open pass-through must
+                // resolve. Log it - a fail-open pass-through must
                 // never happen silently.
                 log::warn!(
                     "Unresolved host ({reason}) served as control plane: explicit ControlPlane opt-in is active"

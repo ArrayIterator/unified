@@ -1,4 +1,4 @@
-// field_service module — Equipment handlers.
+// field_service module - Equipment handlers.
 //
 // Split from the former single-file module `src/modules/field_service.rs`.
 // The module root (`field_service.rs`) re-exports the public items, so the
@@ -27,9 +27,7 @@ use super::helpers::{
     require_permission, require_tenant, require_text,
 };
 
-// ---------------------------------------------------------------------------
 // Equipment handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_equipment(
     ctx: web::Data<Arc<AppContext>>,

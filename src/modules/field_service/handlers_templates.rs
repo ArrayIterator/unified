@@ -1,4 +1,4 @@
-// field_service module — Maintenance template handlers.
+// field_service module - Maintenance template handlers.
 //
 // Split from the former single-file module `src/modules/field_service.rs`.
 // The module root (`field_service.rs`) re-exports the public items, so the
@@ -27,9 +27,7 @@ use super::helpers::{
     optional_text, paginate, require_permission, require_tenant, require_text,
 };
 
-// ---------------------------------------------------------------------------
 // Maintenance template handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_templates(
     ctx: web::Data<Arc<AppContext>>,

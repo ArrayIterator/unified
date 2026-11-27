@@ -1,4 +1,4 @@
--- 000134: Map & Tagging shared geospatial module (task 358).
+-- 000134: Map & Tagging shared geospatial module.
 --
 -- The single shared location store every other module consumes:
 -- IoT / GPS trackers, logistics, ISP ODP and customer pins,
@@ -12,33 +12,33 @@
 -- tenant schema, so the column also stays correct when a
 -- deployment shares one schema across tenants):
 --
---   * map_locations — a pin: label, kind, latitude/longitude,
+--   * map_locations - a pin: label, kind, latitude/longitude,
 --     address, free-form metadata JSONB, optional layer.
---   * map_location_links — the generic join: ANY module attaches
+--   * map_location_links - the generic join: ANY module attaches
 --     a location to its records with (entity_type, entity_id,
 --     location_id, role). `entity_type` is the owning module's
 --     record kind ('shipment', 'warehouse', 'customer', 'odp',
 --     'branch', 'product', ...); `role` is 'home' / 'office' /
---     'delivery' / 'asset' / ... — see `map_link_roles`.
---   * map_layers — named pin layers (visibility + style JSONB);
+--     'delivery' / 'asset' / ... - see `map_link_roles`.
+--   * map_layers - named pin layers (visibility + style JSONB);
 --     a location belongs to at most one layer.
---   * map_geofences — named zones stored as GeoJSON Polygon /
+--   * map_geofences - named zones stored as GeoJSON Polygon /
 --     MultiPolygon in `geometry`; point-in-zone is evaluated by
 --     the runtime (ray casting), never by the database.
---   * map_positions — timestamped GPS positions for one entity
+--   * map_positions - timestamped GPS positions for one entity
 --     (entity_type + entity_id): the tracking history GPS
 --     trackers and IoT devices write to, and the geofence
 --     enter/exit evaluation reads from.
---   * map_location_kinds — admin-definable location kinds
+--   * map_location_kinds - admin-definable location kinds
 --     (slug, label, icon, colour). Built-in kinds are a
 --     runtime fallback, never rows: a tenant with no rows still
 --     gets the built-ins (see docs/integration/MAP_TAGGING.md).
---   * map_link_roles — admin-definable link roles, same shape.
---   * map_providers — tile provider definitions. `tenant_id`
+--   * map_link_roles - admin-definable link roles, same shape.
+--   * map_providers - tile provider definitions. `tenant_id`
 --     NULL is a platform-shared definition (the three seeded
 --     rows below); a tenant row overrides / extends the
 --     catalogue for that tenant only.
---   * map_settings — one row per tenant: the active provider,
+--   * map_settings - one row per tenant: the active provider,
 --     the encrypted browser API key (ciphertext only, written
 --     through the settings endpoint, never returned), and the
 --     default map centre / zoom.
@@ -202,8 +202,8 @@ CREATE TABLE IF NOT EXISTS map_settings (
 -- API). No API key lives here, in code, or in any seed: the
 -- Mapbox and Google rows only declare that a browser key is
 -- required, and an admin supplies one per tenant through PUT
--- /api/v1/maps/settings. Any other provider — any open-source
--- tile server or a fully custom tile API — is a provider row an
+-- /api/v1/maps/settings. Any other provider - any open-source
+-- tile server or a fully custom tile API - is a provider row an
 -- admin creates through POST /api/v1/maps/providers with the
 -- same shape (tile URL template + attribution + key flag +
 -- max zoom + subdomains + options).

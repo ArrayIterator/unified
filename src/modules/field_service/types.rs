@@ -1,4 +1,4 @@
-// field_service module — Domain types.
+// field_service module - Domain types.
 //
 // Split from the former single-file module `src/modules/field_service.rs`.
 // The module root (`field_service.rs`) re-exports the public items, so the
@@ -21,9 +21,7 @@ use uuid::Uuid;
 use super::constants::{DEFAULT_INTERVAL_DAYS, DEFAULT_MAX_CONCURRENT_JOBS, DEFAULT_OVERDUE_ALERT_DAYS, DEFAULT_PRIORITY};
 use super::helpers::created;
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// One value of an admin-editable registry (work order types,
 /// priorities, equipment statuses). Seeded values carry
@@ -79,7 +77,7 @@ pub struct EquipmentType {
 }
 
 /// One equipment item. `asset_id` is a reference to the asset
-/// record owned by the assets module — this module never stores
+/// record owned by the assets module - this module never stores
 /// asset rows of its own. `warranty_end` is a local copy of the
 /// warranty date, refreshed from `assets.updated` events when
 /// that payload carries one; the assets module remains the source
@@ -311,7 +309,7 @@ pub struct WorkOrderItem {
 /// One part line of a work order. `stock_id` references a stock
 /// item owned by the assets module. `status` is `required`
 /// (planned), `reserved`, `consumption_requested` (a stock
-/// adjustment was requested from assets — stock itself is never
+/// adjustment was requested from assets - stock itself is never
 /// decremented here), or `returned`. The quantity is a count of
 /// whole units.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -359,7 +357,7 @@ pub struct DispatchAssignment {
 
 /// One customer sign-off. `signature_ref` is a storage reference
 /// (opaque key handed to the storage module) to the captured
-/// signature image — no signature bytes are stored here.
+/// signature image - no signature bytes are stored here.
 /// `follow_up_status` is `none`, `requested` (a survey send was
 /// requested through the surveys module), or
 /// `pending_no_distribution` (no surveys distribution was

@@ -1,4 +1,4 @@
-// Roles module — the Role Manager.
+// Roles module - the Role Manager.
 
 // Split into one file per concern under `src/modules/roles/`;
 // this root only declares the submodules and re-exports the

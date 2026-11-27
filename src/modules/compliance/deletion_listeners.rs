@@ -1,4 +1,4 @@
-//! Compliance Center module — GDPR / ISO support: data export — Deletion listeners.
+//! Compliance Center module - GDPR / ISO support: data export - Deletion listeners.
 //!
 //! Split from `src/modules/compliance.rs`; behaviour unchanged.
 
@@ -73,7 +73,7 @@ pub(super) fn on_deletion_item_executed(state: ComplianceState, ctx: &mut HookCo
 /// job, so the listener only completes a review the scheduler
 /// actually queued (`scheduler_status == "queued"`) and that has
 /// not been completed already (`reviewed_at` is `None`). A review
-/// the scheduler declined — or one that already ran — is skipped:
+/// the scheduler declined - or one that already ran - is skipped:
 /// completing it here would record a review that never happened
 /// and disagree with the creation response.
 pub(super) fn on_retention_review_requested(state: ComplianceState, ctx: &mut HookContext) {

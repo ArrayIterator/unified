@@ -259,7 +259,7 @@ pub(crate) async fn delete_share(
 
 /// PUBLIC (token-gated): read one workbook through its public
 /// link. The token is the credential, so no tenant context is
-/// needed — possession of the unguessable token is the
+/// needed - possession of the unguessable token is the
 /// authorization. The response is read-only: sheets and cells,
 /// never shares or the token hash.
 pub(crate) async fn get_public_workbook(

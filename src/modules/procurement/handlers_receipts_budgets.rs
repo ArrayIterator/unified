@@ -14,9 +14,7 @@ use super::helpers::*;
 use super::state::*;
 use super::types::*;
 
-// ---------------------------------------------------------------------------
 // Receipt, budget, and spend handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_receipts(
     ctx: web::Data<Arc<AppContext>>,

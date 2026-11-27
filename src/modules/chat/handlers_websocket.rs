@@ -9,9 +9,7 @@ use super::{limits::*, types::*, hub::*, state::*, helpers::*, module::*, handle
 
 
 
-// ---------------------------------------------------------------------------
 // WebSocket handler
-// ---------------------------------------------------------------------------
 pub(crate) async fn chat_ws(
     state: web::Data<ChatState>,
     req: HttpRequest,
@@ -118,7 +116,7 @@ pub(crate) async fn chat_ws(
 
 /// Per-event visibility for an unfiltered WebSocket subscription:
 /// the event's channel must exist and be visible to the
-/// subscriber (`can_view` — membership, unrestricted public, or a
+/// subscriber (`can_view` - membership, unrestricted public, or a
 /// role-restricted public channel the caller qualifies for).
 /// Without this, a subscriber with no `?channel=` filter received
 /// broadcasts for every channel, including private and DM channels

@@ -1,4 +1,4 @@
-// Pos module — payment method, settings, and report handlers.
+// Pos module - payment method, settings, and report handlers.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use unified_core::context::AppContext;
@@ -19,9 +19,7 @@ use std::sync::{
 use uuid::Uuid;
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Payment-method handlers (admin configuration)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_payment_methods(
     ctx: web::Data<Arc<AppContext>>,
@@ -246,9 +244,7 @@ pub(crate) async fn delete_payment_method(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Settings handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn get_settings(
     ctx: web::Data<Arc<AppContext>>,
@@ -386,9 +382,7 @@ pub(crate) async fn update_settings(
     }
 }
 
-// ---------------------------------------------------------------------------
 // End-of-day report
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn end_of_day_report(
     ctx: web::Data<Arc<AppContext>>,

@@ -13,9 +13,7 @@ use uuid::Uuid;
 /// readable); only the identity is anonymized.
 pub(crate) const DELETED_USER_ID: &str = "deleted-user";
 
-// ---------------------------------------------------------------------------
 // User deletion (users module owns the event)
-// ---------------------------------------------------------------------------
 
 /// `user.deleted` carries `user_id` (falling back to `id`, the
 /// same shape the library module reads). The user's threads,
@@ -96,9 +94,7 @@ where
     count
 }
 
-// ---------------------------------------------------------------------------
 // Badge listener (gamification owns badges)
-// ---------------------------------------------------------------------------
 
 /// `gamification.badge.awarded` carries `user_id` (and
 /// `badge_id`). The user's reputation row gains one badge; the
@@ -168,9 +164,7 @@ pub(crate) fn on_badge_awarded(state: ForumState, ctx: &mut HookContext) {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Search reindex listener (search owns the index)
-// ---------------------------------------------------------------------------
 
 /// `search.reindex.requested` republishes every stored thread and
 /// post through `search.index` so the search index is rebuilt

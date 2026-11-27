@@ -10,9 +10,7 @@ use std::sync::Arc;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Handlers: anonymization and visibility
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn anonymize_user(
     ctx: web::Data<Arc<AppContext>>,

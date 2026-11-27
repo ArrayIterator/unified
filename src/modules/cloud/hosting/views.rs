@@ -1,4 +1,4 @@
-// hosting module — Requirement-check views.
+// hosting module - Requirement-check views.
 //
 // Split from the former single-file module `src/modules/hosting.rs`.
 // The module root (`hosting.rs`) re-exports the public items, so the
@@ -22,9 +22,7 @@ use serde_json::{json, Value};
 use std::sync::Arc;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Requirement-check views.
-// ---------------------------------------------------------------------------
 
 /// One checked requirement of a hosting account.
 #[derive(Debug, Clone, Serialize)]

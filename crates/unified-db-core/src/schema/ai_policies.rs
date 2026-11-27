@@ -3,9 +3,7 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
-// AI access allowlists (migration 000036_ai_allowlists; batch 2 notes §8).
-// ---------------------------------------------------------------------------
+// AI access allowlists (migration 000036_ai_allowlists; batch 2 notes sec. 8).
 
 diesel::table! {
     ai_company_policies (id) {
@@ -120,9 +118,7 @@ diesel::table! {
     }
 }
 
-// ---------------------------------------------------------------------------
-// AI gating (migration 000064_ai_gating; batch 5 notes §c).
-// ---------------------------------------------------------------------------
+// AI gating (migration 000064_ai_gating; batch 5 notes sec. c).
 
 diesel::table! {
     ai_global_settings (key) {

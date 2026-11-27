@@ -1,4 +1,4 @@
-// bank_transfer — Internal service helpers shared by the handlers.
+// bank_transfer - Internal service helpers shared by the handlers.
 
 use super::*;
 use unified_core::context::AppContext;
@@ -99,7 +99,6 @@ pub(crate) fn forbid_self_approval(
     Ok(())
 }
 
-// ---------------------------------------------------------------------------
 // Administrator authorization: `X-User-Id` plus `X-Role` headers,
 // capability checked through the `role.check` hook, failing closed
 // (same pattern as the webhooks, roles and store modules). The
@@ -107,7 +106,6 @@ pub(crate) fn forbid_self_approval(
 // bank account creation / deletion) and widens the verification
 // and audit listings to every order; ordinary callers only ever
 // see their own records.
-// ---------------------------------------------------------------------------
 
 /// Capability required to manage bank transfer settings and bank
 /// accounts, and to list verifications and audit trails for every
@@ -172,9 +170,7 @@ pub(crate) fn require_admin(ctx: &AppContext, req: &HttpRequest) -> UnifiedResul
     require_permission(ctx, &caller.role, PERM_BANK_TRANSFER_MANAGE)?;
     Ok(caller)
 }
-// ---------------------------------------------------------------------------
 // Tenant edge guard (C3 pilot 4, gate-only).
-// ---------------------------------------------------------------------------
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request
@@ -440,9 +436,7 @@ pub(crate) fn already_exists_result(verification: &TransferVerification) -> Valu
     })
 }
 
-// ---------------------------------------------------------------------------
 // Hook listeners.
-// ---------------------------------------------------------------------------
 
 /// The store started a checkout with provider `bank_transfer` and
 /// emitted `payment.initiated` with `{ "order", "provider",

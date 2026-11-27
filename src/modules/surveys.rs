@@ -1,43 +1,43 @@
-// Surveys / NPS / CSAT module — survey builder with versions,
+// Surveys / NPS / CSAT module - survey builder with versions,
 // distribution triggers, tokenized responses, NPS + CSAT scoring
 // with trends, and low-score follow-ups through the tasks module.
 //
 // Routes live under `/api/v1/surveys`:
 //
 //   Surveys:
-//     GET/POST / — list surveys / create a survey (draft, version 1).
-//     GET/PATCH/DELETE /{id} — get one survey; PATCH on a draft
+//     GET/POST / - list surveys / create a survey (draft, version 1).
+//     GET/PATCH/DELETE /{id} - get one survey; PATCH on a draft
 //       edits in place, PATCH on a published survey creates a new
 //       version (draft) and returns it; DELETE removes a draft only.
-//     POST /{id}/publish — publish a draft version (the previously
+//     POST /{id}/publish - publish a draft version (the previously
 //       published version of the same family is archived).
 //     POST /{id}/archive.
 //   Questions:
-//     GET/POST /{id}/questions — list / add a question (draft
+//     GET/POST /{id}/questions - list / add a question (draft
 //       surveys only).
 //     GET/PATCH/DELETE /{id}/questions/{question_id} (draft only).
 //   Results and responses:
-//     GET  /{id}/results — NPS + CSAT scores, per-question stats,
+//     GET  /{id}/results - NPS + CSAT scores, per-question stats,
 //       breakdowns by agent / department / product, and trends
 //       (?bucket=daily|weekly, ?from, ?to, ?agent_id,
 //       ?department_id, ?product_id).
-//     GET  /{id}/responses — paginated, filter by status
+//     GET  /{id}/responses - paginated, filter by status
 //       (submitted / pending), score band, agent_id,
 //       department_id, product_id.
-//     GET  /responses/{response_id} — one response with answers.
+//     GET  /responses/{response_id} - one response with answers.
 //   Distributions:
-//     GET/POST /{id}/distributions — list / create a distribution
+//     GET/POST /{id}/distributions - list / create a distribution
 //       (trigger: manual, ticket_closed, purchase, scheduled).
 //     GET  /distributions/{id}.
-//     POST /distributions/{id}/send — send the invitations now
+//     POST /distributions/{id}/send - send the invitations now
 //       (manual recipient list, or re-send pending ones).
-//     DELETE /distributions/{id} — delete a pending distribution.
+//     DELETE /distributions/{id} - delete a pending distribution.
 //   Public response (no auth; see the public-access note below):
-//     GET  /public/{token} — the survey + questions for one
+//     GET  /public/{token} - the survey + questions for one
 //       response token.
-//     POST /public/{token} — submit the answers for one token.
+//     POST /public/{token} - submit the answers for one token.
 //
-// HONESTY — READ THIS FIRST. What is real in this module:
+// HONESTY - READ THIS FIRST. What is real in this module:
 // in-memory survey versions, questions, distributions, responses,
 // and answers; versioning (editing a published survey creates a
 // new draft version in the same family; publishing archives the
@@ -45,7 +45,7 @@
 // version row it answered); tokenized response links (32 random
 // bytes, base64url, one response per recipient per survey version,
 // token expiry); NPS computed on read as %promoters minus
-// %detractors and CSAT as % satisfied (score 4–5 of 5), with
+// %detractors and CSAT as % satisfied (score 4-5 of 5), with
 // daily / weekly trend buckets and breakdowns by agent /
 // department / product; trigger listeners for `ticket.updated`
 // (a ticket moving to `resolved` / `closed` invites its user to
@@ -58,12 +58,12 @@
 // `notification.requested` to the responsible user when one is
 // configured. What is NOT built here: actual delivery of survey
 // invitations (the module creates the tokenized response rows and
-// emits `notification.requested` per recipient — the notifications
+// emits `notification.requested` per recipient - the notifications
 // module owns delivery, exactly like the events module's reminder
 // path); a handler answering `task.create_requested` (no such
 // listener exists in `tasks.rs` today, so a follow-up stays
-// `requested` with no task id until the tasks module — or an
-// integrator — answers that event; the follow-up link is still
+// `requested` with no task id until the tasks module - or an
+// integrator - answers that event; the follow-up link is still
 // stored on the response and `surveys.followup.created` is still
 // emitted); and a public survey directory (public routes answer
 // only for a valid, unexpired token).
@@ -72,9 +72,9 @@
 // through its admin-managed `ApiAccessRule` records (default deny:
 // an endpoint is public only when a rule exists with
 // `public_access: true`). There is no reusable per-request
-// "is this endpoint public?" helper to call from a handler — the
+// "is this endpoint public?" helper to call from a handler - the
 // check lives in the API Manager middleware / `resolve_public`
-// path — so the public routes below rely on that gate: an
+// path - so the public routes below rely on that gate: an
 // administrator must create the matching `ApiAccessRule` rows for
 // `GET /api/v1/surveys/public/{token}` and
 // `POST /api/v1/surveys/public/{token}`. The routes are registered
@@ -114,14 +114,14 @@
 //     "payload": {"survey_id", "distribution_id", ...}}` when a
 //     scheduled distribution is created.
 // Events this module listens to:
-//   - `ticket.updated` — a ticket moving to `resolved` or `closed`
+//   - `ticket.updated` - a ticket moving to `resolved` or `closed`
 //     invites its user to every survey with an active
 //     `ticket_closed` distribution (department filter respected).
-//   - `store.order.completed`, `order.paid` — a completed order
+//   - `store.order.completed`, `order.paid` - a completed order
 //     invites its buyer to every survey with an active `purchase`
 //     distribution (product filter respected when the order
 //     payload names products).
-//   - `surveys.send_requested` — the event the scheduler emits
+//   - `surveys.send_requested` - the event the scheduler emits
 //     when a `surveys.send` job fires, following its naming rule
 //     (`backup.run` -> `backup.run_requested`); sends the pending
 //     invitations of the named distribution.

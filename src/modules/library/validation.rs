@@ -43,7 +43,7 @@ pub(crate) fn optional_text(value: &Option<String>, field: &str, max: usize) -> 
 }
 
 /// Validate a value against a settings list. The list is the live
-/// admin-configured one — never a constant in this file.
+/// admin-configured one - never a constant in this file.
 pub(crate) fn require_in_list(value: &str, field: &str, allowed: &[String]) -> UnifiedResult<String> {
     let checked = require_text(value, field, MAX_SLUG_LEN)?;
     if !allowed.iter().any(|item| item == &checked) {

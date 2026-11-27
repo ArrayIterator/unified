@@ -19,9 +19,7 @@ use super::types::AiProviderConnection;
 use super::types::AiUsageRecord;
 use super::types::RateBucket;
 
-// ---------------------------------------------------------------------------
 // Helpers: caller, permissions, validation.
-// ---------------------------------------------------------------------------
 
 /// The server-verified caller (see `unified_core::caller::Caller`):
 /// the user id identifies the actor, the server-resolved role is the
@@ -68,15 +66,13 @@ pub fn require_permission(ctx: &AppContext, role: &str, permission: &str) -> Uni
     }
 }
 
-// ---------------------------------------------------------------------------
-// Tenant edge guard (C3 pilot 3, task 314, group C).
+// Tenant edge guard (C3 pilot 3, group C).
 //
 // AI records carry companies as `Uuid`: policies carry a required
 // `company_id`, usage records carry `company_id: Option<Uuid>`.
 // Provider connections, drafts, personal keys / MCP servers and the
 // shared context carry no company field and are gate-only (drafts
 // and personal records are additionally user-scoped by owner).
-// ---------------------------------------------------------------------------
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request
@@ -99,7 +95,7 @@ pub(crate) fn require_tenant(
 /// verified caller (company resolved from the database at
 /// authentication time) and the middleware-resolved tenant context
 /// are sources. Do NOT use `resolve_caller_company` (header-first,
-/// task 317's job) for guard decisions.
+/// another module's job) for guard decisions.
 pub(crate) fn caller_company_uuid(
     tenant: &unified_core::tenancy::TenantContext,
     req: &HttpRequest,
@@ -164,11 +160,11 @@ pub(crate) fn require_record_in_company_scope_uuid(
 }
 
 /// Fail closed (403) when a stored record is outside the caller's
-/// company scope FOR A WRITE (C3 task 315, strict by default).
+/// company scope FOR A WRITE (C3, strict by default).
 /// Unlike the read check above (rule A), a write requires an exact
 /// company match: a company caller may write only their own
-/// company's records — global (unscoped) records are platform-only
-/// — and an unresolved caller may write nothing. Mutation handlers
+/// company's records - global (unscoped) records are platform-only
+/// - and an unresolved caller may write nothing. Mutation handlers
 /// call this right after loading the record they mutate; handlers
 /// that only read the record, or load a parent to scope a child
 /// write, keep the read check.
@@ -393,9 +389,7 @@ pub(crate) fn emit_audit(ctx: &AppContext, event: &str, actor: &str, resource: &
     ctx.hooks.emit(event, Value::Object(payload));
 }
 
-// ---------------------------------------------------------------------------
 // Helpers: rate limits and usage recording.
-// ---------------------------------------------------------------------------
 
 /// Enforce the per-minute rate limit for one provider connection
 /// and one caller. The bucket is keyed by `(connection, user)` so
@@ -560,11 +554,9 @@ pub(crate) fn record_denied_usage(
     record
 }
 
-// ---------------------------------------------------------------------------
 // Access allowlists: caller identity, validation, authorization.
 //
 // Enforcement model
-// -----------------
 // The allowlist is default-deny. Enforcement is switched on
 // unless an admin explicitly opts into legacy open mode
 // (`AiGlobalSettings::open_mode`, changed through
@@ -584,7 +576,6 @@ pub(crate) fn record_denied_usage(
 // The `X-Company-Id` header is NEVER trusted here: it is
 // client-asserted, so trusting it would let any JWT caller claim
 // another company's AI caps and policies.
-// ---------------------------------------------------------------------------
 
 /// The caller's user id, parsed from the `X-User-Id` header. The
 /// actor string is the only identity this module trusts; a body

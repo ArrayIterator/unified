@@ -1,4 +1,4 @@
-//! Content Management module. — Module.
+//! Content Management module. - Module.
 //!
 //! Split from `src/modules/content.rs`; behaviour unchanged.
 

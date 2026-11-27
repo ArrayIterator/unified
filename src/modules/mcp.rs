@@ -107,9 +107,7 @@
 // authorisation, never through direct MCP SQL.
 
 
-// ---------------------------------------------------------------------------
 // Constants.
-// ---------------------------------------------------------------------------
 
 pub mod ai_capabilities;
 pub mod protocol;

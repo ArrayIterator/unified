@@ -1,4 +1,4 @@
-// documents — HTTP handlers: folders, document move, document rename.
+// documents - HTTP handlers: folders, document move, document rename.
 //
 // Every handler follows the module's guard order (C3): tenant
 // first (`require_tenant`), then the caller company scope
@@ -22,9 +22,7 @@ use actix_web::{HttpRequest, HttpResponse, web};
 use serde_json::{Value, json};
 use std::sync::Arc;
 
-// ---------------------------------------------------------------------------
-// Handlers — folders
-// ---------------------------------------------------------------------------
+// Handlers - folders
 
 /// Create a folder (`POST /folders`, body `CreateFolderRequest`).
 /// The stored `company_id` is the caller's scope, never a client
@@ -209,7 +207,7 @@ pub(crate) async fn move_folder(
 
 /// Delete a folder (`DELETE /folders/{id}`). Only the owner or an
 /// admin may delete. The delete is refused (409) while the folder
-/// still holds documents or subfolders — the caller moves or
+/// still holds documents or subfolders - the caller moves or
 /// deletes the contents first, so a delete can never orphan or
 /// silently drop files. The UI confirms before calling this
 /// endpoint; the server enforces the non-empty guard regardless.
@@ -248,9 +246,7 @@ pub(crate) async fn delete_folder(
     json::respond(result, debug)
 }
 
-// ---------------------------------------------------------------------------
-// Handlers — document move / rename
-// ---------------------------------------------------------------------------
+// Handlers - document move / rename
 
 /// Move a document between folders (`POST /{id}/move`, body
 /// `MoveDocumentRequest`). Only the owner or an admin may move.

@@ -13,9 +13,7 @@ use std::sync::Arc;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Objects (file browser + upload / download / delete / move).
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_objects(
     state: web::Data<StorageManagerState>,
@@ -44,7 +42,7 @@ pub(crate) async fn list_objects(
         Err(error) => return err_response(error, debug),
     };
     // Tenant scoping: a non-admin may list only a bucket of their
-    // own company (or a shared, company-less bucket — where the
+    // own company (or a shared, company-less bucket - where the
     // object filter below still applies).
     if let Err(error) = check_bucket_access(&bucket, _scope.as_deref(), is_admin) {
         return err_response(error, debug);
@@ -87,7 +85,7 @@ pub(crate) async fn list_objects(
     // Live enumeration where the provider supports it: unrecorded
     // keys are shown with `recorded: false`. When the provider
     // cannot list, the recorded rows are the whole answer (see the
-    // module header) — that is reported, not hidden.
+    // module header) - that is reported, not hidden.
     let mut listing_supported = false;
     let mut listing_error: Option<String> = None;
     if let Ok(provider) = provider_for_bucket(&ctx, &bucket) {
@@ -95,7 +93,7 @@ pub(crate) async fn list_objects(
             Ok(keys) => {
                 listing_supported = true;
                 // Live-only keys have unknown ownership, so they
-                // are shown to admins only — a non-admin must never
+                // are shown to admins only - a non-admin must never
                 // learn about (or fetch) an object whose owner the
                 // hub cannot prove.
                 if is_admin {
@@ -179,7 +177,7 @@ pub(crate) async fn upload_object(
         let bucket = load_bucket(&state, &id)?;
         // Tenant scoping: a non-admin uploads only into a bucket
         // of their own company (or a shared bucket), and the
-        // recorded company is their own company — never a
+        // recorded company is their own company - never a
         // caller-supplied ?company_id= for another tenant.
         check_bucket_access(&bucket, _scope.as_deref(), is_admin)?;
         let company_id = resolve_upload_company(
@@ -299,7 +297,7 @@ pub(crate) async fn upload_object(
         );
         // The object row now counts towards the plan usage, so the
         // plan part of the reservation is released (the explicit
-        // quota counters stay reserved — they were the reservation).
+        // quota counters stay reserved - they were the reservation).
         release_plan_reservation(
             &state,
             company_id.as_deref(),
@@ -531,7 +529,7 @@ pub(crate) async fn delete_object(
 /// Verify one recorded object: download it, hash the bytes, and
 /// compare with the recorded SHA-256. A mismatch is reported as
 /// data (`"status": "mismatch"`) and emits
-/// `storage.object.checksum_mismatch` — the endpoint itself never
+/// `storage.object.checksum_mismatch` - the endpoint itself never
 /// fails on a mismatch, so a scanner can sweep a whole bucket. An
 /// object with no recorded checksum is backfilled from the bytes
 /// just read (`"status": "recorded"`), so later downloads verify.
@@ -679,7 +677,7 @@ pub(crate) struct OrphanCleanupRequest {
 
 /// Delete provider objects that have no recorded hub row
 /// (orphans): objects uploaded outside the hub, or left behind by
-/// a failed or partial operation. Dry-run by default — the caller
+/// a failed or partial operation. Dry-run by default - the caller
 /// must pass `"dry_run": false` to delete anything. Providers that
 /// cannot enumerate objects (S3 / R2 / Drive) answer with an error
 /// instead of pretending the bucket is empty.
@@ -851,7 +849,7 @@ pub(crate) async fn move_object(
         // against the recorded hub rows (the authoritative state);
         // provider-side keys never recorded through the hub are
         // not visible here, so an overwrite can still clobber an
-        // unrecorded provider key — that remainder is documented
+        // unrecorded provider key - that remainder is documented
         // in the module header.
         let destination = state
             .objects
@@ -919,7 +917,7 @@ pub(crate) async fn move_object(
         // and the recorded state agree again; only when the
         // rollback itself fails is the partial state reported
         // (metadata `partial_move`, naming the destination key so
-        // an operator can reconcile it — the recorded state still
+        // an operator can reconcile it - the recorded state still
         // points at the source key).
         if let Err(error) = provider.delete(&input.key).await {
             match provider.delete(&input.new_key).await {
@@ -1015,7 +1013,7 @@ mod tests {
         // Overwriting a smaller destination frees only the difference.
         assert_eq!(move_quota_delta(1000, Some(400)), (600, 0));
         // Overwriting a larger destination frees nothing net (negative
-        // delta is fine — the quota counters clamp at zero on apply).
+        // delta is fine - the quota counters clamp at zero on apply).
         assert_eq!(move_quota_delta(100, Some(400)), (-300, 0));
         // A move never changes the file count.
         assert_eq!(move_quota_delta(1000, Some(1000)).1, 0);

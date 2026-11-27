@@ -72,9 +72,7 @@ pub(crate) fn resolve_tenant(req: &HttpRequest) -> UnifiedResult<String> {
         .map(|context| context.tenant_id.to_string())
 }
 
-// ---------------------------------------------------------------------------
-// Tenant edge guard (C3 pilot 5, task 319).
-// ---------------------------------------------------------------------------
+// Tenant edge guard (C3 pilot 5).
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request
@@ -89,7 +87,7 @@ pub(crate) fn resolve_tenant(req: &HttpRequest) -> UnifiedResult<String> {
 /// filters. `caller_company` below is therefore the mismatch-only
 /// company check (pilot 4 group D idiom), not a strict
 /// `require_company` gate: a tenant/caller company mismatch is 403,
-/// but a write is never refused only because no company resolves —
+/// but a write is never refused only because no company resolves -
 /// the write is still fully tenant-partitioned by `tenant_id`.
 pub(crate) fn require_tenant(
     req: &HttpRequest,
@@ -100,12 +98,12 @@ pub(crate) fn require_tenant(
 /// The company scope the caller acts in: the tenant context's
 /// company first, the verified caller's server-resolved company
 /// otherwise. Fails closed (403) when both are present and disagree
-/// — a request must not carry one company in its tenant context and
+/// - a request must not carry one company in its tenant context and
 /// another in its verified identity. The `X-Company-Id` header is
 /// NEVER trusted here: only the verified caller (company resolved
 /// from the database at authentication time) and the
 /// middleware-resolved tenant context are sources (header trust was
-/// removed by task 317; this helper must never reintroduce it).
+/// removed; this helper must never reintroduce it).
 pub(crate) fn caller_company(
     tenant: &unified_core::tenancy::TenantContext,
     req: &HttpRequest,
@@ -270,7 +268,7 @@ pub(crate) fn validate_late_fee_rule(rule: &LateFeeRule) -> UnifiedResult<()> {
 
 /// Validate a period supplied as data: the unit must be one of
 /// the documented calendar units and the length must be
-/// positive. The units are data values, not a code list — an
+/// positive. The units are data values, not a code list - an
 /// unknown unit is rejected here so no rate is ever priced with
 /// a guessed duration.
 pub(crate) fn validate_period(unit: &str, length: i64) -> UnifiedResult<()> {
@@ -318,9 +316,7 @@ pub(crate) fn validate_notes(raw: &Option<String>) -> UnifiedResult<Option<Strin
     }
 }
 
-// ---------------------------------------------------------------------------
 // Tenant-scoped loaders
-// ---------------------------------------------------------------------------
 //
 // Every loader checks the row's `tenant_id` against the caller's
 // tenant. A row from another tenant reads as 404, never 403, so
@@ -406,9 +402,7 @@ pub(crate) fn load_delivery(
     Ok(delivery)
 }
 
-// ---------------------------------------------------------------------------
 // Availability
-// ---------------------------------------------------------------------------
 
 /// Booked periods for a listing: every order that still holds
 /// units, as `(starts_at, ends_at, quantity)` triples. The

@@ -1,10 +1,10 @@
-//! Entitlements state (split from state.rs; moved verbatim).
+//! Entitlements state.
 
 use super::*;
 
 impl EntitlementsState {
 
-    /// Grace policy — the single source of truth for what grace
+    /// Grace policy - the single source of truth for what grace
     /// means, applied identically by the gate, `effective()`,
     /// `enable_module`, and provisioning:
     ///
@@ -181,7 +181,7 @@ impl EntitlementsState {
     /// union of active stored sources plus the licensing check.
     /// `ctx` is `None` inside hook handlers that run before `init`
     /// stashed a context, in which case only stored rows are
-    /// consulted — the licensing leg is skipped, never assumed.
+    /// consulted - the licensing leg is skipped, never assumed.
     /// Fail closed throughout: no active source means locked.
     /// Hook handlers should call `effective_for_hook` instead,
     /// which passes the stashed context when one exists so the
@@ -216,7 +216,7 @@ impl EntitlementsState {
         // expired row is still inside its grace window. Grace is
         // read-only by the single policy (see `grace_applies`):
         // it never entitles, never allows writes, and never
-        // enables — exactly as the gate refuses it.
+        // enables - exactly as the gate refuses it.
         let mut grace_ends_at: Option<DateTime<Utc>> = None;
         let mut grace_sources: Vec<EntitlementSourceView> = Vec::new();
         for row in self.grace_rows(company_id, module_id) {
@@ -284,7 +284,7 @@ impl EntitlementsState {
     /// stashed at `init`, so the licensing leg is evaluated
     /// exactly as the HTTP handlers evaluate it. When no context
     /// was stashed yet (module not initialized), this falls back
-    /// to stored-rows-only — the same fail-closed behaviour the
+    /// to stored-rows-only - the same fail-closed behaviour the
     /// hook path had before, never an assumed entitlement.
     pub(crate) fn effective_for_hook(
         &self,

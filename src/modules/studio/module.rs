@@ -1,13 +1,13 @@
 // Studio - Module struct, route table and registration.
 
-// Studio module — user-side customizer (metadata-driven only).
+// Studio module - user-side customizer (metadata-driven only).
 //
 // A Studio-style customizer: administrators and power users add custom
 // fields, validation rules, saved list views, and form layouts to any
 // record type, without touching code and without changing the database
 // schema at runtime.
 //
-// HARD BOUNDARY — READ THIS FIRST. This module is STRICTLY
+// HARD BOUNDARY - READ THIS FIRST. This module is STRICTLY
 // METADATA-DRIVEN. It never generates code, never alters a database
 // table at runtime, never executes user-supplied code, and never adds
 // a column. Customizations are metadata records that the owning
@@ -19,7 +19,7 @@
 // Routes live under `/api/v1/studio`:
 //
 //   Field types (closed vocabulary registry, read-only):
-//     GET  /field-types — the seven field types and what each supports.
+//     GET  /field-types - the seven field types and what each supports.
 //   Record types (admin-editable registry; modules register theirs
 //   through the `studio.record_type.register` hook):
 //     GET/POST /record-types
@@ -33,9 +33,9 @@
 //   Custom values (generic key-value store):
 //     GET/POST /values
 //     GET/DELETE /values/{id}
-//     POST /values/validate — validate a value without saving it.
+//     POST /values/validate - validate a value without saving it.
 //     GET  /records/{record_type}/{record_id}/custom-fields
-//        — effective definitions merged with stored values.
+//        - effective definitions merged with stored values.
 //   Saved list views (per user / per company, private or shared):
 //     GET/POST /views
 //     GET/PUT/DELETE /views/{id}
@@ -48,8 +48,8 @@
 // Field types (closed vocabulary, same precedent as the closed
 // `ProductCategory` set in `unified_core::modules`): `text`,
 // `number`, `decimal`, `date`, `boolean`, `select`, `user_reference`.
-// Everything else about a field — its options, defaults, help text,
-// and validation rules — is data stored on the definition row.
+// Everything else about a field - its options, defaults, help text,
+// and validation rules - is data stored on the definition row.
 //
 // Field definitions are VERSIONED. Creating a definition stores
 // version 1. Updating a definition never mutates the old row: it
@@ -62,13 +62,13 @@
 //
 // Validation rules (all data on the definition, all enforced
 // server-side when a value is saved):
-//   - `required` — a value must be present and non-empty.
-//   - `min` / `max` — numeric bounds for `number` and `decimal`.
-//   - `min_length` / `max_length` — text length bounds.
-//   - `pattern` — a regular expression a `text` value must match.
+//   - `required` - a value must be present and non-empty.
+//   - `min` / `max` - numeric bounds for `number` and `decimal`.
+//   - `min_length` / `max_length` - text length bounds.
+//   - `pattern` - a regular expression a `text` value must match.
 //     The pattern is compiled at definition time: an invalid regex
 //     is rejected when the definition is created, never at use time.
-//   - `options` — the allowed values for `select` (data, not code).
+//   - `options` - the allowed values for `select` (data, not code).
 //
 // Safety:
 //   - A record type must be registered (see the registry below)
@@ -81,12 +81,12 @@
 //     `hideable` flag. A layout may never hide a system field whose
 //     `hideable` is false, and a layout may never hide a system
 //     field marked `required`. The owning module, not Studio, owns
-//     the final render — Studio only records the layout metadata.
+//     the final render - Studio only records the layout metadata.
 //   - Company scoping: the caller's company scope is resolved from
 //     server-side sources only (verified caller, tenant context,
-//     `user.company_requested` hook) — never from a body/query
+//     `user.company_requested` hook) - never from a body/query
 //     `company_id` or the `X-Company-Id` header, both of which are
-//     client-asserted — and a body/query `company_id` that disagrees
+//     client-asserted - and a body/query `company_id` that disagrees
 //     with it is rejected (403); list endpoints only return the
 //     caller's own company rows plus global rows, and single-row
 //     reads of another company's rows answer 404. Platform is an
@@ -97,27 +97,27 @@
 //     `tenant_id`, so full tenant partitioning still needs the
 //     store-shape change described in `auth.rs`.
 //
-// Hook contract (the core of this module). Query hooks — owning
+// Hook contract (the core of this module). Query hooks - owning
 // modules ask, Studio answers by adding a result to the hook
 // context; the requester reads `context.results`:
 //   - `studio.fields.requested`
 //     Request payload: `{"record_type": "crm.lead", "company_id": ""}`
 //     (empty `company_id` means global definitions only).
 //     Result payload: `{"record_type": "...", "company_id": "...",
-//     "definitions": [<FieldDefinition>, ...]}` — the effective
+//     "definitions": [<FieldDefinition>, ...]}` - the effective
 //     definitions (highest active version per field key, company
 //     definitions shadowing global ones).
 //   - `studio.layout.requested`
 //     Request payload: `{"record_type": "crm.lead", "company_id": ""}`.
 //     Result payload: `{"record_type": "...", "company_id": "...",
-//     "layout": <FormLayout | null>}` — the default layout for that
+//     "layout": <FormLayout | null>}` - the default layout for that
 //     company, falling back to the global default layout, or null
 //     when no layout exists.
 //   - `studio.views.requested`
 //     Request payload: `{"record_type": "crm.lead",
 //     "company_id": "...", "user_id": "..."}`.
 //     Result payload: `{"record_type": "...", "views": [<ListView>,
-//     ...]}` — the views visible to that user (their own views plus
+//     ...]}` - the views visible to that user (their own views plus
 //     shared company views), defaults first.
 //   - `studio.record_type.register`
 //     Request payload: `{"record_type": "crm.lead",
@@ -133,7 +133,7 @@
 //     `studio.views.requested`, `studio.record_type.register`) have
 //     listeners registered in `register_hooks` below, ready to
 //     answer, but NO emitter of any of them exists anywhere in the
-//     tree outside this module today — no owning module asks Studio
+//     tree outside this module today - no owning module asks Studio
 //     through the hook bus yet (only the `.changed` events below
 //     are actually emitted, by this module itself). The listeners
 //     are kept deliberately: they are the extension points other
@@ -141,18 +141,18 @@
 //     rendering. Do not invent emitters here; the owning modules
 //     add the `emit` call when they adopt the contract.
 // Events emitted on the hook bus:
-//   - `studio.fields.changed` — `{"field_key", "record_type",
+//   - `studio.fields.changed` - `{"field_key", "record_type",
 //     "company_id", "version", "definition_id", "action":
 //     "created" | "updated" | "archived"}`. Owning modules listen to
 //     this to invalidate cached definitions.
-//   - `studio.values.changed` — `{"record_type", "record_id",
+//   - `studio.values.changed` - `{"record_type", "record_id",
 //     "field_key", "company_id", "action": "set" | "deleted"}`.
-//   - `studio.views.changed` — `{"view_id", "record_type",
+//   - `studio.views.changed` - `{"view_id", "record_type",
 //     "company_id", "action": "created" | "updated" | "deleted" |
 //     "default_changed"}`.
-//   - `studio.layouts.changed` — `{"layout_id", "record_type",
+//   - `studio.layouts.changed` - `{"layout_id", "record_type",
 //     "company_id", "action": "created" | "updated" | "deleted"}`.
-//   - `studio.record_type.registered` — `{"record_type",
+//   - `studio.record_type.registered` - `{"record_type",
 //     "module_id", "label"}`.
 //
 // Actor identity: until the auth module provides an extractor, the
@@ -178,7 +178,7 @@
 // schema. The migration has never been executed against a live
 // PostgreSQL database.
 //
-// Honesty — what is real here: metadata CRUD with server-side
+// Honesty - what is real here: metadata CRUD with server-side
 // validation, versioned definitions, the generic key-value value
 // store, saved views, layouts, the record-type registry, and the
 // hook contract above. What is NOT built here: the owning modules
@@ -186,7 +186,7 @@
 // module must adopt the query hooks), there is no migration of
 // values when a definition's type changes (the old values stay
 // attached to the old version), and there is no drag-and-drop
-// layout builder UI — layouts are JSON metadata over HTTP.
+// layout builder UI - layouts are JSON metadata over HTTP.
 
 use crate::modules::ai;
 use actix_web::web;
@@ -209,9 +209,7 @@ use super::{
     update_view, validate_value_handler,
 };
 
-// ---------------------------------------------------------------------------
 // Module.
-// ---------------------------------------------------------------------------
 
 pub struct StudioModule {
     state: StudioState,

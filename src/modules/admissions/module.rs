@@ -1,11 +1,11 @@
-// Admissions module — new-student registration (batch 13, builder B3).
+// Admissions module - new-student registration (batch 13, builder B3).
 //
 // Admission periods per academic year and term, online registration
 // through the Forms module, selection stages with weighted scoring,
 // result announcement, registration fees through Billing, a document
 // checklist through the Documents module, an ordered waitlist, and
 // enrolment handoff to the academic system. Interconnection happens
-// only through the hook bus — no module calls another module directly.
+// only through the hook bus - no module calls another module directly.
 //
 // Identity rule: an application stores the applicant user id ONLY.
 // Names, emails, and all other profile data live in the Users module
@@ -19,14 +19,14 @@
 // in memory, the same convention as the HR payroll amounts.
 //
 // Role-based access (enforced server-side on every handler):
-//   - `admissions:read`      — read admission records (applicants see
+//   - `admissions:read`      - read admission records (applicants see
 //                              only their own applications and results).
-//   - `admissions:read_all`  — read every application and result.
-//   - `admissions:manage`    — create/update/delete periods, quotas,
+//   - `admissions:read_all`  - read every application and result.
+//   - `admissions:manage`    - create/update/delete periods, quotas,
 //                              stages, required documents, decisions,
 //                              checklist verification, fee waivers.
-//   - `admissions:apply`     — file and edit your own application.
-//   - `admissions:score`     — record and correct stage scores.
+//   - `admissions:apply`     - file and edit your own application.
+//   - `admissions:score`     - record and correct stage scores.
 // Capabilities are checked through the `role.check` hook and fail
 // closed: no answer means not allowed. No `admissions:*` capability
 // is granted by the default roles; an administrator must grant them.
@@ -127,7 +127,7 @@
 //      marks the application `enrolled` before emitting, so the
 //      `status == "accepted"` branch in
 //      `on_academic_student_created` is a no-op on the normal path
-//      — the student id link is what matters there.
+//      - the student id link is what matters there.
 //   4. The documents module has no synchronous lookup hook, so a
 //      document id supplied to the attach endpoint cannot be verified
 //      against the documents store here. Attach records the link and
@@ -141,7 +141,7 @@
 //      the academic system. Quota matching is exact string equality
 //      on (`program_id`, `level`); an application whose pair has no
 //      quota row is treated as quota-unlimited only when the period
-//      has no quota rows at all — otherwise acceptance is refused
+//      has no quota rows at all - otherwise acceptance is refused
 //      with a 409 until a quota row exists for the pair.
 //   6. `route_version_support` returns `All`, so the API Manager's
 //      per-version registry picks every route up. No route here is
@@ -155,7 +155,7 @@
 // Applicants read their own application and result only after
 // authenticating with `X-User-Id` / `X-Role` like every other module.
 
-// admissions module — Module implementation.
+// admissions module - Module implementation.
 //
 // Split from the former single-file module `src/modules/admissions.rs`.
 // The module root (`admissions.rs`) re-exports the public items, so the
@@ -192,9 +192,7 @@ use super::handlers_results::{list_results, publish_results, unpublish_results};
 use super::handlers_settings::{list_settings, update_setting};
 use super::ai_capabilities::AI_CAPABILITIES;
 
-// ---------------------------------------------------------------------------
 // Module implementation
-// ---------------------------------------------------------------------------
 
 impl Module for AdmissionsModule {
     fn id(&self) -> &'static str {

@@ -68,14 +68,12 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One configured chain network: EVM (generic JSON-RPC), Stellar
 -- (Horizon), Cardano (Blockfrost- or Koios-style REST), or generic
 -- (configuration only, no provider implementation). Endpoint URLs are
 -- validated against an allowlist before they are stored; a localhost
 -- or private endpoint is only stored when an admin explicitly
 -- allowlisted it (`allow_private_endpoint`).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS web3_networks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
@@ -99,10 +97,8 @@ CREATE TABLE IF NOT EXISTS web3_networks (
 CREATE INDEX IF NOT EXISTS idx_web3_networks_kind_enabled
     ON web3_networks (kind, enabled);
 
--- ---------------------------------------------------------------------------
 -- One address watched for incoming and outgoing transactions, owned
 -- by one user (optionally inside one company).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS web3_watched_addresses (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     network_id UUID NOT NULL REFERENCES web3_networks (id)
@@ -125,12 +121,10 @@ CREATE INDEX IF NOT EXISTS idx_web3_watched_addresses_network_id
 CREATE INDEX IF NOT EXISTS idx_web3_watched_addresses_company_id
     ON web3_watched_addresses (company_id);
 
--- ---------------------------------------------------------------------------
 -- One observed on-chain transaction. `amount_raw` is the exact
 -- chain-native amount as a decimal string (authoritative);
 -- `amount` is the human-readable decimal when it fits NUMERIC(19,4)
 -- (display only). Deduplicated by (network_id, tx_hash).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS web3_transactions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     network_id UUID NOT NULL REFERENCES web3_networks (id)
@@ -168,13 +162,11 @@ CREATE INDEX IF NOT EXISTS idx_web3_transactions_to_address
 CREATE INDEX IF NOT EXISTS idx_web3_transactions_status
     ON web3_transactions (status);
 
--- ---------------------------------------------------------------------------
 -- One on-chain anchor: only the SHA-256 hash of a Unified record
 -- (invoice, contract, certificate, audit entry, or any other record
 -- type) is anchored. Record contents are never stored here and never
 -- sent on-chain. The network reference is RESTRICT: anchors are
 -- tamper-evident proof and must outlive their network row.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS web3_anchors (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     record_type TEXT NOT NULL,
@@ -205,14 +197,12 @@ CREATE INDEX IF NOT EXISTS idx_web3_anchors_tx_hash
 CREATE INDEX IF NOT EXISTS idx_web3_anchors_requested_by
     ON web3_anchors (requested_by);
 
--- ---------------------------------------------------------------------------
 -- One read-only linked wallet. The server observes this address and
 -- can never spend from it. `challenge_nonce_hash` is the SHA-256 hex
 -- of the outstanding challenge nonce; the raw nonce is never stored.
 -- `verification_status` is `unverified`, `pending`, `verified`,
 -- `lookup_only` (Cardano provider lookup: the address exists, which
 -- does not by itself prove control), or `failed`.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS web3_wallets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id TEXT NOT NULL,
@@ -239,12 +229,10 @@ CREATE INDEX IF NOT EXISTS idx_web3_wallets_network_id
 CREATE INDEX IF NOT EXISTS idx_web3_wallets_verification_status
     ON web3_wallets (verification_status);
 
--- ---------------------------------------------------------------------------
 -- One balance snapshot for a linked wallet. `amount_raw` is the exact
 -- chain-native amount as a decimal string (authoritative);
 -- `amount` is the human-readable decimal when it fits NUMERIC(19,4)
 -- (display only). Unlinking a wallet removes its snapshots.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS web3_balances (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     wallet_id UUID NOT NULL REFERENCES web3_wallets (id)
@@ -266,12 +254,10 @@ CREATE INDEX IF NOT EXISTS idx_web3_balances_wallet_id_asset
 CREATE INDEX IF NOT EXISTS idx_web3_balances_network_id
     ON web3_balances (network_id);
 
--- ---------------------------------------------------------------------------
 -- Module settings (one row, scope = 'global'). The public ledger is
 -- default-deny (`public_ledger_enabled = FALSE`). The anchoring relay
 -- URL must pass the endpoint allowlist; the anchoring service key is
 -- ciphertext only (write-only, never returned, never logged).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS web3_settings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     scope TEXT NOT NULL DEFAULT 'global',

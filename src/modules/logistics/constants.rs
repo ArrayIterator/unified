@@ -1,4 +1,4 @@
-//! Logistics module — shipments, fleet, warehouses, delivery — Module constants.
+//! Logistics module - shipments, fleet, warehouses, delivery - Module constants.
 //!
 //! Split from `src/modules/logistics.rs`; behaviour unchanged.
 

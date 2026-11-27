@@ -17,9 +17,7 @@ use super::helpers::{now_string};
 use super::state::{NewsletterState, campaigns_store, click_urls_store, lists_store, seen_tracking_store, subscribers_store, tracking_store};
 use super::types::{TrackingEvent};
 
-// ---------------------------------------------------------------------------
 // Tracking.
-// ---------------------------------------------------------------------------
 
 /// Record one open/click event and update the campaign stats.
 /// Returns false (recording nothing) when the campaign does not

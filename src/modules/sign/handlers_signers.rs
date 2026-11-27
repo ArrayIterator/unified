@@ -82,9 +82,7 @@ fn signer_event(state: &SignState, event: &str, tenant_id: &str, signer: &SignSi
     );
 }
 
-// ---------------------------------------------------------------------------
 // Signer handlers (authenticated)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_signers(
     state: web::Data<SignState>,
@@ -489,9 +487,7 @@ pub(crate) async fn resend_signer(
     }
 }
 
-// ---------------------------------------------------------------------------
-// Public token-gated handlers (no auth — the token is the credential)
-// ---------------------------------------------------------------------------
+// Public token-gated handlers (no auth - the token is the credential)
 
 /// Sign page data for one signing token. The first view records
 /// the view (status `viewed`, audit `viewed`); later views are

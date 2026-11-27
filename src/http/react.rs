@@ -2,7 +2,7 @@
 // A theme that requires `react` is built by Vite into
 // `assets/react/dist/<theme_id>/` (`npm run build:react:all`), and
 // the output is committed, so the server only serves files from disk
-// at runtime — Node/npm are build-time only and the server never
+// at runtime - Node/npm are build-time only and the server never
 // builds anything here. The files are already minified by esbuild,
 // so they bypass the startup minification pipeline
 // (`crate::themes::assets::minify`) entirely: the bytes on disk are
@@ -11,7 +11,7 @@
 // Which bundle answers `/react` is resolved from the active theme
 // through the shared [`ThemeEngine`] (see `resolve_react_base`):
 // the active theme's own bundle when it requires `react` and that
-// bundle is built, otherwise the Untitled bundle — the React app is
+// bundle is built, otherwise the Untitled bundle - the React app is
 // built on the Untitled component library, so Untitled is the React
 // track's theme whatever HBS theme the server-rendered pages use.
 // When neither bundle exists the track answers 404 naming the build
@@ -22,14 +22,14 @@
 // HBS user dashboard (`/dashboard`): `/react` is not on the public
 // allowlist, so an anonymous request is rejected with 401 in the
 // standard error envelope before this handler runs. There is no
-// login redirect anywhere in the dashboard mechanism — the HBS
-// dashboard answers 401 the same way — so this handler adds none.
+// login redirect anywhere in the dashboard mechanism - the HBS
+// dashboard answers 401 the same way - so this handler adds none.
 // Tenant-host blocking is identical to `/dashboard` too: the server
 // factory appends `/react` to the tenant middleware's blocked paths
 // whenever `/dashboard` is blocked (see `src/http/server.rs`).
 //
 // Caching: the Vite content hash in the file name
-// (`index-<hash>.js` / `index-<hash>.css`) is the fingerprint —
+// (`index-<hash>.js` / `index-<hash>.css`) is the fingerprint -
 // hashed files are served immutable for a year, `index.html` is
 // served `no-cache`, and any other file gets the same one-hour
 // cache as an unfingerprinted theme asset. No `?v=` fingerprint is
@@ -48,8 +48,8 @@ use unified_core::json;
 
 /// Mount point of the React track. A constant, not a config value:
 /// the Vite `base` (`/react/`) is baked into the committed build
-/// output — a per-theme `index.html` references
-/// `/react/assets/index-<hash>.js` — so a runtime rename would serve
+/// output - a per-theme `index.html` references
+/// `/react/assets/index-<hash>.js` - so a runtime rename would serve
 /// a shell whose assets 404. Renaming the mount means rebuilding
 /// with a new base.
 pub const REACT_MOUNT: &str = "/react";
@@ -93,7 +93,7 @@ pub async fn serve_react(
 }
 
 /// Resolve the bundle directory that answers `/react` from the
-/// active theme, through the engine — the only place a theme id
+/// active theme, through the engine - the only place a theme id
 /// becomes a filesystem path here:
 ///
 /// 1. The active theme's own bundle, when the active theme requires
@@ -149,7 +149,7 @@ fn serve_react_path(
     }
     // The canonicalized file must stay inside the canonicalized
     // bundle directory: a symlink inside the bundle pointing outside
-    // it serves nothing. A missing file is not an error here — it
+    // it serves nothing. A missing file is not an error here - it
     // falls through to the SPA shell below.
     let Ok(canonical_base) = base.canonicalize() else {
         return serve_index(&base, config.debug);

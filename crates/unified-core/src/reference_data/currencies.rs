@@ -1,4 +1,4 @@
-// Reference data -- ISO 4217 currency catalogue (task 361).
+// Reference data -- ISO 4217 currency catalogue.
 //
 // The single central currency catalogue for the whole platform.
 // Every module that names a currency reads it from here

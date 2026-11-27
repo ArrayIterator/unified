@@ -1,4 +1,4 @@
-// admissions module — Module constants.
+// admissions module - Module constants.
 //
 // Split from the former single-file module `src/modules/admissions.rs`.
 // The module root (`admissions.rs`) re-exports the public items, so the
@@ -18,9 +18,7 @@ use serde_json::{json, Value};
 use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Capabilities (checked through the `role.check` hook; fail closed).
-// ---------------------------------------------------------------------------
 
 /// Read admission records (applicants see only their own).
 pub const PERM_ADMISSIONS_READ: &str = "admissions:read";

@@ -1,4 +1,4 @@
-// pricing — reconciliation.
+// pricing - reconciliation.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -31,9 +31,7 @@ use super::handlers_bundles::*;
 use super::handlers_reconciliation::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Invoice reconciliation (pure).
-// ---------------------------------------------------------------------------
 
 /// One invoice line as the reconciler sees it.
 #[derive(Debug, Clone, Serialize, Deserialize)]

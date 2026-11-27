@@ -25,14 +25,12 @@ use super::state::{
 };
 use super::types::{CreateDomainRequest, CreateSubdomainRequest, UpdateDomainRequest, VerifyRequest};
 
-// ---------------------------------------------------------------------------
 // Handlers.
 //
 // Every handler enforces a permission through the `role.check` hook
 // first (`domains.view` for reads, `domains.manage` for writes),
 // failing closed when the caller has no role or the check is
 // unanswered.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_domains(
     req: HttpRequest,
@@ -454,7 +452,7 @@ pub(crate) async fn create_subdomain(
     }
 }
 
-/// Resolve the caller's company for a WRITE (C3 task 315, strict by
+/// Resolve the caller's company for a WRITE (C3, strict by
 /// default): a write requires a resolved company scope, so an
 /// unresolved caller is refused with 403 instead of silently
 /// writing a global (unscoped) record. Mutation handlers call

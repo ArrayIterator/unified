@@ -1,4 +1,4 @@
-// Tax module — connector endpoint, signing, and mapping helpers.
+// Tax module - connector endpoint, signing, and mapping helpers.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use super::*;
@@ -23,16 +23,14 @@ use std::time::Duration;
 use url::Url;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Connector endpoint validation (SSRF protection) and signing
-// ---------------------------------------------------------------------------
 
 /// True when the address must never be a connector target: private,
 /// loopback, link-local, multicast, unspecified, broadcast,
 /// benchmarking, documentation, or reserved ranges.
 ///
 /// An IPv4-mapped IPv6 address (`::ffff:10.0.0.1`) is classified by
-/// the IPv4 address it wraps — otherwise the mapped private address
+/// the IPv4 address it wraps - otherwise the mapped private address
 /// would pass the guard while the socket connects to 10.0.0.1. Only
 /// the mapped form is unwrapped: unwrapping the IPv4-compatible
 /// form (`::/96`) would map `::1` to `0.0.0.1` and break loopback

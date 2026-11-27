@@ -21,9 +21,7 @@ use super::helpers::{
 use super::state::ForumState;
 use super::types::{ForumSettings, MAX_REASON_LEN, ReviewReportRequest, UpdateSettingsRequest};
 
-// ---------------------------------------------------------------------------
 // Reports
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_reports(
     ctx: web::Data<Arc<AppContext>>,
@@ -288,9 +286,7 @@ fn delete_post_cascade(state: &ForumState, post_id: &uuid::Uuid) {
     state.posts.remove(post_id);
 }
 
-// ---------------------------------------------------------------------------
 // Moderation audit log
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_moderation_actions(
     ctx: web::Data<Arc<AppContext>>,
@@ -329,9 +325,7 @@ pub(crate) async fn list_moderation_actions(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Settings
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn get_settings(
     ctx: web::Data<Arc<AppContext>>,
@@ -433,9 +427,7 @@ pub(crate) async fn update_settings(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Reputation
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 struct LeaderboardQuery {

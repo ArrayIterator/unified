@@ -1,4 +1,4 @@
-// Properties — Plan handlers.
+// Properties - Plan handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -19,9 +19,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Plan handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_plans(
     ctx: web::Data<Arc<AppContext>>,

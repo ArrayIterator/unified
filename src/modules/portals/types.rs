@@ -8,9 +8,7 @@ use serde::Deserialize;
 use serde::Serialize;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// Lifecycle of a portal: `draft` -> `active`; `disabled` hides the
 /// portal from public and client routes until reactivated.
@@ -54,8 +52,8 @@ pub struct Portal {
     /// `rejected`. A requested domain moves past `requested` only
     /// through the verification write-back endpoint
     /// (`PATCH /{id}/domain-status`, `portals.manage` capability),
-    /// which the domains module — or an operator acting on its
-    /// verification result — calls; there is no listener on
+    /// which the domains module - or an operator acting on its
+    /// verification result - calls; there is no listener on
     /// `portals.domain.requested` yet to do this automatically.
     pub domain_status: String,
     /// Storage module reference (target + key) for the portal logo.
@@ -145,9 +143,7 @@ pub struct PortalView {
     pub viewed_at: DateTime<Utc>,
 }
 
-// ---------------------------------------------------------------------------
 // Request bodies
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct CreatePortalRequest {

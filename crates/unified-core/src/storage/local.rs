@@ -1,7 +1,6 @@
-// storage — local.
+// storage - local.
 // Local filesystem provider.
 //
-// Split from `crates/unified-core/src/storage.rs`; moved verbatim, no behaviour changes.
 
 use super::*;
 use crate::error::{UnifiedError, UnifiedResult};
@@ -19,9 +18,7 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::{Arc, RwLock};
 
-// ---------------------------------------------------------------------------
 // Local provider.
-// ---------------------------------------------------------------------------
 
 /// Filesystem storage under a configured base directory.
 ///
@@ -32,7 +29,7 @@ use std::sync::{Arc, RwLock};
 /// of every uploaded object is recorded in a durable sidecar file
 /// (`<key>.sha256`, written atomically next to the object) as well as
 /// in memory (`checksum`), and verified on download whenever a record
-/// exists — so corruption is detected across restarts, not only for
+/// exists - so corruption is detected across restarts, not only for
 /// objects uploaded since this process started. Keys ending in
 /// `.sha256` are reserved for sidecars and rejected as object keys.
 /// Objects written before sidecars existed (or written outside this

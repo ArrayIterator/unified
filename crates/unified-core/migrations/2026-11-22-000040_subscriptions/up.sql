@@ -60,10 +60,8 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One paid subscription: the commercial record of a recurring
 -- purchase, created when a subscription order is paid.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS subscriptions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id VARCHAR NOT NULL,
@@ -121,10 +119,8 @@ CREATE INDEX IF NOT EXISTS idx_subscriptions_status
 CREATE INDEX IF NOT EXISTS idx_subscriptions_current_period_end
     ON subscriptions (current_period_end);
 
--- ---------------------------------------------------------------------------
 -- Append-only lifecycle audit trail for subscriptions. One row per
 -- lifecycle transition; rows are never updated or deleted.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS subscription_events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     subscription_id UUID NOT NULL,
@@ -144,9 +140,7 @@ CREATE INDEX IF NOT EXISTS idx_subscription_events_event
 CREATE INDEX IF NOT EXISTS idx_subscription_events_created_at
     ON subscription_events (created_at);
 
--- ---------------------------------------------------------------------------
 -- One recorded failed renewal payment (dunning attempt).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS dunning_attempts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     subscription_id UUID NOT NULL REFERENCES subscriptions (id)

@@ -16,9 +16,7 @@ use super::state::normalize_domain;
 use super::state::now;
 use super::state::spawn_task;
 
-// ---------------------------------------------------------------------------
 // Hook handlers
-// ---------------------------------------------------------------------------
 
 /// Handle the core `ssl.renew` event: a scheduler job (or the Domains
 /// module) asks for a renewal. A payload with a `domain` renews that

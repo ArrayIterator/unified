@@ -49,9 +49,7 @@ use super::types::Enrollment;
 use super::types::RejectEnrollment;
 use super::types::UpdateAttendance;
 
-// ---------------------------------------------------------------------------
 // Handlers: enrollments (course registration)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_enrollments(
     ctx: web::Data<Arc<AppContext>>,
@@ -427,9 +425,7 @@ pub(crate) async fn drop_enrollment(
     json::respond(result, debug)
 }
 
-// ---------------------------------------------------------------------------
 // Handlers: attendance
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_attendance(
     ctx: web::Data<Arc<AppContext>>,

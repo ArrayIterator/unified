@@ -16,9 +16,7 @@ use super::types::CalendarSettings;
 use super::types::ConflictHint;
 use super::types::NonWorkingDay;
 
-// ---------------------------------------------------------------------------
 // Aggregation.
-// ---------------------------------------------------------------------------
 
 /// Effective settings for a caller: company defaults overlaid
 /// with the caller's own overrides (a set user value wins).
@@ -65,7 +63,7 @@ pub(crate) fn hidden_modules(state: &CalendarState, caller: &Caller) -> HashSet<
 }
 
 /// Overlap test for a view window: an item belongs to the window
-/// when its interval intersects `[start, end]` — that is, it
+/// when its interval intersects `[start, end]` - that is, it
 /// starts before the window ends and its effective end falls after
 /// the window starts. An event that starts before the window but
 /// ends inside it (or spans the whole window) is kept; an item
@@ -82,8 +80,8 @@ pub(crate) fn item_overlaps_window(
 /// Tenant trust for one item: an item scoped to another tenant is
 /// excluded, and a tenant-less item is trusted only when it is
 /// explicitly marked system/global (`is_system`). The company rule
-/// is the same shape — an item scoped to a company the caller has
-/// no company for is excluded — so tenant-less items are never
+/// is the same shape - an item scoped to a company the caller has
+/// no company for is excluded - so tenant-less items are never
 /// treated as more trusted than company-scoped ones.
 pub(crate) fn item_passes_tenant_filter(item: &CalendarItem, tenant_id: &str) -> bool {
     match &item.tenant_id {
@@ -168,7 +166,7 @@ pub(crate) fn aggregate_items(
             // an item carrying a tenant_id different from the
             // caller's tenant is excluded silently, and a
             // tenant-less item is trusted only when it is
-            // explicitly marked system/global — an unmarked
+            // explicitly marked system/global - an unmarked
             // tenant-less item is excluded the same way.
             if !item_passes_tenant_filter(&item, &caller.tenant_id) {
                 continue;
@@ -209,7 +207,7 @@ pub(crate) fn aggregate_items(
 /// weekend days plus holidays answered by the `holidays.is_holiday`
 /// hook. When no handler is registered for the hook (the holidays
 /// module may not exist yet) or no holiday country is configured,
-/// only weekends apply — never an error.
+/// only weekends apply - never an error.
 pub(crate) fn non_working_days(
     ctx: &AppContext,
     tenant_id: &str,
@@ -270,7 +268,7 @@ pub(crate) fn non_working_days(
 }
 
 /// Overlap hints for one user's items: pairs whose intervals
-/// intersect. Hints only — never a hard block.
+/// intersect. Hints only - never a hard block.
 pub(crate) fn conflict_hints(items: &[CalendarItem]) -> Vec<ConflictHint> {
     let mut hints: Vec<ConflictHint> = Vec::new();
     for left_index in 0..items.len() {

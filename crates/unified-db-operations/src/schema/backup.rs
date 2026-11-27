@@ -3,9 +3,7 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Backup and storage targets (2026-11-22-000009_backup_storage).
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     backup_jobs (id) {

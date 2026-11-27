@@ -132,9 +132,7 @@ fn validate_node_target(
     }
 }
 
-// ---------------------------------------------------------------------------
 // IVR menu handlers (manager for writes)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_ivr_menus(
     state: web::Data<PhoneState>,
@@ -353,9 +351,7 @@ pub(crate) async fn delete_ivr_menu(
     }
 }
 
-// ---------------------------------------------------------------------------
 // IVR nodes
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_ivr_nodes(
     state: web::Data<PhoneState>,
@@ -469,7 +465,7 @@ pub(crate) async fn delete_ivr_node(
 /// Resolve one key press against a menu: returns the node's
 /// action and target, plus the next menu when the action is
 /// `go_to_menu`, and the queue ring order when the action is
-/// `transfer_queue`. An unknown key is not an error — the
+/// `transfer_queue`. An unknown key is not an error - the
 /// caller hears the menu again.
 pub(crate) async fn resolve_ivr(
     state: web::Data<PhoneState>,
@@ -562,9 +558,7 @@ pub(crate) async fn resolve_ivr(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Auto-response scripts (manager)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_scripts(
     state: web::Data<PhoneState>,
@@ -783,9 +777,7 @@ pub(crate) async fn delete_script(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Auto-response: answer a routine caller question
-// ---------------------------------------------------------------------------
 
 /// Answer a routine caller question. The tenant's active
 /// scripts are tried first, in priority order: a trigger
@@ -793,7 +785,7 @@ pub(crate) async fn delete_script(
 /// the script's AI capability. When no script matches, the
 /// `answer_caller_question` capability answers directly (the
 /// grounding hook supplies the active menu and scripts). The
-/// AI only answers and may suggest a route or escalation — it
+/// AI only answers and may suggest a route or escalation - it
 /// never books, charges, or changes anything on its own.
 pub(crate) async fn auto_response(
     state: web::Data<PhoneState>,

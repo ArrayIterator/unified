@@ -32,7 +32,7 @@
 --     module), so the module list of any past version can be
 --     rebuilt; the frozen name/description/settings/steps snapshot
 --     of a past version (the in-memory `PackageVersion`) is NOT
---     persisted by this migration — the integrator adds a versions
+--     persisted by this migration - the integrator adds a versions
 --     table if durable snapshots are needed.
 --   - `saas_package_purchases.enabled_modules` is JSONB: the
 --     module ids the purchase enabled for the tenant.
@@ -57,9 +57,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- Package definitions (control plane).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS saas_packages (
     id TEXT PRIMARY KEY,
     slug TEXT NOT NULL UNIQUE CHECK (char_length(slug) BETWEEN 1 AND 100),
@@ -78,10 +76,8 @@ CREATE TABLE IF NOT EXISTS saas_packages (
 CREATE INDEX IF NOT EXISTS idx_saas_packages_status ON saas_packages (status);
 CREATE INDEX IF NOT EXISTS idx_saas_packages_vendor ON saas_packages (vendor_id);
 
--- ---------------------------------------------------------------------------
 -- Versioned module lists of a package. One row per package, version,
 -- and module; the primary key keeps a version's list exact.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS saas_package_modules (
     package_id TEXT NOT NULL,
     version INTEGER NOT NULL CHECK (version >= 1),
@@ -92,10 +88,8 @@ CREATE TABLE IF NOT EXISTS saas_package_modules (
 );
 CREATE INDEX IF NOT EXISTS idx_saas_package_modules_package ON saas_package_modules (package_id, version);
 
--- ---------------------------------------------------------------------------
 -- Purchases of a package by a buyer for a tenant (company). A
 -- purchase pins the package version it bought.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS saas_package_purchases (
     id TEXT PRIMARY KEY,
     package_id TEXT NOT NULL,
@@ -122,10 +116,8 @@ CREATE INDEX IF NOT EXISTS idx_saas_package_purchases_status ON saas_package_pur
 CREATE INDEX IF NOT EXISTS idx_saas_package_purchases_order ON saas_package_purchases (order_id);
 CREATE INDEX IF NOT EXISTS idx_saas_package_purchases_buyer ON saas_package_purchases (buyer_id);
 
--- ---------------------------------------------------------------------------
 -- Provisioning steps. One row per purchase, step, and attempt, so the
 -- full provisioning history is auditable.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS saas_package_provision_steps (
     id TEXT PRIMARY KEY,
     purchase_id TEXT NOT NULL,
@@ -141,11 +133,9 @@ CREATE INDEX IF NOT EXISTS idx_saas_package_provision_steps_purchase ON saas_pac
 CREATE INDEX IF NOT EXISTS idx_saas_package_provision_steps_step ON saas_package_provision_steps (purchase_id, step);
 CREATE INDEX IF NOT EXISTS idx_saas_package_provision_steps_status ON saas_package_provision_steps (status);
 
--- ---------------------------------------------------------------------------
 -- Seed: the example "Online Exam SaaS" package (example data only;
 -- an admin can edit or delete it like any other package). Ids match
 -- the Rust seed rows in `src/modules/saas_packages.rs` exactly.
--- ---------------------------------------------------------------------------
 INSERT INTO saas_packages (id, slug, name, description, status, current_version, product_id, preset_settings, wizard_steps, created_by, vendor_id)
 VALUES (
     '20000000-0000-4000-8000-000000000001',

@@ -11,9 +11,7 @@ use super::{limits::*, types::*, hub::*, state::*, helpers::*, module::*, handle
 
 
 
-// ---------------------------------------------------------------------------
 // Channel handlers
-// ---------------------------------------------------------------------------
 pub(crate) async fn create_channel(
     state: web::Data<ChatState>,
     req: HttpRequest,

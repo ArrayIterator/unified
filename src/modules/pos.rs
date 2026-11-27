@@ -1,4 +1,4 @@
-// Point of Sale (POS) module — in-person sales at a physical till.
+// Point of Sale (POS) module - in-person sales at a physical till.
 //
 // Registers (terminals) with open/close shifts and cashier
 // assignment, an in-person sale flow (cart lines resolved from the
@@ -37,7 +37,7 @@
 //     of emitting an event nobody answers. The follow-up is a
 //     catalogue integration that registers a listener for it.
 //
-// HONESTY — READ THIS FIRST. What is real in this module:
+// HONESTY - READ THIS FIRST. What is real in this module:
 // in-memory registers, shifts, sales, payments, receipts, refunds,
 // and payment-method definitions; shift cash reconciliation with a
 // variance report; split payments with change; receipt data plus a

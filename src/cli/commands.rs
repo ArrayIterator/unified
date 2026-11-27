@@ -134,7 +134,7 @@ fn build_cli_registry() -> CliRegistry {
 fn build_command(cli_registry: &CliRegistry) -> Command {
     let mut command = Command::new("unified")
         .version(env!("CARGO_PKG_VERSION"))
-        .about("Unified Pentagonal Project — high-performance unified management system")
+        .about("Unified Pentagonal Project - high-performance unified management system")
         .arg(
             Arg::new("config")
                 .short('f')

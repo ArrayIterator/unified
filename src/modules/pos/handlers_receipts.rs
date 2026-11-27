@@ -1,4 +1,4 @@
-// Pos module — receipt and product search handlers.
+// Pos module - receipt and product search handlers.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use unified_core::context::AppContext;
@@ -128,9 +128,7 @@ pub(crate) async fn get_receipt_print(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Product search (hook-driven catalogue lookup)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn search_products(
     ctx: web::Data<Arc<AppContext>>,
@@ -187,7 +185,7 @@ pub(crate) async fn search_products(
 
 /// The honest answer when no catalogue can be searched: no
 /// products, and a note saying product lookup is pending a
-/// catalogue integration — never invented catalogue rows.
+/// catalogue integration - never invented catalogue rows.
 pub(crate) fn catalogue_unavailable_response() -> Value {
     json!({
         "products": [],

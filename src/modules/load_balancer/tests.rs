@@ -9,9 +9,7 @@ use super::store::*;
 use super::types::*;
 use super::validation::*;
 
-// ---------------------------------------------------------------------------
 // Unit tests (pure logic only; no network, no database).
-// ---------------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {

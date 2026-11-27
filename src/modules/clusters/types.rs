@@ -1,4 +1,4 @@
-// clusters — Shared types: constants, enums, records, and request/response shapes.
+// clusters - Shared types: constants, enums, records, and request/response shapes.
 
 use chrono::{DateTime, Utc};
 use hmac::Hmac;
@@ -127,12 +127,10 @@ pub(crate) const HEADER_NONCE: &str = "x-cluster-nonce";
 
 pub(crate) const HEADER_SIGNATURE: &str = "x-cluster-signature";
 
-// ---------------------------------------------------------------------------
 // Configurable sync settings.
 //
 // All behaviour knobs live here as data, seeded from the defaults above
 // and editable at runtime through `GET/PUT /api/v1/clusters/sync/settings`.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SyncSettings {
@@ -192,9 +190,7 @@ impl SyncSettings {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Conflict records, retry-queue entries, idempotency records.
-// ---------------------------------------------------------------------------
 
 /// One sync conflict, stored on its own so an admin can see and resolve
 /// it. Conflicts are also embedded in the sync log entry that produced
@@ -232,7 +228,7 @@ pub struct SyncConflictRecord {
 /// `retrying`, `completed`, `dead_letter` or `discarded`. A pending
 /// entry becomes `dead_letter` once `attempt` reaches the configured
 /// maximum; dead-letter entries are visible to admins and are never
-/// retried automatically again — an admin must retry or discard them.
+/// retried automatically again - an admin must retry or discard them.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SyncRetryEntry {
     pub id: Uuid,
@@ -266,9 +262,7 @@ pub struct IdempotencyRecord {
     pub expires_at: DateTime<Utc>,
 }
 
-// ---------------------------------------------------------------------------
 // State.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClusterState {
@@ -316,7 +310,7 @@ pub struct SyncPlanState {
     pub cluster_id: Uuid,
     /// The peer node this plan syncs with (a member of the cluster).
     pub target_node_id: Uuid,
-    /// The node id this instance uses when talking to the peer — the id
+    /// The node id this instance uses when talking to the peer - the id
     /// the peer registered for us. Sent as `x-cluster-node-id`.
     pub local_node_id: String,
     /// `push`, `pull` or `bidirectional`.

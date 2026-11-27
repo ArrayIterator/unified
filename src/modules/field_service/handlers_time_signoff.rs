@@ -1,4 +1,4 @@
-// field_service module — Time logging, incident raising, sign-off, report.
+// field_service module - Time logging, incident raising, sign-off, report.
 //
 // Split from the former single-file module `src/modules/field_service.rs`.
 // The module root (`field_service.rs`) re-exports the public items, so the
@@ -28,9 +28,7 @@ use super::helpers::{
 };
 use super::handlers_work_orders::apply_work_order_transition;
 
-// ---------------------------------------------------------------------------
 // Time logging, incident raising, sign-off, report
-// ---------------------------------------------------------------------------
 
 /// Log time on a work order through the timetracker module. The
 /// timetracker module exposes no log-request listener yet, so the
@@ -176,8 +174,8 @@ pub(crate) async fn raise_incident(
 
 /// Follow-up status for a sign-off: `requested` only when a
 /// survey distribution was supplied *and* the surveys module
-/// answered the send request. When nothing was sent — no
-/// distribution, or no handler answered — the follow-up stays
+/// answered the send request. When nothing was sent - no
+/// distribution, or no handler answered - the follow-up stays
 /// `pending_no_distribution` instead of claiming a request went
 /// out.
 pub(crate) fn signoff_follow_up_status(

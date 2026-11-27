@@ -1,4 +1,4 @@
-// Tenant Destroy module — destroy HTTP handlers.
+// Tenant Destroy module - destroy HTTP handlers.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use unified_core::context::AppContext;
@@ -26,9 +26,7 @@ use std::sync::{Arc, OnceLock, RwLock};
 use uuid::Uuid;
 use super::*;
 
-// ---------------------------------------------------------------------------
 // HTTP handlers. Every handler checks a capability first.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn request_destroy(
     ctx: web::Data<Arc<AppContext>>,
@@ -143,8 +141,8 @@ pub(crate) async fn request_destroy(
             // request's tenant: an export job created for another
             // tenant can never be the proof for this destroy.
             // Answers without a tenant binding are claimed as
-            // before — the job is created in direct response to
-            // this request's tenant-scoped emit — and the binding
+            // before - the job is created in direct response to
+            // this request's tenant-scoped emit - and the binding
             // is re-checked when the proof is attached or the
             // `export.completed` event arrives.
             if let Some(bound) = export_tenant_binding(result) {

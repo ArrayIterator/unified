@@ -1,4 +1,4 @@
-// surveys module — Module constants.
+// surveys module - Module constants.
 //
 // Split from the former single-file module `src/modules/surveys.rs`.
 // The module root (`surveys.rs`) re-exports the public items, so the
@@ -33,11 +33,11 @@ pub(crate) const MAX_RECIPIENTS: usize = 1000;
 /// Default token lifetime for a response invitation (days).
 pub(crate) const DEFAULT_TOKEN_DAYS: i64 = 30;
 /// NPS detractor threshold: NPS answers 0..=6 are detractors,
-/// 7–8 passives, 9–10 promoters.
+/// 7-8 passives, 9-10 promoters.
 pub(crate) const NPS_DETRACTOR_MAX: i32 = 6;
 pub(crate) const NPS_PROMOTER_MIN: i32 = 9;
-/// CSAT satisfied threshold: scores 4–5 of 5 count as satisfied;
-/// 1–2 count as dissatisfied and trigger a follow-up.
+/// CSAT satisfied threshold: scores 4-5 of 5 count as satisfied;
+/// 1-2 count as dissatisfied and trigger a follow-up.
 pub(crate) const CSAT_SATISFIED_MIN: i32 = 4;
 pub(crate) const CSAT_FOLLOWUP_MAX: i32 = 2;
 
@@ -54,8 +54,8 @@ pub(crate) const SEND_REQUESTED: &str = "surveys.send_requested";
 /// Scheduler job kind used for scheduled distributions.
 pub(crate) const SCHEDULER_KIND_SEND: &str = "surveys.send";
 
-/// Question types. `nps` answers are 0–10, `csat` and `rating`
-/// answers are 1–5, `text` answers are free text, and
+/// Question types. `nps` answers are 0-10, `csat` and `rating`
+/// answers are 1-5, `text` answers are free text, and
 /// `multiple_choice` answers must be one of `options`.
 pub(crate) const QUESTION_TYPES: [&str; 5] = ["nps", "csat", "rating", "text", "multiple_choice"];
 /// Distribution triggers.

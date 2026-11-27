@@ -1,4 +1,4 @@
-// admissions module — Helpers.
+// admissions module - Helpers.
 //
 // Split from the former single-file module `src/modules/admissions.rs`.
 // The module root (`admissions.rs`) re-exports the public items, so the
@@ -22,9 +22,7 @@ use super::constants::{MAX_ID, MAX_MONEY, MAX_SHORT, PERM_ADMISSIONS_READ_ALL};
 use super::state::AdmissionsState;
 use super::types::Application;
 
-// ---------------------------------------------------------------------------
 // Helpers: caller, capabilities, validation, views
-// ---------------------------------------------------------------------------
 
 pub(crate) fn new_id() -> String {
     Uuid::new_v4().to_string()
@@ -80,9 +78,7 @@ pub(crate) fn require_permission(ctx: &AppContext, role: &str, permission: &str)
         )))
     }
 }
-// ---------------------------------------------------------------------------
 // Tenant edge guard (C3 pilot 4, gate-only).
-// ---------------------------------------------------------------------------
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request

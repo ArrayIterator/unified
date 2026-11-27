@@ -1,4 +1,4 @@
-// Widgets — the catalogue: the built-in seed plus hook-registered
+// Widgets - the catalogue: the built-in seed plus hook-registered
 // definitions.
 //
 // The seed lists ONLY widgets whose data already exists in the

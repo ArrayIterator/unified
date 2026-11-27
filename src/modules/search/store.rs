@@ -1,4 +1,4 @@
-// Global Search — In-memory state and its constructors.
+// Global Search - In-memory state and its constructors.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -21,9 +21,7 @@ use super::handlers::*;
 use super::hooks::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // State.
-// ---------------------------------------------------------------------------
 
 pub struct SearchState {
     /// Keyed by `{kind}:{id}` so re-indexing the same document replaces

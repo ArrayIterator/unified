@@ -22,9 +22,7 @@ use super::handlers::upload_file;
 use super::hooks::on_file_shared;
 use super::types::FilesState;
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct FilesModule {
     pub(crate) state: Arc<FilesState>,

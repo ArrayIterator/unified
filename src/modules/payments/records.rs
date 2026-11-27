@@ -31,11 +31,9 @@ use uuid::Uuid;
 
 
 #[derive(Debug, Clone, Serialize)]
-// ---------------------------------------------------------------------------
 // Records: intents, transactions, payment methods, subscriptions.
-// ---------------------------------------------------------------------------
 /// A payment intent: the record a checkout creates first, then
-/// confirms. The intent holds no card data — only a token reference.
+/// confirms. The intent holds no card data - only a token reference.
 pub struct PaymentIntent {
     pub id: Uuid,
     pub connection_id: Uuid,
@@ -63,7 +61,7 @@ pub struct PaymentIntent {
     #[serde(skip_serializing)]
     pub payment_method_token: Option<String>,
     /// Stored payment method supplied at creation, kept for the
-    /// same reason — and so confirm can run the card validation
+    /// same reason - and so confirm can run the card validation
     /// gate in method mode without the caller resending it.
     /// Never serialized: a method reference, not a display value.
     #[serde(skip_serializing)]
@@ -120,7 +118,7 @@ pub struct PaymentTransaction {
 
 /// A tokenized payment method for one customer. The record holds the
 /// provider token, the card brand, the last four digits, and the
-/// expiry — never a PAN or CVV.
+/// expiry - never a PAN or CVV.
 #[derive(Debug, Clone, Serialize)]
 pub struct PaymentMethod {
     pub id: Uuid,
@@ -196,10 +194,8 @@ pub struct GatewaySubscription {
 
 
 #[derive(Debug, Clone, Serialize)]
-// ---------------------------------------------------------------------------
 // Split bills: one order/invoice total divided across methods,
 // payers, or instalments.
-// ---------------------------------------------------------------------------
 /// One part of a split bill. Amounts are integer minor units; the
 /// provider is a registry kind string (`stripe`, `bank_transfer`,
 /// ...). A part is paid through the gateway like any other charge,
@@ -251,9 +247,7 @@ pub struct SplitBill {
 
 
 
-// ---------------------------------------------------------------------------
 // In-memory stores (same pattern as the provider registry and store).
-// ---------------------------------------------------------------------------
 pub(crate) static CONNECTIONS: OnceLock<DashMap<Uuid, PaymentConnection>> = OnceLock::new();
 
 
@@ -357,9 +351,7 @@ pub(crate) fn paypal_tokens_store() -> &'static DashMap<Uuid, (String, DateTime<
     PAYPAL_TOKENS.get_or_init(DashMap::new)
 }
 
-// ---------------------------------------------------------------------------
-// Database hydration (C11, task 271).
-// ---------------------------------------------------------------------------
+// Database hydration (C11).
 
 /// Hydrate the in-memory payment stores from the database:
 /// connections, intents, transactions, methods, gateway
@@ -370,8 +362,8 @@ pub(crate) fn paypal_tokens_store() -> &'static DashMap<Uuid, (String, DateTime<
 /// is rebuilt from the loaded transactions, so a repeated
 /// mutating call after a restart still returns the original
 /// transaction instead of charging twice. Rows that cannot be
-/// converted — an unknown provider kind / gateway mode, or
-/// credentials that do not parse — are skipped, never fatal:
+/// converted - an unknown provider kind / gateway mode, or
+/// credentials that do not parse - are skipped, never fatal:
 /// hydration must not fail startup on one bad row. The runtime
 /// records carry no `tenant_id` field yet, so the `tenant_id`
 /// columns added by migration 000126 are ignored here; stamping
@@ -629,9 +621,7 @@ pub(crate) fn hydrate_from_db(pool: &DbPool) -> UnifiedResult<usize> {
     Ok(loaded)
 }
 
-// ---------------------------------------------------------------------------
 // Provider registry: the plug-in point for adapters.
-// ---------------------------------------------------------------------------
 /// Factory that builds an adapter for one stored connection.
 pub type PaymentProviderFactory = Arc<
     dyn Fn(&PaymentConnection) -> UnifiedResult<Arc<dyn PaymentProvider>> + Send + Sync,

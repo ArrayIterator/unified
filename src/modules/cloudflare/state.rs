@@ -1,4 +1,4 @@
-//! Cloudflare connector module. — State.
+//! Cloudflare connector module. - State.
 //!
 //! Split from `src/modules/cloudflare.rs`; behaviour unchanged.
 
@@ -108,7 +108,7 @@ impl CloudflareState {
     }
 
     /// Build the `settings.merge` payload for this module. Only
-    /// flags and non-secret identifiers are emitted — exactly the
+    /// flags and non-secret identifiers are emitted - exactly the
     /// VCS pattern. The raw API token is never placed in a hook
     /// payload: it stays in this module's own in-memory store and
     /// only `api_token_configured` is shared, so no bus listener

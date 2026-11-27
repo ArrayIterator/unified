@@ -7,9 +7,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Constants and limits.
-// ---------------------------------------------------------------------------
 
 /// Default connect timeout for network tools.
 pub const DEFAULT_CONNECT_TIMEOUT_SECS: u64 = 5;
@@ -75,7 +73,6 @@ pub mod network_tool_events {
     pub const CERT_EXPIRING: &str = "network_tools.cert.expiring";
 }
 
-// ---------------------------------------------------------------------------
 // Row types.
 //
 // These are the Diesel row types for the migration
@@ -83,7 +80,6 @@ pub mod network_tool_events {
 // into crates/unified-core/src/db/models.rs` (with the matching `table!` blocks in
 // crates/unified-core/src/db/schema.rs`, see the delivery report) and this module's
 // imports are then updated to `unified_core::db::models::...`.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize, Deserialize, Queryable, Selectable, Insertable)]
 #[diesel(table_name = unified_core::db::schema::network_tool_saved_checks)]
@@ -164,9 +160,7 @@ pub struct NetworkToolCertWatch {
     pub updated_at: DateTime<Utc>,
 }
 
-// ---------------------------------------------------------------------------
 // Request / response types.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct ToolTargetRequest {

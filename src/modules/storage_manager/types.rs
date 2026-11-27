@@ -7,10 +7,8 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Stored records (in-memory DashMap stores are authoritative; the
-// migration tables are persistence targets — see the module report).
-// ---------------------------------------------------------------------------
+// migration tables are persistence targets - see the module report).
 
 /// One storage bucket (a container registered with this hub).
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -232,7 +230,7 @@ pub struct LifecycleRule {
 pub struct SignedUrlRecord {
     pub id: Uuid,
     /// The bearer token value. Never stored: kept empty on the
-    /// record — lookup is by `token_hash` only (see below), so a
+    /// record - lookup is by `token_hash` only (see below), so a
     /// copy of the store never leaks a usable token.
     #[serde(skip_serializing)]
     pub token: String,

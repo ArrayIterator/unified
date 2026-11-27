@@ -92,7 +92,6 @@ pub(crate) struct CompletionOutcome {
     pub(crate) model: String,
 }
 
-// ---------------------------------------------------------------------------
 // AI Capabilities Contract.
 //
 // Every dynamic module exposes its AI features through this registry
@@ -119,7 +118,7 @@ pub(crate) struct CompletionOutcome {
 //       before any provider traffic): for a sellable non-core
 //       module, the calling tenant's entitlement is checked
 //       through the `entitlements.check_requested` hook query,
-//       fail closed — only an explicit `allowed: true` passes.
+//       fail closed - only an explicit `allowed: true` passes.
 //       Core modules, modules that are not sellable, and
 //       control-plane calls (no company id) skip the hook; see the
 //       gate in the function body.
@@ -164,7 +163,7 @@ pub(crate) struct CompletionOutcome {
 // Tenant scoping (standing rule: tenant-scoped data access).
 //   - Tenant data: capability calls, usage records, and grounding
 //     data are tenant-scoped. The company id on every capability
-//     call comes from `resolve_capability_company` — the verified
+//     call comes from `resolve_capability_company` - the verified
 //     `TenantContext` first (middleware-attached, resolved from
 //     the Host header), then the pre-existing header / hook path
 //     for control-plane requests. Usage is recorded per company
@@ -178,7 +177,7 @@ pub(crate) struct CompletionOutcome {
 //   - Current state, honestly: every store in this module (and in
 //     the wired modules) is in-memory with no tenant partition
 //     and no Postgres access at all, so there is no
-//     `public`-schema fallback to remove — but also no
+//     `public`-schema fallback to remove - but also no
 //     tenant-column filtering to enforce yet. The tenancy plumbing
 //     itself DOES exist (`unified_core::tenancy`: `schema_name`,
 //     `with_tenant_connection`, the `TenantContext` extractor, the
@@ -201,7 +200,6 @@ pub(crate) struct CompletionOutcome {
 // usage, and policy stores are the same instance on both paths.
 // This follows the static-state pattern already used by other
 // modules in this codebase for cross-module access.
-// ---------------------------------------------------------------------------
 
 /// One AI capability a module exposes. Capability ids, module ids,
 /// and use cases are declared per-module (registry), never matched
@@ -598,11 +596,11 @@ pub async fn run_ai_capability_with_product(
     // for it, resolved through the `entitlements.check_requested`
     // hook query (answered by the entitlements module from its
     // stored rows; the event name is the literal of
-    // `entitlements::EVENT_CHECK_REQUESTED` — the const cannot be
+    // `entitlements::EVENT_CHECK_REQUESTED` - the const cannot be
     // referenced here until that module is declared in `mod.rs`).
     // The answer is read fail-closed, like `role.check`: only an
-    // explicit `allowed: true` — on the payload first, then in the
-    // contributed results — passes. No answer, an explicit
+    // explicit `allowed: true` - on the payload first, then in the
+    // contributed results - passes. No answer, an explicit
     // `false`, or a malformed answer denies the call with a 403
     // and the provider is never contacted. Core modules and
     // modules that are not sellable pass from the registry alone,
@@ -686,9 +684,7 @@ pub async fn run_ai_capability_with_product(
     }))
 }
 
-// ---------------------------------------------------------------------------
 // Capability HTTP handlers.
-// ---------------------------------------------------------------------------
 
 /// Body of `POST /capabilities/{module_id}/{capability}`.
 #[derive(Debug, Deserialize)]
@@ -968,9 +964,7 @@ pub(crate) async fn run_completion(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Helpers: drafts and hook-gathered context.
-// ---------------------------------------------------------------------------
 
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn store_draft(

@@ -24,9 +24,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // State.
-// ---------------------------------------------------------------------------
 
 #[derive(Clone)]
 pub struct HolidaysState {
@@ -155,8 +153,8 @@ impl HolidaysState {
     /// The manual override (if any) this tenant has for one
     /// (country, date). At most one override per (tenant, country,
     /// date, kind) exists; a `working_day` override and a `day_off`
-    /// override cannot coexist for the same date — creation refuses
-    /// the second one — so the first match found is the answer.
+    /// override cannot coexist for the same date - creation refuses
+    /// the second one - so the first match found is the answer.
     pub(crate) fn tenant_override(&self, tenant_id: &str, country: &str, date: NaiveDate) -> Option<HolidayOverride> {
         self.overrides
             .iter()

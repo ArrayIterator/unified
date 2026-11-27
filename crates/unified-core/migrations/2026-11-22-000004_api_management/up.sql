@@ -29,9 +29,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- Public API versions, each with its own settings.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS api_versions (
     id VARCHAR PRIMARY KEY,
     number INTEGER NOT NULL CHECK (number > 0),
@@ -48,14 +46,12 @@ CREATE TABLE IF NOT EXISTS api_versions (
 CREATE UNIQUE INDEX IF NOT EXISTS uq_api_versions_number
     ON api_versions (number);
 
--- ---------------------------------------------------------------------------
 -- Custom endpoints registered through the API Manager, plus the
 -- built-in endpoints the registry reports. `rules` is the JSON form
 -- of the endpoint validation rules; `version_support` is the JSON
 -- form of the VersionSupport declaration (all / min / max / range /
 -- list). `rate_limit` 0 means "fall back to the owning version's
 -- per-version limit".
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS api_endpoints (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     method VARCHAR NOT NULL CHECK (method IN ('GET', 'POST', 'PUT', 'PATCH', 'DELETE', '*')),
@@ -84,9 +80,7 @@ CREATE INDEX IF NOT EXISTS idx_api_endpoints_owner_module
 CREATE INDEX IF NOT EXISTS idx_api_endpoints_version
     ON api_endpoints (version);
 
--- ---------------------------------------------------------------------------
 -- Global public API prefix setting (singleton row).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS api_prefix_settings (
     key VARCHAR PRIMARY KEY CHECK (key = 'global'),
     prefix VARCHAR NOT NULL DEFAULT 'v',
@@ -95,13 +89,11 @@ CREATE TABLE IF NOT EXISTS api_prefix_settings (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- ---------------------------------------------------------------------------
 -- API keys. The full key value is never stored: only the SHA-256 hex
 -- digest (`key_hash`), the display prefix, and the last four
 -- characters. Scopes are `module:action` strings (`*`,
 -- `payments:*`, `store:read`, `billing:admin`); see
 -- `key_has_scope` in apikeys.rs for the matching rules.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS api_keys (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR NOT NULL,
@@ -130,14 +122,12 @@ CREATE INDEX IF NOT EXISTS idx_api_keys_owner_id
 CREATE INDEX IF NOT EXISTS idx_api_keys_status
     ON api_keys (status);
 
--- ---------------------------------------------------------------------------
 -- Public-access rules. One rule per (method, path template, version);
 -- `version` NULL means the rule applies to every version. A request
 -- for a registered endpoint with no matching rule is denied by
 -- default; a rule with `allowed = false` denies explicitly. An
 -- endpoint is reachable without a key only when `public_access` is
 -- true and the endpoint itself does not require authentication.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS api_access_rules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     method VARCHAR NOT NULL CHECK (method IN ('GET', 'POST', 'PUT', 'PATCH', 'DELETE', '*')),
@@ -163,11 +153,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_api_access_rules_method_path_version
 CREATE INDEX IF NOT EXISTS idx_api_access_rules_path
     ON api_access_rules (path);
 
--- ---------------------------------------------------------------------------
 -- Audit log of access-control changes: rule administration and key
 -- administration (creation, revocation, scope and rate-limit
 -- changes). Append-only; no update or delete path exists.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS api_access_audit (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     actor VARCHAR NOT NULL,

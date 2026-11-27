@@ -37,9 +37,7 @@ pub(crate) const PERM_COMMUNITY_MANAGE: &str = "community.manage";
 /// Hook event name this module listens to.
 pub(crate) const GAMIFICATION_BADGE_AWARDED: &str = "gamification.badge.awarded";
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// Who may see a category. `public` categories appear on the public
 /// routes; `members_only` categories need a stored community
@@ -177,7 +175,7 @@ pub struct CommunityModerationAction {
 }
 
 /// One community member. The directory exposes display name, join
-/// date, badge counts, and activity counts only — never emails or
+/// date, badge counts, and activity counts only - never emails or
 /// other private data. `badge_count` is maintained by the
 /// `gamification.badge.awarded` listener.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -226,9 +224,7 @@ impl Default for CommunitySettings {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Request bodies
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct CreateCategoryRequest {

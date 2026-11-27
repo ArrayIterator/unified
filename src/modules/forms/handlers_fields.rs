@@ -1,4 +1,4 @@
-// forms — handlers fields.
+// forms - handlers fields.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -25,9 +25,7 @@ use super::module::*;
 use super::handlers_forms::*;
 use super::handlers_submissions::*;
 
-// ---------------------------------------------------------------------------
 // Field handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_fields(
     ctx: web::Data<Arc<AppContext>>,

@@ -1,4 +1,4 @@
-//! Studio module — Studio module — user-side customizer (metadata-driven only).
+//! Studio module - Studio module - user-side customizer (metadata-driven only).
 //!
 //! Split into submodules by concern; the public API is
 //! re-exported below. The full route map and module notes

@@ -11,9 +11,7 @@ use super::{events::*, helpers::*, types::*, views::*, inputs::*, state::*, hook
 
 
 
-// ---------------------------------------------------------------------------
 // Scheduled report handlers.
-// ---------------------------------------------------------------------------
 pub(crate) async fn list_scheduled(
     ctx: web::Data<Arc<AppContext>>,
     state: web::Data<Arc<AnalyticsState>>,

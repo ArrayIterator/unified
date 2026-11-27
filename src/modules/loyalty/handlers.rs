@@ -74,9 +74,7 @@ use super::types::UpdateEarnRuleRequest;
 use super::types::UpdateProgramRequest;
 use super::types::UpdateTierRequest;
 
-// ---------------------------------------------------------------------------
 // Handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_programs(
     ctx: web::Data<Arc<AppContext>>,

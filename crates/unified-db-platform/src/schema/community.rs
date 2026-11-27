@@ -3,11 +3,9 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Community (migration 000056_community). The self-reference
 // `community_posts.parent_post_id` gets no `joinable!` (a table
 // cannot join to itself in that form).
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     community_categories (id) {

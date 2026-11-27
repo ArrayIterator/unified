@@ -85,9 +85,7 @@ pub const DEFAULT_HEALTH_INTERVAL_SECS: u64 = 30;
 /// Default upstream connect timeout in seconds.
 pub const DEFAULT_CONNECT_TIMEOUT_SECS: u64 = 5;
 
-// ---------------------------------------------------------------------------
 // Feature gate.
-// ---------------------------------------------------------------------------
 
 /// True when this binary was built with the `gateway` Cargo feature
 /// (the Pingora proxy service is linked in).
@@ -109,7 +107,6 @@ pub fn require_feature_enabled() -> UnifiedResult<()> {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Gateway configuration (runtime view).
 //
 // The durable YAML section lives in `unified_core::config`
@@ -117,7 +114,6 @@ pub fn require_feature_enabled() -> UnifiedResult<()> {
 // runtime copy the gateway reads. It is deliberately independent of
 // `AppConfig` so the gateway module compiles and can be unit-tested
 // without the full configuration tree.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
@@ -253,9 +249,7 @@ fn validate_listen_address(address: &str) -> Result<(), String> {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Request log.
-// ---------------------------------------------------------------------------
 
 /// One proxied request, as kept in the in-memory ring buffer. Method,
 /// host, path, status, duration, and upstream only: request and
@@ -303,9 +297,7 @@ impl RequestLogEntry {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Shared gateway state.
-// ---------------------------------------------------------------------------
 
 /// State shared by the Pingora service, the health sweeper, and the
 /// management module. Routing rules live in `routing.rs` (a process

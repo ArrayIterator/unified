@@ -1,4 +1,4 @@
-// TimeTracker module — Time Doctor-style time tracking, activity
+// TimeTracker module - Time Doctor-style time tracking, activity
 // monitoring, screenshots, payroll, and timesheet approvals.
 //
 // Routes live under `/api/v1/timetracker` (browser / dashboard
@@ -7,54 +7,54 @@
 // authenticated through the apikeys module):
 //
 //   Status:
-//     GET  / — module status and counts.
+//     GET  / - module status and counts.
 //   Timers:
-//     GET  /timers — list timers (own timers; managers may filter
+//     GET  /timers - list timers (own timers; managers may filter
 //       by user_id with `timetracker:view_team`).
-//     POST /timers/start — start a timer (one active timer per user).
+//     POST /timers/start - start a timer (one active timer per user).
 //     POST /timers/{id}/stop, /pause, /resume.
-//     GET  /timers/active — the caller's active timer, if any.
+//     GET  /timers/active - the caller's active timer, if any.
 //   Manual time entries:
-//     GET/POST /entries — list / create a manual entry (with a
+//     GET/POST /entries - list / create a manual entry (with a
 //       reason; approval state starts at `pending`).
-//     GET/PATCH/DELETE /entries/{id} — read / edit / delete (edit
+//     GET/PATCH/DELETE /entries/{id} - read / edit / delete (edit
 //       and delete only while the entry is still `pending`).
-//     POST /entries/{id}/approve, /reject — approval with a note.
+//     POST /entries/{id}/approve, /reject - approval with a note.
 //   Activity (agent-reported):
-//     GET/POST /activity — activity samples: score 0-100 per
+//     GET/POST /activity - activity samples: score 0-100 per
 //       interval plus agent-reported idle seconds.
-//     GET/POST /usage — application / website usage intervals.
+//     GET/POST /usage - application / website usage intervals.
 //   Screenshots:
-//     GET  /screenshots, /screenshots/{id} — metadata plus a
+//     GET  /screenshots, /screenshots/{id} - metadata plus a
 //       short-lived signed URL (never raw bytes in the envelope).
-//     DELETE /screenshots/{id} — delete metadata and the stored object.
-//     POST /screenshots/purge — retention purge (also the manual
+//     DELETE /screenshots/{id} - delete metadata and the stored object.
+//     POST /screenshots/purge - retention purge (also the manual
 //       trigger for the scheduled purge; see below).
 //   Payroll and rates:
-//     GET/POST /rates, GET/PATCH/DELETE /rates/{id} — hourly rates
+//     GET/POST /rates, GET/PATCH/DELETE /rates/{id} - hourly rates
 //       per user (currency + amount).
-//     GET  /payroll — payable hours x rate, with overtime.
+//     GET  /payroll - payable hours x rate, with overtime.
 //   Timesheets:
 //     GET/POST /timesheets, GET /timesheets/{id}.
 //     POST /timesheets/{id}/submit, /approve, /reject.
 //   Reports and monitoring:
 //     GET  /reports/daily, /reports/weekly, /reports/summary.
-//     GET  /dashboard/team — online now, today's activity,
+//     GET  /dashboard/team - online now, today's activity,
 //       low-activity flags.
 //   Settings:
-//     GET/PUT /settings — global settings (admin).
-//     GET/PUT /settings/me — the caller's own tracking settings,
+//     GET/PUT /settings - global settings (admin).
+//     GET/PUT /settings/me - the caller's own tracking settings,
 //       including the screenshot consent flag.
 //   Agent endpoints (API-key authenticated):
-//     POST /agent/heartbeat — presence + idle report; may auto-pause
+//     POST /agent/heartbeat - presence + idle report; may auto-pause
 //       the caller's timer past the idle threshold.
-//     POST /agent/activity, /agent/usage — agent-reported samples.
-//     POST /agent/screenshots — screenshot upload (raw bytes).
-//     GET  /agent/status — the agent's own settings, consent, and
+//     POST /agent/activity, /agent/usage - agent-reported samples.
+//     POST /agent/screenshots - screenshot upload (raw bytes).
+//     GET  /agent/status - the agent's own settings, consent, and
 //       active timer.
 //     POST /agent/timers/start, /agent/timers/stop.
 //
-// HONESTY — READ THIS FIRST. What is real in this module:
+// HONESTY - READ THIS FIRST. What is real in this module:
 // the server side of time tracking: timers, manual entries,
 // approvals, activity and app-usage records, screenshot metadata
 // with bytes stored through the storage module, hourly rates,
@@ -80,12 +80,12 @@
 //   - `timetracker.timer.started`, `timetracker.timer.stopped`,
 //     `timetracker.timer.paused`, `timetracker.timer.resumed`,
 //     `timetracker.timer.auto_paused` (idle threshold reached)
-//   - `timetracker.time.logged` — one entry became billable-tracked
+//   - `timetracker.time.logged` - one entry became billable-tracked
 //     time (manual create and timer stop); a manual edit re-emits it
 //     with the new duration, and a delete emits a compensating void
 //     payload (`"void": true`) for the same entry id, so billing can
 //     re-price or reverse the earlier pricing (see the payload shape
-//     in the `emit_time_logged` helper; billing does not listen yet —
+//     in the `emit_time_logged` helper; billing does not listen yet -
 //     the integrator adds a handler there).
 //   - `timetracker.entry.updated`, `timetracker.entry.deleted`,
 //     `timetracker.entry.approved`, `timetracker.entry.rejected`
@@ -101,35 +101,35 @@
 //     `timetracker.rate.deleted`
 //   - `timetracker.settings.updated`
 // Events this module listens to:
-//   - `project.task.created` — acknowledged only (the task id is
+//   - `project.task.created` - acknowledged only (the task id is
 //     returned so the caller can verify the link; no record is
 //     created here). The name is confirmed by the audit module's
 //     audited-events list; the projects module file itself was not
 //     present in the staging tree when this module was written, so
 //     the handler tolerates any payload shape.
-//   - `project.task.completed` — any running timer linked to that
+//   - `project.task.completed` - any running timer linked to that
 //     task is stopped automatically (the work is done; the timer
 //     must not keep running) and its entry is logged.
-//   - `project.time.logged` — acknowledged only. The projects
+//   - `project.time.logged` - acknowledged only. The projects
 //     module keeps its own time entries; importing them here would
 //     double-count billable hours, so this handler records nothing
 //     and only answers `{"acknowledged": true}`.
-//   - `timetracker.screenshots.purge_requested` — the retention
+//   - `timetracker.screenshots.purge_requested` - the retention
 //     purge itself (deletes expired screenshot metadata and the
 //     stored objects). The scheduler is expected to emit this event
 //     through a `timetracker.screenshots.purge` job kind; see the
-//     note on `request_screenshot_purge` — the scheduler's
+//     note on `request_screenshot_purge` - the scheduler's
 //     `KNOWN_KINDS` list does not contain that kind yet, so today
 //     the purge runs through `POST /screenshots/purge` instead.
-//   - `timetracker.company.membership.check` — answered from this
+//   - `timetracker.company.membership.check` - answered from this
 //     module's own staff map and team memberships (see
 //     `on_company_membership_check`); the company module has no
 //     membership hook, so nothing else can answer it.
-//   - `timetracker.team.check` — answered from this module's own
+//   - `timetracker.team.check` - answered from this module's own
 //     teams, team memberships, and staff manager relations (see
 //     `on_team_check`); there is no separate team module.
 // Events this module emits to other modules:
-//   - `role.check` with `{"role", "permission", "allowed"}` — the
+//   - `role.check` with `{"role", "permission", "allowed"}` - the
 //     roles module answers capability checks (same shape as the
 //     ai module's `check_capability`).
 //   - `timetracker.team.check` with `{"manager_id", "user_id"}`,
@@ -150,7 +150,7 @@
 //     so a caller counts as a member when they hold a staff record
 //     for the company or sit on one of its teams. Fail-closed.
 //   - `scheduler.enqueue` with `{"kind":
-//     "timetracker.screenshots.purge", "payload": {}}` — asks the
+//     "timetracker.screenshots.purge", "payload": {}}` - asks the
 //     scheduler to run the retention purge (see
 //     `request_screenshot_purge`).
 //   - `storage.object.uploaded` / `storage.object.deleted` are NOT
@@ -173,7 +173,7 @@
 //   - Blur: when the user's `blur_screenshots` flag is set, the
 //     agent is expected to blur the image before upload and the
 //     record is marked `blurred: true`; the server records the flag
-//     but cannot verify pixel content — the agent is trusted to
+//     but cannot verify pixel content - the agent is trusted to
 //     honour it, and the flag is visible on every screenshot record
 //     so a manager can see which captures were blurred.
 //   - Visibility: a user sees only their own screenshots. A manager
@@ -182,7 +182,7 @@
 //     `timetracker.team.check` answer. Screenshot reads return a
 //     short-lived signed URL (15 minutes), never the bytes.
 //   - Retention: screenshots older than `retention_days`
-//     (default 90) are deleted — metadata and stored object — by
+//     (default 90) are deleted - metadata and stored object - by
 //     the purge. The purge never deletes anything younger than the
 //     retention window, and every deletion is reported in the
 //     `timetracker.screenshots.purged` event payload.
@@ -210,9 +210,7 @@ use serde_json::json;
 use std::sync::Arc;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Module definition
-// ---------------------------------------------------------------------------
 
 pub struct TimeTrackerModule {
     state: TimeTrackerState,
@@ -502,20 +500,18 @@ pub fn register(registry: &ModuleRegistry) {
     registry.register(Arc::new(TimeTrackerModule::new()));
 }
 
-// ---------------------------------------------------------------------------
 // Hook handlers: membership and team checks
 //
 // These two listeners answer the checks this module's own auth
 // code emits. They live here (not in `service.rs`) because
 // `register_hooks` needs them and the parent module file is the
 // only place that can reference them without a new re-export.
-// ---------------------------------------------------------------------------
 
 /// True when `user_id` belongs to `company_id` in this module's
 /// own records: a staff record for the company, or membership in
 /// one of the company's teams. The company module answers only
 /// `company.exists`; it has no membership hook, so there is no
-/// cross-module fallback to consult — the staff map plus team
+/// cross-module fallback to consult - the staff map plus team
 /// memberships are the source of truth here.
 pub(crate) fn is_company_member(state: &TimeTrackerState, company_id: Uuid, user_id: &str) -> bool {
     if state

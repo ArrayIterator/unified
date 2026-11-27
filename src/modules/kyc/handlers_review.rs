@@ -1,5 +1,5 @@
 //! HTTP handlers for the admin review queue: listing cases
-//! for review with counts, and the human decisions — approve,
+//! for review with counts, and the human decisions - approve,
 //! reject, request more information, escalate, and expire.
 //!
 //! No decision here is taken by the AI: the AI verdict feeds
@@ -70,9 +70,7 @@ fn notify_subject(state: &KycState, case: &super::types::KycCase, title: &str, b
     );
 }
 
-// ---------------------------------------------------------------------------
 // Admin review queue (manager)
-// ---------------------------------------------------------------------------
 
 /// The review queue: every non-terminal case the tenant has,
 /// filterable like the case list (status, risk level,

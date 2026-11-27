@@ -3,12 +3,10 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Contracts (migration 000048_contracts). `Contract` carries a
 // NUMERIC column, so it skips ALL serde derives per the repo header
 // rule. The self-reference `contracts.renewed_from_id` gets no
 // `joinable!` (a table cannot join to itself in that form).
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     contract_templates (id) {

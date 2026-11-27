@@ -1,4 +1,4 @@
-// documents — Hook event names emitted and listened to by this module.
+// documents - Hook event names emitted and listened to by this module.
 
 /// Emitted when a new document is finalized. Payload is the
 /// document record.

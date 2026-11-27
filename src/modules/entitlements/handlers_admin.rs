@@ -12,14 +12,12 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Handlers: admin.
-// ---------------------------------------------------------------------------
 
 /// Admin identity comes ONLY from request headers (`X-User-Id`
 /// actor, `X-Role` role slug) via `admin_caller`. Admin endpoints
 /// run on the control plane: they never take a tenant scope from a
-/// request, and they never fall back to a tenant context — the
+/// request, and they never fall back to a tenant context - the
 /// caller must hold the capability and name the tenant explicitly
 /// in the filter or body. Query parameters (`?viewer_role=` /
 /// `?viewer_id=`) and body actor fields are never identity: a
@@ -103,7 +101,7 @@ pub(crate) async fn create_grant(
         // tenant id, else the company id itself when it is a tenant
         // UUID (the tenants module uses the tenant id as the
         // company id). A non-UUID company with no explicit tenant
-        // fails closed with 400 — never a defaulted tenant id.
+        // fails closed with 400 - never a defaulted tenant id.
         let tenant_id = resolve_grant_tenant_id(body.tenant_id.as_deref(), &company_id)?;
         if let Some(expires_at) = body.expires_at {
             if expires_at <= Utc::now() {
@@ -169,7 +167,7 @@ pub(crate) async fn get_entitlement(
 /// Everything else is a 409: a revoked, expired, or disabled row
 /// can never be resurrected back to active (a lapsed module
 /// returns only through a fresh grant), and a grace row may only
-/// return to active via re-grant — never straight to revoked or
+/// return to active via re-grant - never straight to revoked or
 /// disabled, which would skip the sweep/grace lifecycle.
 pub(crate) fn validate_status_transition(from: &str, to: &str) -> UnifiedResult<()> {
     if from == to {
@@ -335,7 +333,7 @@ pub(crate) async fn delete_grant(
         state.entitlements.remove(&id);
         // History is kept: the delete itself is recorded, and the
         // earlier history rows for this entitlement are not removed.
-        // Tenant data is never deleted by this call — only the
+        // Tenant data is never deleted by this call - only the
         // grant row itself.
         state.record_history(
             &row.tenant_id,

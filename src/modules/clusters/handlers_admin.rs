@@ -1,4 +1,4 @@
-// clusters — HTTP handlers: settings, domains, and hook handlers.
+// clusters - HTTP handlers: settings, domains, and hook handlers.
 
 use super::*;
 use unified_core::context::AppContext;
@@ -11,9 +11,7 @@ use serde_json::{Value, json};
 use std::sync::Arc;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Sync settings and the domain registry.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn get_settings(
     ctx: web::Data<Arc<AppContext>>,
@@ -288,9 +286,7 @@ pub(crate) async fn unregister_domain(
     json::respond(result, debug)
 }
 
-// ---------------------------------------------------------------------------
 // Hook listeners: scheduled health checks and scheduled sync runs.
-// ---------------------------------------------------------------------------
 
 pub(crate) fn on_health_check_requested(state: Arc<ClustersState>, ctx: &mut HookContext) {
     let Some(node_id_text) = ctx.data.get("node_id").and_then(|value| value.as_str()) else {

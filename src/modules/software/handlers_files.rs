@@ -16,9 +16,7 @@ use super::state::SoftwareState;
 use super::validation::{new_id, now, respond_created, sha256_hex, sha512_hex, validate_hex_checksum, validate_url};
 use super::handlers_versions::release_files;
 
-// ---------------------------------------------------------------------------
 // Release file handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn create_release_file(
     ctx: web::Data<Arc<AppContext>>,

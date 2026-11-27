@@ -39,7 +39,7 @@
 --     history rows (a user who cancels may register again).
 --   - `webinar_polls.options` is a TEXT array; `webinar_poll_votes`
 --     stores the chosen option indexes as an INTEGER array, one row
---     per (poll_id, user_id) — voting again replaces the row.
+--     per (poll_id, user_id) - voting again replaces the row.
 --   - `webinar_questions.upvoted_by` is a VARCHAR array of the
 --     user ids that upvoted; the count is derived from it.
 --   - `webinar_attendance` is one row per join/leave session:
@@ -56,9 +56,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One webinar.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS webinars (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title VARCHAR NOT NULL,
@@ -115,9 +113,7 @@ CREATE INDEX IF NOT EXISTS idx_webinars_starts_at
 CREATE INDEX IF NOT EXISTS idx_webinars_meeting_room_id
     ON webinars (meeting_room_id);
 
--- ---------------------------------------------------------------------------
 -- One registration: seat, waitlist slot, or approval request.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS webinar_registrations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     webinar_id UUID NOT NULL REFERENCES webinars (id)
@@ -145,9 +141,7 @@ CREATE INDEX IF NOT EXISTS idx_webinar_registrations_user_id
 CREATE INDEX IF NOT EXISTS idx_webinar_registrations_status
     ON webinar_registrations (webinar_id, status);
 
--- ---------------------------------------------------------------------------
 -- One live poll.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS webinar_polls (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     webinar_id UUID NOT NULL REFERENCES webinars (id)
@@ -169,10 +163,8 @@ CREATE INDEX IF NOT EXISTS idx_webinar_polls_webinar_id
 CREATE INDEX IF NOT EXISTS idx_webinar_polls_status
     ON webinar_polls (webinar_id, status);
 
--- ---------------------------------------------------------------------------
 -- One vote: at most one row per (poll, user); voting again replaces
 -- the choice. `option_indexes` holds the chosen option positions.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS webinar_poll_votes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     poll_id UUID NOT NULL REFERENCES webinar_polls (id)
@@ -191,10 +183,8 @@ CREATE INDEX IF NOT EXISTS idx_webinar_poll_votes_poll_id
 CREATE INDEX IF NOT EXISTS idx_webinar_poll_votes_webinar_id
     ON webinar_poll_votes (webinar_id);
 
--- ---------------------------------------------------------------------------
 -- One Q&A question. `upvoted_by` lists the user ids that upvoted;
 -- the count is derived from it, so a user can upvote only once.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS webinar_questions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     webinar_id UUID NOT NULL REFERENCES webinars (id)
@@ -213,10 +203,8 @@ CREATE INDEX IF NOT EXISTS idx_webinar_questions_webinar_id
 CREATE INDEX IF NOT EXISTS idx_webinar_questions_answered
     ON webinar_questions (webinar_id, answered);
 
--- ---------------------------------------------------------------------------
 -- One attendance session: one join/leave pair. `left_at` is NULL
 -- while the person is still in the session.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS webinar_attendance (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     webinar_id UUID NOT NULL REFERENCES webinars (id)
@@ -237,9 +225,7 @@ CREATE INDEX IF NOT EXISTS idx_webinar_attendance_open
     ON webinar_attendance (webinar_id)
     WHERE left_at IS NULL;
 
--- ---------------------------------------------------------------------------
 -- One recording reference (metadata only; bytes live in storage).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS webinar_recordings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     webinar_id UUID NOT NULL REFERENCES webinars (id)

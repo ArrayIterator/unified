@@ -21,9 +21,7 @@ use unified_core::json;
 use unified_core::pagination::PaginationParams;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Category handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_categories(
     ctx: web::Data<Arc<AppContext>>,
@@ -257,9 +255,7 @@ pub(crate) async fn delete_category(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Topic handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_topics(
     ctx: web::Data<Arc<AppContext>>,

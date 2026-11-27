@@ -1,4 +1,4 @@
-//! Logistics module — shipments, fleet, warehouses, delivery — Hook handlers.
+//! Logistics module - shipments, fleet, warehouses, delivery - Hook handlers.
 //!
 //! Split from `src/modules/logistics.rs`; behaviour unchanged.
 
@@ -23,7 +23,7 @@ use serde_json::{json, Value};
 use std::sync::Arc;
 use uuid::Uuid;
 
-/// `order.paid` — no shipment is auto-created (a paid order may be
+/// `order.paid` - no shipment is auto-created (a paid order may be
 /// for digital goods). The handler only reports which linked
 /// shipments exist for the order, so callers can see the linkage.
 pub(super) fn on_order_paid(state: Arc<LogisticsState>, ctx: &mut HookContext) {
@@ -62,7 +62,7 @@ pub(super) fn on_order_paid(state: Arc<LogisticsState>, ctx: &mut HookContext) {
     }));
 }
 
-/// `store.order.cancelled` — cancel every linked shipment still in
+/// `store.order.cancelled` - cancel every linked shipment still in
 /// `created` status (reason "linked order cancelled") and notify
 /// the shipment creator. Shipments already moving are left alone:
 /// cancelling a truck already on the road is an operator decision,
@@ -135,7 +135,7 @@ pub(super) fn on_store_order_cancelled(state: Arc<LogisticsState>, ctx: &mut Hoo
     }));
 }
 
-/// `assets.stock.low` — when the payload names a warehouse this
+/// `assets.stock.low` - when the payload names a warehouse this
 /// module knows (`warehouse_id`), notify that warehouse's manager
 /// and emit `logistics.stock.low`. Payloads without a warehouse
 /// this module knows are ignored (the assets module owns the item
@@ -200,7 +200,7 @@ pub(super) fn on_assets_stock_low(state: Arc<LogisticsState>, ctx: &mut HookCont
     }));
 }
 
-/// `logistics.maintenance.remind_requested` — the scheduler's
+/// `logistics.maintenance.remind_requested` - the scheduler's
 /// dispatch for a `logistics.maintenance.remind` job. Marks the
 /// reminder due and notifies the assigned driver (or the vehicle
 /// record's assignee when the driver row cannot be found).

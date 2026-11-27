@@ -78,14 +78,14 @@ fn base_data(ctx: &AppContext, state: &FrontendState, title: &str) -> Value {
 }
 
 /// `GET /`: the public home page. The front page IS the site
-/// builder's home page (task 353): it loads the published builder
+/// builder's home page: it loads the published builder
 /// page with slug `home` through the `site_builder.render_page` hook
 /// and renders its blocks; the tagline and description come from the
 /// hero block's content, and the counts stay live from the module
 /// registry. The hard-coded strings below are ONLY the documented
 /// fallbacks for when no builder page answers (site builder
 /// unregistered, or the home page unpublished); the site settings
-/// namespace from task 351 will supply these values instead once it
+/// namespace from will supply these values instead once it
 /// lands. Counts only report what this process knows without a
 /// database: the registered module total. The template guards the
 /// database-backed stats, so they stay hidden instead of rendering

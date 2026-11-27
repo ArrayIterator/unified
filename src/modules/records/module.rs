@@ -1,4 +1,4 @@
-// records — Module registration: struct, defaults, routes, and hooks.
+// records - Module registration: struct, defaults, routes, and hooks.
 
 use super::*;
 use unified_core::hooks::{HookBus, HookContext, HookHandler, events};
@@ -9,9 +9,7 @@ use crate::modules::ai;
 use actix_web::web;
 use std::sync::Arc;
 
-// ---------------------------------------------------------------------------
 // Module.
-// ---------------------------------------------------------------------------
 
 pub struct RecordsModule {
     state: Arc<RecordsState>,

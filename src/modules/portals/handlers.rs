@@ -53,9 +53,7 @@ use super::types::PortalView;
 use super::types::UpdateDomainStatusRequest;
 use super::types::UpdatePortalRequest;
 
-// ---------------------------------------------------------------------------
 // Portal handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_portals(
     ctx: web::Data<Arc<AppContext>>,

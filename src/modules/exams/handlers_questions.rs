@@ -11,9 +11,7 @@ use super::{constants::*, settings::*, types::*, module::*, helpers::*, inputs::
 
 
 
-// ---------------------------------------------------------------------------
 // Handlers: questions
-// ---------------------------------------------------------------------------
 pub(crate) fn question_admin_view(question: &Question) -> Value {
     json!(question)
 }

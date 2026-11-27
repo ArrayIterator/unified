@@ -1,4 +1,4 @@
-// Company module — multi-site, multi-company management.
+// Company module - multi-site, multi-company management.
 //
 // A company owns sites. A site's domain is IMMUTABLE after creation:
 // any update that tries to change it is rejected with HTTP 409.

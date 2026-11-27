@@ -20,9 +20,7 @@ use super::store::allocations_store;
 use super::store::db_pool;
 use super::store::reservations_store;
 
-// ---------------------------------------------------------------------------
 // Caller identity and capability checks (properties-module shape).
-// ---------------------------------------------------------------------------
 
 pub(crate) struct Caller {
     pub(crate) actor: String,
@@ -113,9 +111,7 @@ pub(crate) fn authorize_list(ctx: &AppContext, caller: &Caller) -> UnifiedResult
     )))
 }
 
-// ---------------------------------------------------------------------------
 // Cross-module conflict check: one domain maps to at most one tenant.
-// ---------------------------------------------------------------------------
 
 /// True when `domain` is already claimed anywhere: our own
 /// reservations / aliases / allocations, or the Domains module's
@@ -129,7 +125,7 @@ pub(crate) fn authorize_list(ctx: &AppContext, caller: &Caller) -> UnifiedResult
 /// in the repo listens to either event, so that leg always answered
 /// "not claimed" and was deleted. If the domains or saas modules
 /// ever gain listeners for those events, the hook leg can be
-/// restored here — implementing the listeners themselves is a
+/// restored here - implementing the listeners themselves is a
 /// cross-module follow-up outside this module's scope.
 pub(crate) fn domain_claimed(
     ctx: &AppContext,
@@ -184,9 +180,9 @@ pub(crate) fn conflict_error(domain: &str) -> UnifiedError {
 }
 
 /// Reject tenant-resolved requests from this control-plane
-/// handler (C3 task 315, decision (a)): platform writes go only
+/// handler (C3, decision (a)): platform writes go only
 /// through an explicit, audited platform scope. Mirrors
-/// `tenancy::ControlPlaneGuard` — a request that resolved to a
+/// `tenancy::ControlPlaneGuard` - a request that resolved to a
 /// tenant host is rejected outright (403); the guard's predicate
 /// (`ControlPlaneGuard::is_control_plane_request`) is the single
 /// source of truth, so this never drifts from the guard.

@@ -12,9 +12,7 @@ use super::scheduler::*;
 use super::state::*;
 use super::types::*;
 
-// ---------------------------------------------------------------------------
 // Webinar handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_webinars(
     state: web::Data<WebinarsState>,

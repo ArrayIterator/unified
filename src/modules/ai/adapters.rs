@@ -20,9 +20,7 @@ use super::providers::validate_base_url_with_options;
 use super::types::AiProviderConnection;
 use super::types::AiProviderKind;
 
-// ---------------------------------------------------------------------------
 // Adapters.
-// ---------------------------------------------------------------------------
 
 /// Anthropic Messages API adapter (`POST {base}/v1/messages`).
 pub struct AnthropicAdapter {

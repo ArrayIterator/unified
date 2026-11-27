@@ -20,9 +20,7 @@ use crate::themes::engine::THEME_ACTIVATED_EVENT;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct ThemeModule {
     pub(crate) state: ThemeState,

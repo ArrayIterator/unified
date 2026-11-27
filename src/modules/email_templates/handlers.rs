@@ -13,7 +13,6 @@ use uuid::Uuid;
 use super::render::*;
 use super::types::*;
 
-// ---------------------------------------------------------------------------
 // Caller identity and capability checks (calculator pattern: the
 // verified user id identifies the actor, the server-resolved role
 // carries the role slug the capability check runs against,
@@ -23,7 +22,6 @@ use super::types::*;
 // `email_templates:manage`. Without this gate anyone could rewrite
 // or delete templates, and test-send would be an unauthenticated
 // mail relay to an arbitrary address.
-// ---------------------------------------------------------------------------
 
 /// The server-verified caller (see `unified_core::caller::Caller`).
 /// No verified caller means an anonymous caller, rejected before
@@ -69,9 +67,7 @@ pub(crate) fn authorize(ctx: &AppContext, req: &HttpRequest, permission: &str) -
     Ok(found)
 }
 
-// ---------------------------------------------------------------------------
-// Tenant edge guard (C3 pilot 4, task 316).
-// ---------------------------------------------------------------------------
+// Tenant edge guard (C3 pilot 4).
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request
@@ -93,7 +89,7 @@ pub(crate) fn require_tenant(
 /// The company scope the caller acts in: the tenant context's
 /// company first, the verified caller's server-resolved company
 /// otherwise. Fails closed (403) when both are present and disagree
-/// — a request must not carry one company in its tenant context and
+/// - a request must not carry one company in its tenant context and
 /// another in its verified identity. The `X-Company-Id` header is
 /// NEVER trusted here: only the verified caller (company resolved
 /// from the database at authentication time) and the
@@ -119,7 +115,7 @@ pub(crate) fn caller_company(
 /// Fail closed (403) when no company resolves for a mutating
 /// handler: the tenant context's company first, the verified
 /// caller's server-resolved company otherwise. An unresolved caller
-/// writes nothing (the shared `CallerScope::Unresolved` rule) — the
+/// writes nothing (the shared `CallerScope::Unresolved` rule) - the
 /// records in this module carry no company field to stamp, so there
 /// is no global-row write to fall back to.
 pub(crate) fn require_company(

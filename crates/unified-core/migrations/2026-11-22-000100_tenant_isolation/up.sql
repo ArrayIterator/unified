@@ -2,7 +2,7 @@
 -- (`src/modules/tenants.rs`, batch 17 builder B2).
 --
 -- Migration number note: assigned 000093 when written, renumbered
--- to 000100 by the integration renumber (gapless 000001–000108);
+-- to 000100 by the integration renumber (gapless 000001-000108);
 -- the parallel 000093_product_subdomains claim was resolved by
 -- the same renumber. Do not renumber.
 --

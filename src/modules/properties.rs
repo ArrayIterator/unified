@@ -1,20 +1,20 @@
-// Properties module — land parcels and housing developments with
+// Properties module - land parcels and housing developments with
 // 2D site plans (master plans), blocks / plots for sale, location
 // search, SVG rendering, and print support.
 //
 // Routes live under `/api/v1/properties`:
 //
 //   Properties:
-//     GET/POST / — list properties / create a property.
+//     GET/POST / - list properties / create a property.
 //     GET/PATCH/DELETE /{id}.
 //     POST /{id}/publish, /{id}/archive, /{id}/mark-sold-out.
 //   Plans:
-//     GET/POST /{id}/plans — list plans / create a plan.
+//     GET/POST /{id}/plans - list plans / create a plan.
 //     GET/PATCH/DELETE /{id}/plans/{plan_id}.
-//     GET  /{id}/plans/{plan_id}/svg — the plan as SVG.
-//     GET  /{id}/plans/{plan_id}/print — print-friendly HTML page.
+//     GET  /{id}/plans/{plan_id}/svg - the plan as SVG.
+//     GET  /{id}/plans/{plan_id}/print - print-friendly HTML page.
 //   Blocks:
-//     GET/POST /{id}/plans/{plan_id}/blocks — list blocks / create a block.
+//     GET/POST /{id}/plans/{plan_id}/blocks - list blocks / create a block.
 //     GET/PATCH/DELETE /{id}/plans/{plan_id}/blocks/{block_id}.
 //     POST /{id}/plans/{plan_id}/blocks/{block_id}/reserve,
 //          /release, /purchase, /assign, /block, /unblock,
@@ -22,12 +22,12 @@
 //     GET  /{id}/plans/{plan_id}/blocks/{block_id}/history.
 //     GET  /{id}/plans/{plan_id}/blocks/export?format=csv|json.
 //   Location:
-//     GET  /location/search?q=... — geocoder search.
-//     GET  /location/reverse?lat=...&lng=... — reverse geocoding.
-//     GET/PATCH /location/settings — geocoder provider settings.
+//     GET  /location/search?q=... - geocoder search.
+//     GET  /location/reverse?lat=...&lng=... - reverse geocoding.
+//     GET/PATCH /location/settings - geocoder provider settings.
 //   Public (no auth; see the public-access note below):
-//     GET  /public — published properties only.
-//     GET  /public/{slug} — one published property with plans and blocks.
+//     GET  /public - published properties only.
+//     GET  /public/{slug} - one published property with plans and blocks.
 //     GET  /public/{slug}/plans/{plan_id}/svg.
 //     GET  /public/{slug}/plans/{plan_id}/print.
 //

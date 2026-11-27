@@ -10,9 +10,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Audit (2026-11-22-000024_audit).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = audit_entries)]
@@ -39,9 +37,7 @@ pub struct NewAuditEntry {
     pub ip: Option<String>,
 }
 
-// ---------------------------------------------------------------------------
 // Gateway (2026-11-22-000025_gateway).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = gateway_routing_rules)]

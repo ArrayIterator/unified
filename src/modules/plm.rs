@@ -1,4 +1,4 @@
-// PLM module — product lifecycle management: data-driven
+// PLM module - product lifecycle management: data-driven
 // lifecycle stages, product versions with revision math,
 // engineering change orders with a status machine and
 // data-driven approval steps, versioned BOM snapshots, and a
@@ -7,38 +7,38 @@
 // Routes live under `/api/v1/plm`:
 //
 //   Stages:
-//     GET/POST /stages — list stages / create a stage.
-//     POST /stages/seed — seed the default stage set
+//     GET/POST /stages - list stages / create a stage.
+//     POST /stages/seed - seed the default stage set
 //       (idempotent; existing slugs are skipped).
 //     GET/PATCH/DELETE /stages/{stage_id}.
 //   Versions:
-//     GET/POST /versions — list versions / create a version
+//     GET/POST /versions - list versions / create a version
 //       (explicit numbers, or a major/minor/patch bump off
 //       the superseded revision; otherwise 1.0.0).
 //     GET/PATCH/DELETE /versions/{version_id}.
-//     POST /versions/{version_id}/transition — move through
+//     POST /versions/{version_id}/transition - move through
 //       the stage graph (allowed transitions + approval gate).
-//     GET  /versions/{version_id}/diff?against= —
+//     GET  /versions/{version_id}/diff?against= -
 //       field-by-field diff metadata.
-//     POST /versions/{version_id}/approvals — record a
+//     POST /versions/{version_id}/approvals - record a
 //       stage-entry approval.
 //   ECOs:
-//     GET/POST /ecos — list ECOs / create an ECO.
+//     GET/POST /ecos - list ECOs / create an ECO.
 //     GET/PATCH/DELETE /ecos/{eco_id}.
-//     POST /ecos/{eco_id}/transition — draft -> review ->
+//     POST /ecos/{eco_id}/transition - draft -> review ->
 //       approved -> implemented -> closed, plus rejected
 //       (review/approved -> rejected, rejected -> draft).
-//     GET/POST /ecos/{eco_id}/approvals — list / decide one
+//     GET/POST /ecos/{eco_id}/approvals - list / decide one
 //       approval step.
 //   BOM versions:
-//     GET/POST /bom-versions — list / version a BOM snapshot.
+//     GET/POST /bom-versions - list / version a BOM snapshot.
 //     GET/DELETE /bom-versions/{bom_version_id}.
 //   Settings and audit:
-//     GET  /settings — per-tenant PLM settings.
+//     GET  /settings - per-tenant PLM settings.
 //     PATCH /settings (manager).
-//     GET  /audit — the audit trail.
+//     GET  /audit - the audit trail.
 //
-// HONESTY — READ THIS FIRST. What is real in this module:
+// HONESTY - READ THIS FIRST. What is real in this module:
 // in-memory stage, version, ECO, approval, BOM-version, and
 // audit management; lifecycle stages as data (an admin defines
 // them, their order, their allowed transitions, and how many
@@ -62,15 +62,15 @@
 // durable storage until the migration runs (the DashMap
 // stores are authoritative; migration
 // `2026-11-22-000113_plm` is the persistence target);
-// products themselves (the products module owns them — this
+// products themselves (the products module owns them - this
 // module links them by id and marks versions
 // `product_deleted` from `product.deleted`); BOMs themselves
-// (the manufacturing module owns them — this module stores
+// (the manufacturing module owns them - this module stores
 // snapshots by BOM id and links manufacturing versions from
 // `manufacturing.bom.version.created`); documents themselves
-// (the documents module owns them — ECOs link them by id
+// (the documents module owns them - ECOs link them by id
 // only); and email / push delivery (the notifications module
-// owns delivery — this module only emits
+// owns delivery - this module only emits
 // `notification.requested`).
 //
 // Actor identity: the caller is the server-verified caller from
@@ -92,13 +92,13 @@
 //   - `notification.requested` (ECO implemented, in the
 //     notifications module's payload shape).
 // Events this module listens to:
-//   - `user.deleted` — anonymizes actor fields on versions,
+//   - `user.deleted` - anonymizes actor fields on versions,
 //     ECOs, approvals, BOM versions, and audit entries to
 //     `deleted-user`.
-//   - `product.deleted` — marks the product's versions
+//   - `product.deleted` - marks the product's versions
 //     `product_deleted` (history is kept, not removed) and
 //     writes an audit entry per version.
-//   - `manufacturing.bom.version.created` — links the
+//   - `manufacturing.bom.version.created` - links the
 //     manufacturing version to a matching PLM BOM snapshot
 //     with an audit entry.
 

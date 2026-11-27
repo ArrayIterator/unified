@@ -6,7 +6,7 @@
 //! validated, stored, and broadcast on the process-wide
 //! `global_hub()` (`crate::http::websocket`), and receivers
 //! filter on `call_id` plus `recipient_id`. Media itself is
-//! peer-to-peer WebRTC between the callers' browsers — the
+//! peer-to-peer WebRTC between the callers' browsers - the
 //! server NEVER relays media in this version, and there is no
 //! SFU: a group call depends on every participant's browser
 //! keeping a peer connection to every other participant.
@@ -44,10 +44,8 @@ struct PhoneWsQuery {
     call: Option<String>,
 }
 
-// ---------------------------------------------------------------------------
 // Signalling relay (shared by the REST endpoint and the
 // WebSocket endpoint, exactly like meetings `relay_signal`)
-// ---------------------------------------------------------------------------
 
 /// Validate and relay one signalling message inside a call:
 /// the sender must be a participant of the call, the call must
@@ -201,9 +199,7 @@ async fn handle_ws_message(
     }
 }
 
-// ---------------------------------------------------------------------------
 // REST handlers (authenticated)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn post_signal(
     state: web::Data<PhoneState>,
@@ -306,9 +302,7 @@ pub(crate) async fn list_signals(
     }
 }
 
-// ---------------------------------------------------------------------------
 // WebSocket endpoint (authenticated)
-// ---------------------------------------------------------------------------
 
 /// `GET /api/v1/phone/ws?call={id}`: a call-scoped view over
 /// the shared hub, exactly like the meetings room feed. The

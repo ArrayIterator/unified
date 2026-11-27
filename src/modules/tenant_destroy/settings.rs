@@ -1,4 +1,4 @@
-// Tenant Destroy module — destroy settings and the settings store.
+// Tenant Destroy module - destroy settings and the settings store.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use unified_core::context::AppContext;
@@ -26,9 +26,7 @@ use std::sync::{Arc, OnceLock, RwLock};
 use uuid::Uuid;
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Configurable settings (admin-editable; defaults are defaults only)
-// ---------------------------------------------------------------------------
 
 /// All behaviour-shaping defaults of this module. An administrator
 /// edits these through `PUT /destroy-settings`; every validation and

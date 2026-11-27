@@ -1,4 +1,4 @@
-// Tickets module — module definition and registration.
+// Tickets module - module definition and registration.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use unified_core::context::AppContext;
@@ -18,9 +18,7 @@ use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct TicketsModule {
     pub(crate) state: Arc<TicketsState>,

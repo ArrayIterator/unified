@@ -11,14 +11,12 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
-// Logistics (migration 000062_logistics; batch 5 notes §d). The notes
+// Logistics (migration 000062_logistics; batch 5 notes sec. d). The notes
 // give Queryable structs only for most tables and put `Deserialize`
 // on Queryable structs; `New*` structs are added per the file
 // convention and Queryable structs are normalised to the file's
 // `Queryable, Selectable, Serialize` shape. Money structs carry no
 // serde derives.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = logistics_drivers)]

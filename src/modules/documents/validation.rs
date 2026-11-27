@@ -1,4 +1,4 @@
-// documents — Validation helpers and small pure utilities.
+// documents - Validation helpers and small pure utilities.
 
 use super::*;
 use unified_core::context::AppContext;
@@ -13,9 +13,7 @@ use serde_json::{Value, json};
 use std::path::Path;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 pub(crate) fn new_id() -> String {
     Uuid::new_v4().to_string()
@@ -90,7 +88,7 @@ pub(crate) fn mime_for(name: &str, bytes: &[u8]) -> String {
     }
 }
 
-/// Image dimensions from the image header bytes only — no rendering.
+/// Image dimensions from the image header bytes only - no rendering.
 /// Supports PNG, GIF, JPEG (first SOF marker), and WebP (VP8X / VP8
 /// lossy / VP8L). Returns `None` for anything else.
 pub(crate) fn image_dimensions(mime: &str, bytes: &[u8]) -> Option<(u32, u32)> {
@@ -249,7 +247,7 @@ pub(crate) fn valid_visibility(value: &str) -> UnifiedResult<String> {
 /// Validate a folder name: non-empty, no path separators, at most
 /// `MAX_FOLDER_NAME_LEN` characters (same rules as the files
 /// module, so a name can never smuggle a path segment into any
-/// derived path). A name is display text only — folders are
+/// derived path). A name is display text only - folders are
 /// addressed by id, never by path.
 pub(crate) fn validate_folder_name(raw: &str) -> UnifiedResult<String> {
     let name = raw.trim();
@@ -276,7 +274,7 @@ pub(crate) fn validate_folder_name(raw: &str) -> UnifiedResult<String> {
 /// stored MIME only (never from the extension at serve time, but
 /// the list filter is display-side grouping, so MIME is the right
 /// source). Known values: `image`, `video`, `audio`, `document`,
-/// `archive`, `other`. Anything unrecognized is `other` — the
+/// `archive`, `other`. Anything unrecognized is `other` - the
 /// filter never rejects a row for an unknown MIME.
 pub(crate) fn document_type(mime: &str) -> &'static str {
     if mime.starts_with("image/") {
@@ -335,7 +333,7 @@ pub(crate) fn push_multipart_text(text: &mut String, chunk: &[u8]) -> UnifiedRes
 /// enforced on `company_id` inputs elsewhere in this module.
 pub(crate) const MAX_COMPANY_ID_LEN: usize = 128;
 
-/// The caller's company id, resolved server-side — never taken
+/// The caller's company id, resolved server-side - never taken
 /// from a request body, a query filter, or the `X-Company-Id`
 /// header. The verified caller's server-resolved company first,
 /// then the `user.company_requested` hook answered by the users
@@ -426,7 +424,7 @@ pub(crate) fn require_tenant(
 /// The company scope the caller acts in: the tenant context's
 /// company first, the verified caller's server-resolved company
 /// otherwise. Fails closed (403) when both are present and disagree
-/// — a request must not carry one company in its tenant context and
+/// - a request must not carry one company in its tenant context and
 /// another in its verified identity. The `X-Company-Id` header is
 /// NEVER trusted here: only the verified caller (company resolved
 /// from the database at authentication time) and the
@@ -513,19 +511,19 @@ pub(crate) fn in_company_scope(record_company_id: &str, caller_company: &Option<
     }
 }
 
-/// Role-scoped media-listing rule (task 355) — the list endpoint
+/// Role-scoped media-listing rule - the list endpoint
 /// itself filters; the UI never gets a row the caller may not see.
 ///   - Admins (`documents:admin`) see every document in the
 ///     company scope, public and private.
 ///   - Author / editor roles see every PUBLIC document in the
-///     company scope, plus their OWN private documents — so they
+///     company scope, plus their OWN private documents - so they
 ///     can mark their own uploads public ("mark as public") via
 ///     the flip endpoint. Another owner's private document never
 ///     appears: not its name, its URL, or its existence.
 ///   - Out-of-scope rows are hidden for every role (same rule as
 ///     `in_company_scope`).
 /// The picker endpoint (`GET /picker`) is stricter still: public
-/// only, for every role — content embeds a public URL, and a
+/// only, for every role - content embeds a public URL, and a
 /// private file would 404 for readers.
 pub(crate) fn list_visible(
     document: &DocumentRecord,
@@ -1121,7 +1119,7 @@ mod tests {
             false,
             "user-1"
         ));
-        // Author: another owner's PRIVATE document is invisible —
+        // Author: another owner's PRIVATE document is invisible -
         // zero private rows leak through the list endpoint.
         assert!(!list_visible(
             &doc("private", "company-1", "user-2"),

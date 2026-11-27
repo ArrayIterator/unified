@@ -1,4 +1,4 @@
-// data_tools — HTTP handlers: rules, scan, run, run history, and
+// data_tools - HTTP handlers: rules, scan, run, run history, and
 // the admin page.
 //
 // Auth follows the documents / scheduler shape: the caller is
@@ -17,9 +17,7 @@ use unified_core::context::AppContext;
 use unified_core::json;
 use unified_core::pagination::PaginationParams;
 
-// ---------------------------------------------------------------------------
-// Handlers — rules
-// ---------------------------------------------------------------------------
+// Handlers - rules
 
 pub(crate) async fn list_rules(
     state: web::Data<Arc<DataToolsState>>,
@@ -51,9 +49,7 @@ pub(crate) async fn update_rule(
     }
 }
 
-// ---------------------------------------------------------------------------
-// Handlers — scan / run / runs
-// ---------------------------------------------------------------------------
+// Handlers - scan / run / runs
 
 /// Dry-run preview: counts per target, zero deletes, guaranteed.
 pub(crate) async fn scan_now(
@@ -98,13 +94,11 @@ pub(crate) async fn list_runs(
     json::success_response(paginate(state.list_runs(), &query.into_inner()), 200)
 }
 
-// ---------------------------------------------------------------------------
-// Handler — admin page (HTML)
-// ---------------------------------------------------------------------------
+// Handler - admin page (HTML)
 
 /// The Data Tools admin page: rules table, scan now, run, and run
 /// history. Served from this module (not the dashboards section
-/// allowlist — wiring `/admin/data-tools` into the dashboards module
+/// allowlist - wiring `/admin/data-tools` into the dashboards module
 /// is follow-up work for its owner; the Handlebars template for that
 /// integration ships at `templates/default/data-tools/`).
 /// The rules table is server-rendered (values escaped) so the page is
@@ -138,7 +132,7 @@ pub(crate) async fn admin_page(
         ));
     }
     let html = format!(
-        "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>Data Tools — Admin</title>\n<style>\nbody{{font-family:system-ui,sans-serif;margin:2rem auto;max-width:960px;padding:0 1rem;color:#111}}\ntable{{border-collapse:collapse;width:100%;margin:1rem 0}}\nth,td{{border:1px solid #ccc;padding:.4rem .6rem;text-align:left}}\ninput[type=number]{{width:5rem}}\nbutton{{padding:.4rem .8rem;margin:.2rem;cursor:pointer}}\n#status{{margin:1rem 0;font-weight:600}}\n.note{{color:#555;font-size:.9rem}}\n</style>\n</head>\n<body>\n<h1>Data Tools</h1>\n<p class=\"note\">Orphaned-data resolver, expired-data purging, and cleanup rules. \
+        "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>Data Tools - Admin</title>\n<style>\nbody{{font-family:system-ui,sans-serif;margin:2rem auto;max-width:960px;padding:0 1rem;color:#111}}\ntable{{border-collapse:collapse;width:100%;margin:1rem 0}}\nth,td{{border:1px solid #ccc;padding:.4rem .6rem;text-align:left}}\ninput[type=number]{{width:5rem}}\nbutton{{padding:.4rem .8rem;margin:.2rem;cursor:pointer}}\n#status{{margin:1rem 0;font-weight:600}}\n.note{{color:#555;font-size:.9rem}}\n</style>\n</head>\n<body>\n<h1>Data Tools</h1>\n<p class=\"note\">Orphaned-data resolver, expired-data purging, and cleanup rules. \
 A scan is always a dry run: it counts, it never deletes. A run deletes only what the rules allow; \
 the cross-check target only ever reports. Every run is recorded below.</p>\n<h2>Cleanup rules</h2>\n<table>\n<thead><tr><th>Target</th><th>Description</th><th>Retention (days)</th><th>Enabled</th><th>Dry run by default</th><th></th></tr></thead>\n<tbody id=\"rules\">\n{rows}</tbody>\n</table>\n<h2>Scan &amp; run</h2>\n<button type=\"button\" id=\"scan-now\">Scan now (dry run)</button>\n<button type=\"button\" id=\"run-now\">Run cleanup</button>\n<label><input type=\"checkbox\" id=\"run-dry\"> dry run</label>\n<p id=\"status\" role=\"status\"></p>\n<h2>Run history</h2>\n<table>\n<thead><tr><th>Started</th><th>Finished</th><th>Dry run</th><th>Status</th><th>Triggered by</th><th>Counts</th></tr></thead>\n<tbody id=\"runs\"></tbody>\n</table>\n<script>\nconst statusEl = document.getElementById('status');\nfunction setStatus(text) {{ statusEl.textContent = text; }}\nfunction rowCell(text) {{ const td = document.createElement('td'); td.textContent = text; return td; }}\nfunction outcomeText(outcomes) {{\n  return (outcomes || []).map(o => o.target + ': ' + o.counted + ' counted, ' + o.removed + ' removed' + (o.note ? ' (' + o.note + ')' : '')).join('; ');\n}}\nasync function loadRuns() {{\n  const res = await fetch('/api/v1/data-tools/runs?per_page=20');\n  if (!res.ok) {{ setStatus('Could not load run history.'); return; }}\n  const body = await res.json();\n  const tbody = document.getElementById('runs');\n  tbody.replaceChildren();\n  for (const run of (body.data && body.data.items) || []) {{\n    const tr = document.createElement('tr');\n    tr.append(rowCell(run.started_at || ''), rowCell(run.finished_at || ''), rowCell(String(run.dry_run)), rowCell(run.status || ''), rowCell(run.triggered_by || ''), rowCell(outcomeText(run.counts)));\n    tbody.append(tr);\n  }}\n}}\nasync function loadRules() {{\n  const res = await fetch('/api/v1/data-tools/rules');\n  if (!res.ok) {{ setStatus('Could not load rules.'); return; }}\n  const body = await res.json();\n  const tbody = document.getElementById('rules');\n  tbody.replaceChildren();\n  for (const rule of (body.data && body.data.items) || []) {{\n    const tr = document.createElement('tr');\n    tr.dataset.ruleId = rule.id;\n    tr.append(rowCell(rule.target), rowCell(rule.description));\n    const retentionTd = document.createElement('td');\n    const retention = document.createElement('input');\n    retention.type = 'number'; retention.min = '0'; retention.max = '3650';\n    retention.value = String(rule.retention_days); retention.dataset.field = 'retention_days';\n    retentionTd.append(retention); tr.append(retentionTd);\n    for (const field of ['enabled', 'dry_run_default']) {{\n      const td = document.createElement('td');\n      const box = document.createElement('input');\n      box.type = 'checkbox'; box.checked = !!rule[field]; box.dataset.field = field;\n      td.append(box); tr.append(td);\n    }}\n    const actionTd = document.createElement('td');\n    const save = document.createElement('button');\n    save.type = 'button'; save.textContent = 'Save'; save.dataset.action = 'save-rule';\n    actionTd.append(save); tr.append(actionTd);\n    tbody.append(tr);\n  }}\n}}\ndocument.getElementById('rules').addEventListener('click', async (event) => {{\n  const button = event.target.closest('[data-action=\"save-rule\"]');\n  if (!button) return;\n  const tr = button.closest('tr');\n  const patch = {{}};\n  tr.querySelectorAll('[data-field]').forEach((input) => {{\n    patch[input.dataset.field] = input.type === 'checkbox' ? input.checked : Number(input.value);\n  }});\n  const res = await fetch('/api/v1/data-tools/rules/' + encodeURIComponent(tr.dataset.ruleId), {{\n    method: 'PATCH', headers: {{ 'Content-Type': 'application/json' }}, body: JSON.stringify(patch),\n  }});\n  setStatus(res.ok ? 'Rule saved.' : 'Could not save rule.');\n}});\ndocument.getElementById('scan-now').addEventListener('click', async () => {{\n  const res = await fetch('/api/v1/data-tools/scan', {{ method: 'POST' }});\n  if (!res.ok) {{ setStatus('Scan failed.'); return; }}\n  const body = await res.json();\n  setStatus('Scan (dry run, nothing deleted): ' + outcomeText(body.data && body.data.targets));\n}});\ndocument.getElementById('run-now').addEventListener('click', async () => {{\n  const dry = document.getElementById('run-dry').checked;\n  const res = await fetch('/api/v1/data-tools/run', {{\n    method: 'POST', headers: {{ 'Content-Type': 'application/json' }}, body: JSON.stringify({{ dry_run: dry }}),\n  }});\n  if (!res.ok) {{ setStatus('Run failed (a cleanup may already be in progress).'); return; }}\n  const body = await res.json();\n  setStatus('Run ' + (body.data && body.data.status) + ': ' + outcomeText(body.data && body.data.counts));\n  loadRuns();\n}});\nloadRules();\nloadRuns();\n</script>\n</body>\n</html>\n",
         rows = rows

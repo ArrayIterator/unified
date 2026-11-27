@@ -21,9 +21,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // In-meeting chat and signalling
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_messages(
     state: web::Data<MeetingsState>,

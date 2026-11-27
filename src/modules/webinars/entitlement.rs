@@ -7,9 +7,7 @@ use super::helpers::*;
 use super::state::*;
 use super::types::*;
 
-// ---------------------------------------------------------------------------
 // Entitlement (paid webinars)
-// ---------------------------------------------------------------------------
 
 /// Check, at join time, whether `user_id` may enter a paid webinar.
 ///

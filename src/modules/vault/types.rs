@@ -4,15 +4,13 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// One folder. `parent_id` is `None` for a top-level folder.
 /// `retention_days` is the retention rule for the folder: documents
 /// older than that many days are flagged for review (never
 /// auto-deleted). `auto_delete` is stored for the migration target
-/// only and is always `false` in this module — deletion is never
+/// only and is always `false` in this module - deletion is never
 /// automatic; see the module header.
 /// `tenant_id` is the owning tenant, bound server-side from the
 /// resolved tenant context at creation (never taken from the
@@ -114,7 +112,7 @@ pub struct VaultAccessLog {
 /// no separators) and is the only credential needed to resolve the
 /// link; it is never written to logs. `expires_at` is required;
 /// `max_downloads` caps downloads (0 means unlimited is not
-/// allowed — a cap is always set, defaulting to 1); `revoked`
+/// allowed - a cap is always set, defaulting to 1); `revoked`
 /// disables the link immediately. `tenant_id` is the owning tenant,
 /// bound server-side from the resolved tenant context at creation;
 /// resolving the link requires a request resolved to the same
@@ -161,9 +159,7 @@ pub struct VaultAccessRequest {
     pub updated_at: DateTime<Utc>,
 }
 
-// ---------------------------------------------------------------------------
 // Request bodies
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct CreateFolderRequest {

@@ -25,7 +25,7 @@ use super::types::AiDraftResponse;
 /// `/ai/whats-next`: build context from the caller's own
 /// aggregated items for one day, emit `calendar.ai.draft_requested`,
 /// and return the first hook result that carries a draft string.
-/// Fails closed (503) when no AI handler answers — a summary is
+/// Fails closed (503) when no AI handler answers - a summary is
 /// never fabricated locally. Drafts only: the AI never creates,
 /// moves, or deletes a calendar item.
 pub(crate) fn request_ai_draft(
@@ -128,7 +128,7 @@ pub(crate) fn parse_ai_date(raw: Option<&str>) -> UnifiedResult<NaiveDate> {
     }
 }
 
-/// POST /api/v1/calendar/ai/summarize-day — AI draft summary of
+/// POST /api/v1/calendar/ai/summarize-day - AI draft summary of
 /// the caller's calendar day.
 pub(crate) async fn ai_summarize_day(
     ctx: web::Data<Arc<AppContext>>,
@@ -156,7 +156,7 @@ pub(crate) async fn ai_summarize_day(
     }
 }
 
-/// POST /api/v1/calendar/ai/whats-next — AI draft briefing of
+/// POST /api/v1/calendar/ai/whats-next - AI draft briefing of
 /// what comes next on the caller's calendar from the given date.
 pub(crate) async fn ai_whats_next(
     ctx: web::Data<Arc<AppContext>>,

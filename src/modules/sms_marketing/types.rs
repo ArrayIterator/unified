@@ -9,7 +9,7 @@
 //! (endpoint, auth type, credentials, sender id, rate
 //! limit), templates, contact lists, opt-out keywords, and
 //! rate limits are all data rows an administrator enters.
-//! No real provider name or credential is baked in — the
+//! No real provider name or credential is baked in - the
 //! only provider kinds are the generic `http` adapter
 //! (POST JSON to the configured endpoint with the
 //! configured auth) and the `log_only` test provider, which
@@ -112,9 +112,7 @@ pub(crate) const DEFAULT_OPTOUT_KEYWORDS: &[&str] = &["STOP", "UNSUBSCRIBE", "QU
 /// the sender from the opt-out list.
 pub(crate) const DEFAULT_OPTIN_KEYWORDS: &[&str] = &["START", "SUBSCRIBE", "YES"];
 
-// ---------------------------------------------------------------------------
 // GSM-7 / UCS-2 segment math (pure functions, unit-tested below)
-// ---------------------------------------------------------------------------
 
 /// GSM 7-bit default alphabet (single-septet characters),
 /// including the newline and carriage return entries of the
@@ -234,9 +232,7 @@ pub fn segment_info(text: &str) -> SegmentInfo {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Template substitution (pure functions, unit-tested below)
-// ---------------------------------------------------------------------------
 
 /// Variable names referenced by `{{name}}` placeholders in
 /// `body`, in first-appearance order, deduplicated. A
@@ -351,13 +347,11 @@ fn utf8_len(first: u8) -> usize {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Phone normalization (pure function, unit-tested below)
-// ---------------------------------------------------------------------------
 
 /// Normalize a phone number to E.164: strip spaces, dashes,
 /// parentheses, and dots, then require a leading `+` and
-/// 8-15 digits. Returns `None` for anything else — a number
+/// 8-15 digits. Returns `None` for anything else - a number
 /// without a country code, a short code, or text that is not
 /// a number never becomes a recipient.
 pub fn normalize_phone(raw: &str) -> Option<String> {
@@ -378,9 +372,7 @@ pub fn normalize_phone(raw: &str) -> Option<String> {
     Some(cleaned)
 }
 
-// ---------------------------------------------------------------------------
 // Status machines (pure functions, unit-tested below)
-// ---------------------------------------------------------------------------
 
 /// Campaign status: `draft` -> `scheduled` -> `sending` ->
 /// `sent`, with `paused` and `cancelled` as side states.
@@ -501,9 +493,7 @@ pub fn message_can_transition(from: MessageStatus, to: MessageStatus) -> bool {
     )
 }
 
-// ---------------------------------------------------------------------------
 // Opt-out keyword matching and segment filters (pure functions)
-// ---------------------------------------------------------------------------
 
 /// Match an inbound message body against the tenant's
 /// opt-out / opt-in keyword rows. The body is trimmed and
@@ -586,9 +576,7 @@ pub fn segment_filter_matches(
     true
 }
 
-// ---------------------------------------------------------------------------
 // Rate-limit math (pure functions, unit-tested below)
-// ---------------------------------------------------------------------------
 
 /// True when another send fits inside the per-minute limit:
 /// `sent_in_window` sends already happened in the last
@@ -620,12 +608,10 @@ pub fn is_https_url(url: &str) -> bool {
     !host.is_empty() && !host.contains(' ')
 }
 
-// ---------------------------------------------------------------------------
-// Enumerations (fixed vocabulary — the shape, not the content)
-// ---------------------------------------------------------------------------
+// Enumerations (fixed vocabulary - the shape, not the content)
 
 /// Provider kind: the generic HTTP adapter or the log-only
-/// test provider. No real provider is named anywhere — a
+/// test provider. No real provider is named anywhere - a
 /// tenant points the HTTP adapter at whatever SMS gateway
 /// it uses by entering the endpoint as data.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -717,9 +703,7 @@ impl KeywordKind {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Stored types
-// ---------------------------------------------------------------------------
 
 /// One admin-configured SMS provider. `endpoint_url` is
 /// empty for the log-only kind. The credential is write-only:
@@ -794,7 +778,7 @@ impl SmsProvider {
 }
 
 /// One plain-text SMS template with `{{variable}}`
-/// placeholders. Bodies are plain text only — no HTML, no
+/// placeholders. Bodies are plain text only - no HTML, no
 /// attachments. `variables` lists the placeholder names the
 /// body references (derived at write time).
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -871,7 +855,7 @@ pub struct CampaignStats {
 /// defaults; per-contact variables win over them.
 /// `send_at` is the scheduled send time; `sent_at` is when
 /// the send pass ran. A campaign never stores message
-/// bodies itself — bodies live on the message rows.
+/// bodies itself - bodies live on the message rows.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SmsCampaign {
     pub id: Uuid,
@@ -999,9 +983,7 @@ pub struct AuditRecord {
     pub created_at: DateTime<Utc>,
 }
 
-// ---------------------------------------------------------------------------
 // Request bodies
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct CreateProviderRequest {

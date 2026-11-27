@@ -11,7 +11,7 @@
 //! a `secret` query parameter, compared in constant time
 //! against the stored hash). A provider with no webhook
 //! secret configured rejects every callback, and an unknown
-//! provider id answers 404 — the secret is the credential
+//! provider id answers 404 - the secret is the credential
 //! here, exactly like the referral module's token-gated
 //! public link.
 
@@ -42,7 +42,7 @@ use super::types::{
 /// Seed a tenant's default keyword rows the first time
 /// they are needed: the conventional opt-out words as
 /// `opt_out` rows and the opt-in words as `opt_in` rows.
-/// These are data rows like any other — a tenant edits or
+/// These are data rows like any other - a tenant edits or
 /// deletes them, and matching always reads the rows, never
 /// a hard-coded list.
 pub(crate) fn ensure_default_keywords(state: &SmsMarketingState, tenant_id: &str) {
@@ -435,9 +435,7 @@ pub(crate) async fn delete_keyword(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Webhooks (public, shared-secret gated)
-// ---------------------------------------------------------------------------
 
 /// Read the presented webhook secret from the
 /// `X-Webhook-Secret` header or the `secret` query
@@ -471,7 +469,7 @@ fn require_webhook_secret(
 /// id, inside the provider's tenant. A callback for a
 /// transition the status machine does not allow (for
 /// example a delivery report for an already-failed message)
-/// is acknowledged and ignored, never an error — providers
+/// is acknowledged and ignored, never an error - providers
 /// retry webhooks that answer with an error. Emits
 /// `sms.message.delivered` / `sms.message.failed`.
 pub(crate) async fn delivery_webhook(

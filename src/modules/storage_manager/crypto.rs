@@ -9,14 +9,12 @@ use std::sync::RwLock;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Credential encryption (write-only storage).
 //
 // Same construction as the AI module (`encrypt_api_key`): a versioned
 // `v1.` HMAC-SHA256 keystream (XOR stream cipher) with an HMAC tag
-// over nonce + ciphertext. Kept as a local copy on purpose — see the
+// over nonce + ciphertext. Kept as a local copy on purpose - see the
 // module header note about a shared core helper.
-// ---------------------------------------------------------------------------
 
 pub(crate) type HmacSha256 = Hmac<Sha256>;
 
@@ -45,7 +43,7 @@ pub(crate) fn sha256_hex_of(data: &[u8]) -> String {
 ///
 /// Decrypt-only legacy path: existing rows encrypted under the
 /// development fallback must stay readable, so decryption keeps
-/// falling back. Encryption never uses this function — see
+/// falling back. Encryption never uses this function - see
 /// `encryption_secret_for_encrypt`, which fails closed.
 pub(crate) fn encryption_secret_from(config: &RwLock<AppConfig>) -> String {
     let config = config.read().expect("config lock poisoned");
@@ -75,7 +73,7 @@ pub(crate) fn encryption_secret_for_encrypt(
     }
     if config.app.mode == "development" {
         log::warn!(
-            "Storage Manager: app.secret_key is not configured; encrypting credentials with the DEVELOPMENT fallback secret \"{DEV_ENCRYPTION_SECRET}\" (development mode only — never use this in production)"
+            "Storage Manager: app.secret_key is not configured; encrypting credentials with the DEVELOPMENT fallback secret \"{DEV_ENCRYPTION_SECRET}\" (development mode only - never use this in production)"
         );
         return Ok(DEV_ENCRYPTION_SECRET.to_string());
     }
@@ -176,7 +174,7 @@ pub(crate) fn secret_fingerprint(plaintext: &str) -> String {
     sha256_hex_of(plaintext.as_bytes()).chars().take(12).collect()
 }
 
-/// Fingerprint of an ENCRYPTED credential blob (`v1.…` ciphertext),
+/// Fingerprint of an ENCRYPTED credential blob (`v1....` ciphertext),
 /// for masked views: the first 12 hex characters of the SHA-256 of
 /// the stored ciphertext. Fingerprinting the ciphertext (which
 /// carries a random nonce, so equal plaintexts give different
@@ -305,7 +303,7 @@ mod tests {
         assert_eq!(fp_a.len(), 12);
         assert_ne!(fp_a, fp_b);
         assert_eq!(fp_a, &sha256_hex_of(a.as_bytes())[..12]);
-        // A plaintext hash would be identical for both — that is
+        // A plaintext hash would be identical for both - that is
         // exactly the brute-forceable leak this replaces.
         assert_eq!(secret_fingerprint("same-value"), secret_fingerprint("same-value"));
     }

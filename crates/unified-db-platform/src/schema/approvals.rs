@@ -3,10 +3,8 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Approvals (migration 000089_approvals). `module` is a Rust keyword,
 // so the struct field is `module_` (Diesel strips the underscore).
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     approval_definitions (id) {

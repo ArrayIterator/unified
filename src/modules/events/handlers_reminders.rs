@@ -1,4 +1,4 @@
-// Events Manager — Reminder handlers.
+// Events Manager - Reminder handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};

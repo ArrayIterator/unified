@@ -45,9 +45,7 @@ use super::types::ApiKeyStatus;
 use super::types::ApiKeyView;
 use super::types::AuthenticatedKey;
 
-// ---------------------------------------------------------------------------
 // Key generation and hashing.
-// ---------------------------------------------------------------------------
 
 /// Default sunset for legacy unpeppered API-key hashes: on or
 /// after this date (UTC) a key stored under the plain SHA-256 digest
@@ -249,9 +247,7 @@ pub fn key_has_scope(scopes: &[String], module: &str, action: &str) -> bool {
     false
 }
 
-// ---------------------------------------------------------------------------
 // Authentication and usage tracking (public, for middleware).
-// ---------------------------------------------------------------------------
 
 /// Validate a presented key value. Returns the authenticated key on
 /// success. A rotating key past its grace period is revoked lazily
@@ -374,7 +370,6 @@ pub fn note_used(key_id: Uuid) {
     );
 }
 
-// ---------------------------------------------------------------------------
 // Service functions.
 //
 // The API Manager's key endpoints delegate to these, so this module
@@ -383,7 +378,6 @@ pub fn note_used(key_id: Uuid) {
 // same functions. The store itself is the process-global static
 // above, so the functions work regardless of whether this module is
 // currently enabled as a module.
-// ---------------------------------------------------------------------------
 
 /// Parameters for creating a key through the service API.
 pub struct CreateApiKeyParams {

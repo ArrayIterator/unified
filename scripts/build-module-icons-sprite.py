@@ -14,7 +14,7 @@ icon.svg owners. A module-owned icon overrides the central file of
 the same name; the build prints every override so it is visible.
 
 One <symbol id="module-icon-<module>" viewBox="0 0 48 48"> per icon.
-Icons are Icons8 Flat Color Icons (MIT-or-Good-Boy — see
+Icons are Icons8 Flat Color Icons (MIT-or-Good-Boy - see
 assets/icons/LICENSE.flat-color-icons), 48x48 grid, flat multi-tone
 fills, no strokes: every shape carries its own explicit fill, so the
 icons render identically on light and dark backgrounds and the

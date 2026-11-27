@@ -1,4 +1,4 @@
-// Contracts — shared constants.
+// Contracts - shared constants.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};

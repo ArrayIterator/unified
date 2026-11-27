@@ -16,9 +16,7 @@ use super::types::*;
 use super::validation::*;
 use super::providers::{require_network};
 
-// ---------------------------------------------------------------------------
 // Handlers: watched addresses and transactions
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_watched_addresses(
     ctx: web::Data<Arc<AppContext>>,

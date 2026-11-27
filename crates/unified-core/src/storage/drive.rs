@@ -1,7 +1,6 @@
-// storage — drive.
+// storage - drive.
 // Google Drive provider.
 //
-// Split from `crates/unified-core/src/storage.rs`; moved verbatim, no behaviour changes.
 
 use super::keys::percent_encode;
 use super::validation::build_http_client;
@@ -22,9 +21,7 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::{Arc, RwLock};
 
-// ---------------------------------------------------------------------------
 // Google Drive provider.
-// ---------------------------------------------------------------------------
 
 /// Configuration for `GoogleDriveProvider`.
 #[derive(Debug, Clone)]
@@ -71,7 +68,7 @@ struct CachedToken {
 /// `signed_url` returns a Drive share-style download URL
 /// (`https://drive.google.com/uc?export=download&id={id}`). Honest
 /// limitation: Google Drive has no time-limited presigned URLs, so
-/// `expires_secs` cannot be enforced by Drive — the returned link
+/// `expires_secs` cannot be enforced by Drive - the returned link
 /// works only while the file is shared with link access, and it does
 /// not expire on its own. Callers that need a time limit must serve
 /// the bytes through the storage API instead.

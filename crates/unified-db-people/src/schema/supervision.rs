@@ -3,9 +3,7 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
-// Supervision (migration 000063_supervision; batch 5 notes §c).
-// ---------------------------------------------------------------------------
+// Supervision (migration 000063_supervision; batch 5 notes sec. c).
 
 diesel::table! {
     supervision_assignments (id) {

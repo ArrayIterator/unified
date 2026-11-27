@@ -48,9 +48,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One searchable document in the global index.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS search_documents (
     kind VARCHAR NOT NULL,
     id VARCHAR NOT NULL,
@@ -67,9 +65,7 @@ CREATE INDEX IF NOT EXISTS idx_search_documents_kind
 CREATE INDEX IF NOT EXISTS idx_search_documents_updated_at
     ON search_documents (updated_at);
 
--- ---------------------------------------------------------------------------
 -- One notification: an in-app / email / webhook message for a user.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS notifications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id VARCHAR NOT NULL,
@@ -88,10 +84,8 @@ CREATE INDEX IF NOT EXISTS idx_notifications_read
 CREATE INDEX IF NOT EXISTS idx_notifications_created_at
     ON notifications (created_at);
 
--- ---------------------------------------------------------------------------
 -- Per-user notification preferences: channels, categories, and
 -- digest cadence.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS notification_preferences (
     user_id VARCHAR PRIMARY KEY,
     channels JSONB NOT NULL DEFAULT '["in_app", "email", "webhook"]'::jsonb,
@@ -102,11 +96,9 @@ CREATE TABLE IF NOT EXISTS notification_preferences (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- ---------------------------------------------------------------------------
 -- One notification template: per-event title and body templates
 -- with `{{placeholders}}`, a locale, and the channels the event is
 -- delivered through.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS notification_templates (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     event VARCHAR NOT NULL,
@@ -124,9 +116,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_notification_templates_event_locale
 CREATE INDEX IF NOT EXISTS idx_notification_templates_event
     ON notification_templates (event);
 
--- ---------------------------------------------------------------------------
 -- One saved filter / view, per user and per module.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS saved_views (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id VARCHAR NOT NULL,
@@ -149,9 +139,7 @@ CREATE INDEX IF NOT EXISTS idx_saved_views_user_id
 CREATE INDEX IF NOT EXISTS idx_saved_views_module_id
     ON saved_views (module_id);
 
--- ---------------------------------------------------------------------------
 -- One timeline entry: a materialized event-stream row.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS timeline_entries (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     seq BIGINT NOT NULL,

@@ -19,7 +19,6 @@ pub(crate) type HmacSha256 = Hmac<Sha256>;
 
 
 
-// ---------------------------------------------------------------------------
 // HMAC-signed device tokens.
 //
 // Token format: `<device-id>.<base64url(HMAC-SHA256(secret, device-id))>`.
@@ -27,7 +26,6 @@ pub(crate) type HmacSha256 = Hmac<Sha256>;
 // secret is configured, signing and validation fail closed (see
 // `signing_secret`), so a deployment without a configured secret issues
 // no tokens at all instead of issuing tokens anyone can forge.
-// ---------------------------------------------------------------------------
 pub(crate) fn signing_secret(ctx: &AppContext) -> UnifiedResult<String> {
     let config = ctx.config.read().expect("config lock poisoned");
     let secret = config.app.secret_key.trim().to_string();

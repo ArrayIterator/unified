@@ -1,7 +1,6 @@
-// storage — s3.
+// storage - s3.
 // S3 and R2 (S3-compatible) providers.
 //
-// Split from `crates/unified-core/src/storage.rs`; moved verbatim, no behaviour changes.
 
 use super::keys::encode_key;
 use super::keys::hex_encode;
@@ -26,9 +25,7 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::{Arc, RwLock};
 
-// ---------------------------------------------------------------------------
 // S3 provider (AWS S3, SigV4).
-// ---------------------------------------------------------------------------
 
 /// Configuration for `S3Provider`.
 #[derive(Debug, Clone)]
@@ -441,9 +438,7 @@ impl StorageProvider for S3Provider {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R2 provider (Cloudflare R2, S3-compatible).
-// ---------------------------------------------------------------------------
 
 /// Configuration for `R2Provider`. The endpoint is the account endpoint,
 /// for example `https://<account-id>.r2.cloudflarestorage.com`. The

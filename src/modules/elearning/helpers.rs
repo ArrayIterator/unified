@@ -1,4 +1,4 @@
-// Elearning — Helpers.
+// Elearning - Helpers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -21,9 +21,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 /// Caller identity: the server-verified caller (user id plus
 /// server-resolved role, both required for capability checks),
@@ -81,9 +79,7 @@ pub(crate) fn require_teach(ctx: &AppContext, role: &str) -> UnifiedResult<()> {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Tenant edge guard (C3 pilot 3).
-// ---------------------------------------------------------------------------
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request
@@ -99,12 +95,12 @@ pub(crate) fn require_tenant(
 /// The company scope the caller acts in: the tenant context's
 /// company first, the verified caller's server-resolved company
 /// otherwise. Fails closed (403) when both are present and disagree
-/// — a request must not carry one company in its tenant context and
+/// - a request must not carry one company in its tenant context and
 /// another in its verified identity. The `X-Company-Id` header is
 /// NEVER trusted here: only the verified caller (company resolved
 /// from the database at authentication time) and the
 /// middleware-resolved tenant context are sources (header trust
-/// removal is task 317's job elsewhere).
+/// removal is handled elsewhere).
 pub(crate) fn caller_company(
     tenant: &unified_core::tenancy::TenantContext,
     req: &HttpRequest,
@@ -125,7 +121,7 @@ pub(crate) fn caller_company(
     }
 }
 
-/// Resolve the caller's company for a WRITE (C3 task 315, strict by
+/// Resolve the caller's company for a WRITE (C3, strict by
 /// default): a write requires a resolved company scope, so an
 /// unresolved caller is refused with 403 instead of silently
 /// writing a global (unscoped) record. Mutation handlers call
@@ -153,7 +149,7 @@ pub(crate) fn require_company_for_write(
 /// so the record is never stored unscoped under a scoped caller.
 /// When no caller scope is known, a body company is refused: an
 /// unresolved caller may not claim a company (the shared
-/// `CallerScope::Unresolved` rule); omitting the company is refused (C3 task 315):
+/// `CallerScope::Unresolved` rule); omitting the company is refused (C3):
 /// a write requires a resolved company scope.
 pub(crate) fn require_company_match(
     tenant: &unified_core::tenancy::TenantContext,
@@ -212,7 +208,7 @@ pub(crate) fn require_company_change_for(
 /// company-owned record is denied (the shared
 /// `CallerScope::Unresolved` rule). With a scope, only records
 /// carrying that company match, plus unscoped (global/legacy) records,
-/// which are shared content visible to any resolved scope (C3 task 320, rule A).
+/// which are shared content visible to any resolved scope (C3, rule A).
 pub(crate) fn in_company_scope(
     record_company_id: &Option<String>,
     caller_company: &Option<String>,
@@ -242,11 +238,11 @@ pub(crate) fn require_record_in_company_scope(
 }
 
 /// Fail closed (403) when a stored record is outside the caller's
-/// company scope FOR A WRITE (C3 task 315, strict by default).
+/// company scope FOR A WRITE (C3, strict by default).
 /// Unlike the read check above (rule A), a write requires an exact
 /// company match: a company caller may write only their own
-/// company's records — global (unscoped) records are platform-only
-/// — and an unresolved caller may write nothing. Mutation handlers
+/// company's records - global (unscoped) records are platform-only
+/// - and an unresolved caller may write nothing. Mutation handlers
 /// call this right after loading the record they mutate; handlers
 /// that only read the record, or load a parent to scope a child
 /// write, keep the read check.
@@ -439,7 +435,7 @@ pub(crate) fn optional_media_reference(
 }
 
 /// Validate a value against a settings list. The list is the live
-/// admin-configured one — never a constant in this file.
+/// admin-configured one - never a constant in this file.
 pub(crate) fn require_in_list(value: &str, field: &str, allowed: &[String]) -> UnifiedResult<String> {
     let checked = require_text(value, field, MAX_SLUG_LEN)?;
     if !allowed.iter().any(|item| item == &checked) {
@@ -503,7 +499,7 @@ pub(crate) fn valid_course_transition(from: &str, to: &str) -> bool {
     )
 }
 
-// --- Loaders ---------------------------------------------------------------
+// Loaders
 
 pub(crate) fn load_course(state: &ElearningState, raw_id: &str) -> UnifiedResult<Course> {
     let id = parse_uuid(raw_id, "course")?;
@@ -735,7 +731,7 @@ pub(crate) fn new_certificate_code() -> String {
 }
 
 /// SHA-256 fingerprint of the canonical certificate payload. This
-/// is the value handed to the anchoring flow — never the payload
+/// is the value handed to the anchoring flow - never the payload
 /// itself, so no personal data leaves the application.
 pub(crate) fn certificate_fingerprint(
     code: &str,
@@ -759,7 +755,7 @@ pub(crate) fn certificate_fingerprint(
 /// `elearning.certificate.issued` and, when anchoring is enabled
 /// in settings, `web3.anchor.requested` plus
 /// `elearning.certificate.anchor.requested`. Anchoring is events
-/// only — this module never talks to a chain.
+/// only - this module never talks to a chain.
 pub(crate) fn issue_certificate(
     state: &ElearningState,
     enrollment: &Enrollment,

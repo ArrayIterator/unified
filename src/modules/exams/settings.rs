@@ -6,9 +6,7 @@ use super::{constants::*, types::*, module::*, helpers::*, inputs::*, handlers_b
 
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-// ---------------------------------------------------------------------------
 // Configurable settings (admin-editable; defaults are defaults only)
-// ---------------------------------------------------------------------------
 /// All behaviour-shaping lists and defaults of this module. An
 /// administrator edits these through `PUT /settings`; every
 /// validation and default in this file reads the live settings,

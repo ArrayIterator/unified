@@ -39,9 +39,7 @@ use super::state::normalize_domain;
 use super::state::now;
 use super::state::paginate;
 
-// ---------------------------------------------------------------------------
 // Certificate-mode and Cloudflare-detection handlers.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_cert_modes(
     ctx: web::Data<Arc<AppContext>>,

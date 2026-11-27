@@ -62,9 +62,7 @@ pub(crate) fn can_manage(ctx: &AppContext, role: &str) -> bool {
     check_capability(ctx, role, PERM_DELIVERY_NOTES_MANAGE)
 }
 
-// ---------------------------------------------------------------------------
 // Tenant edge guard (C3 pilot 5, group A).
-// ---------------------------------------------------------------------------
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request
@@ -83,7 +81,7 @@ pub(crate) fn require_tenant(
 /// The company scope the caller acts in: the tenant context's
 /// company first, the verified caller's server-resolved company
 /// otherwise. Fails closed (403) when both are present and disagree
-/// — a request must not carry one company in its tenant context and
+/// - a request must not carry one company in its tenant context and
 /// another in its verified identity. The `X-Company-Id` header is
 /// NEVER trusted here: only the verified caller (company resolved
 /// from the database at authentication time) and the
@@ -106,7 +104,7 @@ pub(crate) fn caller_company(
     }
 }
 
-/// Resolve the caller's company for a WRITE (C3 task 315, strict by
+/// Resolve the caller's company for a WRITE (C3, strict by
 /// default): a write requires a resolved company scope, so an
 /// unresolved caller is refused with 403 instead of silently
 /// writing a global (unscoped) record. Mutation handlers call
@@ -142,8 +140,8 @@ fn scope_uuid(scope: &Option<String>) -> Option<Uuid> {
 /// company-owned record is denied (the shared
 /// `CallerScope::Unresolved` rule). With a scope, only records
 /// carrying that company match, plus unscoped (global/legacy) records,
-/// which are shared content visible to any resolved scope (C3 task 320, rule A). A scope that is not a UUID
-/// matches nothing at all — not even global rows — because a
+/// which are shared content visible to any resolved scope (C3, rule A). A scope that is not a UUID
+/// matches nothing at all - not even global rows - because a
 /// caller carrying a company scope is not an unresolved caller.
 pub(crate) fn in_company_scope_uuid(
     record_company_id: &Option<Uuid>,
@@ -177,11 +175,11 @@ pub(crate) fn require_note_in_company_scope(
 }
 
 /// Fail closed (404) when a stored delivery note is outside the
-/// caller's company scope FOR A WRITE (C3 task 315, strict by
+/// caller's company scope FOR A WRITE (C3, strict by
 /// default). Like the read check above, the failure is a 404, not a
 /// 403, so a write outside the caller's scope never leaks whether
 /// such a note exists: a company caller may write only their own
-/// company's notes — global notes are platform-only — and an
+/// company's notes - global notes are platform-only - and an
 /// unresolved caller may write nothing.
 pub(crate) fn require_note_writable_in_company_scope(
     record_company_id: &Option<Uuid>,
@@ -208,7 +206,7 @@ pub(crate) fn require_note_writable_in_company_scope(
 /// so the record is never stored unscoped under a scoped caller.
 /// When no caller scope is known, a body company is refused: an
 /// unresolved caller may not claim a company (the shared
-/// `CallerScope::Unresolved` rule); omitting the company is refused (C3 task 315):
+/// `CallerScope::Unresolved` rule); omitting the company is refused (C3):
 /// a write requires a resolved company scope. A caller scope that is not a UUID cannot be
 /// stored on a note, so omitting the company is refused for such
 /// callers as well.
@@ -272,7 +270,7 @@ pub(crate) fn require_company_change_uuid(
         )),
         // An explicit clear stays a clear for a resolved caller
         // (deliberate pilot semantic); an unresolved caller may
-        // not write at all (C3 task 315).
+        // not write at all (C3).
         (None, Some(_)) => Ok(None),
         (None, None) => Err(UnifiedError::forbidden(
             "A write requires a resolved company scope",
@@ -361,9 +359,7 @@ pub(crate) fn paginate<T: Serialize + Clone>(
     PageResult::new(page_items, total, &pagination)
 }
 
-// ---------------------------------------------------------------------------
 // Tenant-scoped loaders
-// ---------------------------------------------------------------------------
 //
 // Every loader checks the row's `tenant_id` against the caller's
 // tenant. A row from another tenant reads as 404, never 403, so
@@ -446,9 +442,7 @@ fn utc_from_naive(date: chrono::NaiveDate) -> chrono::DateTime<chrono::Utc> {
         .unwrap_or_else(chrono::Utc::now)
 }
 
-// ---------------------------------------------------------------------------
 // Views and events
-// ---------------------------------------------------------------------------
 
 /// DO view with its items and quantity totals attached, so a
 /// single read shows the whole document.

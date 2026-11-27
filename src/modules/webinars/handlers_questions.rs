@@ -11,9 +11,7 @@ use super::helpers::*;
 use super::state::*;
 use super::types::*;
 
-// ---------------------------------------------------------------------------
 // Q&A handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) fn require_qa_access(
     state: &WebinarsState,

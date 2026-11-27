@@ -1,4 +1,4 @@
-//! Curriculum module — competency-based school curricula. — State.
+//! Curriculum module - competency-based school curricula. - State.
 //!
 //! Split from `src/modules/curriculum.rs`; behaviour unchanged.
 

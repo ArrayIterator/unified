@@ -24,9 +24,7 @@ use std::time::Duration;
 use uuid::Uuid;
 use super::{providers::*, state::*, handlers_providers::*, login::*, tokens::*, recovery::*, totp::*, google::*, module::*};
 
-// ---------------------------------------------------------------------------
 // JWT helpers
-// ---------------------------------------------------------------------------
 
 /// Clock-skew leeway for JWT time claims, in seconds. A token whose
 /// `iat` is further in the future than this is rejected as

@@ -46,9 +46,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- Custom brand rules (tenant business data).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS card_custom_rules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 128),
@@ -70,9 +68,7 @@ CREATE INDEX IF NOT EXISTS idx_card_custom_rules_tenant_override
     ON card_custom_rules (tenant_id, overrides_standard_brand)
     WHERE overrides_standard_brand IS NOT NULL;
 
--- ---------------------------------------------------------------------------
 -- Daily validation counts (tenant business data, aggregates only).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS card_validation_daily_counts (
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 128),
     date DATE NOT NULL,

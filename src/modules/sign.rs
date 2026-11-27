@@ -1,4 +1,4 @@
-// Sign module — core e-signature: envelopes (signing
+// Sign module - core e-signature: envelopes (signing
 // requests) over multiple documents, signers with hashed
 // signing tokens, signature capture with tamper evidence,
 // reusable templates, data-driven reminder schedules, and
@@ -6,44 +6,44 @@
 //
 // Routes live under `/api/v1/sign`:
 //
-//   Public (token-gated — the token is the credential; see the
+//   Public (token-gated - the token is the credential; see the
 //   public-access note below):
-//     GET  /public/sign/{token} — sign page data.
-//     POST /public/sign/{token} — record a signature.
-//     POST /public/sign/{token}/decline — decline.
-//     GET  /public/verify/{certificate_hash} — verify a
+//     GET  /public/sign/{token} - sign page data.
+//     POST /public/sign/{token} - record a signature.
+//     POST /public/sign/{token}/decline - decline.
+//     GET  /public/verify/{certificate_hash} - verify a
 //       completion certificate.
 //   Envelopes:
-//     GET/POST /envelopes — list envelopes / create a draft.
+//     GET/POST /envelopes - list envelopes / create a draft.
 //     GET/PATCH/DELETE /envelopes/{envelope_id}.
-//     POST /envelopes/{envelope_id}/send — draft -> sent,
+//     POST /envelopes/{envelope_id}/send - draft -> sent,
 //       tokens issued (raw tokens returned once).
-//     POST /envelopes/{envelope_id}/cancel — cancel.
-//     POST /envelopes/{envelope_id}/void — void.
-//     GET  /envelopes/{envelope_id}/certificate — the
+//     POST /envelopes/{envelope_id}/cancel - cancel.
+//     POST /envelopes/{envelope_id}/void - void.
+//     GET  /envelopes/{envelope_id}/certificate - the
 //       completion certificate with its audit-chain check.
-//     GET  /envelopes/{envelope_id}/audit — the hash-chained
+//     GET  /envelopes/{envelope_id}/audit - the hash-chained
 //       audit trail.
-//     POST /envelopes/{envelope_id}/remind — remind every
+//     POST /envelopes/{envelope_id}/remind - remind every
 //       signer who has not signed yet.
-//     GET  /reminders/due — envelopes whose next reminder is
+//     GET  /reminders/due - envelopes whose next reminder is
 //       due (read-only).
 //   Signers:
-//     GET/POST /envelopes/{envelope_id}/signers — list / add.
+//     GET/POST /envelopes/{envelope_id}/signers - list / add.
 //     GET/PATCH/DELETE
 //       /envelopes/{envelope_id}/signers/{signer_id}.
 //     POST /envelopes/{envelope_id}/signers/{signer_id}/resend
-//       — rotate the token and resend.
+//       - rotate the token and resend.
 //   Templates:
-//     GET/POST /templates — list templates / create one.
+//     GET/POST /templates - list templates / create one.
 //     GET/PATCH/DELETE /templates/{template_id}.
-//     POST /templates/{template_id}/use — build a draft
+//     POST /templates/{template_id}/use - build a draft
 //       envelope from the template.
 //   Settings:
-//     GET  /settings — per-tenant sign settings.
+//     GET  /settings - per-tenant sign settings.
 //     PATCH /settings (manager).
 //
-// HONESTY — READ THIS FIRST. What is real in this module:
+// HONESTY - READ THIS FIRST. What is real in this module:
 // in-memory envelope, signer, template, audit, certificate,
 // and settings management; the envelope status machine (draft
 // -> sent -> partially_signed -> completed, plus declined,
@@ -58,7 +58,7 @@
 // rotates, tokens revoked on cancel / void / decline /
 // completion); signature capture as hashes only (drawn
 // strokes, typed names, and uploaded images are never stored
-// or sent — the client sends the SHA-256 of the signature
+// or sent - the client sends the SHA-256 of the signature
 // bytes plus the SHA-256 of the document as displayed, which
 // must match the hash recorded for that document at send
 // time); a hash-chained audit trail (every view, sign,
@@ -72,10 +72,10 @@
 // until the migration runs (the DashMap stores are
 // authoritative; migration `2026-11-22-000114_sign` is the
 // persistence target); email / push delivery (the
-// notifications module owns delivery — this module only emits
+// notifications module owns delivery - this module only emits
 // `notification.requested` and `sign.reminder.due`); document
 // rendering or PDF sealing (the documents module owns the
-// files — this module links them by id and records hashes);
+// files - this module links them by id and records hashes);
 // and any provider integration beyond the built-in
 // hash-and-audit provider (the provider name in settings only
 // selects configuration).
@@ -86,8 +86,8 @@
 // with `public_access: true`, and denied outright when a rule
 // exists with `allowed: false`). There is no reusable
 // per-request "is this endpoint public?" helper to call from a
-// handler — the check lives in the API Manager middleware /
-// `resolve_public` path — so the public routes below rely on
+// handler - the check lives in the API Manager middleware /
+// `resolve_public` path - so the public routes below rely on
 // that gate: an administrator must create the matching
 // `ApiAccessRule` rows for `GET /api/v1/sign/public/*` and
 // `POST /api/v1/sign/public/*`. The routes are registered in
@@ -120,10 +120,10 @@
 //     a sent envelope, token resent, reminder sent, in the
 //     notifications module's payload shape).
 // Events this module listens to:
-//   - `documents.deleted` — voids every live envelope
+//   - `documents.deleted` - voids every live envelope
 //     referencing the deleted document and revokes its tokens;
 //     completed envelopes keep their certificate.
-//   - `user.deleted` — anonymizes the user's envelopes and
+//   - `user.deleted` - anonymizes the user's envelopes and
 //     templates to `deleted-user` and their audit entries;
 //     signer rows are anonymized when the payload carries the
 //     deleted user's email.

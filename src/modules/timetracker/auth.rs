@@ -1,4 +1,4 @@
-// timetracker — Caller identity, capability checks, and agent authentication.
+// timetracker - Caller identity, capability checks, and agent authentication.
 
 use super::*;
 use unified_core::context::AppContext;
@@ -10,9 +10,7 @@ use serde_json::{Value, json};
 use std::time::Instant;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Helpers: caller, permissions, agent auth, company scope
-// ---------------------------------------------------------------------------
 
 /// The server-verified caller (see `unified_core::caller::Caller`):
 /// the user id identifies the actor, the server-resolved role is the
@@ -53,7 +51,7 @@ pub(crate) fn require_tenant(
 /// The company scope the caller acts in: the tenant context's
 /// company first, the verified caller's server-resolved company
 /// otherwise. Fails closed (403) when both are present and disagree
-/// — a request must not carry one company in its tenant context and
+/// - a request must not carry one company in its tenant context and
 /// another in its verified identity. The `X-Company-Id` header is
 /// NEVER trusted here: only the verified caller (company resolved
 /// from the database at authentication time) and the
@@ -78,7 +76,7 @@ pub(crate) fn caller_company(
     }
 }
 
-/// Resolve the caller's company for a WRITE (C3 task 315, strict by
+/// Resolve the caller's company for a WRITE (C3, strict by
 /// default): a write requires a resolved company scope, so an
 /// unresolved caller is refused with 403 instead of silently
 /// writing a global (unscoped) record. Mutation handlers call
@@ -107,7 +105,7 @@ pub(crate) fn require_company_for_write(
 /// When no caller scope is known (neither the tenant context nor
 /// the verified caller carries a company), a body company is refused:
 /// an unresolved caller may not claim a company (the shared
-/// `CallerScope::Unresolved` rule); omitting the company is refused (C3 task 315):
+/// `CallerScope::Unresolved` rule); omitting the company is refused (C3):
 /// a write requires a resolved company scope.
 pub(crate) fn require_company_match(
     tenant: &unified_core::tenancy::TenantContext,
@@ -185,11 +183,11 @@ pub(crate) fn require_record_in_company_scope(
 }
 
 /// Fail closed (403) when a stored record is outside the caller's
-/// company scope FOR A WRITE (C3 task 315, strict by default).
+/// company scope FOR A WRITE (C3, strict by default).
 /// Unlike the read check above (rule A), a write requires an exact
 /// company match: a company caller may write only their own
-/// company's records — global (unscoped) records are platform-only
-/// — and an unresolved caller may write nothing. Mutation handlers
+/// company's records - global (unscoped) records are platform-only
+/// - and an unresolved caller may write nothing. Mutation handlers
 /// call this right after loading the record they mutate; handlers
 /// that only read the record, or load a parent to scope a child
 /// write, keep the read check.
@@ -358,7 +356,7 @@ fn company_exists(ctx: &AppContext, company_id: Uuid) -> bool {
 /// `{"company_id", "user_id"}`, expecting `{"member": true}` in
 /// the first hook result; this module answers it itself from its
 /// own staff map and team memberships (see
-/// `on_company_membership_check` in module.rs) — the company
+/// `on_company_membership_check` in module.rs) - the company
 /// module has no membership hook. Fail-closed on both halves: an
 /// unknown company or an unanswered membership check is a 403,
 /// never a pass.
@@ -423,7 +421,7 @@ pub(crate) fn can_view_user(ctx: &AppContext, caller: &Caller, user_id: &str) ->
 }
 
 /// Authorise reading another user's screenshots: stricter than
-/// `can_view_user` — it needs the dedicated screenshot capability
+/// `can_view_user` - it needs the dedicated screenshot capability
 /// on top of the team check.
 pub(crate) fn can_view_screenshots(
     ctx: &AppContext,

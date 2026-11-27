@@ -13,9 +13,7 @@ use super::helpers::{matches_search};
 
 
 
-// ---------------------------------------------------------------------------
 // Dashboard and summary handlers.
-// ---------------------------------------------------------------------------
 pub(crate) async fn get_dashboard(
     ctx: web::Data<Arc<AppContext>>,
     state: web::Data<Arc<AnalyticsState>>,
@@ -801,10 +799,10 @@ mod tests {
         ctx
     }
 
-    /// The company the handler tests act as (C3 task 315).
+    /// The company the handler tests act as (C3).
     const TEST_COMPANY: &str = "company-a";
 
-    /// A request scoped to the test company (C3 task 315):
+    /// A request scoped to the test company (C3):
     /// mutation handlers require a resolved company, so the
     /// happy-path tests carry one on both the tenant context and
     /// the verified caller.

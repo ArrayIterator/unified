@@ -58,7 +58,7 @@
 --     stored here: only the record id and metadata. A token is
 --     revoked by setting `revoked_at`; `expires_at` is enforced on
 --     every redemption. Provider (presigned) URLs issued alongside
---     a hub token cannot be revoked by the hub — see
+--     a hub token cannot be revoked by the hub - see
 --     `provider_url_issued` and the module header.
 --   - `storage_health_checks` is an append-only audit of health
 --     runs (connectivity + write/read/delete probe). `detail` never
@@ -66,9 +66,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One registered storage bucket (container).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS storage_buckets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR NOT NULL,
@@ -105,9 +103,7 @@ CREATE INDEX IF NOT EXISTS ix_storage_buckets_company_id
 CREATE INDEX IF NOT EXISTS ix_storage_buckets_enabled
     ON storage_buckets (enabled);
 
--- ---------------------------------------------------------------------------
 -- One per-module binding: which module stores where.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS storage_bindings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     module_id VARCHAR NOT NULL,
@@ -132,9 +128,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_storage_bindings_enabled_module_company
     ON storage_bindings (module_id, COALESCE(company_id, ''))
     WHERE enabled;
 
--- ---------------------------------------------------------------------------
 -- One quota: soft (warn) and hard (reject) limits for one scope.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS storage_quotas (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     scope VARCHAR NOT NULL
@@ -157,9 +151,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_storage_quotas_scope_scope_id
 CREATE INDEX IF NOT EXISTS ix_storage_quotas_scope
     ON storage_quotas (scope);
 
--- ---------------------------------------------------------------------------
 -- Daily usage rollup: one row per (date, bucket, company, user, module).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS storage_usage_daily (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     date DATE NOT NULL,
@@ -188,9 +180,7 @@ CREATE INDEX IF NOT EXISTS ix_storage_usage_daily_user_id
 CREATE INDEX IF NOT EXISTS ix_storage_usage_daily_company_id
     ON storage_usage_daily (company_id);
 
--- ---------------------------------------------------------------------------
 -- One lifecycle rule for one bucket.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS storage_lifecycle_rules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     bucket_id UUID NOT NULL,
@@ -212,10 +202,8 @@ CREATE INDEX IF NOT EXISTS ix_storage_lifecycle_rules_bucket_id
 CREATE INDEX IF NOT EXISTS ix_storage_lifecycle_rules_enabled
     ON storage_lifecycle_rules (enabled);
 
--- ---------------------------------------------------------------------------
 -- Issued hub download tokens (audit + revocation). The token value is
 -- never stored: only metadata. Revocation sets `revoked_at`.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS storage_signed_url_revocations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     bucket_id UUID NOT NULL,
@@ -239,9 +227,7 @@ CREATE INDEX IF NOT EXISTS ix_storage_signed_url_revocations_revoked_at
 CREATE INDEX IF NOT EXISTS ix_storage_signed_url_revocations_issued_by
     ON storage_signed_url_revocations (issued_by);
 
--- ---------------------------------------------------------------------------
 -- Health-check runs (append-only audit).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS storage_health_checks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     bucket_id UUID NOT NULL,

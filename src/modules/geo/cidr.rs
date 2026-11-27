@@ -6,9 +6,7 @@ use std::net::IpAddr;
 
 
 #[derive(Debug, Clone, Copy)]
-// ---------------------------------------------------------------------------
 // CIDR parsing and containment (IPv4 and IPv6, implemented with std only).
-// ---------------------------------------------------------------------------
 pub struct Cidr {
     pub network: IpAddr,
     pub prefix: u8,

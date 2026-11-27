@@ -17,9 +17,7 @@ use super::state::*;
 use super::types::*;
 use super::validation::*;
 
-// ---------------------------------------------------------------------------
 // Handlers: wallets and balances
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_wallets(
     ctx: web::Data<Arc<AppContext>>,

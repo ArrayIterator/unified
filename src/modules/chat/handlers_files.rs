@@ -11,9 +11,7 @@ use super::{limits::*, types::*, hub::*, state::*, helpers::*, module::*, handle
 
 
 
-// ---------------------------------------------------------------------------
 // File sharing handlers
-// ---------------------------------------------------------------------------
 pub(crate) async fn share_file(
     state: web::Data<ChatState>,
     req: HttpRequest,

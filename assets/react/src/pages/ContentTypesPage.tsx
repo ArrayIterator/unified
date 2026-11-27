@@ -3,7 +3,7 @@
 // Definitions are data: labels, icon, supports, dynamic field
 // definitions, visibility, archive/menu/REST flags. Creating one
 // makes the generic routes and the generic entry screens serve the
-// type immediately — no per-type code exists. Deleting a type is a
+// type immediately - no per-type code exists. Deleting a type is a
 // soft-disable: its entries are preserved and reappear on enable.
 
 import { useState } from "react";
@@ -97,7 +97,7 @@ export default function ContentTypesPage() {
           <p className="mt-1 text-sm text-muted">
             Admin-definable post types. Each type gets generic API
             routes, a menu entry, and definition-driven list/form
-            screens — no code per type.
+            screens - no code per type.
           </p>
         </div>
         <Button
@@ -135,8 +135,8 @@ export default function ContentTypesPage() {
                     <span className="font-normal text-faint">/{type.slug}</span>
                   </p>
                   <p className="mt-0.5 text-xs text-faint">
-                    {type.fields.length} field{type.fields.length === 1 ? "" : "s"} ·{" "}
-                    {type.supports.join(", ") || "no built-in features"} · icon{" "}
+                    {type.fields.length} field{type.fields.length === 1 ? "" : "s"} -{" "}
+                    {type.supports.join(", ") || "no built-in features"} - icon{" "}
                     {type.icon}
                   </p>
                 </div>
@@ -442,7 +442,7 @@ function TypeForm({
             isDisabled={saving}
             onClick={() => void save()}
           >
-            {saving ? "Saving…" : "Create post type"}
+            {saving ? "Saving..." : "Create post type"}
           </Button>
           <Button color="secondary" onClick={onCancel}>
             Cancel

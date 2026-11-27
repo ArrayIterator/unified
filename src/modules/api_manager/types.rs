@@ -9,9 +9,7 @@ use uuid::Uuid;
 
 use super::{parse_version_number, sort_version_ids};
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EndpointRule {
@@ -116,9 +114,7 @@ pub struct CreateKeyInput {
     pub expires_in_days: Option<u32>,
 }
 
-// ---------------------------------------------------------------------------
 // Version registry types
-// ---------------------------------------------------------------------------
 
 /// How an endpoint declares the API versions it is available in.
 ///
@@ -382,9 +378,7 @@ pub struct ResolvedEndpoint {
     pub deprecated_warning: Option<String>,
 }
 
-// ---------------------------------------------------------------------------
 // Public access control (default deny)
-// ---------------------------------------------------------------------------
 
 /// Maximum number of access-audit entries kept in memory. The
 /// migration (000004, `api_access_audit`) persists the same rows;
@@ -540,7 +534,7 @@ pub(crate) struct AccessAuditRow {
 }
 
 /// Seeded access rules: `(method, path template, version,
-/// public_access, source)`. `allowed` is always `true` for a seed —
+/// public_access, source)`. `allowed` is always `true` for a seed -
 /// the seed only opens the endpoint to the gate the notes describe;
 /// the module behind the endpoint still enforces its own
 /// authentication, capability, and tenant checks.
@@ -583,13 +577,13 @@ pub(crate) struct AccessAuditRow {
 /// - Cards (batch 18) have no public endpoints, so no card rows
 ///   are seeded here.
 pub const DEFAULT_ACCESS_RULES: &[(&str, &str, &str, bool, &str)] = &[
-    // Batch 2 — events public routes.
+    // Batch 2 - events public routes.
     ("GET", "/api/v1/events/public", "v1", true, "batch-2 events public"),
     ("GET", "/api/v1/events/public/{slug}", "v1", true, "batch-2 events public"),
     ("GET", "/api/v1/events/public/{slug}/ics", "v1", true, "batch-2 events public"),
     ("GET", "/api/v1/events/public/calendar.ics", "v1", true, "batch-2 events public"),
     ("GET", "/api/v1/events/public/calendar.json", "v1", true, "batch-2 events public"),
-    // Batch 4 — public routes.
+    // Batch 4 - public routes.
     ("POST", "/api/v1/affiliates/track", "v1", true, "batch-4 affiliates public"),
     ("GET", "/api/v1/portals/public/{slug}", "v1", true, "batch-4 portals public"),
     ("GET", "/api/v1/forms/public/{slug}", "v1", true, "batch-4 forms public"),
@@ -603,25 +597,25 @@ pub const DEFAULT_ACCESS_RULES: &[(&str, &str, &str, bool, &str)] = &[
     ("POST", "/api/v1/surveys/public/{token}", "v1", true, "batch-4 surveys public"),
     ("GET", "/api/v1/vault/shared/{token}", "v1", true, "batch-4 vault public"),
     ("POST", "/api/v1/workflows/hooks/{token}", "v1", true, "batch-4 workflows public"),
-    // Batch 5 — sharing, logistics tracking, properties public.
+    // Batch 5 - sharing, logistics tracking, properties public.
     ("GET", "/api/v1/sharing/public/{token}", "v1", true, "batch-5 sharing public"),
     ("GET", "/api/v1/logistics/track/{tracking_number}", "v1", true, "batch-5 logistics public"),
     ("GET", "/api/v1/properties/public", "v1", true, "batch-5 properties public"),
     ("GET", "/api/v1/properties/public/{slug}", "v1", true, "batch-5 properties public"),
     ("GET", "/api/v1/properties/public/{slug}/plans/{plan_id}/svg", "v1", true, "batch-5 properties public"),
     ("GET", "/api/v1/properties/public/{slug}/plans/{plan_id}/print", "v1", true, "batch-5 properties public"),
-    // Batch 6 — web3 public ledger.
+    // Batch 6 - web3 public ledger.
     ("GET", "/api/v1/web3/public/ledger", "v1", true, "batch-6 web3 public"),
-    // Batch 7 — licensing public-facing endpoints.
+    // Batch 7 - licensing public-facing endpoints.
     ("POST", "/api/v1/licensing/public/verify", "v1", false, "batch-7 licensing public"),
     ("POST", "/api/v1/licensing/offline-verify", "v1", true, "batch-7 licensing public"),
     ("GET", "/api/v1/licensing/distribute/git/{product}/access", "v1", false, "batch-7 licensing public"),
     ("POST", "/api/v1/licensing/distribute/git/{product}/webhook", "v1", true, "batch-7 licensing public"),
     ("GET", "/api/v1/licensing/distribute/releases/{release_id}/download", "v1", true, "batch-7 licensing public"),
     ("GET", "/api/v1/licensing/distribute/releases/{release_id}/file", "v1", true, "batch-7 licensing public"),
-    // Batch 9 — whitelabel public branding.
+    // Batch 9 - whitelabel public branding.
     ("GET", "/api/v1/whitelabel/public/branding/{company_id}", "v1", true, "batch-9 whitelabel public"),
-    // Batch 10 — e-learning certificate verification, appointments
+    // Batch 10 - e-learning certificate verification, appointments
     // public routes, digital storefront reads + sample.
     ("GET", "/api/v1/elearning/certificates/verify/{code}", "v1", true, "batch-10 elearning public"),
     ("GET", "/api/v1/appointments/public/services", "v1", true, "batch-10 appointments public"),
@@ -632,7 +626,7 @@ pub const DEFAULT_ACCESS_RULES: &[(&str, &str, &str, bool, &str)] = &[
     ("GET", "/api/v1/store/digital/{id}", "v1", true, "batch-10 digital storefront"),
     ("GET", "/api/v1/store/digital/{id}/previews", "v1", true, "batch-10 digital storefront"),
     ("GET", "/api/v1/store/digital/{id}/sample", "v1", true, "batch-10 digital storefront"),
-    // Batch 15 — entitlements routes (all keyed).
+    // Batch 15 - entitlements routes (all keyed).
     ("GET", "/api/v1/entitlements/my-modules", "v1", false, "batch-15 entitlements"),
     ("GET", "/api/v1/entitlements/modules/{module_id}/access", "v1", false, "batch-15 entitlements"),
     ("POST", "/api/v1/entitlements/modules/{module_id}/enable", "v1", false, "batch-15 entitlements"),
@@ -653,7 +647,7 @@ pub const DEFAULT_ACCESS_RULES: &[(&str, &str, &str, bool, &str)] = &[
     ("GET", "/api/v1/entitlements/{id}", "v1", false, "batch-15 entitlements"),
     ("PATCH", "/api/v1/entitlements/{id}", "v1", false, "batch-15 entitlements"),
     ("DELETE", "/api/v1/entitlements/{id}", "v1", false, "batch-15 entitlements"),
-    // Batch 15 — pricing routes (all keyed).
+    // Batch 15 - pricing routes (all keyed).
     ("POST", "/api/v1/pricing/recommendations/cost-plus", "v1", false, "batch-15 pricing"),
     ("POST", "/api/v1/pricing/recommendations/tiered", "v1", false, "batch-15 pricing"),
     ("POST", "/api/v1/pricing/recommendations/bundle", "v1", false, "batch-15 pricing"),
@@ -712,7 +706,7 @@ pub const DEFAULT_ACCESS_RULES: &[(&str, &str, &str, bool, &str)] = &[
     ("POST", "/api/v1/pricing/currencies", "v1", false, "batch-15 pricing"),
     ("PUT", "/api/v1/pricing/currencies/{code}", "v1", false, "batch-15 pricing"),
     ("POST", "/api/v1/pricing/convert", "v1", false, "batch-15 pricing"),
-    // Batch 16 — calendar routes (all keyed; the public iCal feed
+    // Batch 16 - calendar routes (all keyed; the public iCal feed
     // is token-gated and is deliberately not seeded).
     ("GET", "/api/v1/calendar", "v1", false, "batch-16 calendar"),
     ("GET", "/api/v1/calendar/items", "v1", false, "batch-16 calendar"),
@@ -726,7 +720,7 @@ pub const DEFAULT_ACCESS_RULES: &[(&str, &str, &str, bool, &str)] = &[
     ("DELETE", "/api/v1/calendar/feeds/{id}", "v1", false, "batch-16 calendar"),
     ("POST", "/api/v1/calendar/ai/summarize-day", "v1", false, "batch-16 calendar"),
     ("POST", "/api/v1/calendar/ai/whats-next", "v1", false, "batch-16 calendar"),
-    // Batch 16 — holidays routes (all keyed).
+    // Batch 16 - holidays routes (all keyed).
     ("GET", "/api/v1/holidays/providers", "v1", false, "batch-16 holidays"),
     ("POST", "/api/v1/holidays/providers", "v1", false, "batch-16 holidays"),
     ("GET", "/api/v1/holidays/providers/{id}", "v1", false, "batch-16 holidays"),
@@ -756,9 +750,7 @@ pub const DEFAULT_ACCESS_RULES: &[(&str, &str, &str, bool, &str)] = &[
     ("DELETE", "/api/v1/holidays/overrides/{id}", "v1", false, "batch-16 holidays"),
 ];
 
-// ---------------------------------------------------------------------------
 // Validation helpers
-// ---------------------------------------------------------------------------
 
 pub(crate) const HTTP_METHODS: &[&str] = &["GET", "POST", "PUT", "PATCH", "DELETE"];
 

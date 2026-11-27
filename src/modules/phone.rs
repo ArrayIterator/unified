@@ -1,4 +1,4 @@
-// Phone module — WebRTC voice and video calling over the
+// Phone module - WebRTC voice and video calling over the
 // web (internet-only): 1:1 and group calls, store-and-forward
 // signalling, call queues and routing rules as data,
 // presence, IVR menus and auto-response scripts as data,
@@ -7,53 +7,53 @@
 // Routes live under `/api/v1/phone`:
 //
 //   Calls:
-//     GET/POST /calls — list calls / initiate a call.
+//     GET/POST /calls - list calls / initiate a call.
 //     GET/PATCH/DELETE /calls/{call_id}.
 //     POST /calls/{call_id}/accept, /reject, /end, /hold,
 //       /resume, /invite.
 //     GET  /calls/{call_id}/participants.
-//     GET  /calls/{call_id}/summary — the stored AI summary.
-//     POST /calls/{call_id}/summarize — run the AI summary.
-//     GET  /call-logs — ended and missed calls.
+//     GET  /calls/{call_id}/summary - the stored AI summary.
+//     POST /calls/{call_id}/summarize - run the AI summary.
+//     GET  /call-logs - ended and missed calls.
 //   Signalling (WebRTC, media stays peer-to-peer):
-//     POST /calls/{call_id}/signal — offer / answer / ICE.
-//     GET  /calls/{call_id}/signals — the signals inbox.
-//     GET  /ws?call={id} — WebSocket feed of one call.
+//     POST /calls/{call_id}/signal - offer / answer / ICE.
+//     GET  /calls/{call_id}/signals - the signals inbox.
+//     GET  /ws?call={id} - WebSocket feed of one call.
 //   Queues and routing:
 //     GET/POST /queues, GET/PATCH/DELETE /queues/{queue_id}.
 //     GET/POST /queues/{queue_id}/members, DELETE
 //       /queues/{queue_id}/members/{member_id}.
-//     POST /queues/{queue_id}/join — wait in a queue.
-//     GET  /queues/{queue_id}/waiting — who is waiting.
-//     POST /queues/{queue_id}/answer — admin answers next.
-//     GET  /admin/queue — admin queue dashboard.
+//     POST /queues/{queue_id}/join - wait in a queue.
+//     GET  /queues/{queue_id}/waiting - who is waiting.
+//     POST /queues/{queue_id}/answer - admin answers next.
+//     GET  /admin/queue - admin queue dashboard.
 //     GET/POST /routing-rules, GET/PATCH/DELETE
 //       /routing-rules/{rule_id}.
-//     POST /routing-rules/evaluate — first matching rule.
+//     POST /routing-rules/evaluate - first matching rule.
 //   Presence:
 //     GET  /presence, GET /presence/{user_id}.
-//     POST /presence — set your own status.
-//     POST /presence/heartbeat — refresh last-seen.
+//     POST /presence - set your own status.
+//     POST /presence/heartbeat - refresh last-seen.
 //   IVR and auto-response:
 //     GET/POST /ivr-menus, GET/PATCH/DELETE
 //       /ivr-menus/{menu_id}.
 //     GET/POST /ivr-menus/{menu_id}/nodes, DELETE
 //       /ivr-menus/{menu_id}/nodes/{node_id}.
-//     POST /ivr-menus/{menu_id}/resolve — one key press.
+//     POST /ivr-menus/{menu_id}/resolve - one key press.
 //     GET/POST /auto-response-scripts, GET/PATCH/DELETE
 //       /auto-response-scripts/{script_id}.
-//     POST /auto-response — answer a routine caller question.
-//   Recordings (metadata only — references, never bytes):
+//     POST /auto-response - answer a routine caller question.
+//   Recordings (metadata only - references, never bytes):
 //     GET  /calls/{call_id}/recordings.
 //     POST /calls/{call_id}/recordings/start.
 //     POST /calls/{call_id}/recordings/{recording_id}/stop,
 //       /attach.
 //   AI and settings:
-//     POST /ai/{capability} — run a registered phone AI
+//     POST /ai/{capability} - run a registered phone AI
 //       capability through the AI module's gated runner.
 //     GET  /settings, PATCH /settings.
 //
-// HONESTY — READ THIS FIRST. What is real in this module:
+// HONESTY - READ THIS FIRST. What is real in this module:
 // in-memory call, participant, signal, queue, member, waiter,
 // routing-rule, presence, IVR-menu, IVR-node,
 // auto-response-script, recording, and settings management;
@@ -81,7 +81,7 @@
 // migration runs (the DashMap stores are authoritative;
 // migration `2026-11-22-000116_phone` is the persistence
 // target); the actual media transport is browser-to-browser
-// WebRTC — there is NO media server, NO SFU, and NO TURN
+// WebRTC - there is NO media server, NO SFU, and NO TURN
 // relay in this round, so the server NEVER relays media, and
 // a group call depends on every participant's browser keeping
 // a peer connection to every other participant; queue wait
@@ -89,10 +89,10 @@
 // target) but no background expiry pass runs yet, so an
 // expired waiter is visible on the dashboard until an admin
 // or a future scheduler pass clears it; the AI provider
-// itself (the ai module owns providers, gating, and usage —
+// itself (the ai module owns providers, gating, and usage -
 // this module only declares capabilities and calls the
 // runner); and transcription (the summarize endpoint accepts
-// a caller-supplied transcript or transcript reference —
+// a caller-supplied transcript or transcript reference -
 // there is no transcription pipeline in this module yet).
 //
 // REUSED FROM MEETINGS vs BUILT FRESH. Reused, same shapes
@@ -114,7 +114,7 @@
 // meetings are scheduled rooms and calls are not: the call
 // status machine (ringing/active/held/ended/missed) and the
 // call log with direction and outcome; the store-and-forward
-// signals inbox (meetings has no inbox — a call client that
+// signals inbox (meetings has no inbox - a call client that
 // reconnects must not lose an offer); queues with ring-order
 // math, waiters, and admin answering; routing rules with
 // caller patterns and time windows; per-user presence owned
@@ -123,7 +123,7 @@
 // recording; and the AI summary stored on the call log.
 //
 // CLIENT CONTRACT (desktop app and Android clients reuse
-// this same API later — no second API is planned):
+// this same API later - no second API is planned):
 //   Auth: every endpoint is authenticated
 //     (`RouteAuth::Authenticated`); the caller is the
 //     server-verified caller from
@@ -145,7 +145,7 @@
 //     starts), rejects with /reject, ends with /end.
 //   Signalling: POST /calls/{id}/signal with
 //     `{"kind": "offer" | "answer" | "ice_candidate",
-//     "recipient_id"?: "<user id>", "payload": {…}}`.
+//     "recipient_id"?: "<user id>", "payload": {...}}`.
 //     `recipient_id` absent means broadcast to the whole
 //     call. The server stores the message, broadcasts
 //     `{"event": "phone.signal", "call_id", "sender_id",
@@ -156,7 +156,7 @@
 //     delivered). The WebSocket feed is
 //     GET /api/v1/phone/ws?call={id}: it forwards only this
 //     call's events addressed to the caller or broadcast,
-//     and accepts inbound `{"type": "signal", …}` and
+//     and accepts inbound `{"type": "signal", ...}` and
 //     `{"type": "ping"}` frames.
 //   Presence: POST /presence with `{"status":
 //     "available" | "busy" | "do_not_disturb" | "offline",
@@ -194,20 +194,20 @@
 //   - `notification.requested` (incoming calls and call
 //     updates, in the notifications module's payload shape).
 // Events this module listens to:
-//   - `user.deleted` — anonymizes the user's calls,
+//   - `user.deleted` - anonymizes the user's calls,
 //     participants, signals, queue memberships and waiters,
 //     and recordings to `deleted-user`, and deletes their
 //     presence row (presence is live state, not history).
-//   - `phone.ai.answer_caller_question_requested` —
+//   - `phone.ai.answer_caller_question_requested` -
 //     grounds the answer capability with the tenant's active
 //     IVR menus and auto-response scripts.
-//   - `phone.ai.summarize_call_requested` — grounds the
+//   - `phone.ai.summarize_call_requested` - grounds the
 //     summary capability with the call's stored facts.
 // No presence events exist to listen to: no
 // `user.presence.*` or `presence.changed` event is emitted
 // anywhere in the tree (verified by grep over
 // `src/modules/`), and the chat module's presence is
-// per-room state, not a hook event — so presence is owned by
+// per-room state, not a hook event - so presence is owned by
 // this module and nothing subscribes to an external feed.
 
 pub mod ai_capabilities;

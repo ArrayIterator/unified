@@ -1,6 +1,6 @@
-// Widgets — input validation: zones and layout items.
+// Widgets - input validation: zones and layout items.
 //
-// A zone is any kebab-case page id — there is no zone registry, so
+// A zone is any kebab-case page id - there is no zone registry, so
 // a page opts into widgets by declaring its zone (see `module.rs`)
 // without touching this module. A layout is valid only when every
 // item names a widget that exists in the catalogue AND is allowed
@@ -25,7 +25,7 @@ pub(crate) fn is_valid_zone(value: &str) -> bool {
 }
 
 /// Parse a zone id from a path segment or query value. Any
-/// well-formed zone is accepted — zones are declared by the pages
+/// well-formed zone is accepted - zones are declared by the pages
 /// that use them, not registered here.
 pub(crate) fn validate_zone(raw: &str) -> UnifiedResult<&str> {
     if is_valid_zone(raw) {
@@ -38,7 +38,7 @@ pub(crate) fn validate_zone(raw: &str) -> UnifiedResult<&str> {
 }
 
 /// Validate and normalize layout items for a zone: cap the size,
-/// drop nothing silently — an unknown id, a wrong-zone id, or a
+/// drop nothing silently - an unknown id, a wrong-zone id, or a
 /// duplicate id is a 400, so a broken client cannot store a layout
 /// the render path cannot honour. The returned order is the stored
 /// order.

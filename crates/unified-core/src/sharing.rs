@@ -1,4 +1,4 @@
-// Public link sharing and auditor sandbox — shared machinery.
+// Public link sharing and auditor sandbox - shared machinery.
 //
 // This module holds the security-critical machinery shared by the
 // public-link endpoints and the auditor accounts, with no HTTP
@@ -20,7 +20,7 @@
 //     creation time, in the creation response.
 //   - Token comparison is constant-time over the hex digests.
 //   - A link has a required expiry, at most 30 days from creation.
-//   - Every access attempt — allowed AND denied — is recorded in the
+//   - Every access attempt - allowed AND denied - is recorded in the
 //     access log by the caller (see `PublicLinkAccessAttempt`); this
 //     module builds the record, the auditors module stores it.
 //   - IP addresses and user agents are never stored raw in the access
@@ -44,7 +44,7 @@
 //     change to a permanent account. Exports are denied unless the
 //     scope entry for that exact resource grants `allow_export`.
 //
-// Hook contract — `sharing.allow_check` (see `check_allow_public_link`):
+// Hook contract - `sharing.allow_check` (see `check_allow_public_link`):
 //   - Emitted with payload `{"kind", "id", "view", "actor",
 //     "allowed": false}` when a public link is created for a resource.
 //   - The module that OWNS the resource kind answers it: a handler
@@ -60,8 +60,8 @@
 // Rate limiting: failed link validations feed the existing hardening
 // engine (`HardeningState::record_login_failure`) with the account
 // key `public_link:<link id>` (or `public_link:unknown` when no link
-// row matched), so repeated guessing of tokens for one link — or
-// from one IP — trips the same progressive lockout as failed logins.
+// row matched), so repeated guessing of tokens for one link - or
+// from one IP - trips the same progressive lockout as failed logins.
 // This module does NOT duplicate the rate-limit machinery in
 // `crate::hardening`; see `record_failed_link_validation`.
 //
@@ -74,8 +74,8 @@
 //     `auditors.action`, `auditors.session.started`,
 //     `auditors.session.revoked`, `auditors.expire_requested`
 // Events this machinery answers (via the auditors module):
-//   - `sharing.allow_check` — see the contract above.
-//   - `auditors.scope.check` — payload `{"user_id", "module",
+//   - `sharing.allow_check` - see the contract above.
+//   - `auditors.scope.check` - payload `{"user_id", "module",
 //     "resource_kind", "resource_id", "company_id", "action",
 //     "allowed": false}`; the auditors module answers `allowed`
 //     from the auditor's stored scope. `action` is `"read"` or
@@ -259,9 +259,7 @@ impl SharingSettings {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Share scope
-// ---------------------------------------------------------------------------
 
 /// Exactly what a public link exposes: one resource kind, one
 /// resource id, one view. A link NEVER grants a module, a list, or
@@ -338,9 +336,7 @@ fn valid_scope_segment(value: &str, field: &str) -> UnifiedResult<String> {
     Ok(trimmed)
 }
 
-// ---------------------------------------------------------------------------
 // Shareable registry (the `allow_public_link` flag, hook-based)
-// ---------------------------------------------------------------------------
 
 /// One resource kind that may be shared through a public link, as
 /// registered by its owning module. The registry is only a catalog
@@ -468,9 +464,7 @@ pub fn check_allow_public_link(bus: &HookBus, scope: &ShareScope, actor: &str) -
         .unwrap_or(false)
 }
 
-// ---------------------------------------------------------------------------
 // Link tokens
-// ---------------------------------------------------------------------------
 
 /// SHA-256 hex digest of a string. Used for token hashes and for
 /// hashing IPs / user agents in the access log (never store raw).
@@ -546,9 +540,7 @@ pub fn generate_auditor_password() -> String {
     URL_SAFE_NO_PAD.encode(bytes)
 }
 
-// ---------------------------------------------------------------------------
 // HMAC-signed link URL payload
-// ---------------------------------------------------------------------------
 
 /// Sign a link URL payload with HMAC-SHA256 under `secret`.
 /// Returns `base64url(payload).hex(hmac)` where the payload is
@@ -636,9 +628,7 @@ pub fn verify_signed_link_url(
     Ok((link_id, scope, expires_at))
 }
 
-// ---------------------------------------------------------------------------
 // Public link record + validation
-// ---------------------------------------------------------------------------
 
 /// One public link, as stored (in memory in the auditors module;
 /// the durable row is `public_links` in migration 000067). The raw
@@ -741,7 +731,7 @@ pub fn validate_public_link(
 }
 
 /// One public-link access attempt, for the access log. Every
-/// attempt is recorded — allowed AND denied — with only hashes of
+/// attempt is recorded - allowed AND denied - with only hashes of
 /// the IP and user agent, never the raw values.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PublicLinkAccessAttempt {
@@ -821,9 +811,7 @@ pub fn record_successful_link_validation(
     hardening.record_login_success(ip, Some(&account));
 }
 
-// ---------------------------------------------------------------------------
 // Auditor scope (the security boundary)
-// ---------------------------------------------------------------------------
 
 /// One scope entry: what an auditor may see. The three shapes are:
 ///   - `resource_id` set: exactly that one record.
@@ -891,7 +879,7 @@ impl AuditorScope {
     /// True when the scope covers reading ANY record of this kind
     /// in this module (used for list endpoints: a list is only
     /// served when at least one entry covers the kind, and the
-    /// query itself must then be restricted to the covered ids —
+    /// query itself must then be restricted to the covered ids -
     /// see the data-layer note at the top of this file).
     pub fn allows_kind(&self, module: &str, resource_kind: &str) -> bool {
         self.entries

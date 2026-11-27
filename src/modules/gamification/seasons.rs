@@ -1,4 +1,4 @@
-// Gamification — Season handlers.
+// Gamification - Season handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -16,9 +16,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Season handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_seasons(
     ctx: web::Data<Arc<AppContext>>,

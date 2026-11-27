@@ -70,9 +70,7 @@ fn clear_current_for_product(state: &PlmState, tenant_id: &str, product_id: &str
     }
 }
 
-// ---------------------------------------------------------------------------
 // Version handlers (authenticated)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_versions(
     state: web::Data<PlmState>,

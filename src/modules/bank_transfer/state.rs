@@ -1,4 +1,4 @@
-// bank_transfer — In-memory state and its methods.
+// bank_transfer - In-memory state and its methods.
 
 use super::*;
 use unified_core::hooks::HookBus;
@@ -7,9 +7,7 @@ use serde_json::Value;
 use std::sync::{Arc, OnceLock, RwLock};
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // State and in-memory stores.
-// ---------------------------------------------------------------------------
 
 pub struct BankTransferState {
     pub(crate) hooks: RwLock<Arc<HookBus>>,

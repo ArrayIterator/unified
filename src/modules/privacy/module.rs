@@ -53,9 +53,7 @@ use std::sync::Arc;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct PrivacyModule {
     pub(crate) state: Arc<PrivacyState>,
@@ -108,7 +106,7 @@ impl Module for PrivacyModule {
         // key: tokens issued under a per-process key change on
         // every restart. The constructor already fell back to one
         // (register_all is infallible, so try_new is not wired
-        // there); this init-time check is the fail-fast guard —
+        // there); this init-time check is the fail-fast guard -
         // refuse to start in production when no usable key is
         // configured, instead of serving with unstable tokens.
         // Development keeps the loud fallback (with its error log)

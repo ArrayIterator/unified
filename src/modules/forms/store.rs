@@ -1,4 +1,4 @@
-// forms — store.
+// forms - store.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -25,9 +25,7 @@ use super::handlers_forms::*;
 use super::handlers_fields::*;
 use super::handlers_submissions::*;
 
-// ---------------------------------------------------------------------------
 // Shared state
-// ---------------------------------------------------------------------------
 
 /// In-memory stores for forms. The hook bus is attached in `init`
 /// (the bus lives in `AppContext`); handlers tolerate a missing bus

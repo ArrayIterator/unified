@@ -44,9 +44,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- Study programs (majors).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS academic_programs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     code TEXT NOT NULL CHECK (char_length(code) BETWEEN 1 AND 64),
@@ -60,10 +58,8 @@ CREATE TABLE IF NOT EXISTS academic_programs (
 CREATE UNIQUE INDEX IF NOT EXISTS uq_academic_programs_code ON academic_programs (code);
 CREATE INDEX IF NOT EXISTS idx_academic_programs_status ON academic_programs (status);
 
--- ---------------------------------------------------------------------------
 -- Students. Only the linked user id is stored; names and emails live
 -- in the Users module.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS academic_students (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id TEXT NOT NULL CHECK (char_length(user_id) BETWEEN 1 AND 200),
@@ -80,10 +76,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_academic_students_number ON academic_studen
 CREATE INDEX IF NOT EXISTS idx_academic_students_program ON academic_students (program_id, status);
 CREATE INDEX IF NOT EXISTS idx_academic_students_advisor ON academic_students (advisor_id);
 
--- ---------------------------------------------------------------------------
 -- Lecturers (teachers). Only the linked user id is stored; names and
 -- emails live in the Users module.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS academic_lecturers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id TEXT NOT NULL CHECK (char_length(user_id) BETWEEN 1 AND 200),
@@ -98,11 +92,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_academic_lecturers_user ON academic_lecture
 CREATE UNIQUE INDEX IF NOT EXISTS uq_academic_lecturers_number ON academic_lecturers (lecturer_number);
 CREATE INDEX IF NOT EXISTS idx_academic_lecturers_status ON academic_lecturers (status);
 
--- ---------------------------------------------------------------------------
 -- Academic subjects (course records). Lessons, quizzes, and attempts
 -- live in the E-Learning module; `elearning_course_id` is only a
 -- reference to one of its courses.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS academic_subjects (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     code TEXT NOT NULL CHECK (char_length(code) BETWEEN 1 AND 64),
@@ -120,9 +112,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_academic_subjects_code ON academic_subjects
 CREATE INDEX IF NOT EXISTS idx_academic_subjects_program ON academic_subjects (program_id, status);
 CREATE INDEX IF NOT EXISTS idx_academic_subjects_elearning ON academic_subjects (elearning_course_id);
 
--- ---------------------------------------------------------------------------
 -- Rooms where classes meet.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS academic_rooms (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     code TEXT NOT NULL CHECK (char_length(code) BETWEEN 1 AND 64),
@@ -136,9 +126,7 @@ CREATE TABLE IF NOT EXISTS academic_rooms (
 CREATE UNIQUE INDEX IF NOT EXISTS uq_academic_rooms_code ON academic_rooms (code);
 CREATE INDEX IF NOT EXISTS idx_academic_rooms_status ON academic_rooms (status);
 
--- ---------------------------------------------------------------------------
 -- Semesters (academic terms).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS academic_semesters (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     code TEXT NOT NULL CHECK (char_length(code) BETWEEN 1 AND 64),
@@ -152,10 +140,8 @@ CREATE TABLE IF NOT EXISTS academic_semesters (
 CREATE UNIQUE INDEX IF NOT EXISTS uq_academic_semesters_code ON academic_semesters (code);
 CREATE INDEX IF NOT EXISTS idx_academic_semesters_status ON academic_semesters (status);
 
--- ---------------------------------------------------------------------------
 -- Academic calendar events: holidays, exam periods, registration
 -- windows, and other dated events.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS academic_calendar_events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     semester_id UUID REFERENCES academic_semesters (id) ON DELETE SET NULL,
@@ -170,10 +156,8 @@ CREATE TABLE IF NOT EXISTS academic_calendar_events (
 CREATE INDEX IF NOT EXISTS idx_academic_calendar_semester ON academic_calendar_events (semester_id, start_date);
 CREATE INDEX IF NOT EXISTS idx_academic_calendar_type ON academic_calendar_events (event_type, start_date);
 
--- ---------------------------------------------------------------------------
 -- Weekly class sessions. `day_of_week` follows ISO numbering
 -- (1 = Monday, 7 = Sunday); times are `HH:MM` (24-hour clock).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS academic_schedules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     subject_id UUID NOT NULL REFERENCES academic_subjects (id) ON DELETE RESTRICT,
@@ -191,10 +175,8 @@ CREATE INDEX IF NOT EXISTS idx_academic_schedules_subject ON academic_schedules 
 CREATE INDEX IF NOT EXISTS idx_academic_schedules_lecturer ON academic_schedules (lecturer_id, semester_id, day_of_week);
 CREATE INDEX IF NOT EXISTS idx_academic_schedules_room ON academic_schedules (room_id, semester_id, day_of_week);
 
--- ---------------------------------------------------------------------------
 -- Course registrations. `credits` is snapshotted from the subject at
 -- request time so later subject edits do not rewrite history.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS academic_enrollments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     student_id UUID NOT NULL REFERENCES academic_students (id) ON DELETE RESTRICT,
@@ -213,10 +195,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_academic_enrollments_live
 CREATE INDEX IF NOT EXISTS idx_academic_enrollments_student ON academic_enrollments (student_id, semester_id, status);
 CREATE INDEX IF NOT EXISTS idx_academic_enrollments_subject ON academic_enrollments (subject_id, semester_id, status);
 
--- ---------------------------------------------------------------------------
 -- Class attendance. `source` is `manual` or `timetracker`;
 -- `entry_id` holds the TimeTracker entry id for de-duplication.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS academic_attendance (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     schedule_id UUID NOT NULL REFERENCES academic_schedules (id) ON DELETE RESTRICT,
@@ -235,10 +215,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_academic_attendance_session
 CREATE INDEX IF NOT EXISTS idx_academic_attendance_student ON academic_attendance (student_id, date);
 CREATE INDEX IF NOT EXISTS idx_academic_attendance_entry ON academic_attendance (entry_id);
 
--- ---------------------------------------------------------------------------
 -- Grade components of a subject (for example a midterm worth 30%).
 -- Weights are configurable per subject.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS academic_grade_components (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     subject_id UUID NOT NULL REFERENCES academic_subjects (id) ON DELETE CASCADE,
@@ -250,9 +228,7 @@ CREATE TABLE IF NOT EXISTS academic_grade_components (
 );
 CREATE INDEX IF NOT EXISTS idx_academic_grade_components_subject ON academic_grade_components (subject_id);
 
--- ---------------------------------------------------------------------------
 -- Recorded grades: one score (0-100) per enrollment and component.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS academic_grades (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     enrollment_id UUID NOT NULL REFERENCES academic_enrollments (id) ON DELETE CASCADE,
@@ -266,10 +242,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_academic_grades_enrollment_component
     ON academic_grades (enrollment_id, component_id);
 CREATE INDEX IF NOT EXISTS idx_academic_grades_enrollment ON academic_grades (enrollment_id);
 
--- ---------------------------------------------------------------------------
 -- Grade appeals. A whole-enrollment appeal has a NULL component_id;
 -- a component appeal names the component.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS academic_grade_appeals (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     enrollment_id UUID NOT NULL REFERENCES academic_enrollments (id) ON DELETE RESTRICT,
@@ -287,10 +261,8 @@ CREATE TABLE IF NOT EXISTS academic_grade_appeals (
 CREATE INDEX IF NOT EXISTS idx_academic_grade_appeals_enrollment ON academic_grade_appeals (enrollment_id, status);
 CREATE INDEX IF NOT EXISTS idx_academic_grade_appeals_student ON academic_grade_appeals (student_id, status);
 
--- ---------------------------------------------------------------------------
 -- Issued official transcripts. `lines` is the content snapshot
 -- taken at issue time.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS academic_transcripts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     student_id UUID NOT NULL REFERENCES academic_students (id) ON DELETE RESTRICT,
@@ -303,9 +275,7 @@ CREATE TABLE IF NOT EXISTS academic_transcripts (
 );
 CREATE INDEX IF NOT EXISTS idx_academic_transcripts_student ON academic_transcripts (student_id, created_at);
 
--- ---------------------------------------------------------------------------
 -- Theses / final projects.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS academic_theses (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     student_id UUID NOT NULL REFERENCES academic_students (id) ON DELETE RESTRICT,
@@ -323,10 +293,8 @@ CREATE TABLE IF NOT EXISTS academic_theses (
 CREATE INDEX IF NOT EXISTS idx_academic_theses_student ON academic_theses (student_id, status);
 CREATE INDEX IF NOT EXISTS idx_academic_theses_advisor ON academic_theses (advisor_id, status);
 
--- ---------------------------------------------------------------------------
 -- Academic standing records: one per student and semester (latest
 -- wins). `standing` is a key from the `standing_rule` definitions.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS academic_standing_records (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     student_id UUID NOT NULL REFERENCES academic_students (id) ON DELETE RESTRICT,
@@ -342,10 +310,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_academic_standing_student_semester
     ON academic_standing_records (student_id, semester_id);
 CREATE INDEX IF NOT EXISTS idx_academic_standing_standing ON academic_standing_records (standing);
 
--- ---------------------------------------------------------------------------
 -- Admin-editable definitions: status vocabularies, grade scales,
 -- standing rules, and state-machine transitions.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS academic_definitions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     kind TEXT NOT NULL CHECK (char_length(kind) BETWEEN 1 AND 64),
@@ -360,9 +326,7 @@ CREATE TABLE IF NOT EXISTS academic_definitions (
 CREATE UNIQUE INDEX IF NOT EXISTS uq_academic_definitions_kind_key ON academic_definitions (kind, key);
 CREATE INDEX IF NOT EXISTS idx_academic_definitions_kind ON academic_definitions (kind, sort_order);
 
--- ---------------------------------------------------------------------------
 -- Admin-editable scalar settings (configurable defaults).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS academic_settings (
     key TEXT PRIMARY KEY CHECK (char_length(key) BETWEEN 1 AND 64),
     value JSONB NOT NULL DEFAULT 'null'::jsonb,
@@ -370,10 +334,8 @@ CREATE TABLE IF NOT EXISTS academic_settings (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- ---------------------------------------------------------------------------
 -- Seed rows: CONFIGURABLE DEFAULTS (see the header). They apply only
 -- when no admin definition or setting exists yet.
--- ---------------------------------------------------------------------------
 INSERT INTO academic_definitions (kind, key, label, config, sort_order) VALUES
     ('grade_scale', 'A', 'A', '{"min_score": 90, "max_score": 100, "points": 4.0}'::jsonb, 1),
     ('grade_scale', 'B', 'B', '{"min_score": 80, "max_score": 89.99, "points": 3.0}'::jsonb, 2),

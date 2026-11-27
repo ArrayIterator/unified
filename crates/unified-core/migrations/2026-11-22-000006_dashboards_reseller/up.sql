@@ -23,10 +23,8 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One reseller-to-client link. `verified` is true when the client id
 -- was confirmed to exist in the users table at link time.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS reseller_links (
     reseller_id UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE ON UPDATE NO ACTION,
     client_id UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE ON UPDATE NO ACTION,
@@ -39,9 +37,7 @@ CREATE TABLE IF NOT EXISTS reseller_links (
 CREATE INDEX IF NOT EXISTS idx_reseller_links_client_id
     ON reseller_links (client_id);
 
--- ---------------------------------------------------------------------------
 -- One active admin view-as session, keyed by the admin's user id.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS view_as_sessions (
     admin_id UUID PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE ON UPDATE NO ACTION,
     target_user_id UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE ON UPDATE NO ACTION,
@@ -57,10 +53,8 @@ CREATE INDEX IF NOT EXISTS idx_view_as_sessions_target_user_id
 CREATE INDEX IF NOT EXISTS idx_view_as_sessions_expires_at
     ON view_as_sessions (expires_at);
 
--- ---------------------------------------------------------------------------
 -- Dashboard settings (singleton row): the admin and user dashboard
 -- path prefixes and the view-as session lifetime in minutes.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS dashboard_settings (
     key VARCHAR PRIMARY KEY CHECK (key = 'global'),
     admin_prefix VARCHAR NOT NULL DEFAULT 'admin',

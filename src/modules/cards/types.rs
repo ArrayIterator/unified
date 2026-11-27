@@ -1,12 +1,10 @@
-// cards — Shared types: constants, enums, records, and request/response shapes.
+// cards - Shared types: constants, enums, records, and request/response shapes.
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Events and capabilities.
-// ---------------------------------------------------------------------------
 
 /// Asked when another module wants a card validated without calling
 /// HTTP. Payload: `{"tenant_id", "mode"?, "number"?, "expiry"?,
@@ -42,9 +40,7 @@ pub const PERM_CARDS_VALIDATE: &str = "cards:validate";
 /// Create, update, or delete custom rules and settings.
 pub const PERM_CARDS_MANAGE: &str = "cards:manage";
 
-// ---------------------------------------------------------------------------
 // Limits.
-// ---------------------------------------------------------------------------
 
 /// Shortest and longest PAN accepted (ISO/IEC 7812: 12-19 digits
 /// after normalisation; the standard allows 8-19, but no brand in
@@ -64,11 +60,9 @@ pub const DEFAULT_MAX_EXPIRY_YEARS_AHEAD: u32 = 20;
 /// Widest expiry upper bound an administrator may configure.
 pub const MAX_EXPIRY_YEARS_AHEAD_LIMIT: u32 = 50;
 
-// ---------------------------------------------------------------------------
-// Standard brand table (sanctioned hard-coded constants — see the
+// Standard brand table (sanctioned hard-coded constants - see the
 // module header). Lengths are PAN lengths in digits; CVV length is
 // 4 for American Express and 3 for every other standard brand.
-// ---------------------------------------------------------------------------
 
 /// One numeric IIN range: the first `digits` digits of the PAN,
 /// taken as a number, must fall between `start` and `end`
@@ -590,9 +584,7 @@ pub const TEST_PANS: &[&str] = &[
     "6250941006528599",
 ];
 
-// ---------------------------------------------------------------------------
 // Settings (per-tenant, data-driven).
-// ---------------------------------------------------------------------------
 
 /// Live or sandbox mode for test-number handling. Default is live:
 /// well-known test PANs are rejected unless the tenant explicitly
@@ -628,7 +620,7 @@ impl Default for TestMode {
 }
 
 /// Per-tenant card validation settings. Everything behaviour-level
-/// lives here — never in code — except the standard IIN tables
+/// lives here - never in code - except the standard IIN tables
 /// themselves (sanctioned constants, see the module header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CardsSettings {
@@ -665,9 +657,7 @@ impl Default for CardsSettings {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Custom rules (administrator-defined, stored as data).
-// ---------------------------------------------------------------------------
 
 /// One IIN range of a custom rule, as digit strings of equal
 /// length (for example `{"start": "622126", "end": "622925"}`).

@@ -189,7 +189,6 @@ pub(crate) struct SystemSnapshot {
 /// percentages until the second refresh.
 pub(crate) const SNAPSHOT_REFRESH_INTERVAL: Duration = Duration::from_secs(1);
 
-// ---------------------------------------------------------------------------
 // Access control.
 //
 // Every route in this module requires a caller identity and a
@@ -205,7 +204,6 @@ pub(crate) const SNAPSHOT_REFRESH_INTERVAL: Duration = Duration::from_secs(1);
 // capabilities to roles through the roles module; until they do,
 // every endpoint answers 401 (no identity headers) or 403 (the
 // role does not hold the capability).
-// ---------------------------------------------------------------------------
 
 /// Read capability: status, services, processes, info, library
 /// results / reports, and the registered SSH server list.

@@ -19,7 +19,6 @@ use super::{ApiAccessAuditEntry, ApiAccessRule, ApiManagerState, CreateAccessRul
     CreateKeyInput, UpdateAccessRuleInput, UpdateKeyAccessInput, validate_method, validate_path,
     validate_version};
 
-// ---------------------------------------------------------------------------
 // API key handlers.
 //
 // These endpoints are a thin adapter over the API Keys module
@@ -233,7 +232,6 @@ pub(crate) fn on_apikey_rotated(state: &ApiManagerState, ctx: &mut HookContext) 
     ctx.add_result(json!({"audited": true, "action": "key_created", "target": new_key_id}));
 }
 
-// ---------------------------------------------------------------------------
 // Access-control handlers.
 //
 // Rules and the audit trail live on `ApiManagerState` (in memory)
@@ -246,7 +244,6 @@ pub(crate) fn on_apikey_rotated(state: &ApiManagerState, ctx: &mut HookContext) 
 // function, so this module never touches key records directly. Key
 // material is never returned: only the key id, name, scopes, tier,
 // and limit.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_access_rules(
     state: web::Data<ApiManagerState>,

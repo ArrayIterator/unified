@@ -40,7 +40,7 @@
 --   - `compliance_retention_policies` has one row per data
 --     category (unique). `review_action` names what the review
 --     does. Enforcement is the `compliance.retention.review`
---     scheduler job, which only flags items — nothing here ever
+--     scheduler job, which only flags items - nothing here ever
 --     auto-deletes.
 --   - `compliance_retention_reviews` records review runs:
 --     `items_flagged` and `scheduler_status` (`not_scheduled`,

@@ -3,12 +3,10 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Card validation (migration 000105_cards) + reference-id settings
-// (batch 18 notes §3b/§3e; the §3e `reference` columns for
-// `store_orders` / `billing_invoices` are NOT added here — no
+// (batch 18 notes sec. 3b/sec. 3e; the sec. 3e `reference` columns for
+// `store_orders` / `billing_invoices` are NOT added here - no
 // migration creates them; see the header note).
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     card_custom_rules (id) {

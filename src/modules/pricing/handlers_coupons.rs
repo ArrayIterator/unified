@@ -1,4 +1,4 @@
-// pricing — handlers coupons.
+// pricing - handlers coupons.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -31,9 +31,7 @@ use super::handlers_bundles::*;
 use super::handlers_reconciliation::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // HTTP handlers: coupons and discount evaluation.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_coupons(
     ctx: web::Data<Arc<AppContext>>,

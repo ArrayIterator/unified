@@ -1,4 +1,4 @@
-// Projects module — time, CSV, statistics, and cycle helpers.
+// Projects module - time, CSV, statistics, and cycle helpers.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use super::*;
@@ -9,9 +9,7 @@ use chrono::{DateTime, Utc};
 use serde::Serialize;
 use serde_json::json;
 
-// ---------------------------------------------------------------------------
 // Private helpers (all prefixed `s5_`)
-// ---------------------------------------------------------------------------
 
 /// Round a float to two decimal places.
 pub(crate) fn s5_round2(value: f64) -> f64 {

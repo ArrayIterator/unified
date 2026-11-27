@@ -1,4 +1,4 @@
-// Domain Verification — Hook event names (inter-module contract).
+// Domain Verification - Hook event names (inter-module contract).
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -20,9 +20,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Hook event names (inter-module contract).
-// ---------------------------------------------------------------------------
 
 /// Emitted when a verification token is issued. Never carries the raw token.
 pub const EVENT_TOKEN_ISSUED: &str = "domain.verification.token_issued";
@@ -46,14 +44,12 @@ pub const EVENT_VERIFY_RETRY_REQUESTED: &str = "domain.verify.retry_requested";
 /// summary (`checked`, `verified`, `failed`, `skipped` counts).
 pub const EVENT_VERIFY_RETRY_COMPLETED: &str = "domain.verify.retry_completed";
 
-// ---------------------------------------------------------------------------
 // Verification statuses.
 //
 // Contract vocabulary (see the module docs): these four strings are
 // fixed by the platform event contract, so resolvers, middleware, and
 // the SaaS Domains module can match on them. WHEN a domain moves
 // between them is driven entirely by admin settings.
-// ---------------------------------------------------------------------------
 
 /// DNS check matched the expected record for the current token.
 pub const STATUS_VERIFIED: &str = "verified";

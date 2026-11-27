@@ -1,4 +1,4 @@
-// Events Manager — Registration, attendee, and waitlist handlers.
+// Events Manager - Registration, attendee, and waitlist handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -27,9 +27,7 @@ use super::handlers_public::*;
 use super::hooks::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Registration handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn register_for_event(
     ctx: web::Data<Arc<AppContext>>,
@@ -536,9 +534,7 @@ pub(crate) async fn check_in_registration(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Attendee / waitlist / reminder handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_attendees(
     ctx: web::Data<Arc<AppContext>>,

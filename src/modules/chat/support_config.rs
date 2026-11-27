@@ -9,9 +9,7 @@ use super::{limits::*, types::*, hub::*, state::*, helpers::*, module::*, handle
 
 
 
-// ---------------------------------------------------------------------------
 // Live support: widget config + bootstrap
-// ---------------------------------------------------------------------------
 pub(crate) async fn get_widget_config(
     state: web::Data<ChatState>,
     query: web::Query<WidgetConfigQuery>,
@@ -156,9 +154,7 @@ pub(crate) async fn poll_widget_session(
 
 
 
-// ---------------------------------------------------------------------------
 // Live support: queue
-// ---------------------------------------------------------------------------
 pub(crate) async fn list_queue(
     state: web::Data<ChatState>,
     req: HttpRequest,

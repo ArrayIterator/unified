@@ -1,7 +1,6 @@
-// service — timers.
+// service - timers.
 // Timer lifecycle: start/stop bookkeeping shared by handlers.
 //
-// Split from `src/modules/timetracker/service.rs`; moved verbatim, no behaviour changes.
 
 use super::super::*;
 use super::payroll::active_rate_for;
@@ -18,15 +17,13 @@ use unified_core::pagination::PaginationParams;
 use unified_core::storage::StorageRegistry;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Core logic: entries, timers, purge, payroll, reports
-// ---------------------------------------------------------------------------
 
 /// Emit `timetracker.time.logged` for one entry.
 ///
 /// Payload shape (the billing module reads this to price billable
 /// hours; the integrator adds a `timetracker.time.logged` handler
-/// in billing.rs — billing currently listens to `order.created`,
+/// in billing.rs - billing currently listens to `order.created`,
 /// `payment.captured`, and `payment.refunded` only):
 /// ```json
 /// {
@@ -55,7 +52,7 @@ use uuid::Uuid;
 /// tracked time apart from priced time. `project_time_entry` is
 /// the shared `ProjectTimeEntry` shape (see
 /// `TimeEntry::to_project_time_entry_json`); the projects module
-/// stores it, billing never reads it — there is exactly one
+/// stores it, billing never reads it - there is exactly one
 /// billing path, this event.
 ///
 /// A manual edit re-emits with the new duration (`source`

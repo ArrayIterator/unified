@@ -1,6 +1,6 @@
 //! roles - module.
 
-// Roles module — the Role Manager.
+// Roles module - the Role Manager.
 //
 // Static default roles (admin, editor, author, member, customer,
 // reseller, finance) are

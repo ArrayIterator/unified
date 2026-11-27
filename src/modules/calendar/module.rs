@@ -18,9 +18,7 @@ use super::state::CalendarState;
 use super::ai_handlers::{ai_summarize_day, ai_whats_next};
 use super::handlers::{create_feed, create_intent, get_calendar_view, get_feed_ics, get_settings, get_sources, list_calendar_items, list_feeds, revoke_feed, update_settings, update_sources};
 
-// ---------------------------------------------------------------------------
 // Module declaration.
-// ---------------------------------------------------------------------------
 
 pub struct CalendarModule {
     pub(crate) state: CalendarState,
@@ -79,7 +77,7 @@ impl Module for CalendarModule {
         // secret, so outstanding feed tokens keep verifying after
         // a restart. With no secret configured the state's random
         // per-process key stays (tokens then do not survive a
-        // restart — same fallback as the auth manager).
+        // restart - same fallback as the auth manager).
         {
             let config = ctx.config.read().expect("config lock poisoned");
             self.state

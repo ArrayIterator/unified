@@ -68,7 +68,7 @@
 --     constraint, because "unique among active rows" cannot be
 --     expressed as a unique index; one document reference per
 --     case. Risk-level score ranges must not overlap among
---     active levels for a tenant — also enforced by the module.
+--     active levels for a tenant - also enforced by the module.
 --   - `kyc_cases.status` is `draft`, `submitted`, `verifying`,
 --     `more_info_requested`, `approved`, `rejected`, or
 --     `expired`; `kyc_cases.subject_type` names a
@@ -78,7 +78,6 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- Cases: one identity verification case for one subject (a user
 -- id or a company id, as plain TEXT). `subject_type` names a
 -- subject-type row by code. `risk_score` is 0-100 (NULL until
@@ -88,7 +87,6 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- verdict as JSON (NULL until the first verification run).
 -- `escalated` marks a case an admin escalated for senior
 -- review. `expires_at` bounds the case lifetime.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS kyc_cases (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -112,12 +110,10 @@ CREATE INDEX IF NOT EXISTS idx_kyc_cases_tenant_subject ON kyc_cases (tenant_id,
 CREATE INDEX IF NOT EXISTS idx_kyc_cases_tenant_risk ON kyc_cases (tenant_id, risk_level_code, created_at DESC) WHERE risk_level_code IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_kyc_cases_tenant_expires ON kyc_cases (tenant_id, expires_at) WHERE status IN ('submitted', 'verifying', 'more_info_requested');
 
--- ---------------------------------------------------------------------------
 -- Documents: one linked identity document on a case. Only the
 -- documents-module reference and the SHA-256 of the document
--- bytes are stored — never the file itself.
+-- bytes are stored - never the file itself.
 -- `document_type_code` names a document-type row by code.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS kyc_documents (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -134,12 +130,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_kyc_documents_case_document ON kyc_documen
 CREATE INDEX IF NOT EXISTS idx_kyc_documents_tenant_case ON kyc_documents (tenant_id, case_id, created_at ASC);
 CREATE INDEX IF NOT EXISTS idx_kyc_documents_tenant_type ON kyc_documents (tenant_id, document_type_code, created_at DESC);
 
--- ---------------------------------------------------------------------------
 -- Document types: the document kinds a tenant accepts, as data.
 -- `subject_types` lists the subject-type codes the kind
 -- applies to; an empty list means it applies to every subject
 -- type. Inactive kinds cannot be linked to new cases.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS kyc_document_types (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -154,11 +148,9 @@ CREATE TABLE IF NOT EXISTS kyc_document_types (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_kyc_document_types_tenant_code ON kyc_document_types (tenant_id, code);
 CREATE INDEX IF NOT EXISTS idx_kyc_document_types_tenant_active ON kyc_document_types (tenant_id, active, created_at DESC);
 
--- ---------------------------------------------------------------------------
 -- Subject types: the subject kinds a tenant verifies, as data.
 -- `required_document_type_codes` lists the document-type codes
 -- a case of this kind must link before it can be submitted.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS kyc_subject_types (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -173,15 +165,13 @@ CREATE TABLE IF NOT EXISTS kyc_subject_types (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_kyc_subject_types_tenant_code ON kyc_subject_types (tenant_id, code);
 CREATE INDEX IF NOT EXISTS idx_kyc_subject_types_tenant_active ON kyc_subject_types (tenant_id, active, created_at DESC);
 
--- ---------------------------------------------------------------------------
 -- Verification contexts: the DEFAULT CONTEXT the AI
 -- verification pipeline runs under, as data. One context is
 -- active per tenant (enforced by the module). `visible_fields`
 -- names the case fields and document metadata the AI may see;
--- `checks` names the checks the AI must run (values are data —
+-- `checks` names the checks the AI must run (values are data -
 -- the module never invents a check name). `version` increments
 -- on every update; a verdict records the version it ran under.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS kyc_verification_contexts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -198,7 +188,6 @@ CREATE TABLE IF NOT EXISTS kyc_verification_contexts (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_kyc_contexts_tenant_name ON kyc_verification_contexts (tenant_id, name);
 CREATE INDEX IF NOT EXISTS idx_kyc_contexts_tenant_active ON kyc_verification_contexts (tenant_id, active, version DESC);
 
--- ---------------------------------------------------------------------------
 -- Instructions: ADDITIONAL INSTRUCTIONS declared on top of a
 -- verification context, as data. `context_id` NULL means the
 -- instruction applies to every context of the tenant.
@@ -207,7 +196,6 @@ CREATE INDEX IF NOT EXISTS idx_kyc_contexts_tenant_active ON kyc_verification_co
 -- `supersedes_id` pointing at its replacement, so the history
 -- is never rewritten. `priority` orders instructions (lowest
 -- first) when they are merged into the resolved context.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS kyc_instructions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -224,12 +212,10 @@ CREATE TABLE IF NOT EXISTS kyc_instructions (
 CREATE INDEX IF NOT EXISTS idx_kyc_instructions_tenant_context ON kyc_instructions (tenant_id, context_id, active, priority ASC, created_at ASC);
 CREATE INDEX IF NOT EXISTS idx_kyc_instructions_tenant_active ON kyc_instructions (tenant_id, active, created_at DESC);
 
--- ---------------------------------------------------------------------------
 -- Risk levels: the risk bands a tenant uses, as data. A case
 -- score (0-100) resolves to the level whose [min_score,
 -- max_score] contains it. Active levels of a tenant must not
 -- overlap (enforced by the module).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS kyc_risk_levels (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -246,7 +232,6 @@ CREATE TABLE IF NOT EXISTS kyc_risk_levels (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_kyc_risk_levels_tenant_code ON kyc_risk_levels (tenant_id, code);
 CREATE INDEX IF NOT EXISTS idx_kyc_risk_levels_tenant_active ON kyc_risk_levels (tenant_id, active, min_score ASC);
 
--- ---------------------------------------------------------------------------
 -- Audit trail: one row per case event (created, submitted,
 -- verified, approved, rejected, more_info_requested,
 -- escalated, expired, documents_updated, verification_failed,
@@ -254,7 +239,6 @@ CREATE INDEX IF NOT EXISTS idx_kyc_risk_levels_tenant_active ON kyc_risk_levels 
 -- `prev_hash|id|case_id|action|actor|created_at|detail`; the
 -- first entry of a case chains from the genesis hash (64
 -- zeroes).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS kyc_audit_entries (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -269,13 +253,11 @@ CREATE TABLE IF NOT EXISTS kyc_audit_entries (
 CREATE INDEX IF NOT EXISTS idx_kyc_audit_tenant_case ON kyc_audit_entries (tenant_id, case_id, created_at ASC);
 CREATE INDEX IF NOT EXISTS idx_kyc_audit_tenant_action ON kyc_audit_entries (tenant_id, action, created_at DESC);
 
--- ---------------------------------------------------------------------------
 -- Per-tenant KYC settings. `auto_approve_low_risk` is the only
 -- path by which an AI verdict can approve a case without a
 -- human, and only for the configured low-risk level code; it
 -- defaults to off. `require_ai_verification` gates the verify
 -- endpoint. `verification_expiry_days` bounds new cases.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS kyc_settings (
     tenant_id TEXT PRIMARY KEY CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
     auto_approve_low_risk BOOLEAN NOT NULL DEFAULT FALSE,

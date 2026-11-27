@@ -1,4 +1,4 @@
-/* Site builder editor styles (GrapeJS, task 353).
+/* Site builder editor styles (GrapeJS).
  *
  * Loaded by the `admin-site-builder` template next to the editor
  * bundle. The admin theme (dashboard.css) owns the page chrome;
@@ -50,7 +50,7 @@
 }
 
 #gjs .sb-block:empty::after {
-  content: "Empty block — select it to edit its fields.";
+  content: "Empty block - select it to edit its fields.";
   color: var(--muted, #667085);
   font-size: 0.875rem;
 }

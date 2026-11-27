@@ -1,4 +1,4 @@
-// clusters — Module registration: struct, defaults, routes, and hooks.
+// clusters - Module registration: struct, defaults, routes, and hooks.
 
 use super::*;
 use unified_core::context::AppContext;
@@ -9,9 +9,7 @@ use crate::modules::ai;
 use actix_web::web;
 use std::sync::Arc;
 
-// ---------------------------------------------------------------------------
 // Module definition.
-// ---------------------------------------------------------------------------
 
 pub struct ClustersModule {
     state: Arc<ClustersState>,

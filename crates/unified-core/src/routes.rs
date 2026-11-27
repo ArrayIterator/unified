@@ -7,17 +7,17 @@
 // `/login` or `/dashboard`.
 //
 // Precedence (highest wins):
-//   1. settings override — set at runtime through the Routes admin
+//   1. settings override - set at runtime through the Routes admin
 //      API (`PUT /api/v1/routes/{name}`); stored in the registry.
-//   2. config override — set in the configuration file under the
+//   2. config override - set in the configuration file under the
 //      `routes:` section (`RoutesSection` below) and applied at
 //      startup.
-//   3. built-in default — the `DEFAULT_ROUTES` table in this file.
+//   3. built-in default - the `DEFAULT_ROUTES` table in this file.
 //
 // Deprecated: the legacy `app.dashboard_path` config value. It is
 // NOT a config override layer of its own anymore: `routes.
 // user_dashboard` is canonical, and `app.dashboard_path` only acts
-// as a fallback for it — applied (with a logged deprecation
+// as a fallback for it - applied (with a logged deprecation
 // warning) when `routes.user_dashboard` is not set, and ignored
 // (also with a warning) when it is. See
 // `RouteRegistry::apply_legacy_dashboard_path`. The default
@@ -28,7 +28,7 @@
 // a permanent (301) redirect to the new path. Redirect policy
 // (latest-only): only the immediately previous path of a route
 // redirects. Changing a path twice drops the older redirect, so at
-// most one redirect exists per route and redirects never chain — a
+// most one redirect exists per route and redirects never chain - a
 // redirect target is always the route's current effective path.
 // Bookmarks made against the very first path therefore stop working
 // after a second change; operators who rename a route twice should
@@ -43,7 +43,7 @@
 //     `/assets/`, `/theme/`;
 //   - must not conflict with any other route's effective path: an
 //     exact match is a conflict, and a prefix collision is a conflict
-//     too — one path is a prefix of the other at a segment boundary
+//     too - one path is a prefix of the other at a segment boundary
 //     (for example `/dashboard` conflicts with `/dashboard/tasks`).
 //     A trailing slash is normalized away before comparison.
 // Invalid overrides are rejected with HTTP 422 and the reason in the
@@ -52,15 +52,15 @@
 // Named routes and their defaults (verified against the owning
 // modules; no page is invented here):
 //   - `login`, `register`, `forgot_password`, `reset_password`,
-//     `logout` — auth pages. The auth module currently exposes only
+//     `logout` - auth pages. The auth module currently exposes only
 //     the `/api/v1/auth-manager` API; these names reserve the page
 //     paths so the page handlers (owned by the dashboards/auth work)
 //     mount at the registry-resolved path instead of a literal.
-//   - `user_dashboard` — default `/dashboard` (matches the existing
+//   - `user_dashboard` - default `/dashboard` (matches the existing
 //     `app.dashboard_path` default `"dashboard"` and the templates).
-//   - `admin_dashboard` — default `/admin` (admin layout under
+//   - `admin_dashboard` - default `/admin` (admin layout under
 //     `/admin/*`, separate from the customer dashboard).
-//   - `status_page` — default `/status`, the public HTML status page
+//   - `status_page` - default `/status`, the public HTML status page
 //     registered by the statuspage module (`GET /status`).
 // There is no `gateway_status` page anywhere in the codebase, so no
 // such route is registered; adding one requires a real page first.

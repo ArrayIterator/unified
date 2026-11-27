@@ -7,9 +7,7 @@ use super::{events::*, paper::*, profiles::*, jobs::*, state::*, auth::*, hooks:
 
 
 
-// ---------------------------------------------------------------------------
 // Thermal (ESC/POS) rendering
-// ---------------------------------------------------------------------------
 /// ESC/POS control bytes. These are the published ESC/POS command
 /// set, not application behaviour: `ESC @` initialise, `ESC a n`
 /// alignment, `ESC E n` bold, `GS ! n` character size, `ESC t n`

@@ -1,4 +1,4 @@
-// forms — handlers forms.
+// forms - handlers forms.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -25,9 +25,7 @@ use super::module::*;
 use super::handlers_fields::*;
 use super::handlers_submissions::*;
 
-// ---------------------------------------------------------------------------
 // Form handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) fn form_view(state: &FormsState, form: &Form) -> Value {
     let fields = fields_for(state, form.id);

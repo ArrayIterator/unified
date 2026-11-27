@@ -9,9 +9,7 @@ use super::{limits::*, hub::*, state::*, helpers::*, module::*, handlers_channel
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 /// Channel visibility.
 pub enum ChannelKind {
     Public,
@@ -82,7 +80,7 @@ pub struct ChatMessage {
 /// File Manager module owns the bytes and answers the `file.shared` hook.
 /// The storage reference (`storage_target` + `storage_key`, plus an
 /// optional public/signed `url`) points at the object in the storage
-/// module — chat never stores file bytes itself.
+/// module - chat never stores file bytes itself.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChatFile {
     pub id: Uuid,
@@ -122,9 +120,7 @@ pub struct ChatBroadcast {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
-// ---------------------------------------------------------------------------
 // Live support types
-// ---------------------------------------------------------------------------
 /// Lifecycle of a live support session.
 pub enum SupportSessionStatus {
     Waiting,
@@ -138,7 +134,7 @@ pub enum SupportSessionStatus {
 /// conversation itself lives in the backing private channel
 /// (`channel_id`); the session carries routing, queue, and outcome data.
 /// `department_id` is an opaque identifier owned by the Departments
-/// module — chat stores it and routes on it but never defines it.
+/// module - chat stores it and routes on it but never defines it.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SupportSession {
     pub id: Uuid,
@@ -281,9 +277,7 @@ pub struct WidgetBootstrap {
 
 
 #[derive(Debug, Deserialize)]
-// ---------------------------------------------------------------------------
 // Request bodies
-// ---------------------------------------------------------------------------
 pub struct CreateChannelRequest {
     pub name: String,
     pub kind: Option<ChannelKind>,

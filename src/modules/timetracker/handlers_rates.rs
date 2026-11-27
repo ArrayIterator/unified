@@ -1,4 +1,4 @@
-// timetracker — HTTP handlers: rates, payroll, and timesheets.
+// timetracker - HTTP handlers: rates, payroll, and timesheets.
 
 use super::*;
 use unified_core::context::AppContext;
@@ -11,9 +11,7 @@ use serde_json::{Value, json};
 use std::sync::Arc;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Handlers: rates, payroll, timesheets, reports, dashboard, settings
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_rates(
     state: web::Data<TimeTrackerState>,

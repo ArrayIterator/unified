@@ -13,12 +13,11 @@ use super::{events::*, card_settings::*, limits::*, providers::*, types::*, refe
 
 
 
-// ---------------------------------------------------------------------------
-// Batch 18 — card validation wiring.
+// Batch 18 - card validation wiring.
 //
 // The gateway never validates a card number itself: it emits
 // `cards.validate_requested` and the cards module answers. This
-// section is the whole wiring surface — the event contract, the
+// section is the whole wiring surface - the event contract, the
 // reason codes, the capability names, and the fail-closed gate
 // (`request_card_validation`) the checkout handlers call before
 // any card payment is processed. The cards module itself
@@ -30,7 +29,6 @@ use super::{events::*, card_settings::*, limits::*, providers::*, types::*, refe
 // and `on_config_validate_cards`) because the cards module's
 // per-tenant settings and the store / billing reference settings
 // are the single sources of truth.
-// ---------------------------------------------------------------------------
 /// Emitted before a card payment is processed, asking the cards
 /// module to validate the card. The gateway proceeds ONLY on a
 /// successful validation answer; see `request_card_validation`.
@@ -39,7 +37,7 @@ use super::{events::*, card_settings::*, limits::*, providers::*, types::*, refe
 /// (`cvv`, the value) so the validator can run Luhn, brand
 /// detection, expiry, and CVV-length checks. All three travel on
 /// the in-process hook bus only: the cards module's validator is
-/// pure — it never stores, logs, or returns them — and the
+/// pure - it never stores, logs, or returns them - and the
 /// payload must never be audited, persisted, or forwarded to a
 /// webhook. `cards.validate_requested` is therefore deliberately
 /// absent from the audit event list and from the webhooks
@@ -48,7 +46,7 @@ use super::{events::*, card_settings::*, limits::*, providers::*, types::*, refe
 pub const CARDS_VALIDATE_REQUESTED: &str = "cards.validate_requested";
 
 /// Emitted by the cards module (not by this gateway) once per
-/// answered validation, with the masked PAN only — never the full
+/// answered validation, with the masked PAN only - never the full
 /// number. The audit log subscribes to this event, not to the
 /// request event above. Payload (cards module): `tenant_id`,
 /// `masked_pan`, `brand_id`, `brand_name`, `matched_rule`,
@@ -160,7 +158,7 @@ pub const CARDS_EXPIRY_YEAR_GUARD_MAX_AHEAD: u32 = 50;
 /// request. All fields are optional and defaulted so older
 /// clients that send no `card` object keep working: the gate
 /// only runs when `number` is non-empty. The struct is
-/// deserialize-only and is never serialized anywhere — the number,
+/// deserialize-only and is never serialized anywhere - the number,
 /// expiry, and CVV value leave this handler only as the
 /// in-memory `cards.validate_requested` bus payload (`number`,
 /// `expiry`, `cvv`) to the cards module's pure validator, and
@@ -233,14 +231,12 @@ pub fn mask_pan(pan_digits: &str) -> String {
 
 
 
-// ---------------------------------------------------------------------------
 // Card validation: capability check and the checkout gate.
-// ---------------------------------------------------------------------------
 /// Fail when the caller does not hold `permission` for the cards
 /// resource. Follows the entitlements module's `role.check`
 /// pattern: ask the hook bus, fail closed on silence (no roles
 /// module answering means denied). The role comes from the
-/// `x-role` header — the same trusted-header caveat as the rest of
+/// `x-role` header - the same trusted-header caveat as the rest of
 /// the codebase applies until the auth extractor lands. Used by
 /// the cards settings endpoint; the checkout gate itself runs
 /// server-side on behalf of the paying customer (ownership is
@@ -283,7 +279,7 @@ pub(crate) fn require_cards_capability(
 /// validator could not answer: the cards module is not
 /// registered, it stayed silent, or its answer broke the
 /// contract. 503, with the generic reason code and the masked PAN
-/// only — never the full number, never a per-digit detail.
+/// only - never the full number, never a per-digit detail.
 pub(crate) fn cards_unavailable(masked_pan: Option<&str>) -> UnifiedError {
     let mut error = UnifiedError::new(
         "Card validation is unavailable; the card payment was rejected",
@@ -301,7 +297,7 @@ pub(crate) fn cards_unavailable(masked_pan: Option<&str>) -> UnifiedError {
 
 
 /// Card data the validator can check without a PAN: a brand,
-/// last 4 digits, and expiry — as claimed on a method-onboarding
+/// last 4 digits, and expiry - as claimed on a method-onboarding
 /// request. The stored-method path resolves the same fields from
 /// the stored record instead; the two shapes are identical on the
 /// wire, only the source (and the mode label) differs.
@@ -319,19 +315,19 @@ pub struct CardMethodRef {
 ///
 /// The gate runs only when the gateway actually holds card data:
 ///
-///   - raw `card` details in the request → mode `"full"`: Luhn,
+///   - raw `card` details in the request -> mode `"full"`: Luhn,
 ///     brand detection, per-brand length, expiry, CVV length,
 ///     brand enabled, test-number policy;
-///   - a stored `payment_method_id` (and no raw details) → mode
+///   - a stored `payment_method_id` (and no raw details) -> mode
 ///     `"method"`: brand known / enabled and expiry, from the
 ///     stored brand, last4, and expiry (no PAN exists to run Luhn
 ///     over);
 ///   - a claimed brand / last4 / expiry on a method-onboarding
-///     request (and no raw details) → mode `"claim"`: the same
+///     request (and no raw details) -> mode `"claim"`: the same
 ///     brand and expiry checks as `"method"`, so a disabled brand
 ///     or an out-of-bound expiry is rejected at onboarding instead
 ///     of at the first charge;
-///   - an opaque token alone → no gate: the token came from a
+///   - an opaque token alone -> no gate: the token came from a
 ///     PCI-compliant tokenization step upstream and the gateway
 ///     cannot validate what it cannot see. `Ok(None)` means
 ///     "nothing to validate", not "validation passed".
@@ -341,14 +337,14 @@ pub struct CardMethodRef {
 /// `invalid_format` when it is missing, so `"method"` and
 /// `"claim"` emits fail closed with `invalid_format` until the
 /// handler learns number-less validation (brand / last4 / expiry
-/// only). The gate keeps emitting them anyway — silently
-/// skipping stored-method validation would be a fail-open — so
+/// only). The gate keeps emitting them anyway - silently
+/// skipping stored-method validation would be a fail-open - so
 /// stored-method card payments stay rejected until that handler
 /// extension lands. See the batch report for the exact
 /// extension.
 ///
 /// Fail closed, in order: no resolved tenant context (401/403
-/// from the tenant extractor — card payments are tenant-scoped
+/// from the tenant extractor - card payments are tenant-scoped
 /// and never fall back to the control plane); the cards module
 /// is not registered on `cards.validate_requested` (503
 /// `cards_unavailable`); the module stays silent or answers
@@ -356,7 +352,7 @@ pub struct CardMethodRef {
 /// answer is invalid (422 with the generic reason code from the
 /// allowlist, the masked PAN only, and the brand when the answer
 /// carried one); the answer carries a reason outside the
-/// allowlist (503 `cards_unavailable` — a contract violation,
+/// allowlist (503 `cards_unavailable` - a contract violation,
 /// never a guessed reason). The full PAN and the CVV value are
 /// never stored, logged, or returned: they travel only on the
 /// in-process bus to the cards module's pure validator
@@ -485,7 +481,7 @@ pub(crate) fn request_card_validation(
     // when none was supplied). No settings ride along: the cards
     // module validates against its own per-tenant settings
     // (`PUT /api/v1/cards/settings`) and ignores any gateway-side
-    // values, so the gateway sends none — the old
+    // values, so the gateway sends none - the old
     // `test_mode` / `gpn_enabled` / `enabled_brands` /
     // `expiry_upper_bound_years` payload fields were dropped with
     // the gateway's `cards.*` settings namespace.
@@ -532,12 +528,12 @@ pub(crate) fn request_card_validation(
     };
     if !valid {
         // The validator reports generic codes in `reason_codes`
-        // (first code wins — the validator emits exactly one per
+        // (first code wins - the validator emits exactly one per
         // failure). Its `missing_tenant_context` refusal is not a
         // validation reason: it maps to `cards_unavailable` (the
         // gate always supplies a tenant id, so it should never
         // fire). Any code outside the allowlist is a contract
-        // violation and also maps to `cards_unavailable` — never
+        // violation and also maps to `cards_unavailable` - never
         // a guessed reason.
         let reason = answer
             .and_then(|result| result.get("reason_codes"))

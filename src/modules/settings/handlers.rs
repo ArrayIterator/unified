@@ -98,8 +98,8 @@ pub(crate) fn on_settings_merge(store: SettingsStore, ctx: &mut HookContext) {
 /// 351): the generic KV store accepts any namespace/key, and this
 /// `config.validate` handler is the layer that makes the site
 /// namespace behave like WordPress General Settings. Other
-/// namespaces pass through untouched — this handler never marks
-/// them invalid — and unknown `site/*` keys pass too (the KV store
+/// namespaces pass through untouched - this handler never marks
+/// them invalid - and unknown `site/*` keys pass too (the KV store
 /// stays open for modules that keep their own site keys). A value
 /// for a KNOWN key that fails its definition is refused with 422:
 /// the handler sets `valid: false` plus a `message` on the hook
@@ -199,7 +199,6 @@ pub(crate) fn validate_via_hooks(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Caller identity and capability checks.
 //
 // Every route in this module requires an authenticated caller: the
@@ -217,7 +216,6 @@ pub(crate) fn validate_via_hooks(
 // overwrite or delete any namespace/key, including values other
 // modules trust. Gating all four routes is the fix; a genuinely
 // public namespace would need an explicit allowlist here first.
-// ---------------------------------------------------------------------------
 
 /// Capability checked for the `GET` routes.
 pub(crate) const PERM_SETTINGS_VIEW: &str = "settings.view";
@@ -719,7 +717,7 @@ mod tests {
         assert_eq!(event.get("deleted").and_then(|v| v.as_bool()), Some(true));
     }
 
-    /// Task 351: the site-namespace validate handler refuses an
+    /// The site-namespace validate handler refuses an
     /// invalid value (and names the problem) while leaving valid
     /// values and other namespaces untouched.
     #[test]

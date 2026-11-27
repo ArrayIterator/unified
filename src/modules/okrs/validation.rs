@@ -1,4 +1,4 @@
-// OKR / Goals — Input validation and pure value checks.
+// OKR / Goals - Input validation and pure value checks.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};

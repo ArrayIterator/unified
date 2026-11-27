@@ -17,7 +17,7 @@ pub const PERM_ROLES_MANAGE: &str = "roles:manage";
 /// role's `"*": ["*"]` wildcard) is denied, so a capability only
 /// becomes usable once it is listed here AND granted to a role.
 /// Nothing below grants anything to the customer, editor, author,
-/// or member roles — the only non-admin role seeded with new
+/// or member roles - the only non-admin role seeded with new
 /// capabilities is Finance (cards, batch 18). Two naming shapes
 /// coexist in the tree and both are listed verbatim as checked:
 /// `resource:action` (cards, pricing, entitlements, calendar,

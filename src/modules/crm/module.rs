@@ -1,4 +1,4 @@
-// crm — module.
+// crm - module.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -22,9 +22,7 @@ use super::handlers_contacts::*;
 use super::handlers_leads::*;
 use super::handlers_activities::*;
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct CrmModule {
     pub(crate) state: Arc<CrmState>,

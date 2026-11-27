@@ -20,7 +20,6 @@ use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 use super::{constants::*, types::*, state::*, auth::*, helpers::*, provisioning::*, handlers_packages::*, handlers_purchases::*, handlers_ai::*, events::*, module::*};
 
-// ---------------------------------------------------------------------------
 // SEED DATA -- the example package as initial rows.
 //
 // This table is read exactly once, at startup (`init`), to insert
@@ -41,7 +40,6 @@ use super::{constants::*, types::*, state::*, auth::*, helpers::*, provisioning:
 // `payments` are registered. `init` logs a warning per unregistered
 // seed module instead of failing startup, and provisioning reports
 // such modules as unknown until their modules register.
-// ---------------------------------------------------------------------------
 
 /// Fixed id for the seeded example package, shared with the
 /// migration `INSERT`s so the database row and the in-memory row
@@ -58,7 +56,7 @@ pub const SEED_SITE_BUILDER_PACKAGE_ID: &str = "20000000-0000-4000-8000-00000000
 /// above.
 pub const SEED_CLOUD_PACKAGE_ID: &str = "20000000-0000-4000-8000-000000000003";
 
-/// The example "Cloud SaaS" package (task 377): the cloud module as
+/// The example "Cloud SaaS" package: the cloud module as
 /// a PACKAGE. A tenant ordering this package gets the cloud module
 /// (hosting plans and accounts, provider connectors, containers, app
 /// deployment) plus the domains module for its own domain. No pricing
@@ -97,7 +95,7 @@ pub(crate) fn seed_cloud_package() -> SaasPackage {
     }
 }
 
-/// The example "Site Builder SaaS" package (task 353): the site
+/// The example "Site Builder SaaS" package: the site
 /// builder as a PACKAGE. A tenant ordering this package gets the
 /// builder plus the content module, the theme, and its own domain
 /// (subdomain or custom, with SSL via the domains module). No

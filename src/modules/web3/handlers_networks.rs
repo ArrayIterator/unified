@@ -16,9 +16,7 @@ use super::state::*;
 use super::types::*;
 use super::validation::*;
 
-// ---------------------------------------------------------------------------
 // Handlers: networks
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_networks(
     ctx: web::Data<Arc<AppContext>>,
@@ -453,9 +451,7 @@ pub(crate) async fn network_fee_estimate(
     json::respond(result, debug)
 }
 
-// ---------------------------------------------------------------------------
 // Tests for the network-update private-endpoint rules (W5)
-// ---------------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {

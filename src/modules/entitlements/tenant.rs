@@ -14,9 +14,7 @@ use std::sync::Arc;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Tenant scope (standing rule: tenant-scoped data access).
-// ---------------------------------------------------------------------------
 
 /// The tenant a request resolved to, from the canonical tenant
 /// context (`unified_core::tenancy::TenantContext`, built by the
@@ -43,7 +41,7 @@ impl TenantScope {
     /// tenant context is present (a control-plane request, an
     /// unresolved host, or middleware not running) the call is
     /// refused with 403 `tenant.required` and no data is returned
-    /// — never a silent fall back to the `public` schema and
+    /// - never a silent fall back to the `public` schema and
     /// never another tenant's modules. A `requested` company that
     /// differs from the context's company is also a 403: a tenant
     /// may only ever see its own modules. A resolved context with
@@ -78,9 +76,7 @@ impl TenantScope {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Handlers: tenant dashboard.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_my_modules(
     req: HttpRequest,
@@ -230,7 +226,7 @@ pub(crate) async fn enable_module(
         // Identity comes from the request headers only.
         let caller = caller_of(&req);
         // Enabling mutates tenant activation state, so it needs
-        // the manage capability — a read-only role must not be
+        // the manage capability - a read-only role must not be
         // able to enable modules.
         require_capability(&ctx, caller.role.as_deref(), PERM_ENTITLEMENTS_MANAGE)?;
         // The recorded actor is the header caller. A body
@@ -260,7 +256,7 @@ pub(crate) async fn enable_module(
         // Enabling is a write, so only full entitlement enables:
         // `effective.entitled` is the one decision (see the grace
         // policy on `EntitlementsState::grace_applies`). Grace is
-        // read-only and never enables — a grace-state module
+        // read-only and never enables - a grace-state module
         // enabled here would be an enabled module the licensing
         // gate 403s, the exact divergence this used to be.
         if effective.entitled {
@@ -274,7 +270,7 @@ pub(crate) async fn enable_module(
         } else {
             // Grace reads as a distinct denial, not "no active
             // entitlement": the tenant held the module and it
-            // lapsed, so renewal — not a new purchase — is the
+            // lapsed, so renewal - not a new purchase - is the
             // way back. Locked modules keep the existing code.
             let (reason, error_code, denied_reason) = if effective.read_only {
                 (
@@ -344,7 +340,7 @@ pub(crate) async fn disable_module(
         // Identity comes from the request headers only.
         let caller = caller_of(&req);
         // Disabling mutates tenant activation state, so it needs
-        // the manage capability — a read-only role must not be
+        // the manage capability - a read-only role must not be
         // able to disable modules.
         require_capability(&ctx, caller.role.as_deref(), PERM_ENTITLEMENTS_MANAGE)?;
         // The recorded actor is the header caller. A body
@@ -472,7 +468,7 @@ mod tests {
 
     /// A minimal registry module for tests: `billing` is a
     /// sellable non-core module, so only a stored row (or a
-    /// license) entitles it — never the implicit owner leg.
+    /// license) entitles it - never the implicit owner leg.
     struct FakeModule {
         id: &'static str,
         core: bool,
@@ -701,7 +697,7 @@ mod tests {
         let company_id = Uuid::now_v7().to_string();
         let state = Arc::new(EntitlementsState::new());
         // Grace enabled (the default): the lapsed row reads as
-        // grace_read_only, and grace never enables — the module
+        // grace_read_only, and grace never enables - the module
         // cannot be re-enabled until a live source re-entitles it.
         state.create_entitlement(
             &company_id,

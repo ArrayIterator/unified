@@ -1,4 +1,4 @@
-// clusters — Hashing, signatures, and secret handling.
+// clusters - Hashing, signatures, and secret handling.
 
 use super::*;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -10,9 +10,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Small helpers.
-// ---------------------------------------------------------------------------
 
 pub(crate) fn now() -> DateTime<Utc> {
     Utc::now()
@@ -94,7 +92,6 @@ pub(crate) fn hash_secret(secret: &str) -> String {
     sha256_hex(secret.as_bytes())
 }
 
-// ---------------------------------------------------------------------------
 // Node-to-node HMAC authentication.
 //
 // Signature input: `{unix_timestamp}.{nonce}.{sha256_hex(body)}`, signed
@@ -103,7 +100,6 @@ pub(crate) fn hash_secret(secret: &str) -> String {
 // from the secret it was given at registration, the receiver from the
 // stored hash. Requests older than the replay window or with a reused
 // nonce are rejected. Comparison is constant-time.
-// ---------------------------------------------------------------------------
 
 fn sign_request(secret_hash_hex: &str, timestamp: i64, nonce: &str, body: &[u8]) -> String {
     let key = hex_decode(secret_hash_hex).unwrap_or_default();

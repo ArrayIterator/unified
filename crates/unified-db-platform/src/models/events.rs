@@ -11,10 +11,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
-// Events (migration 000034_events; batch 2 notes §6). `New*` structs
+// Events (migration 000034_events; batch 2 notes sec. 6). `New*` structs
 // added per the notes' convention (the notes give Queryable only).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable)]
 #[diesel(table_name = events)]
@@ -247,9 +245,7 @@ pub struct NewEventReminderRow {
     pub sent_at: Option<DateTime<Utc>>,
 }
 
-// ---------------------------------------------------------------------------
-// Sharing / auditors (migration 000068_sharing_auditor; batch 5 notes §d).
-// ---------------------------------------------------------------------------
+// Sharing / auditors (migration 000068_sharing_auditor; batch 5 notes sec. d).
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = public_links)]

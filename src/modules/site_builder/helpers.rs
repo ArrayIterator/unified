@@ -1,4 +1,4 @@
-// Site Builder — Small shared helpers: caller identity, capability checks, and HTTP responses.
+// Site Builder - Small shared helpers: caller identity, capability checks, and HTTP responses.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -67,9 +67,7 @@ pub(crate) fn slugify(title: &str) -> String {
     slug
 }
 
-// ---------------------------------------------------------------------------
 // Server-side block rendering (theme engine contract)
-// ---------------------------------------------------------------------------
 
 pub(crate) fn content_str(content: &Value, key: &str) -> Option<String> {
     content
@@ -86,9 +84,7 @@ pub(crate) fn not_found_page(debug: bool) -> HttpResponse {
     api_json::error_response(&UnifiedError::not_found("Page not found"), debug)
 }
 
-// ---------------------------------------------------------------------------
 // Caller identity and capability checks
-// ---------------------------------------------------------------------------
 
 /// Capabilities checked through the `role.check` hook; fails closed.
 /// The admin role holds every capability through the roles module
@@ -136,7 +132,7 @@ pub(crate) fn require_permission(ctx: &AppContext, role: &str, permission: &str)
     }
 }
 
-/// Package gate for the site builder (task 353): the builder is a
+/// Package gate for the site builder: the builder is a
 /// CHOICE, off by default. A request acting in a company scope gets
 /// the builder only when that company's package includes the
 /// `site-builder` module entry; the control plane (no company scope
@@ -181,15 +177,13 @@ pub(crate) fn authorize(ctx: &AppContext, req: &HttpRequest, permission: &str) -
     Ok(found)
 }
 
-// ---------------------------------------------------------------------------
 // Safe URLs for rendered links and media
-// ---------------------------------------------------------------------------
 
 /// True when `url` uses an allowlisted shape for rendered links and
 /// media: `http://`, `https://`, a site-relative path starting with
 /// `/` (but not protocol-relative `//`), or a `#` fragment. Anything
-/// else — `javascript:`, `data:`, `vbscript:`, a bare scheme, or a
-/// URL containing control characters — is rejected, so an
+/// else - `javascript:`, `data:`, `vbscript:`, a bare scheme, or a
+/// URL containing control characters - is rejected, so an
 /// HTML-escaped but dangerous URL can never reach an `href`, `src`,
 /// or `action` attribute.
 pub(crate) fn is_safe_url(url: &str) -> bool {
@@ -366,9 +360,7 @@ mod tests {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Tenant edge guard (C3 pilot 4, group C).
-// ---------------------------------------------------------------------------
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request

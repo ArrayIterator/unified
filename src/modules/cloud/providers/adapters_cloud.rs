@@ -12,9 +12,7 @@ use url::Url;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // AWS EC2 adapter.
-// ---------------------------------------------------------------------------
 
 /// AWS EC2 (`ec2.<region>.amazonaws.com`), SigV4 signed query API.
 /// DescribeInstances only in this round; the XML response is read with
@@ -199,9 +197,7 @@ impl CloudProvider for AwsAdapter {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Google Cloud Compute Engine adapter.
-// ---------------------------------------------------------------------------
 
 /// Google Cloud Compute Engine (`compute.googleapis.com`), OAuth2 bearer
 /// token supplied through settings. List / status only in this round;
@@ -329,9 +325,7 @@ impl CloudProvider for GoogleAdapter {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Virtualizor adapter.
-// ---------------------------------------------------------------------------
 
 /// Virtualizor panel API. The panel URL is supplied on the connection
 /// (`endpoint`); authentication is the API key (`api_token`) plus the
@@ -605,9 +599,7 @@ impl CloudProvider for VirtualizorAdapter {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Docker adapter.
-// ---------------------------------------------------------------------------
 
 /// Remote Docker Engine API (`/v1.44`), over TCP/TLS against the
 /// endpoint on the connection. Containers list / inspect / create /
@@ -1006,9 +998,7 @@ impl CloudProvider for DockerAdapter {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Kubernetes adapter.
-// ---------------------------------------------------------------------------
 
 /// Kubernetes API server, service-account bearer token. Namespaces,
 /// pods, and deployments list / status, plus deployment create /

@@ -1,43 +1,43 @@
 // Inbox - Module struct, route table and registration.
 
-// Smart Inbox module — one queue unifying email, chat, tickets, and
+// Smart Inbox module - one queue unifying email, chat, tickets, and
 // social mentions, with assignment, snooze, canned replies, SLA
 // surfacing, per-agent read tracking, and explicit thread merging.
 //
 // Routes live under `/api/v1/inbox`:
 //
 //   Queue:
-//     GET    /threads — unified queue (filter by channel, status,
+//     GET    /threads - unified queue (filter by channel, status,
 //       assignee, priority, department_id, unread, overdue;
 //       overdue threads first, then most recent activity).
-//     POST   /threads — register a thread reference manually
+//     POST   /threads - register a thread reference manually
 //       (email / chat / ticket / social; the owning module keeps
-//       the messages — this only stores the reference).
+//       the messages - this only stores the reference).
 //     GET    /threads/{id}.
-//     PATCH  /threads/{id} — status / priority / department.
-//     GET    /stats — queue counts by status and channel, overdue
+//     PATCH  /threads/{id} - status / priority / department.
+//     GET    /stats - queue counts by status and channel, overdue
 //       count, unassigned count, snoozed count.
 //   Assignment / snooze / read:
-//     POST   /threads/{id}/assign — assign to an agent.
-//     POST   /threads/{id}/snooze — hide until a time, then reappear
+//     POST   /threads/{id}/assign - assign to an agent.
+//     POST   /threads/{id}/snooze - hide until a time, then reappear
 //       (scheduler job `inbox.unsnooze`).
-//     POST   /threads/{id}/unsnooze — bring a snoozed thread back.
-//     POST   /threads/{id}/read — mark read for the caller.
-//     POST   /threads/{id}/unread — mark unread for the caller.
+//     POST   /threads/{id}/unsnooze - bring a snoozed thread back.
+//     POST   /threads/{id}/read - mark read for the caller.
+//     POST   /threads/{id}/unread - mark unread for the caller.
 //   Merge:
-//     POST   /threads/{id}/merge — merge into another thread
+//     POST   /threads/{id}/merge - merge into another thread
 //       (explicit only; same customer, multiple channels).
-//     POST   /threads/{id}/unmerge — reverse a merge.
+//     POST   /threads/{id}/unmerge - reverse a merge.
 //   Reply:
-//     POST   /threads/{id}/reply — request a reply from the owning
+//     POST   /threads/{id}/reply - request a reply from the owning
 //       module (the inbox never sends mail or chat itself); an
 //       optional canned reply id expands into the draft body.
 //   Canned replies:
-//     GET/POST /canned-replies — list (filter by department_id) /
+//     GET/POST /canned-replies - list (filter by department_id) /
 //       create (per department).
 //     GET/PATCH/DELETE /canned-replies/{id}.
 //
-// HONESTY — READ THIS FIRST. What is real in this module:
+// HONESTY - READ THIS FIRST. What is real in this module:
 // in-memory thread index, assignment history, canned replies, and
 // per-agent read receipts; ingestion listeners that maintain the
 // index from `ticket.created` / `ticket.updated` /
@@ -45,7 +45,7 @@
 // `chat.session.created` / `chat.session.assigned`, and `mail.sent`
 // payloads; SLA display copied from the tickets module's own SLA
 // fields (`sla_resolution_due_at`, `sla_resolution_breached`) on
-// the thread — the tickets module owns SLA computation, this module
+// the thread - the tickets module owns SLA computation, this module
 // only surfaces it and sorts overdue threads first; assignment with
 // a `notification.requested` to the assignee; snooze with a
 // `scheduler.enqueue` attempt; reply as a fire-and-forget
@@ -55,12 +55,12 @@
 // source channel, source id, subject, participants, last activity,
 // unread flag); actual sending of any reply (the owning module
 // consumes `inbox.reply.requested`); inbound email ingestion from
-// the mail module (no `mail.received` event exists in this tree —
+// the mail module (no `mail.received` event exists in this tree -
 // `mail.sent` is ingested defensively and skipped when its payload
 // carries no message id, so email threads mostly arrive through
 // the manual registration endpoint until the mail module emits an
 // inbound event); social mention ingestion (no social module exists
-// in this tree yet — social threads are registered manually with
+// in this tree yet - social threads are registered manually with
 // channel `social`); and automatic merging (merging is explicit
 // only, by agent choice).
 //
@@ -78,7 +78,7 @@
 //
 // Tenancy: every handler resolves the tenant FIRST, before caller
 // identity or any capability check (`require_tenant` in
-// `auth.rs`, following the library module's pattern — see
+// `auth.rs`, following the library module's pattern - see
 // `unified_core::tenancy`). A request with no resolved tenant
 // context is rejected (401); a resolved tenant id that is not a
 // UUID is rejected (403); a verified caller company that does not
@@ -111,18 +111,18 @@
 //     when a thread is snoozed.
 // Events this module listens to:
 //   - `ticket.created`, `ticket.updated`, `ticket.commented`,
-//     `ticket.assigned` — upsert the ticket thread (full ticket
+//     `ticket.assigned` - upsert the ticket thread (full ticket
 //     JSON payload: id, title, user_id, department_id, priority,
 //     status, SLA due / breached flags).
-//   - `chat.message` — upsert the chat thread for the channel
+//   - `chat.message` - upsert the chat thread for the channel
 //     (payload: channel_id, message_id, author_id, body).
-//   - `chat.session.created`, `chat.session.assigned` — upsert the
+//   - `chat.session.created`, `chat.session.assigned` - upsert the
 //     chat thread for the session (payload: session_id,
 //     visitor_id, department_id when present).
-//   - `mail.sent` — upsert an email thread when the payload
+//   - `mail.sent` - upsert an email thread when the payload
 //     carries a message id (`id` / `message_id`); skipped
 //     otherwise (see the HONESTY note above).
-//   - `inbox.unsnooze_requested` — the event the scheduler emits
+//   - `inbox.unsnooze_requested` - the event the scheduler emits
 //     when an `inbox.unsnooze` job fires, following its naming
 //     rule (`backup.run` -> `backup.run_requested`); clears the
 //     snooze on the named thread. When the payload carries a
@@ -160,9 +160,7 @@ use super::{CHAT_MESSAGE, CHAT_SESSION_ASSIGNED, CHAT_SESSION_CREATED, InboxStat
     register_thread, request_reply, snooze_thread, unmerge_thread, unsnooze_thread,
     update_canned_reply, update_thread};
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct InboxModule {
     state: InboxState,
@@ -192,7 +190,7 @@ impl Module for InboxModule {
     }
 
     fn description(&self) -> &'static str {
-        "One unified queue over email, chat, tickets, and social mentions: a lightweight thread index (references only — the owning modules keep the messages), assignment, snooze with scheduler re-appearance, per-department canned replies, reply requests emitted to the owning module, SLA surfacing from tickets with overdue threads first, per-agent read tracking, and explicit thread merging."
+        "One unified queue over email, chat, tickets, and social mentions: a lightweight thread index (references only - the owning modules keep the messages), assignment, snooze with scheduler re-appearance, per-department canned replies, reply requests emitted to the owning module, SLA surfacing from tickets with overdue threads first, per-agent read tracking, and explicit thread merging."
     }
 
     fn requires(&self) -> &[&'static str] {

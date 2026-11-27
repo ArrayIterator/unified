@@ -76,9 +76,7 @@ pub(crate) fn resolve_tenant(req: &HttpRequest) -> UnifiedResult<String> {
         .map(|context| context.tenant_id.to_string())
 }
 
-// ---------------------------------------------------------------------------
-// Tenant edge guard (C3 pilot 5, task 319).
-// ---------------------------------------------------------------------------
+// Tenant edge guard (C3 pilot 5).
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request
@@ -93,7 +91,7 @@ pub(crate) fn resolve_tenant(req: &HttpRequest) -> UnifiedResult<String> {
 /// filters. `caller_company` below is therefore the mismatch-only
 /// company check (pilot 4 group D idiom), not a strict
 /// `require_company` gate: a tenant/caller company mismatch is 403,
-/// but a write is never refused only because no company resolves —
+/// but a write is never refused only because no company resolves -
 /// the write is still fully tenant-partitioned by `tenant_id`.
 pub(crate) fn require_tenant(
     req: &HttpRequest,
@@ -104,12 +102,12 @@ pub(crate) fn require_tenant(
 /// The company scope the caller acts in: the tenant context's
 /// company first, the verified caller's server-resolved company
 /// otherwise. Fails closed (403) when both are present and disagree
-/// — a request must not carry one company in its tenant context and
+/// - a request must not carry one company in its tenant context and
 /// another in its verified identity. The `X-Company-Id` header is
 /// NEVER trusted here: only the verified caller (company resolved
 /// from the database at authentication time) and the
 /// middleware-resolved tenant context are sources (header trust was
-/// removed by task 317; this helper must never reintroduce it).
+/// removed; this helper must never reintroduce it).
 pub(crate) fn caller_company(
     tenant: &unified_core::tenancy::TenantContext,
     req: &HttpRequest,
@@ -185,9 +183,7 @@ pub(crate) fn paginate<T: Serialize + Clone>(
     PageResult::new(page_items, total, &pagination)
 }
 
-// ---------------------------------------------------------------------------
 // Validation
-// ---------------------------------------------------------------------------
 
 /// Validate a document id list: at least one document, at most
 /// the module bound, every id non-empty and within the length
@@ -363,9 +359,7 @@ pub(crate) fn validate_reason(raw: &Option<String>) -> UnifiedResult<Option<Stri
     optional_text(raw, "reason", MAX_REASON_LEN)
 }
 
-// ---------------------------------------------------------------------------
 // Tenant-scoped loaders
-// ---------------------------------------------------------------------------
 //
 // Every loader checks the row's `tenant_id` against the caller's
 // tenant. A row from another tenant reads as 404, never 403, so
@@ -430,7 +424,7 @@ pub(crate) fn load_template(
 /// Resolve a raw signing token to its signer. Unknown, expired,
 /// and revoked tokens all answer 404 with the same message, so
 /// tokens cannot be probed apart. The token is the credential
-/// here, so no tenant context is needed — possession of the
+/// here, so no tenant context is needed - possession of the
 /// unguessable token is the authorization.
 pub(crate) fn load_signer_by_token(
     state: &SignState,
@@ -463,9 +457,7 @@ pub(crate) fn load_signer_by_token(
     Ok((envelope, signer))
 }
 
-// ---------------------------------------------------------------------------
 // Audit trail and lifecycle
-// ---------------------------------------------------------------------------
 
 /// Append one hash-chained audit entry to an envelope's trail
 /// and return it.
@@ -665,9 +657,7 @@ pub(crate) fn transition_envelope(
     Ok(())
 }
 
-// ---------------------------------------------------------------------------
 // Views
-// ---------------------------------------------------------------------------
 
 /// A signer view never includes the token hash. The raw token is
 /// returned separately (and only once) by the send / resend /

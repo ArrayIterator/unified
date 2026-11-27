@@ -10,9 +10,7 @@ use std::sync::{Arc, RwLock};
 use super::money::{format_minor, mul_div_round_half_up};
 use super::types::{BundleItem, Inventory, InventorySummary, PriceQuote, PriceQuoteRequest, PriceTier, Product, ProductDetail, ProductFile, ProductOption, ProductVariant, ProductVersion, RegionalPrice, Tag, TaxRule, TaxonomyNode, UsagePrice};
 
-// ---------------------------------------------------------------------------
 // State
-// ---------------------------------------------------------------------------
 
 pub struct ProductsState {
     pub(crate) hooks: RwLock<Arc<HookBus>>,

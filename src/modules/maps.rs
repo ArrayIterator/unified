@@ -1,4 +1,4 @@
-//! Map & Tagging — the single shared geospatial module.
+//! Map & Tagging - the single shared geospatial module.
 //!
 //! Locations (pins), generic location links for ANY module's
 //! records, layers, geofences, GPS tracking history, and a

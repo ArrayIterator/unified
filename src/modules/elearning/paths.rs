@@ -1,4 +1,4 @@
-// Elearning — Learning path handlers.
+// Elearning - Learning path handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -20,9 +20,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Learning path handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_paths(
     ctx: web::Data<Arc<AppContext>>,

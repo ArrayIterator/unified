@@ -5,7 +5,7 @@
 // Each module file exposes `register(registry)` and a `*Module` struct
 // implementing `unified_core::modules::Module`.
 //
-// Interconnection between modules happens through the hook/event bus — no
+// Interconnection between modules happens through the hook/event bus - no
 // module calls another module directly. See `unified_core::hooks::events`
 // for the well-known event names.
 

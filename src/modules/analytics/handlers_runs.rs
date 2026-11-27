@@ -11,9 +11,7 @@ use super::{events::*, helpers::*, types::*, views::*, inputs::*, state::*, hook
 
 
 
-// ---------------------------------------------------------------------------
 // Report runs and export.
-// ---------------------------------------------------------------------------
 pub(crate) async fn run_report_now(
     ctx: web::Data<Arc<AppContext>>,
     state: web::Data<Arc<AnalyticsState>>,

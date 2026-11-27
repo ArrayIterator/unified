@@ -11,9 +11,7 @@ use super::{limits::*, types::*, hub::*, state::*, helpers::*, module::*, handle
 
 
 
-// ---------------------------------------------------------------------------
 // Message handlers
-// ---------------------------------------------------------------------------
 pub(crate) async fn post_message(
     state: web::Data<ChatState>,
     req: HttpRequest,

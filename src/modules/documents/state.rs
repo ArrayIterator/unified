@@ -1,4 +1,4 @@
-// documents — In-memory state and its methods.
+// documents - In-memory state and its methods.
 
 use super::*;
 use unified_core::config::DocumentsConfig;
@@ -31,14 +31,12 @@ pub mod finalize;
 pub mod folders;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // State
-// ---------------------------------------------------------------------------
 
 pub struct DocumentsState {
     pub(crate) hooks: RwLock<Arc<HookBus>>,
     pub(crate) documents: DashMap<String, DocumentRecord>,
-    /// Folders keyed by folder id (migration 000132, task 355).
+    /// Folders keyed by folder id (migration 000132).
     /// The in-memory map is the runtime authority; the
     /// `document_folders` table is the persistence target (same
     /// convention as the documents map itself).
@@ -49,7 +47,7 @@ pub struct DocumentsState {
     pub(crate) parts: DashMap<String, DashMap<u32, UploadPart>>,
     /// Lazy-finalize jobs keyed by job id. The row is the unit the
     /// worker claims, retries and reports on (see `FinalizeJob` in
-    /// types.rs); the in-memory map is the runtime authority —
+    /// types.rs); the in-memory map is the runtime authority -
     /// the `finalize_jobs` DB table is the persistence target for
     /// the future C11 write-through.
     pub(crate) finalize_jobs: DashMap<String, FinalizeJob>,
@@ -790,7 +788,7 @@ mod tests {
         );
         state.sessions.insert(session.id.clone(), session.clone());
         state.parts.insert(session.id.clone(), DashMap::new());
-        // Parts arrive out of order: 3, 0, 4, 1 — part 2 is the
+        // Parts arrive out of order: 3, 0, 4, 1 - part 2 is the
         // resume gap.
         for index in [3u32, 0, 4, 1] {
             let start = index as usize * 1024 * 1024;
@@ -1002,7 +1000,7 @@ mod tests {
         let tenant_scope = StorageScope::Tenant(tenant);
         let bytes = b"same bytes, own copy";
         // Two uploads of identical bytes mint two distinct objects
-        // (one fresh UUIDv7 per upload — the "upload freely"
+        // (one fresh UUIDv7 per upload - the "upload freely"
         // semantics); both files exist behind their own keys.
         // Stored keys are scope-free; the files live under the
         // scope root resolved from the scope at runtime.
@@ -1068,7 +1066,7 @@ mod tests {
                 .is_file()
         );
         // Same content, different extension -> a different key (a
-        // separate copy) — intended, consistent with no dedup.
+        // separate copy) - intended, consistent with no dedup.
         let pdf_key = state
             .store_content(tenant_scope, StorageArea::Private, ContentKind::Documents, Some("pdf"), bytes)
             .await

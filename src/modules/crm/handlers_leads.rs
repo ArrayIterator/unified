@@ -1,4 +1,4 @@
-// crm — handlers leads.
+// crm - handlers leads.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -21,9 +21,7 @@ use super::handlers_contacts::*;
 use super::handlers_activities::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Lead handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_leads(
     ctx: web::Data<Arc<AppContext>>,

@@ -1,4 +1,4 @@
-// risk — handlers instances.
+// risk - handlers instances.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -335,9 +335,7 @@ pub(crate) async fn reopen_instance_item(
     json::respond(result, false)
 }
 
-// ---------------------------------------------------------------------------
 // Hook handlers
-// ---------------------------------------------------------------------------
 
 /// Answer `risk.review_check_requested` by running the review-date
 /// scan and reporting how many alerts were raised.

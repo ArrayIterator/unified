@@ -60,14 +60,14 @@ function AdminUsersTable() {
       <Table.Body>
         {state.data.map((user) => (
           <Table.Row key={user.id ?? user.email}>
-            <Table.Cell>{user.name || "—"}</Table.Cell>
-            <Table.Cell>{user.email || "—"}</Table.Cell>
+            <Table.Cell>{user.name || "-"}</Table.Cell>
+            <Table.Cell>{user.email || "-"}</Table.Cell>
             <Table.Cell>
               {user.is_active ? <Badge tone="success">Yes</Badge> : <Badge tone="neutral">No</Badge>}
             </Table.Cell>
             <Table.Cell>{user.roles?.length ?? 0}</Table.Cell>
             <Table.Cell>
-              {user.created_at ? formatDateTime(user.created_at) : "—"}
+              {user.created_at ? formatDateTime(user.created_at) : "-"}
             </Table.Cell>
           </Table.Row>
         ))}
@@ -105,8 +105,8 @@ function AdminModulesTable() {
                 {module.name || module.id}{" "}
                 <span className="font-mono text-xs text-faint">({module.id})</span>
               </Table.Cell>
-              <Table.Cell>{module.version || "—"}</Table.Cell>
-              <Table.Cell>{module.description || "—"}</Table.Cell>
+              <Table.Cell>{module.version || "-"}</Table.Cell>
+              <Table.Cell>{module.description || "-"}</Table.Cell>
             </Table.Row>
           ))}
         </Table.Body>

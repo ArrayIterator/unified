@@ -1,7 +1,6 @@
-// hardening — rate_limit.
+// hardening - rate_limit.
 // Per-IP / per-user / per-endpoint rate limiting and bursts.
 //
-// Split from `crates/unified-core/src/hardening.rs`; moved verbatim, no behaviour changes.
 
 use super::*;
 use crate::error::UnifiedError;

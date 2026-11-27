@@ -13,9 +13,7 @@ use super::helpers::*;
 use super::state::*;
 use super::types::*;
 
-// ---------------------------------------------------------------------------
 // Purchase order handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_purchase_orders(
     ctx: web::Data<Arc<AppContext>>,

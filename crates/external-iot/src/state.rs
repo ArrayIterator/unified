@@ -1,11 +1,9 @@
-//! IoT external module (split from lib.rs; moved verbatim).
+//! IoT external module.
 
 use super::*;
 
 
-// ---------------------------------------------------------------------------
 // In-memory store
-// ---------------------------------------------------------------------------
 
 /// The whole module state. Every map is keyed or filtered by
 /// `tenant_id`; there is no global view. The hook bus is attached by

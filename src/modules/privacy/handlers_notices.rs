@@ -10,9 +10,7 @@ use std::sync::Arc;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Handlers: privacy notices and audit trail
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_notices(
     ctx: web::Data<Arc<AppContext>>,

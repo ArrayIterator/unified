@@ -19,9 +19,7 @@ use super::*;
 pub mod effective;
 pub mod lifecycle;
 
-// ---------------------------------------------------------------------------
 // State.
-// ---------------------------------------------------------------------------
 
 pub struct EntitlementsState {
     pub entitlements: DashMap<Uuid, Entitlement>,
@@ -61,7 +59,7 @@ pub(crate) static ENTITLEMENTS_CTX: OnceLock<Arc<AppContext>> = OnceLock::new();
 /// rows `effective()` reads through the one shared
 /// `entitled_via_live_sources` decision. `None` until the
 /// entitlements module initializes; the gate treats that as "no
-/// stored rows" (fail closed — the pre-fix behaviour), never as
+/// stored rows" (fail closed - the pre-fix behaviour), never as
 /// an entitlement.
 pub(crate) static ENTITLEMENTS_STATE: OnceLock<Arc<EntitlementsState>> = OnceLock::new();
 
@@ -121,7 +119,7 @@ pub(crate) struct LiveEntitlement {
 
 impl LiveEntitlement {
     /// Every covering source, stored rows first, then the derived
-    /// licensing source — the same list `effective()` reported
+    /// licensing source - the same list `effective()` reported
     /// before this decision was shared.
     pub(crate) fn sources(&self) -> Vec<EntitlementSourceView> {
         let mut sources = self.stored.clone();
@@ -143,7 +141,7 @@ impl LiveEntitlement {
 /// 4. Sellable non-core without a license: an active
 ///    subscription covering the module (asked through the hook
 ///    bus, same as the gate always did).
-/// 5. An active stored row for the module — SaaS package,
+/// 5. An active stored row for the module - SaaS package,
 ///    manual grant, or a mirrored license/subscription row.
 ///    This is the leg the gate never consulted before: a module
 ///    covered only by a stored row was entitled in
@@ -569,7 +567,7 @@ mod tests {
         let company_id = company_id();
         let ctx = licensing_leg_context(false);
         // No license, no subscription: the stored package row is
-        // the only live source — the leg the gate never consulted
+        // the only live source - the leg the gate never consulted
         // before, so `effective()` and the gate disagreed here.
         grant_package_row(&state, &company_id, "addon-mod", "pkg-1");
         let verdict = entitled_via_live_sources(Some(&state), Some(&ctx), &company_id, "addon-mod");
@@ -597,7 +595,7 @@ mod tests {
             "package_change",
         );
         // Grace is enabled by default, so the module reads as
-        // grace_read_only — but the shared decision never
+        // grace_read_only - but the shared decision never
         // entitles through it, exactly as the gate refuses it.
         let effective = state.effective(Some(&ctx), &company_id, "addon-mod");
         assert_eq!(effective.state, ACCESS_GRACE_READ_ONLY);
@@ -613,7 +611,7 @@ mod tests {
         let company_id = company_id();
         // A stored subscription row from a tenant grant: the
         // row's `source_id` is the tenant id, the subscription id
-        // rides `source_ref` — the only link a cancel can match.
+        // rides `source_ref` - the only link a cancel can match.
         state.create_entitlement(
             &company_id,
             &company_id,

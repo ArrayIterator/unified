@@ -1,4 +1,4 @@
-// Projects module — project board and column handlers.
+// Projects module - project board and column handlers.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use super::*;
@@ -9,9 +9,7 @@ use actix_web::{HttpRequest, HttpResponse, web};
 use serde_json::{Value, json};
 use std::sync::Arc;
 
-// ---------------------------------------------------------------------------
 // Project boards
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_project_boards(
     req: HttpRequest,
@@ -272,9 +270,7 @@ pub(crate) async fn delete_project_board(
     json::respond(result, false)
 }
 
-// ---------------------------------------------------------------------------
 // Board columns
-// ---------------------------------------------------------------------------
 
 /// Move every task sitting in a deleted column to the board's first
 /// remaining column (lowest position), so no task keeps pointing at a

@@ -13,9 +13,7 @@ use super::{events::*, card_validation::*, card_settings::*, limits::*, provider
 
 
 
-// ---------------------------------------------------------------------------
 // Handlers: payment methods (tokenized only).
-// ---------------------------------------------------------------------------
 pub(crate) async fn create_payment_method(
     ctx: web::Data<Arc<AppContext>>,
     state: web::Data<Arc<PaymentsState>>,
@@ -46,7 +44,7 @@ pub(crate) async fn create_payment_method(
         // four-digit year no tenant setting could ever accept
         // beyond (current year + the cards module's 50-year
         // maximum). Past-ness and the real per-tenant bound stay
-        // the validator's `invalid_expiry` — the gate below runs
+        // the validator's `invalid_expiry` - the gate below runs
         // it. See `CARDS_EXPIRY_YEAR_GUARD_MAX_AHEAD`.
         let latest_expiry_year =
             Utc::now().year() + CARDS_EXPIRY_YEAR_GUARD_MAX_AHEAD as i32;
@@ -60,7 +58,7 @@ pub(crate) async fn create_payment_method(
         // expiry before storing the method (`claim` mode when no
         // raw card details were supplied, `full` mode when they
         // were). The stored brand comes from the validator's
-        // answer — authoritative — falling back to the claimed
+        // answer - authoritative - falling back to the claimed
         // brand when the answer carried none.
         let outcome = request_card_validation(
             &state,

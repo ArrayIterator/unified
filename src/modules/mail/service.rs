@@ -161,7 +161,7 @@ fn encode_word(chunk: &str) -> String {
 
 /// Encode a header value as RFC 2047 encoded-word(s) when it is not ASCII.
 ///
-/// A single encoded-word must be at most 75 characters (RFC 2047 §2),
+/// A single encoded-word must be at most 75 characters (RFC 2047 sec. 2),
 /// so a long value is split into several words, each encoding at most
 /// 45 bytes (60 base64 characters, a 72-character word). Splitting
 /// happens on character boundaries so every word decodes to valid UTF-8.

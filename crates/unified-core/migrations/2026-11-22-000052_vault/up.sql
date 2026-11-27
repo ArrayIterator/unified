@@ -1,5 +1,5 @@
 -- Document Vault tables for the Unified Pentagonal Project
--- (`src/modules/vault.rs`): folders, documents (metadata only —
+-- (`src/modules/vault.rs`): folders, documents (metadata only -
 -- file bytes live in the storage module), document versions,
 -- append-only access log, share links, and access requests.
 -- Matches src/db/schema.rs conventions. PostgreSQL only.
@@ -54,9 +54,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One folder. A top-level folder has parent_id NULL.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS vault_folders (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(200) NOT NULL,
@@ -74,9 +72,7 @@ CREATE INDEX IF NOT EXISTS idx_vault_folders_parent_id ON vault_folders (parent_
 CREATE INDEX IF NOT EXISTS idx_vault_folders_owner_id ON vault_folders (owner_id);
 CREATE INDEX IF NOT EXISTS idx_vault_folders_company_id ON vault_folders (company_id);
 
--- ---------------------------------------------------------------------------
 -- One document (metadata only).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS vault_documents (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     folder_id UUID NOT NULL REFERENCES vault_folders (id) ON DELETE RESTRICT,
@@ -105,9 +101,7 @@ CREATE INDEX IF NOT EXISTS idx_vault_documents_status ON vault_documents (status
 CREATE INDEX IF NOT EXISTS idx_vault_documents_flagged ON vault_documents (flagged_for_review);
 CREATE INDEX IF NOT EXISTS idx_vault_documents_shared_clients ON vault_documents USING GIN (shared_with_client_ids);
 
--- ---------------------------------------------------------------------------
 -- One version of a document.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS vault_document_versions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     document_id UUID NOT NULL REFERENCES vault_documents (id) ON DELETE CASCADE,
@@ -135,9 +129,7 @@ ALTER TABLE vault_documents
     FOREIGN KEY (current_version_id) REFERENCES vault_document_versions (id) ON DELETE SET NULL
     NOT VALID;
 
--- ---------------------------------------------------------------------------
 -- One append-only access-log row.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS vault_access_log (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     document_id UUID NOT NULL REFERENCES vault_documents (id) ON DELETE CASCADE,
@@ -156,9 +148,7 @@ CREATE INDEX IF NOT EXISTS idx_vault_access_log_actor_id ON vault_access_log (ac
 CREATE INDEX IF NOT EXISTS idx_vault_access_log_action ON vault_access_log (action);
 CREATE INDEX IF NOT EXISTS idx_vault_access_log_created_at ON vault_access_log (created_at);
 
--- ---------------------------------------------------------------------------
 -- One share link.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS vault_share_links (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     document_id UUID NOT NULL REFERENCES vault_documents (id) ON DELETE CASCADE,
@@ -175,9 +165,7 @@ CREATE TABLE IF NOT EXISTS vault_share_links (
 CREATE INDEX IF NOT EXISTS idx_vault_share_links_document_id ON vault_share_links (document_id);
 CREATE INDEX IF NOT EXISTS idx_vault_share_links_expires_at ON vault_share_links (expires_at);
 
--- ---------------------------------------------------------------------------
 -- One access request.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS vault_access_requests (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     document_id UUID NOT NULL REFERENCES vault_documents (id) ON DELETE CASCADE,

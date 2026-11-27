@@ -4,9 +4,7 @@ use chrono::{DateTime, Utc};
 use serde::Serialize;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Types.
-// ---------------------------------------------------------------------------
 
 /// Lifecycle of a key. `rotating` means a replacement was issued and
 /// the key is inside its grace period; it becomes `revoked` when the

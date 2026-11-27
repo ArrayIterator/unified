@@ -1,4 +1,4 @@
-// Map & Tagging — caller, capability, and tenant helpers.
+// Map & Tagging - caller, capability, and tenant helpers.
 //
 // Mirrors `widgets::helpers` exactly (same fail-closed shapes):
 // the caller is the server-verified JWT identity (never a header),

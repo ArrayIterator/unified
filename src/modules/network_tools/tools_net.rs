@@ -15,16 +15,14 @@ use tokio::time::timeout;
 use super::types::{DEFAULT_DNSBL_ZONES, MAX_HTTP_REDIRECTS, MAX_TOTAL_TIMEOUT_SECS, MAX_WEBHOOK_BODY_BYTES, MAX_WHOIS_TEXT_CHARS, ToolResult};
 use super::validation::{clamp_total_timeout, guard_url, pinned_http_client, resolve_and_guard, url_port_or_default, valid_hostname_or_ip, validate_target};
 
-// ---------------------------------------------------------------------------
 // WHOIS (TCP port 43, one referral follow).
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn whois_query(server: &str, query: &str, timeout_secs: u64) -> UnifiedResult<String> {
     // The server name is caller input for the first hop and a
     // referral taken from a WHOIS response (attacker-influenced
     // data) for the second, so it passes the same SSRF guard as any
     // other probe target: a link-local, loopback, or other
-    // restricted address — hostname or IP literal — is refused
+    // restricted address - hostname or IP literal - is refused
     // before any socket opens. The connection is then pinned to the
     // guarded addresses, never re-resolved at connect time.
     let addrs = resolve_and_guard(server, false).await?;
@@ -182,10 +180,8 @@ pub(crate) async fn tool_whois(target: &str, timeout_secs: u64) -> UnifiedResult
     })
 }
 
-// ---------------------------------------------------------------------------
 // HTTP header / status check with manual redirect following so every
 // hop is re-checked by the SSRF guard.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn tool_http_check(
     url_text: &str,
@@ -320,9 +316,7 @@ pub(crate) async fn tool_http_check(
     })
 }
 
-// ---------------------------------------------------------------------------
 // IP info + Geo (delegates to the geo module) and reverse DNS.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn tool_ip_info(ctx: &AppContext, target: &str) -> UnifiedResult<ToolResult> {
     let started = Instant::now();
@@ -348,9 +342,7 @@ pub(crate) async fn tool_ip_info(ctx: &AppContext, target: &str) -> UnifiedResul
     })
 }
 
-// ---------------------------------------------------------------------------
 // Subnet / CIDR calculator (pure computation, IPv4 + IPv6).
-// ---------------------------------------------------------------------------
 
 pub(crate) fn tool_subnet(cidr_text: &str, contains: Option<&str>) -> UnifiedResult<ToolResult> {
     let started = Instant::now();
@@ -491,9 +483,7 @@ pub(crate) fn tool_subnet(cidr_text: &str, contains: Option<&str>) -> UnifiedRes
     })
 }
 
-// ---------------------------------------------------------------------------
 // Webhook tester.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn tool_webhook_test(
     url_text: &str,
@@ -579,9 +569,7 @@ pub(crate) async fn tool_webhook_test(
     })
 }
 
-// ---------------------------------------------------------------------------
 // DNS blacklist check.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn tool_blacklist(
     target: &str,

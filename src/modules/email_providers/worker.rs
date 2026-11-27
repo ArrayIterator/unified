@@ -8,9 +8,7 @@ use serde_json::{Value, json};
 use std::collections::HashMap;
 use unified_core::error::{UnifiedError, UnifiedResult};
 
-// ---------------------------------------------------------------------------
 // Delivery worker (used by the `email.send_requested` hook).
-// ---------------------------------------------------------------------------
 /// Render a template through the Email Templates module, when the
 /// message references one. Returns the rendered HTML and subject.
 pub(crate) fn render_template(

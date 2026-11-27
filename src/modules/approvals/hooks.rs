@@ -1,4 +1,4 @@
-// Generic Approvals — Hook-bus listeners.
+// Generic Approvals - Hook-bus listeners.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -26,11 +26,9 @@ use super::handlers_requests::*;
 use super::handlers_dashboards::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Hook handlers
-// ---------------------------------------------------------------------------
 
-/// `approval.requested` — another module asks for approval of one of
+/// `approval.requested` - another module asks for approval of one of
 /// its records. Creates the request under the active definition for
 /// (`module`, `record_type`) and answers with the `request_id`, or
 /// answers `accepted: false` when no definition applies.

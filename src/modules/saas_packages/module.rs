@@ -374,9 +374,7 @@ pub fn register(registry: &ModuleRegistry) {
     registry.register(Arc::new(SaasPackagesModule::new()));
 }
 
-// ---------------------------------------------------------------------------
 // Module implementation.
-// ---------------------------------------------------------------------------
 
 impl Module for SaasPackagesModule {
     fn id(&self) -> &'static str {

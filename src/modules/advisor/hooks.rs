@@ -8,9 +8,7 @@ use super::{rules::*, types::*, state::*, helpers::*, handlers_suggestions::*, h
 
 
 
-// ---------------------------------------------------------------------------
 // Hook handlers: ingest source events into the local fact cache
-// ---------------------------------------------------------------------------
 /// Cache the invoice carried by `invoice.created`, `invoice.paid`,
 /// or `invoice.voided` (all three emit the full invoice JSON).
 pub(crate) fn on_invoice_event(state: Arc<AdvisorState>, ctx: &mut HookContext) {

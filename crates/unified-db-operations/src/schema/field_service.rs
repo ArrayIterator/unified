@@ -3,11 +3,9 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Field service (migration 000080_field_service). No `joinable!`
 // entries: the migration declares no foreign keys (all references
 // are plain ids by design).
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     field_equipment (id) {

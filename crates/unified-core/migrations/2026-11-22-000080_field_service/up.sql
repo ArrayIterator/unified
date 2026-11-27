@@ -35,9 +35,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- Equipment registry.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS field_equipment (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     asset_id UUID,
@@ -59,9 +57,7 @@ CREATE INDEX IF NOT EXISTS idx_field_equipment_asset ON field_equipment (asset_i
 CREATE INDEX IF NOT EXISTS idx_field_equipment_status ON field_equipment (status);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_field_equipment_serial ON field_equipment (serial_number) WHERE serial_number IS NOT NULL;
 
--- ---------------------------------------------------------------------------
 -- Recurring maintenance plans.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS field_maintenance_plans (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     equipment_id UUID NOT NULL,
@@ -83,9 +79,7 @@ CREATE INDEX IF NOT EXISTS idx_field_plans_equipment ON field_maintenance_plans 
 CREATE INDEX IF NOT EXISTS idx_field_plans_next_due ON field_maintenance_plans (next_due_at) WHERE is_active;
 CREATE INDEX IF NOT EXISTS idx_field_plans_template ON field_maintenance_plans (template_id);
 
--- ---------------------------------------------------------------------------
 -- Work orders.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS field_work_orders (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     equipment_id UUID NOT NULL,
@@ -115,9 +109,7 @@ CREATE INDEX IF NOT EXISTS idx_field_work_orders_status ON field_work_orders (st
 CREATE INDEX IF NOT EXISTS idx_field_work_orders_assignee ON field_work_orders (assignee_id);
 CREATE INDEX IF NOT EXISTS idx_field_work_orders_due ON field_work_orders (due_at);
 
--- ---------------------------------------------------------------------------
 -- Work order checklist items.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS field_work_order_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     work_order_id UUID NOT NULL,
@@ -132,9 +124,7 @@ CREATE TABLE IF NOT EXISTS field_work_order_items (
 );
 CREATE INDEX IF NOT EXISTS idx_field_work_order_items_order ON field_work_order_items (work_order_id, position);
 
--- ---------------------------------------------------------------------------
 -- Work order part lines.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS field_work_order_parts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     work_order_id UUID NOT NULL,
@@ -151,9 +141,7 @@ CREATE TABLE IF NOT EXISTS field_work_order_parts (
 CREATE INDEX IF NOT EXISTS idx_field_work_order_parts_order ON field_work_order_parts (work_order_id);
 CREATE INDEX IF NOT EXISTS idx_field_work_order_parts_stock ON field_work_order_parts (stock_id);
 
--- ---------------------------------------------------------------------------
 -- Dispatch assignments.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS field_dispatch_assignments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     work_order_id UUID NOT NULL,
@@ -173,9 +161,7 @@ CREATE INDEX IF NOT EXISTS idx_field_dispatch_technician ON field_dispatch_assig
 CREATE INDEX IF NOT EXISTS idx_field_dispatch_order ON field_dispatch_assignments (work_order_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_field_dispatch_active_order ON field_dispatch_assignments (work_order_id) WHERE status = 'active';
 
--- ---------------------------------------------------------------------------
 -- Customer sign-offs.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS field_signoffs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     work_order_id UUID NOT NULL,

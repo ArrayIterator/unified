@@ -13,9 +13,7 @@ use super::{events::*, card_validation::*, card_settings::*, limits::*, provider
 
 
 
-// ---------------------------------------------------------------------------
 // Handlers: intents.
-// ---------------------------------------------------------------------------
 pub(crate) async fn create_intent(
     ctx: web::Data<Arc<AppContext>>,
     req: HttpRequest,
@@ -123,7 +121,7 @@ pub(crate) async fn get_intent(
 /// `requires_confirmation` with no event and a 202 pending
 /// outcome, while a terminal provider status that is neither a
 /// capture nor a plain decline (refunded, voided, chargeback,
-/// cancelled) fails the intent and returns an error — the confirm
+/// cancelled) fails the intent and returns an error - the confirm
 /// never reports success for those, even though the transaction
 /// row keeps the provider's own status for the audit trail.
 pub(crate) struct ConfirmMapping {
@@ -358,7 +356,7 @@ pub(crate) async fn confirm_intent(
             // The provider answered with a terminal status that is
             // not a capture: the transaction row above keeps the
             // provider's status, the intent is failed, and the
-            // confirm itself is an error — never a success.
+            // confirm itself is an error - never a success.
             return Err(UnifiedError::unprocessable(format!(
                 "Provider \"{}\" returned status \"{}\"; the payment was not confirmed",
                 intent.provider,

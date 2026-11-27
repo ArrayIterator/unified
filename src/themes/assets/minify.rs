@@ -8,14 +8,14 @@
 // served, so release builds send minified assets and debug builds
 // send the readable originals:
 //
-//   - `minify_js` — removes comments and collapsible whitespace
+//   - `minify_js` - removes comments and collapsible whitespace
 //     from JavaScript. It is a tokenizer, not a parser: it tracks
 //     strings, template literals (with `${}` interpolation),
 //     regular expressions versus division, and ASI-sensitive
 //     newlines, but it never renames identifiers, drops code, or
 //     reorders anything. The output is always a byte-for-byte
 //     subset of the input's tokens, so it cannot change behaviour.
-//   - `minify_css` — removes comments and collapsible whitespace
+//   - `minify_css` - removes comments and collapsible whitespace
 //     from CSS, and drops a `;` that directly precedes `}`.
 //     Whitespace around `+` and `-` is always kept, because
 //     `calc()` requires it (`calc(100% - 10px)` must keep its
@@ -28,7 +28,7 @@
 // dependency that cannot be proven to work here is worse than a
 // small, fully tested, semantics-preserving minifier. The follow-up
 // is to swap `minify_js` for `oxc_minifier` (same OXC 0.159 family
-// as `unified-ts`, compress without mangling — the dashboard's
+// as `unified-ts`, compress without mangling - the dashboard's
 // `window.UnifiedDashboard` surface must keep its names) and
 // `minify_css` for `lightningcss` once CI can compile them; both
 // functions are the single call sites, so the swap is local.
@@ -38,7 +38,7 @@
 // TypeScript sources (see `run_server`). The whole asset set is
 // small (six TypeScript files, ~130 KiB, plus three stylesheets,
 // ~52 KiB), so the step costs milliseconds; doing it on a
-// background thread would only add a swap race — a browser that
+// background thread would only add a swap race - a browser that
 // cached the unminified bytes under a fingerprint would keep
 // serving them after the swap, because the URL would not change.
 // Synchronous startup minification keeps one atomic served map:
@@ -65,14 +65,12 @@ use std::sync::{OnceLock, RwLock};
 /// data into memory.
 pub const MAX_STYLE_SIZE: u64 = 5 * 1024 * 1024;
 
-// ---------------------------------------------------------------------------
 // Minification switch and served-byte fingerprints
-// ---------------------------------------------------------------------------
 
 /// Process-wide minification switch, decided once at startup from
 /// the `assets.minify` config value (`None` means automatic:
 /// minify unless the application runs in development mode). Before
-/// startup sets it — in unit tests, for example — the default is
+/// startup sets it - in unit tests, for example - the default is
 /// `!cfg!(debug_assertions)`, which matches the same rule at the
 /// build level.
 static MINIFY_ENABLED: OnceLock<bool> = OnceLock::new();
@@ -122,9 +120,7 @@ pub fn served_fingerprint(public_path: &str) -> Option<String> {
         .cloned()
 }
 
-// ---------------------------------------------------------------------------
 // Stylesheet compilation
-// ---------------------------------------------------------------------------
 
 /// Read every `.css` file directly inside `styles_dir`
 /// (non-recursive) and return the stylesheets keyed by their public
@@ -189,7 +185,7 @@ pub fn compile_styles_dir(
 
 /// Minify every compiled script in place: the OXC-transpiled
 /// JavaScript from `compile_scripts_dir` becomes the minified
-/// JavaScript served in release builds. Infallible — the minifier
+/// JavaScript served in release builds. Infallible - the minifier
 /// only removes comments and whitespace, so it cannot fail on any
 /// input.
 pub fn minify_compiled_scripts(compiled: HashMap<String, String>) -> HashMap<String, String> {
@@ -199,9 +195,7 @@ pub fn minify_compiled_scripts(compiled: HashMap<String, String>) -> HashMap<Str
         .collect()
 }
 
-// ---------------------------------------------------------------------------
 // JavaScript minifier
-// ---------------------------------------------------------------------------
 
 /// True for a character that can appear inside a JavaScript
 /// identifier or number (`a-z`, `A-Z`, `0-9`, `_`, `$`).
@@ -751,9 +745,7 @@ pub fn minify_js(source: &str) -> String {
     out
 }
 
-// ---------------------------------------------------------------------------
 // CSS minifier
-// ---------------------------------------------------------------------------
 
 /// True for a character that can appear inside a CSS identifier or
 /// number (`a-z`, `A-Z`, `0-9`, `_`, `$`, plus non-ASCII letters).
@@ -769,7 +761,7 @@ fn is_css_word_char(c: char) -> bool {
 ///
 /// Whitespace collapses to one space exactly when both neighbours
 /// are word characters (`1px solid red` keeps its spaces, `a > b`
-/// becomes `a>b`), or when either neighbour is `+` or `-` — the
+/// becomes `a>b`), or when either neighbour is `+` or `-` - the
 /// `calc()` rule (`calc(100% - 10px)` must keep its spaces, and
 /// keeping a space anywhere else around `+`/`-` is always valid).
 /// Quoted strings (including `url("...")` and `content: "..."`)

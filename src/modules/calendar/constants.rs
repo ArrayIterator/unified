@@ -1,4 +1,4 @@
-// Calendar module — the integrated aggregation view.
+// Calendar module - the integrated aggregation view.
 //
 // This module OWNS NO dated records. It does not store events,
 // appointments, meetings, or todos, and it never creates, moves, or
@@ -29,7 +29,7 @@
 //
 // Hook contracts this module defines (see the matching `pub const`
 // names below for the exact event strings):
-//   - `calendar.items_requested` — request:
+//   - `calendar.items_requested` - request:
 //       {"tenant_id", "company_id", "user_id", "start", "end",
 //        "modules": [...]}
 //     (start/end are RFC 3339 UTC bounds; "modules" is an optional
@@ -46,7 +46,7 @@
 //     it is explicitly marked system/global (`is_system`). When no
 //     module answers,
 //     the calendar still works and returns an empty item list.
-//   - `calendar.create_requested` — request:
+//   - `calendar.create_requested` - request:
 //       {"tenant_id", "module", "start", "end", "title", "user_id",
 //        "company_id"}.
 //     Answer: {"url": "<owning module create link with the date
@@ -54,34 +54,34 @@
 //     deep-link template (see `DEFAULT_CREATE_LINK_TEMPLATES`,
 //     admin-editable through settings) is used; when neither exists
 //     the endpoint answers 503 instead of inventing a link.
-//   - `calendar.ai.draft_requested` — request:
+//   - `calendar.ai.draft_requested` - request:
 //       {"user_id", "role", "kind", "date", "context_text",
 //        "item_ids", "requested_at"}. Answer: {"draft": "..."} (or
 //        {"text": "..."}), optionally with "model"/"provider". The
 //        AI never creates, moves, or deletes calendar items; drafts
 //        only. When no AI handler answers, the endpoint answers 503
 //        instead of fabricating a summary.
-//   - `calendar.feeds.prune_requested` — the scheduler-facing
+//   - `calendar.feeds.prune_requested` - the scheduler-facing
 //     listener name for the `calendar.feeds.prune` job kind. The
 //     kind is a known scheduler kind (listed in the scheduler's
 //     `KNOWN_KINDS`) and its dispatcher emits this event, so the
 //     listener is live and the scheduler runs it.
 //   - `holidays.is_holiday` (CONSUMED, owned by the holidays
-//     module, which may not exist yet) — request:
+//     module, which may not exist yet) - request:
 //       {"date": "2026-11-23", "country": "ID",
 //        "tenant_id": "<uuidv7>"} where "country" is an ISO 3166-1
 //       alpha-2 code and "tenant_id" is REQUIRED (the holidays
 //       handler answers nothing without it, fail closed). Expected
 //       answer: one result object {"is_holiday": true,
 //       "name": "Christmas Day", "source": "synced",
-//       "provider": "nager-date"} — "source" is "synced" or
+//       "provider": "nager-date"} - "source" is "synced" or
 //       "manual", the provider id travels in "provider". When no
 //       handler is registered the hook simply returns no results
 //       and non-working days fall back to the configured weekend
 //       days (see below); the calendar never errors because the
 //       holidays module is absent.
 //
-// Tenant scoping (standing rule — read before changing anything
+// Tenant scoping (standing rule - read before changing anything
 // below). Calendar feeds, settings, and source toggles are TENANT
 // business data. Every record carries `tenant_id`, every lookup
 // key is prefixed with the tenant id, and every aggregated item
@@ -89,7 +89,7 @@
 // `unified_core::tenancy::TenantContext::from_http_request` (the
 // batch-17 tenancy context: parsed uuidv7 tenant id plus the
 // `schema_name` derived ONLY by `tenancy::schema_name()` from it)
-// — never from a client-supplied header, and never from a
+// - never from a client-supplied header, and never from a
 // hard-coded tenant id, schema name, or package id. NO TENANT
 // CONTEXT MEANS FAIL CLOSED: every handler (including the public
 // iCal feed, whose token must belong to the resolved tenant)
@@ -97,15 +97,15 @@
 // nothing silently falls back to the `public` schema. OPEN:
 // control-plane requests with no tenant resolve to 403, so
 // serving the calendar on the control plane needs an explicit
-// policy decision — never a silent `public` fallback. Aggregated
-// items come ONLY through the `calendar.items_requested` hook —
+// policy decision - never a silent `public` fallback. Aggregated
+// items come ONLY through the `calendar.items_requested` hook -
 // this module never reads another module's tables directly, and
 // it issues no SQL at all. Control-plane tables (tenants,
 // subscriptions, domains, billing, licensing) live in `public`
 // and are touched only through their own modules/events, never
 // from here.
 //
-// CONVERGENCE POINT (batch 17 — DONE 2026-11-22): this module
+// CONVERGENCE POINT (batch 17 - DONE 2026-11-22): this module
 // resolves its tenant through
 // `unified_core::tenancy::TenantContext::from_http_request`
 // (aliased `TenancyContext`), the same plumbing holidays uses.
@@ -131,7 +131,7 @@
 //
 // Non-working days: the configured weekend days (per-company
 // setting, ISO weekday numbers 1=Monday..7=Sunday, default
-// Saturday+Sunday — weekend days vary by country, so the pair is a
+// Saturday+Sunday - weekend days vary by country, so the pair is a
 // configurable default, never the only option) plus any holidays
 // the `holidays.is_holiday` hook returns for the configured
 // holiday country (unset by default: no country configured means
@@ -146,26 +146,26 @@
 // restart until a database-backed implementation is wired in.
 // No secret is stored anywhere: feed tokens are HMAC-SHA-256
 // signed with a key derived from the configured app secret (see
-// `CalendarState::derive_signing_key`), so the key — which never
-// leaves memory — is the same on every restart and outstanding
+// `CalendarState::derive_signing_key`), so the key - which never
+// leaves memory - is the same on every restart and outstanding
 // tokens keep verifying; only the SHA-256 hash of an issued token
 // is kept in the registry.
 //
 // Routes live under `/api/v1/calendar`:
-//   GET    /                          — month/week/day/agenda view
-//   GET    /items                     — paginated, filtered items
-//   POST   /create-intent             — owning-module create link
-//   GET    /settings                  — effective settings
-//   PUT    /settings                  — save settings
-//   GET    /sources                   — per-module visibility toggles
-//   PUT    /sources                   — save toggles
-//   POST   /feeds                     — issue an iCal feed token
-//   GET    /feeds                     — list own feed tokens
-//   DELETE /feeds/{id}                — revoke a feed token
-//   GET    /feed/{token}              — public iCal subscription feed
+//   GET    /                          - month/week/day/agenda view
+//   GET    /items                     - paginated, filtered items
+//   POST   /create-intent             - owning-module create link
+//   GET    /settings                  - effective settings
+//   PUT    /settings                  - save settings
+//   GET    /sources                   - per-module visibility toggles
+//   PUT    /sources                   - save toggles
+//   POST   /feeds                     - issue an iCal feed token
+//   GET    /feeds                     - list own feed tokens
+//   DELETE /feeds/{id}                - revoke a feed token
+//   GET    /feed/{token}              - public iCal subscription feed
 //          (".ics" suffix accepted; the token is the credential)
-//   POST   /ai/summarize-day          — AI draft daily summary
-//   POST   /ai/whats-next             — AI draft briefing
+//   POST   /ai/summarize-day          - AI draft daily summary
+//   POST   /ai/whats-next             - AI draft briefing
 //
 // Events emitted on the hook bus:
 //   - `calendar.view.requested` (observability; view + range)
@@ -175,10 +175,10 @@
 //   - `calendar.create_intent.requested`
 //   - `calendar.ai.draft_requested` (see above)
 // Events this module listens to:
-//   - `calendar.feeds.prune_requested` — prune expired/revoked feeds
-//   - `calendar.ai.summarize_day_requested` — grounding for the AI
+//   - `calendar.feeds.prune_requested` - prune expired/revoked feeds
+//   - `calendar.ai.summarize_day_requested` - grounding for the AI
 //     capability runner (`summarize_day`)
-//   - `calendar.ai.whats_next_requested` — grounding for the AI
+//   - `calendar.ai.whats_next_requested` - grounding for the AI
 //     capability runner (`whats_next`)
 //
 // Security: every authenticated handler checks a capability
@@ -194,9 +194,7 @@
 
 use crate::modules::ai::AiCapability;
 
-// ---------------------------------------------------------------------------
 // Events.
-// ---------------------------------------------------------------------------
 
 /// Aggregation contract: emitted with {company_id, user_id, start,
 /// end, modules?}; each answering module contributes one array of
@@ -235,9 +233,7 @@ pub const EVENT_VIEW_REQUESTED: &str = "calendar.view.requested";
 /// Observability: emitted when a create-intent resolves.
 pub const EVENT_CREATE_INTENT_REQUESTED: &str = "calendar.create_intent.requested";
 
-// ---------------------------------------------------------------------------
 // Permissions (checked through the `role.check` hook; fail closed).
-// ---------------------------------------------------------------------------
 
 /// May read calendar views, items, settings, and sources.
 pub const PERM_CALENDAR_READ: &str = "calendar:read";
@@ -249,9 +245,7 @@ pub const PERM_CALENDAR_MANAGE: &str = "calendar:manage";
 /// the AI module itself when it answers the event).
 pub const PERM_AI_USE: &str = "ai:use";
 
-// ---------------------------------------------------------------------------
 // Limits and configurable defaults.
-// ---------------------------------------------------------------------------
 
 /// Views the calendar renders. Configurable default: "month".
 pub const CALENDAR_VIEWS: &[&str] = &["month", "week", "day", "agenda"];
@@ -297,7 +291,7 @@ pub const DEFAULT_WORK_START: &str = "09:00";
 pub const DEFAULT_WORK_END: &str = "17:00";
 
 /// Default weekend days, ISO weekday numbers 1=Monday..7=Sunday.
-/// Saturday (6) + Sunday (7). Configurable per company — weekend
+/// Saturday (6) + Sunday (7). Configurable per company - weekend
 /// days vary by country, so this pair is a default, never the only
 /// option.
 pub const DEFAULT_WEEKEND_DAYS: &[u8] = &[6, 7];
@@ -336,9 +330,7 @@ pub const DEFAULT_CREATE_LINK_TEMPLATES: &[(&str, &str)] = &[
     ),
 ];
 
-// ---------------------------------------------------------------------------
 // AI capabilities (registered from `init` via the AI contract).
-// ---------------------------------------------------------------------------
 
 pub const CALENDAR_AI_CAPABILITIES: &[AiCapability] = &[
     AiCapability {

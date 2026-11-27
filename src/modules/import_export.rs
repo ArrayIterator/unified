@@ -127,9 +127,7 @@
 // job columns for persistence later.
 
 
-// ---------------------------------------------------------------------------
 // Configurable defaults.
-// ---------------------------------------------------------------------------
 
 pub mod ai_capabilities;
 pub mod types;

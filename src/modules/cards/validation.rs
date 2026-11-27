@@ -1,13 +1,11 @@
-// cards — Validation helpers and small pure utilities.
+// cards - Validation helpers and small pure utilities.
 
 use super::*;
 use unified_core::hooks::HookContext;
 use chrono::{DateTime, Datelike, Utc};
 use serde::{Deserialize, Serialize};
 
-// ---------------------------------------------------------------------------
 // Luhn checksum.
-// ---------------------------------------------------------------------------
 
 /// Luhn checksum sum of an all-digit string, or `None` when the
 /// input is empty or contains a non-digit.
@@ -42,9 +40,7 @@ pub fn luhn_valid(digits: &str) -> bool {
     matches!(luhn_checksum(digits), Some(sum) if sum % 10 == 0)
 }
 
-// ---------------------------------------------------------------------------
 // Normalisation and masking (PCI).
-// ---------------------------------------------------------------------------
 
 /// Strip spaces and dashes from a raw PAN. Any other non-digit
 /// character is rejected: the caller must not silently accept
@@ -89,9 +85,7 @@ fn mask_raw_input(raw: &str) -> String {
     mask_pan(&digits)
 }
 
-// ---------------------------------------------------------------------------
 // Expiry and CVV.
-// ---------------------------------------------------------------------------
 
 /// Validate an expiry string in `MM/YY` or `MM/YYYY` form against
 /// `now`. The card is valid through the last day of its expiry
@@ -139,9 +133,7 @@ pub fn cvv_is_valid(cvv: &str, cvv_length: u8) -> bool {
     cvv.len() == cvv_length as usize && cvv.bytes().all(|byte| byte.is_ascii_digit())
 }
 
-// ---------------------------------------------------------------------------
 // Validation result and core.
-// ---------------------------------------------------------------------------
 
 /// Input to a validation. `number` is the raw PAN as supplied
 /// (spaces and dashes allowed); `expiry` is `MM/YY` or `MM/YYYY`;
@@ -480,7 +472,7 @@ pub fn validate_card(
 }
 
 /// Record one validation outcome in the daily counts (tenant,
-/// UTC date, matched rule, valid/invalid — no PANs). Shared by
+/// UTC date, matched rule, valid/invalid - no PANs). Shared by
 /// the full and the number-less validation paths, so counts stay
 /// consistent.
 fn record_validation(state: &CardsState, tenant_id: &str, result: &CardValidationResult) {
@@ -500,7 +492,7 @@ fn record_validation(state: &CardsState, tenant_id: &str, result: &CardValidatio
 }
 
 /// Validate and record the outcome in the daily counts
-/// (tenant, UTC date, matched rule, valid/invalid — no PANs).
+/// (tenant, UTC date, matched rule, valid/invalid - no PANs).
 /// This is the single entry point the HTTP handler and the hook
 /// answerer both use, so counts stay consistent.
 pub fn validate_and_record(
@@ -581,7 +573,7 @@ pub(crate) fn numberless_masked_pan(ctx: &HookContext) -> String {
 /// the same shape as a full validation (`valid`, `reason_codes`,
 /// `brand_id` / `brand_name`, `matched_rule`, `masked_pan` from
 /// the payload) so the gateway reads it through the same answer
-/// contract — but `valid: true` here means "brand known and
+/// contract - but `valid: true` here means "brand known and
 /// expiry in range", never "this is a new, fully validated card":
 /// mode `"full"` still requires the number, and the hook answerer
 /// refuses a number-less payload in that mode. No Luhn, length,

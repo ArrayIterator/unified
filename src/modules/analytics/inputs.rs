@@ -8,9 +8,7 @@ use serde_json::Value;
 
 
 #[derive(Debug, Deserialize)]
-// ---------------------------------------------------------------------------
 // Request types.
-// ---------------------------------------------------------------------------
 pub(crate) struct RecordSaleRequest {
     #[serde(default)]
     pub(crate) order_id: Option<String>,

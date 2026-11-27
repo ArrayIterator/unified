@@ -1,4 +1,4 @@
-//! WhatsApp external module (split from lib.rs; moved verbatim).
+//! WhatsApp external module.
 
 use super::*;
 
@@ -252,9 +252,7 @@ impl WhatsAppState {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Meta Graph API delivery
-// ---------------------------------------------------------------------------
 
 /// Build the Graph API request body for one queued outbound message.
 /// Pure function (no network), unit-tested.

@@ -1,4 +1,4 @@
-// Tenant Destroy module — caller, input, and audit helpers.
+// Tenant Destroy module - caller, input, and audit helpers.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use unified_core::context::AppContext;
@@ -26,11 +26,9 @@ use std::sync::{Arc, OnceLock, RwLock};
 use uuid::Uuid;
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Caller identity and capability checks (same trusted-parameter
 // pattern as the import/export module: X-User-Id plus X-Role
 // headers, `role.check` hook, fail closed).
-// ---------------------------------------------------------------------------
 
 /// Caller identity: the server-verified caller (user id plus
 /// server-resolved role, both required for capability checks).
@@ -80,9 +78,7 @@ pub(crate) fn validate_grace_period_days(days: i64) -> UnifiedResult<()> {
     Ok(())
 }
 
-// ---------------------------------------------------------------------------
 // Helpers.
-// ---------------------------------------------------------------------------
 
 pub(crate) fn now() -> DateTime<Utc> {
     Utc::now()

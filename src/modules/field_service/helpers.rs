@@ -1,4 +1,4 @@
-// field_service module — Helpers.
+// field_service module - Helpers.
 //
 // Split from the former single-file module `src/modules/field_service.rs`.
 // The module root (`field_service.rs`) re-exports the public items, so the
@@ -22,9 +22,7 @@ use super::constants::{MAX_SLUG_LEN, PERM_FIELD_SERVICE_MANAGE, PERM_FIELD_SERVI
 use super::types::{DispatchAssignment, Equipment, EquipmentType, MaintenancePlan, MaintenanceTemplate, WorkOrder, WorkOrderItem, WorkOrderPart};
 use super::state::FieldServiceState;
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 /// Caller identity: the server-verified caller (user id plus
 /// server-resolved role, both required for capability checks),
@@ -64,9 +62,7 @@ pub(crate) fn require_permission(ctx: &AppContext, role: &str, permission: &str)
         )))
     }
 }
-// ---------------------------------------------------------------------------
 // Tenant edge guard (C3 pilot 4, gate-only).
-// ---------------------------------------------------------------------------
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request

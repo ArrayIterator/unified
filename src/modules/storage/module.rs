@@ -19,9 +19,7 @@ use super::handlers::signed_url;
 use super::handlers::test_target;
 use super::handlers::upload_object;
 
-// ---------------------------------------------------------------------------
 // Module definition.
-// ---------------------------------------------------------------------------
 
 pub struct StorageModule;
 

@@ -1,4 +1,4 @@
-// Logistics module — shipments, fleet, warehouses, delivery
+// Logistics module - shipments, fleet, warehouses, delivery
 // routes, delivery scheduling, proof of delivery, delivery
 // exceptions, and shipping cost quotes.
 //

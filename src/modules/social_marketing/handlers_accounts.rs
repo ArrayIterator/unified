@@ -246,7 +246,7 @@ pub(crate) async fn create_account(
     }
 }
 
-/// Get one account (masked view — the credential and the
+/// Get one account (masked view - the credential and the
 /// webhook secret never appear).
 pub(crate) async fn get_account(
     state: web::Data<SocialMarketingState>,
@@ -271,7 +271,7 @@ pub(crate) async fn get_account(
 }
 
 /// Update an account (manager). The credential is never
-/// changed here — use connect to store a fresh one.
+/// changed here - use connect to store a fresh one.
 pub(crate) async fn update_account(
     state: web::Data<SocialMarketingState>,
     req: HttpRequest,
@@ -599,7 +599,7 @@ pub(crate) async fn rotate_account_webhook_secret(
 /// Dry-run check of an account's configuration (manager):
 /// validates the network, the connection, the token expiry,
 /// and whether a credential is stored. This makes NO
-/// network call and publishes NOTHING — a live probe would
+/// network call and publishes NOTHING - a live probe would
 /// publish a real post, so reachability is proven by the
 /// first real publish, not here.
 pub(crate) async fn test_account(

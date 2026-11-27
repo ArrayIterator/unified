@@ -18,9 +18,7 @@ use super::validation::{
 };
 use super::state::AnnouncementsState;
 
-// ---------------------------------------------------------------------------
 // Announcement handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_announcements(
     ctx: web::Data<Arc<AppContext>>,

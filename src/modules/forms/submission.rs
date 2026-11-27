@@ -1,4 +1,4 @@
-// forms — submission.
+// forms - submission.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -25,9 +25,7 @@ use super::handlers_forms::*;
 use super::handlers_fields::*;
 use super::handlers_submissions::*;
 
-// ---------------------------------------------------------------------------
 // Submission validation
-// ---------------------------------------------------------------------------
 
 /// Render a submitted JSON value as a plain string for equality
 /// checks (conditional visibility) and CSV export.
@@ -309,9 +307,7 @@ pub(crate) fn check_text_rules(field: &FormField, text: &str) -> UnifiedResult<(
     Ok(())
 }
 
-// ---------------------------------------------------------------------------
 // Rate limiting + mapping
-// ---------------------------------------------------------------------------
 
 /// Enforce the submit rate limits and record the attempt: at most
 /// 10 submissions per IP per form per rolling hour, and at most
@@ -368,7 +364,7 @@ pub(crate) fn fill_title_template(template: &str, values: &[(FormField, Value)])
 /// `forms.mapping.requested` and read the handler's answer. Returns
 /// (mapping_status, mapped_target_id, mapping_error). A missing
 /// bus, an empty answer, or an explicit failure are all recorded
-/// as `failed` with an error message — never silent.
+/// as `failed` with an error message - never silent.
 pub(crate) fn try_mapping(
     state: &FormsState,
     form: &Form,

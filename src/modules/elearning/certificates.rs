@@ -1,4 +1,4 @@
-// Elearning — Certificate handlers.
+// Elearning - Certificate handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -20,9 +20,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Certificate handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_certificates(
     ctx: web::Data<Arc<AppContext>>,
@@ -114,7 +112,7 @@ pub(crate) async fn get_certificate(
 }
 
 /// Public certificate verification: no caller headers and no
-/// capability check, by design — anyone holding a code must be
+/// capability check, by design - anyone holding a code must be
 /// able to verify it. The code is compared in constant time
 /// against stored codes; an unknown or revoked code answers 404
 /// without saying which of the two it was.

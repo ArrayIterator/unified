@@ -115,9 +115,7 @@ fn queue_view(state: &PhoneState, queue: &PhoneQueue) -> Value {
     value
 }
 
-// ---------------------------------------------------------------------------
 // Queue handlers (manager for writes, authenticated for reads)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_queues(
     state: web::Data<PhoneState>,
@@ -388,9 +386,7 @@ pub(crate) async fn delete_queue(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Queue members
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_queue_members(
     state: web::Data<PhoneState>,
@@ -512,15 +508,13 @@ pub(crate) async fn remove_queue_member(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Queue waiting room and admin answering
-// ---------------------------------------------------------------------------
 
 /// A caller joins a queue as a waiting caller. The caller waits
 /// until an admin answers the queue (which creates a call
 /// between the admin and the caller) or the wait expires
 /// (`max_wait_secs`, enforced by the caller / a future
-/// scheduler pass — this version records the join time and the
+/// scheduler pass - this version records the join time and the
 /// overflow target and leaves expiry to the dashboard).
 pub(crate) async fn join_queue(
     state: web::Data<PhoneState>,
@@ -760,9 +754,7 @@ pub(crate) async fn admin_queue_dashboard(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Routing rules (manager)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_routing_rules(
     state: web::Data<PhoneState>,

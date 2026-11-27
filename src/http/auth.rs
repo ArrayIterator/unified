@@ -10,7 +10,7 @@
 //
 // * every request that is not on the public allowlist must carry
 //   a valid Auth Manager JWT (Bearer header or session cookie),
-//   verified with the ONE existing verifier —
+//   verified with the ONE existing verifier -
 //   `crate::modules::security::auth::verify_jwt`, the same HS256
 //   HMAC-SHA256 check the security module uses for its own
 //   endpoints (signing key `"{secret_key}:{salt_key}"`, pinned
@@ -20,7 +20,7 @@
 //   covers both issuers.
 // * a verified token becomes a server-verified `Caller`
 //   (`unified_core::auth::Caller`) in the request extensions.
-//   Handlers read it through `unified_core::auth::caller_from` —
+//   Handlers read it through `unified_core::auth::caller_from` -
 //   never from headers.
 // * the middleware also resolves the user's role slugs from the
 //   database (`user_roles` / `roles`) and the user's company id
@@ -28,11 +28,11 @@
 //   `role()` / `roles` return real values and the `role.check`
 //   capability checks answer from the roles module's store instead
 //   of failing closed on `"anonymous"` for every verified caller
-//   (inspection HIGH-1 / task 279), and the handler-facing view
+// (inspection HIGH-1), and the handler-facing view
 //   carries the server-resolved company (C3) instead of `None`.
 //   The cost is three indexed lookups per authenticated request
-//   (two for roles, one for the company); any failure — no pool
-//   attached, no connection, any query error — resolves to no
+//   (two for roles, one for the company); any failure - no pool
+//   attached, no connection, any query error - resolves to no
 //   roles and no company, so capability checks fail closed
 //   exactly as they did before these lookups existed. A failed
 //   lookup never fails authentication itself: the token is
@@ -41,8 +41,8 @@
 //   as before.
 // * a verified token is also checked against the persisted
 //   revocation store (`auth_revoked_tokens`, migration
-//   `2026-11-22-000109`) — one indexed lookup per authenticated
-//   request, on top of the role lookups — and a revoked token is
+//   `2026-11-22-000109`) - one indexed lookup per authenticated
+//   request, on top of the role lookups - and a revoked token is
 //   denied here, so logout and explicit revocation take effect on
 //   every API route immediately, not only at the Auth Manager's
 //   verify endpoint (inspection C13/H2, R2 HIGH-2). The check
@@ -51,14 +51,14 @@
 //   this layer cannot reach and which can go stale for rows
 //   another process wrote. Fail closed: when a pool is attached
 //   and the lookup fails for any reason (no connection, query
-//   error, table not migrated yet) authentication is denied — a
+//   error, table not migrated yet) authentication is denied - a
 //   revocation status that cannot be determined is never treated
 //   as "not revoked". Without a database pool (the in-memory
 //   deployment) there is no revocation store to consult, so the
 //   check is skipped and the token passes; revocation in that
 //   deployment is best-effort only (the in-memory map the Auth
 //   Manager keeps per process). Operators running with a database
-//   must have migration `2026-11-22-000109` applied — it runs
+//   must have migration `2026-11-22-000109` applied - it runs
 //   automatically at startup when a database is configured.
 // * invalid or missing tokens are rejected with the standard
 //   error envelope (401, fail closed). The token itself is never
@@ -196,10 +196,10 @@ fn is_infra_public(path: &str) -> bool {
 /// The public routes declared in the route catalog: every
 /// `RouteInfo` whose `auth` is `RouteAuth::Public`, as
 /// (method, path template). This is the module-declared public
-/// surface — the `PUBLIC:` / `TOKEN-GATED:` /
+/// surface - the `PUBLIC:` / `TOKEN-GATED:` /
 /// `TOKEN-AUTHENTICATED:` routes, the public pages, the
 /// signature-verified provider webhook receivers, and the public
-/// storefront reads — and the ONLY catalog-derived source of
+/// storefront reads - and the ONLY catalog-derived source of
 /// publicness. A route that no module declares public is
 /// protected: undeclared routes fail closed, and a module that
 /// wants a public route must declare it.
@@ -228,7 +228,7 @@ pub fn is_public_route(method: &Method, path: &str, public_routes: &[PublicRoute
 /// `Caller`. This is the single verification path the middleware
 /// uses: Bearer header first, session cookie second (see
 /// `extract_token_with_source`), then the security module's
-/// `verify_jwt`. Any failure is a 401 — fail closed — including
+/// `verify_jwt`. Any failure is a 401 - fail closed - including
 /// the case where authentication is not configured at all
 /// (`verify_jwt` rejects empty keys). A verified token is then
 /// checked against the persisted revocation store (see
@@ -288,8 +288,8 @@ pub fn authenticate_request(
 
 /// Resolve the role slugs assigned to `user_id` from the database
 /// (`user_roles` / `roles`), for the verified caller. Two indexed
-/// lookups, only when a pool is attached. ANY failure — no pool,
-/// no connection, any query error — resolves to no roles, so
+/// lookups, only when a pool is attached. ANY failure - no pool,
+/// no connection, any query error - resolves to no roles, so
 /// capability checks fail closed exactly as they did before this
 /// lookup existed. A failed lookup never fails authentication
 /// itself: the token is already verified, and the actor identity
@@ -307,8 +307,8 @@ fn resolve_user_roles(ctx: &AppContext, user_id: Uuid) -> Vec<String> {
 
 /// Resolve the company id assigned to `user_id` from the database
 /// (`users.company_id`), for the verified caller. One indexed
-/// lookup, only when a pool is attached. ANY failure — no pool,
-/// no connection, any query error — resolves to no company, so
+/// lookup, only when a pool is attached. ANY failure - no pool,
+/// no connection, any query error - resolves to no company, so
 /// company scoping fails closed exactly as it did before this
 /// lookup existed (the caller simply has no company). A failed
 /// lookup never fails authentication itself: the token is already
@@ -329,13 +329,13 @@ fn resolve_user_company(ctx: &AppContext, user_id: Uuid) -> Option<String> {
 
 /// True when the token id `jti` is revoked in the persisted
 /// revocation store (`auth_revoked_tokens`), consulted directly
-/// from the database — the durable source of truth, shared with
+/// from the database - the durable source of truth, shared with
 /// the Auth Manager's verify path (see
 /// `AuthManagerState::is_jti_revoked_in_db`). One indexed lookup,
 /// only when a pool is attached. The error case is the fail-closed
 /// one: when a pool is attached and the lookup fails (no
 /// connection, query error, table not migrated yet) the caller
-/// gets an error and authentication is denied — a revocation
+/// gets an error and authentication is denied - a revocation
 /// status that cannot be determined is never treated as "not
 /// revoked". Without a database pool there is no revocation store
 /// to consult, so this returns `Ok(false)`: revocation cannot be

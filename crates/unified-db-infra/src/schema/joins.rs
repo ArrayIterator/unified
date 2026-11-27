@@ -5,9 +5,7 @@
 // file lives here, whole, so no join group spans files.
 
 use super::*;
-// ---------------------------------------------------------------------------
 // Joinable tables in this bounded context.
-// ---------------------------------------------------------------------------
 
 diesel::joinable!(provider_servers -> provider_connections (connection_id));
 diesel::joinable!(panel_synced_records -> panel_connections (connection_id));
@@ -48,7 +46,6 @@ diesel::joinable!(web3_wallets -> web3_networks (network_id));
 diesel::joinable!(web3_balances -> web3_wallets (wallet_id));
 diesel::joinable!(web3_balances -> web3_networks (network_id));
 
-// ---------------------------------------------------------------------------
 // Tables allowed to appear in the same query, grouped by join graph.
 //
 // One `allow_tables_to_appear_in_same_query!` invocation generates an
@@ -61,7 +58,6 @@ diesel::joinable!(web3_balances -> web3_networks (network_id));
 // no entry at all. If a future query needs two tables from different
 // groups, merge the groups (the compiler reports the missing pair
 // as E0277).
-// ---------------------------------------------------------------------------
 
 // Join group 26 (6 tables, e.g. vault_access_log (+5 more)).
 diesel::allow_tables_to_appear_in_same_query!(

@@ -10,7 +10,7 @@
 //
 // Scheduling: a background ticker started in `init` (`start_ticker`
 // in `service.rs`) calls `run_due_jobs` every 30 seconds, so jobs
-// with a schedule fire on their own — interval jobs once their
+// with a schedule fire on their own - interval jobs once their
 // interval elapsed since the last fire (or `created_at`), cron jobs
 // once per matching minute. Manual runs (`POST /jobs/{id}/run`) and
 // queue items still dispatch through the same `dispatch` path.
@@ -33,12 +33,12 @@
 // failing closed when no context was stored.
 //
 // Authentication: every route is gated by `authorize` in
-// `handlers.rs` — `X-User-Id` and `X-Role` headers are required and
+// `handlers.rs` - `X-User-Id` and `X-Role` headers are required and
 // the role must hold `scheduler.view` (reads) or `scheduler.manage`
 // (create, update, delete, run, enqueue) through the `role.check`
 // hook. The check fails closed when the roles module does not
 // answer. Note the limit of this gate: scheduler jobs carry no
-// tenant field, so jobs are global control-plane objects — the gate
+// tenant field, so jobs are global control-plane objects - the gate
 // is caller identity plus permission, not per-tenant scoping.
 //
 // Listener wiring: `approvals.sweep_expiry_requested` is consumed
@@ -58,9 +58,7 @@ use std::sync::Arc;
 use super::{SchedulerState, create_job, delete_job, enqueue, get_job, list_jobs, list_queue,
     list_runs, on_scheduler_enqueue, run_job, update_job};
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct SchedulerModule {
     state: Arc<SchedulerState>,
@@ -109,7 +107,7 @@ impl Module for SchedulerModule {
         // Keep the live context's handles so `dispatch` can run
         // work that needs one (the `tenant.destroy_due` sweep).
         self.state.set_context(ctx);
-        // Seed the built-in jobs (idempotent — see
+        // Seed the built-in jobs (idempotent - see
         // `seed_builtin_jobs`), then start the ticker so scheduled
         // jobs fire on their own. Starting twice is a no-op (see
         // `start_ticker`).

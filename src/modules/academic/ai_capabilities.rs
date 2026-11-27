@@ -4,11 +4,10 @@
 
 use crate::modules::ai;
 
-// ---------------------------------------------------------------------------
 
 /// AI capabilities this module exposes through the AI module's
 /// contract. The capability is non-PII: the grounding summary is
-/// anonymised (aggregates only — no user id, no student number, no
+/// anonymised (aggregates only - no user id, no student number, no
 /// names), and the input is redacted before it reaches the model.
 pub const AI_CAPABILITIES: &[ai::AiCapability] = &[ai::AiCapability {
     id: "summarize_progress",

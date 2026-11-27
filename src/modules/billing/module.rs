@@ -132,7 +132,7 @@ impl Module for BillingModule {
             "billing",
             Arc::new(move |ctx: &mut HookContext| on_payment_failed(state.clone(), ctx)),
         );
-        // --- School fees: academic-module events and invoice
+        // School fees: academic-module events and invoice
         // sync. Fee charges stay in step with their linked billing
         // invoice through the invoice events below, so gateway
         // captures (`payment.captured`), manual invoice payments

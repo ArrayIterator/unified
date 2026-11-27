@@ -1,4 +1,4 @@
--- Widget layouts (task 352): one durable row per (context, scope, owner).
+-- Widget layouts: one durable row per (context, scope, owner).
 --
 -- The widgets module is DB-backed by design: layouts are read from
 -- this table on every request and written here on every save. There

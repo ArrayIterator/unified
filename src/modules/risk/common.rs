@@ -1,4 +1,4 @@
-// risk — common.
+// risk - common.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -22,9 +22,7 @@ use super::handlers_templates::*;
 use super::handlers_instances::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 pub(crate) fn new_id() -> String {
     Uuid::new_v4().to_string()
@@ -81,9 +79,7 @@ pub(crate) fn require_capability(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Tenant edge guard (C3 pilot 3).
-// ---------------------------------------------------------------------------
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request
@@ -101,7 +97,7 @@ pub(crate) fn require_tenant(
 /// The company scope the caller acts in: the tenant context's
 /// company first, the verified caller's server-resolved company
 /// otherwise. Fails closed (403) when both are present and disagree
-/// — a request must not carry one company in its tenant context and
+/// - a request must not carry one company in its tenant context and
 /// another in its verified identity. The `X-Company-Id` header is
 /// NEVER trusted here: only the verified caller (company resolved
 /// from the database at authentication time) and the
@@ -126,7 +122,7 @@ pub(crate) fn caller_company(
     }
 }
 
-/// Resolve the caller's company for a WRITE (C3 task 315, strict by
+/// Resolve the caller's company for a WRITE (C3, strict by
 /// default): a write requires a resolved company scope, so an
 /// unresolved caller is refused with 403 instead of silently
 /// writing a global (unscoped) record. Mutation handlers call
@@ -154,7 +150,7 @@ pub(crate) fn require_company_for_write(
 /// so the record is never stored unscoped under a scoped caller.
 /// When no caller scope is known, a body company is refused: an
 /// unresolved caller may not claim a company (the shared
-/// `CallerScope::Unresolved` rule); omitting the company is refused (C3 task 315):
+/// `CallerScope::Unresolved` rule); omitting the company is refused (C3):
 /// a write requires a resolved company scope.
 pub(crate) fn require_company_match(
     tenant: &unified_core::tenancy::TenantContext,
@@ -192,7 +188,7 @@ pub(crate) fn require_company_match_for(
 /// company-owned record is denied (the shared
 /// `CallerScope::Unresolved` rule). With a scope, only records
 /// carrying that company match, plus unscoped (global/legacy) records,
-/// which are shared content visible to any resolved scope (C3 task 320, rule A).
+/// which are shared content visible to any resolved scope (C3, rule A).
 pub(crate) fn in_company_scope(
     record_company_id: &Option<String>,
     caller_company: &Option<String>,
@@ -222,11 +218,11 @@ pub(crate) fn require_record_in_company_scope(
 }
 
 /// Fail closed (403) when a stored record is outside the caller's
-/// company scope FOR A WRITE (C3 task 315, strict by default).
+/// company scope FOR A WRITE (C3, strict by default).
 /// Unlike the read check above (rule A), a write requires an exact
 /// company match: a company caller may write only their own
-/// company's records — global (unscoped) records are platform-only
-/// — and an unresolved caller may write nothing. Mutation handlers
+/// company's records - global (unscoped) records are platform-only
+/// - and an unresolved caller may write nothing. Mutation handlers
 /// call this right after loading the record they mutate; handlers
 /// that only read the record, or load a parent to scope a child
 /// write, keep the read check.
@@ -245,7 +241,7 @@ pub(crate) fn require_record_writable_in_company_scope(
 
 /// Load a risk and fail closed (403) when it is outside the
 /// caller's company scope. Plans and tasks carry no company of
-/// their own — they are scoped through their parent risk — so
+/// their own - they are scoped through their parent risk - so
 /// every handler that works through a parent id calls one of
 /// these helpers first.
 pub(crate) fn require_risk_in_scope(
@@ -259,7 +255,7 @@ pub(crate) fn require_risk_in_scope(
 }
 
 /// Load a risk by id for a WRITE and fail closed (403) when it is
-/// outside the caller's company scope (C3 task 315, strict by
+/// outside the caller's company scope (C3, strict by
 /// default). Unlike `require_risk_in_scope` (rule A reads), a write
 /// requires an exact company match: a global risk is platform-only.
 /// Mutation-only loaders call this; read handlers keep
@@ -288,8 +284,8 @@ pub(crate) fn require_plan_risk_in_scope(
 }
 
 /// Load a mitigation task for a WRITE and fail closed when its parent
-/// risk is outside the caller's company scope (C3 task 315, strict by
-/// default: the parent risk must match the caller's company exactly —
+/// risk is outside the caller's company scope (C3, strict by
+/// default: the parent risk must match the caller's company exactly -
 /// a task under a global risk is platform-only). Mutation-only; read
 /// handlers keep `require_risk_in_scope` through the plan loader.
 pub(crate) fn require_task_risk_in_scope(
@@ -307,10 +303,10 @@ pub(crate) fn require_task_risk_in_scope(
 }
 
 /// Load a checklist instance for a WRITE and fail closed (403) when
-/// it is outside the caller's company scope (C3 task 315, strict by
-/// default: an exact company match is required — a global instance
+/// it is outside the caller's company scope (C3, strict by
+/// default: an exact company match is required - a global instance
 /// is platform-only). Mutation-only; instance items carry no company
-/// of their own — they are scoped through their parent instance.
+/// of their own - they are scoped through their parent instance.
 pub(crate) fn require_instance_in_scope(
     state: &RiskState,
     instance_id: &str,

@@ -1,4 +1,4 @@
-// Projects module — automation rule and ticket bridge handlers.
+// Projects module - automation rule and ticket bridge handlers.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use super::*;
@@ -9,9 +9,7 @@ use actix_web::{HttpRequest, HttpResponse, web};
 use serde_json::{Value, json};
 use std::sync::Arc;
 
-// ---------------------------------------------------------------------------
 // Automation rules
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_automation_rules(
     req: HttpRequest,
@@ -362,9 +360,7 @@ pub(crate) async fn run_automation_rule(
     json::respond(result, false)
 }
 
-// ---------------------------------------------------------------------------
 // Ticket bridge
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn convert_task_to_ticket(
     req: HttpRequest,

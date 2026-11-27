@@ -11,9 +11,7 @@ use super::{limits::*, types::*, hub::*, state::*, helpers::*, module::*, handle
 
 
 
-// ---------------------------------------------------------------------------
 // Live support: ratings
-// ---------------------------------------------------------------------------
 pub(crate) async fn rate_support_session(
     state: web::Data<ChatState>,
     req: HttpRequest,
@@ -233,7 +231,7 @@ mod tests {
         let session = session("visitor-1", Some("agent-1"));
         assert!(rating_actor_allowed(&session, "visitor-1").is_ok());
         // The assigned agent, another visitor, and a stranger are
-        // all refused — previously any of them could rate the
+        // all refused - previously any of them could rate the
         // session by asserting its visitor id in the body.
         assert!(rating_actor_allowed(&session, "agent-1").is_err());
         assert!(rating_actor_allowed(&session, "visitor-2").is_err());

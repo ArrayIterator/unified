@@ -22,7 +22,7 @@
 // to_appear_in_same_query!` groups emit bogus `TableNotEqual<{error}>`
 // impls that poison coherence (E0119). The nine groups below define a
 // table of their own name, so they are declared under a `_tables` name
-// (same file, via `#[path = "schema/<group>.rs"]` — `#[path]` resolves
+// (same file, via `#[path = "schema/<group>.rs"]` - `#[path]` resolves
 // relative to the crate root, not this file) and re-exported from there.
 // Never name a new `schema/<group>.rs` file after a table it defines.
 

@@ -1,7 +1,6 @@
-// service — tests.
+// service - tests.
 // Unit tests for the timetracker service helpers.
 //
-// Split from `src/modules/timetracker/service.rs`; moved verbatim, no behaviour changes.
 
 use super::super::*;
 use super::payroll::split_entry_into_weeks;

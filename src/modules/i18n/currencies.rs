@@ -1,7 +1,7 @@
 // i18n -- Currency reference data and formatting.
 //
 // Thin re-export of the single central ISO 4217 catalogue, which lives
-// in `unified_core::reference_data::currencies` (task 361). This module
+// in `unified_core::reference_data::currencies`. This module
 // keeps its original public names so the i18n HTTP endpoints
 // (`GET /api/v1/i18n/currencies[/<code>]`) and every existing caller
 // keep working unchanged; the data itself is owned by unified-core and

@@ -1,4 +1,4 @@
-// forms — module.
+// forms - module.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -26,9 +26,7 @@ use super::handlers_forms::*;
 use super::handlers_fields::*;
 use super::handlers_submissions::*;
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct FormsModule {
     pub(crate) state: FormsState,

@@ -25,9 +25,7 @@ use super::types::PanelProduct;
 use super::types::PanelServerAccount;
 use super::types::validate_panel_endpoint;
 
-// ---------------------------------------------------------------------------
 // CyberPanel adapter.
-// ---------------------------------------------------------------------------
 
 /// CyberPanel JSON API (`<endpoint>/api/<call>`, POST with a JSON
 /// body). Authentication is the API token: it is sent as a Bearer

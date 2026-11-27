@@ -22,11 +22,9 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- A hosting plan: a sellable resource bundle (disk / CPU / RAM /
 -- bandwidth, price, billing cycle), optionally linked to a store
 -- product id so the plan can be sold through the Store.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS hosting_plans (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR NOT NULL,
@@ -49,11 +47,9 @@ CREATE INDEX IF NOT EXISTS idx_hosting_plans_store_product_id
 CREATE INDEX IF NOT EXISTS idx_hosting_plans_is_active
     ON hosting_plans (is_active);
 
--- ---------------------------------------------------------------------------
 -- A hosting account: one plan bound to one domain and one company.
 -- Lifecycle: pending -> active -> suspended -> active, with
 -- cancelled as the terminal state.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS hosting_accounts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     plan_id UUID NOT NULL REFERENCES hosting_plans (id) ON DELETE RESTRICT ON UPDATE NO ACTION,
@@ -79,12 +75,10 @@ CREATE INDEX IF NOT EXISTS idx_hosting_accounts_status
 CREATE INDEX IF NOT EXISTS idx_hosting_accounts_store_order_id
     ON hosting_accounts (store_order_id);
 
--- ---------------------------------------------------------------------------
 -- A paid store order for a hosting plan, recorded from the
 -- `store.order.completed` / `order.paid` hook events, so an account
 -- created with `store_order_id` can be verified against a real
 -- paid order.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS hosting_order_claims (
     order_id VARCHAR NOT NULL,
     plan_id UUID NOT NULL REFERENCES hosting_plans (id) ON DELETE CASCADE ON UPDATE NO ACTION,

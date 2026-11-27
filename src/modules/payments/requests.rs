@@ -8,9 +8,7 @@ use super::{events::*, card_validation::*, card_settings::*, limits::*, provider
 
 
 #[derive(Debug, Clone, Deserialize)]
-// ---------------------------------------------------------------------------
 // API request types.
-// ---------------------------------------------------------------------------
 pub struct CreateConnectionRequest {
     pub name: String,
     pub kind: String,
@@ -311,9 +309,7 @@ pub struct PayOrderRequest {
 
 
 #[derive(Debug, Clone, Deserialize)]
-// ---------------------------------------------------------------------------
 // Split bill request types.
-// ---------------------------------------------------------------------------
 pub struct SplitPartInput {
     pub amount_minor: i64,
     #[serde(default)]

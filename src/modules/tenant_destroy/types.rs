@@ -1,4 +1,4 @@
-// Tenant Destroy module — destroy request, audit, and tenant reference types.
+// Tenant Destroy module - destroy request, audit, and tenant reference types.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use unified_core::context::AppContext;
@@ -26,9 +26,7 @@ use std::sync::{Arc, OnceLock, RwLock};
 use uuid::Uuid;
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Records.
-// ---------------------------------------------------------------------------
 
 /// One audit entry on a destroy request: who did what, and when.
 /// The trail is append-only; entries are never edited or removed.

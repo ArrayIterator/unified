@@ -1,4 +1,4 @@
-// Properties — Location providers (pluggable geocoder).
+// Properties - Location providers (pluggable geocoder).
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -19,9 +19,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Location providers (pluggable geocoder)
-// ---------------------------------------------------------------------------
 
 /// Pluggable geocoder provider. Implementations must never log a
 /// query or a configured URL that could contain credentials; this

@@ -1,7 +1,7 @@
 // Diesel schema for the ESG domain of the unified-db-platform bounded context.
 //
 // Tables are defined by migration 2026-11-22-000119_esg. They had
-// no Diesel bindings before C11 (task 271): the ESG module kept
+// no Diesel bindings before C11: the ESG module kept
 // its live data in memory and the tables were persistence targets
 // only. The columns below are byte-identical to that migration.
 // No foreign keys: ESG rows reference other modules by plain
@@ -9,9 +9,7 @@
 // declarations belong here; the hydrate path in
 // `src/modules/esg/state.rs` loads each table on its own.
 
-// ---------------------------------------------------------------------------
 // ESG (migration 000119_esg).
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     esg_frameworks (id) {

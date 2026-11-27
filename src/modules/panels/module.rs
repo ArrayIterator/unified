@@ -13,9 +13,7 @@ use super::handlers_records::*;
 use super::registry::panel_registry;
 use super::ai_capabilities::AI_CAPABILITIES;
 
-// ---------------------------------------------------------------------------
 // Module definition.
-// ---------------------------------------------------------------------------
 
 pub struct PanelsModule;
 

@@ -10,7 +10,7 @@
 //!
 //! `verify_identity_documents` is the one capability that
 //! allows PII: identity verification cannot work on redacted
-//! identity data — the model must see the document metadata
+//! identity data - the model must see the document metadata
 //! and the subject's declared details to run the checks the
 //! tenant declared in its default context. The input it
 //! receives is metadata only (document references and content

@@ -1,4 +1,4 @@
-//! Presets + Setup Wizard module. — Preset handlers.
+//! Presets + Setup Wizard module. - Preset handlers.
 //!
 //! Split from `src/modules/presets.rs`; behaviour unchanged.
 
@@ -595,7 +595,7 @@ pub(super) async fn preview_preset(
         Ok(scope) => scope,
         Err(error) => return error_response(&error, debug),
     };
-    // Tenant filter from the query: a data filter, not identity —
+    // Tenant filter from the query: a data filter, not identity -
     // but a query company other than the caller's scope is refused,
     // and a scoped caller with no query previews their own company.
     let company_id = match resolve_preview_company(&scope, query.filters.get("company_id")) {

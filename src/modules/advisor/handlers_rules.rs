@@ -9,9 +9,7 @@ use super::{rules::*, types::*, state::*, helpers::*, handlers_suggestions::*, h
 
 
 
-// ---------------------------------------------------------------------------
 // Handlers: rules and rule runs (read-only reference data)
-// ---------------------------------------------------------------------------
 pub(crate) async fn list_rules(
     state: web::Data<Arc<AdvisorState>>,
     req: HttpRequest,

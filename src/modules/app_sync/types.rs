@@ -11,9 +11,7 @@ use uuid::Uuid;
 
 
 #[derive(Debug, Clone, Serialize)]
-// ---------------------------------------------------------------------------
 // Device and sync-record state.
-// ---------------------------------------------------------------------------
 pub struct DeviceView {
     pub id: Uuid,
     pub device_name: String,

@@ -5,9 +5,7 @@ use super::{paper::*, thermal::*, profiles::*, jobs::*, state::*, auth::*, hooks
 
 
 
-// ---------------------------------------------------------------------------
 // Events and permissions
-// ---------------------------------------------------------------------------
 /// Create a print job. Payload: a `CreatePrintJobRequest` plus
 /// `requested_by`. The handler answers by setting `job_id` and
 /// `status` on the event payload (and adding the same object as a
@@ -43,8 +41,8 @@ pub const EVENT_PRINT_JOB_CANCELLED: &str = "printing.job.cancelled";
 /// `currency`, `method`, `reference`, `invoice_id`, `issued_by`)
 /// but no rendered document, so this module renders it as a
 /// thermal receipt (80mm) from those fields. The billing module
-/// only documents the event today — no emitter was found when this
-/// handler was written — so the handler is forward-compatible: it
+/// only documents the event today - no emitter was found when this
+/// handler was written - so the handler is forward-compatible: it
 /// answers with `job_id` and `status` whenever the event arrives.
 pub const EVENT_SCHOOL_FEE_RECEIPT_PRINT_REQUESTED: &str =
     "school_fees.receipt.print_requested";
@@ -81,7 +79,7 @@ pub(crate) const PERM_PRINTING_JOB: &str = "printing.job";
 
 /// Output kinds a print job may request. Kept as data (validated
 /// against this list), not as an enum, so a deployment can add a
-/// kind without a code change only by extending this list — the
+/// kind without a code change only by extending this list - the
 /// list itself is the closed vocabulary the job state machine
 /// understands.
 pub const OUTPUT_KINDS: &[&str] = &["paper", "thermal", "pdf", "email"];

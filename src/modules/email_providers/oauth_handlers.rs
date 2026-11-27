@@ -29,7 +29,7 @@ use unified_core::json as api_json;
 /// pending flow lives 10 minutes; the provider redirects back to
 /// `GET /oauth/callback` with the code and state.
 ///
-/// Query: `redirect_uri` (required, https or http-on-localhost —
+/// Query: `redirect_uri` (required, https or http-on-localhost -
 /// it must match the URI registered at the provider),
 /// `scopes` (optional, comma-separated; defaults to the provider's
 /// configured scopes).
@@ -127,7 +127,7 @@ pub(crate) async fn oauth_authorize(
 /// here with `?code=...&state=...`. The state token resolves the
 /// pending flow (single-use, 10 minutes); the code is exchanged for
 /// tokens, which are encrypted and stored on the connection. No
-/// token is ever returned in the response — only the linked account
+/// token is ever returned in the response - only the linked account
 /// address and the expiry.
 pub(crate) async fn oauth_callback(
     state: web::Data<Arc<EmailProviderState>>,

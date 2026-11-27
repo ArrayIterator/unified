@@ -197,7 +197,7 @@ pub(crate) async fn list_incident_updates(
 /// Derive one consistent (uptime_percent, minutes_down) pair for a
 /// day: `minutes_down` is authoritative when given, otherwise it is
 /// derived from `uptime_percent`, and the percent is always
-/// recomputed from the minutes — so a stored aggregate can never
+/// recomputed from the minutes - so a stored aggregate can never
 /// claim 100% uptime with 1440 minutes down, and the value agrees
 /// with `add_downtime`, which recomputes the same way.
 fn derive_uptime(uptime_percent: f64, minutes_down: Option<i64>) -> (f64, i64) {
@@ -212,9 +212,7 @@ fn derive_uptime(uptime_percent: f64, minutes_down: Option<i64>) -> (f64, i64) {
     )
 }
 
-// ---------------------------------------------------------------------------
 // Admin handlers (components, incidents)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn create_component(
     state: web::Data<Arc<StatusPageState>>,

@@ -17,9 +17,7 @@ use uuid::Uuid;
 use super::*;
 use super::helpers::{minor_to_major};
 
-// ---------------------------------------------------------------------------
 // Asset handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_assets(
     ctx: web::Data<Arc<AppContext>>,

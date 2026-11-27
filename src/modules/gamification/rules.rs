@@ -1,4 +1,4 @@
-// Gamification — Rule handlers.
+// Gamification - Rule handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -16,9 +16,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Rule handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_rules(
     ctx: web::Data<Arc<AppContext>>,

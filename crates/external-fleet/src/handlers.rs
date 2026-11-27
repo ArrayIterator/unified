@@ -6,7 +6,7 @@
 //! the store: the tenant comes from the `X-Unified-Tenant` header
 //! (the same header the core tenant middleware uses) or from the
 //! request's `tenant_id` field / query parameter. A request without
-//! any tenant is rejected with 400 — handlers never fall back to a
+//! any tenant is rejected with 400 - handlers never fall back to a
 //! global view.
 
 use crate::state::{

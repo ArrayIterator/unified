@@ -4,7 +4,7 @@
 //! to be honest dead ends: no reset backend existed. These two
 //! endpoints close that gap:
 //!
-//! * `POST /api/v1/auth-manager/password/forgot` — body `{email}`:
+//! * `POST /api/v1/auth-manager/password/forgot` - body `{email}`:
 //!   when an account exists for the email, mint a single-use token
 //!   (32 random bytes, HMAC-hashed at rest), store it with a 60-minute
 //!   expiry, and email a reset link through `mail.send_requested`.
@@ -12,7 +12,7 @@
 //!   the endpoint never reveals which emails are registered. A
 //!   per-address cooldown (5 minutes) keeps the endpoint from
 //!   flooding one inbox.
-//! * `POST /api/v1/auth-manager/password/reset` — body
+//! * `POST /api/v1/auth-manager/password/reset` - body
 //!   `{token, new_password}`: redeem the token (expiry and single-use
 //!   enforced atomically in the database), set the new password under
 //!   the shared `PasswordPolicy`, and invalidate every sibling token

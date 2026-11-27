@@ -14,9 +14,7 @@ use super::handlers_announcements::{archive_announcement, create_announcement, d
 use super::handlers_changelog::{create_changelog, delete_changelog, get_changelog, list_changelog, update_changelog};
 use super::ai_capabilities::AI_CAPABILITIES;
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct AnnouncementsModule {
     pub(crate) state: Arc<AnnouncementsState>,

@@ -42,11 +42,9 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- Per-product licensing settings: key format, seat defaults, validity,
 -- grace period, renewal reminders, offline-token allowance, and the
 -- allowed distribution channels.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS license_products (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     product TEXT NOT NULL UNIQUE CHECK (product ~ '^[a-z0-9][a-z0-9_-]{0,63}$'),
@@ -71,11 +69,9 @@ CREATE TABLE IF NOT EXISTS license_products (
 
 CREATE INDEX IF NOT EXISTS idx_license_products_owner_id ON license_products (owner_id);
 
--- ---------------------------------------------------------------------------
 -- One git distribution channel for a product: provider, repository,
 -- branch/tag reference, and the SHA-256 hash of the webhook secret
 -- (the raw secret is never stored).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS license_distributions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     product TEXT NOT NULL,
@@ -90,11 +86,9 @@ CREATE TABLE IF NOT EXISTS license_distributions (
 
 CREATE INDEX IF NOT EXISTS idx_license_distributions_product ON license_distributions (product);
 
--- ---------------------------------------------------------------------------
 -- One uploaded build/package attached to a licensed product.
 -- `storage_key` is the object key in `storage_target`, or the
 -- in-memory blob key when no storage target was registered.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS license_releases (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     product_id UUID NOT NULL REFERENCES license_products (id) ON DELETE CASCADE,
@@ -113,13 +107,11 @@ CREATE TABLE IF NOT EXISTS license_releases (
 CREATE INDEX IF NOT EXISTS idx_license_releases_product ON license_releases (product);
 CREATE INDEX IF NOT EXISTS idx_license_releases_product_id ON license_releases (product_id);
 
--- ---------------------------------------------------------------------------
 -- Hash-chained license event log. `prev_hash` is the previous
 -- entry's hash for the same license, or 'GENESIS' for the first
 -- entry; `hash` is SHA-256 over the canonical payload (see the
 -- header notes). Events are append-only by convention: no update
 -- or delete path exists in the module.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS license_events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     license_id UUID NOT NULL REFERENCES licenses (id) ON DELETE CASCADE,
@@ -134,10 +126,8 @@ CREATE TABLE IF NOT EXISTS license_events (
 CREATE INDEX IF NOT EXISTS idx_license_events_license_id ON license_events (license_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_license_events_event ON license_events (event);
 
--- ---------------------------------------------------------------------------
 -- Signed offline-token records (token value is never stored).
 -- `revoked` only affects online checks.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS license_offline_tokens (
     token_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     license_id UUID NOT NULL REFERENCES licenses (id) ON DELETE CASCADE,
@@ -151,11 +141,9 @@ CREATE TABLE IF NOT EXISTS license_offline_tokens (
 CREATE INDEX IF NOT EXISTS idx_license_offline_tokens_license_id ON license_offline_tokens (license_id);
 CREATE INDEX IF NOT EXISTS idx_license_offline_tokens_expires_at ON license_offline_tokens (expires_at);
 
--- ---------------------------------------------------------------------------
 -- Activation history: every activate and deactivate, with actor,
 -- instance, hostname, and timestamp. Audit records: kept even when
 -- the license is deleted.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS license_activation_history (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     license_id UUID NOT NULL REFERENCES licenses (id) ON DELETE CASCADE,

@@ -9,9 +9,7 @@ use serde::Deserialize;
 use serde::Serialize;
 use serde_json::Value;
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// One study program (major). `department_id` is owned by the
 /// Departments module and is stored as a plain id only.

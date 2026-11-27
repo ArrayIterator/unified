@@ -35,9 +35,7 @@ use unified_core::error::UnifiedResult;
 use unified_core::hooks::{HookBus, HookContext};
 use unified_core::modules::{Module, ModuleRegistry, RouteInfo, RouteVersionSupport};
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct EsgModule {
     pub(crate) state: EsgState,
@@ -67,7 +65,7 @@ impl Module for EsgModule {
     }
 
     fn description(&self) -> &'static str {
-        "Environmental, Social, and Governance sustainability reporting: admin-defined metric definitions (category, unit, data type, reporting frequency, framework tags) and reporting-framework definitions as data, reporting periods with open / closed status, metric values per period per scope (company / site reference ids) with source notes, document references, and full value history, per-metric targets per period with direction and deadline plus exact progress math in basis points, period summaries (metrics by category, completion, target attainment) with JSON and CSV export, an append-only audit trail of entry / target / period changes, and an AI capability that summarizes a period from its stored facts. Numbers are decimal strings computed on an integer-mantissa decimal type — f64 is never used for a stored or returned number."
+        "Environmental, Social, and Governance sustainability reporting: admin-defined metric definitions (category, unit, data type, reporting frequency, framework tags) and reporting-framework definitions as data, reporting periods with open / closed status, metric values per period per scope (company / site reference ids) with source notes, document references, and full value history, per-metric targets per period with direction and deadline plus exact progress math in basis points, period summaries (metrics by category, completion, target attainment) with JSON and CSV export, an append-only audit trail of entry / target / period changes, and an AI capability that summarizes a period from its stored facts. Numbers are decimal strings computed on an integer-mantissa decimal type - f64 is never used for a stored or returned number."
     }
 
     fn is_core(&self) -> bool {

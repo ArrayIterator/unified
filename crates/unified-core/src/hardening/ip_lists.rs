@@ -1,7 +1,6 @@
-// hardening — ip_lists.
+// hardening - ip_lists.
 // CIDR ranges and allow/block lists.
 //
-// Split from `crates/unified-core/src/hardening.rs`; moved verbatim, no behaviour changes.
 
 use super::*;
 use crate::error::UnifiedError;
@@ -22,9 +21,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 
-// ---------------------------------------------------------------------------
 // CIDR ranges
-// ---------------------------------------------------------------------------
 
 /// One parsed CIDR range (or a bare IP, stored as a /32 or /128).
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]

@@ -272,9 +272,7 @@ impl CloudProvider for HetznerAdapter {
     }
 }
 
-// ---------------------------------------------------------------------------
 // OVH adapter.
-// ---------------------------------------------------------------------------
 
 /// OVH API (`api.ovh.com` / `eu.api.ovh.com`), application-key +
 /// signature auth. One cloud project per connection.
@@ -510,9 +508,7 @@ impl CloudProvider for OvhAdapter {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Tencent Cloud CVM adapter.
-// ---------------------------------------------------------------------------
 
 /// Tencent Cloud CVM (`cvm.tencentcloudapi.com`), TC3-HMAC-SHA256
 /// signing. List / status only in this round.
@@ -670,9 +666,7 @@ impl CloudProvider for TencentAdapter {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Huawei Cloud ECS adapter.
-// ---------------------------------------------------------------------------
 
 /// Huawei Cloud ECS. Two auth modes: IAM password credentials (a token
 /// is fetched from the regional IAM endpoint and cached until shortly

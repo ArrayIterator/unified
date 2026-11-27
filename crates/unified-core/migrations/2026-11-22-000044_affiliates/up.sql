@@ -52,9 +52,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One affiliate (partner).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS affiliates (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id VARCHAR(128) NOT NULL UNIQUE,
@@ -81,9 +79,7 @@ CREATE TABLE IF NOT EXISTS affiliates (
 CREATE INDEX IF NOT EXISTS idx_affiliates_status ON affiliates (status);
 CREATE INDEX IF NOT EXISTS idx_affiliates_company_id ON affiliates (company_id);
 
--- ---------------------------------------------------------------------------
 -- Per-product commission override for one affiliate.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS affiliate_commission_rules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     affiliate_id UUID NOT NULL REFERENCES affiliates (id) ON DELETE CASCADE,
@@ -99,9 +95,7 @@ CREATE TABLE IF NOT EXISTS affiliate_commission_rules (
 CREATE INDEX IF NOT EXISTS idx_affiliate_commission_rules_affiliate_id
     ON affiliate_commission_rules (affiliate_id);
 
--- ---------------------------------------------------------------------------
 -- One referral link / code.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS affiliate_links (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     affiliate_id UUID NOT NULL REFERENCES affiliates (id) ON DELETE CASCADE,
@@ -117,9 +111,7 @@ CREATE INDEX IF NOT EXISTS idx_affiliate_links_affiliate_id
     ON affiliate_links (affiliate_id);
 CREATE INDEX IF NOT EXISTS idx_affiliate_links_code ON affiliate_links (code);
 
--- ---------------------------------------------------------------------------
 -- One recorded click on a referral link.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS affiliate_clicks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     link_id UUID NOT NULL REFERENCES affiliate_links (id) ON DELETE CASCADE,
@@ -138,9 +130,7 @@ CREATE INDEX IF NOT EXISTS idx_affiliate_clicks_affiliate_id ON affiliate_clicks
 CREATE INDEX IF NOT EXISTS idx_affiliate_clicks_ip_hash ON affiliate_clicks (ip_hash);
 CREATE INDEX IF NOT EXISTS idx_affiliate_clicks_clicked_at ON affiliate_clicks (clicked_at);
 
--- ---------------------------------------------------------------------------
 -- One tracked conversion (signup or purchase).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS affiliate_conversions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     affiliate_id UUID NOT NULL REFERENCES affiliates (id) ON DELETE CASCADE,
@@ -169,9 +159,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_affiliate_conversions_purchase_order
     ON affiliate_conversions (order_id)
     WHERE kind = 'purchase' AND order_id IS NOT NULL;
 
--- ---------------------------------------------------------------------------
 -- One commission earned from a purchase conversion.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS affiliate_commissions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     affiliate_id UUID NOT NULL REFERENCES affiliates (id) ON DELETE CASCADE,
@@ -203,9 +191,7 @@ CREATE INDEX IF NOT EXISTS idx_affiliate_commissions_conversion_id
 CREATE INDEX IF NOT EXISTS idx_affiliate_commissions_order_id
     ON affiliate_commissions (order_id);
 
--- ---------------------------------------------------------------------------
 -- One payout request: approved commissions paid out together.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS affiliate_payouts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     affiliate_id UUID NOT NULL REFERENCES affiliates (id) ON DELETE CASCADE,

@@ -31,9 +31,7 @@ pub(crate) const EXPIRE_REQUESTED: &str = "auditors.expire_requested";
 pub(crate) const SCOPE_CHECK: &str = "auditors.scope.check";
 pub(crate) const SCHEDULER_ENQUEUE: &str = "scheduler.enqueue";
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// Lifecycle of an auditor account: `active` -> `revoked` (admin
 /// action, immediate) or `expired` (expiry time passed; set by the
@@ -239,7 +237,7 @@ pub struct PublicLinkCreated {
     /// Owning modules can verify it with
     /// `core::sharing::verify_signed_link_url` instead of trusting
     /// a caller-supplied scope string. `None` when no secret is
-    /// configured — the link still works through the token.
+    /// configured - the link still works through the token.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub signed_payload: Option<String>,
 }
@@ -272,9 +270,7 @@ pub struct ActiveAuditorSessionView {
     pub scopes: Vec<AuditorScopeEntry>,
 }
 
-// ---------------------------------------------------------------------------
 // Request bodies
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct AuditorScopeInput {

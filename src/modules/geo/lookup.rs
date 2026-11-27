@@ -8,11 +8,9 @@ use super::{store::*, cidr::*, classification::*, db::*, types::*, handlers::*, 
 
 
 
-// ---------------------------------------------------------------------------
 // Lookup core: shared by the HTTP handler, the hook handler, and the
 // Network module (which delegates geo lookups through the `geo.lookup`
 // hook event and falls back to this function).
-// ---------------------------------------------------------------------------
 /// Resolve Geo information for an IP address.
 ///
 /// `ctx` supplies configuration (database path, settings-override flag).

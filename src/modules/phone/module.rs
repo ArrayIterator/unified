@@ -37,9 +37,7 @@ use unified_core::error::UnifiedResult;
 use unified_core::hooks::{HookBus, HookContext};
 use unified_core::modules::{Module, ModuleRegistry, RouteInfo, RouteVersionSupport};
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct PhoneModule {
     pub(crate) state: PhoneState,
@@ -249,7 +247,7 @@ impl Module for PhoneModule {
             RouteInfo { method: "GET", path: "/api/v1/phone/calls", owner: "phone", description: "List calls (paginated, filter by status, kind, user, queue, date range; callers see only their own calls).", auth },
             RouteInfo { method: "POST", path: "/api/v1/phone/calls", owner: "phone", description: "Initiate a 1:1 or group voice/video call (ringing; callees are notified).", auth },
             RouteInfo { method: "GET", path: "/api/v1/phone/calls/{call_id}", owner: "phone", description: "Get one call with its participants and recordings (caller, participant, or manager).", auth },
-            RouteInfo { method: "PATCH", path: "/api/v1/phone/calls/{call_id}", owner: "phone", description: "Update a live call (subject, recording consent) — caller or manager.", auth },
+            RouteInfo { method: "PATCH", path: "/api/v1/phone/calls/{call_id}", owner: "phone", description: "Update a live call (subject, recording consent) - caller or manager.", auth },
             RouteInfo { method: "DELETE", path: "/api/v1/phone/calls/{call_id}", owner: "phone", description: "Delete an ended or missed call with its participants, signals, and recordings (caller or manager).", auth },
             RouteInfo { method: "POST", path: "/api/v1/phone/calls/{call_id}/accept", owner: "phone", description: "Accept a ringing call (ringing -> active; the call starts).", auth },
             RouteInfo { method: "POST", path: "/api/v1/phone/calls/{call_id}/reject", owner: "phone", description: "Reject a ringing call; a 1:1 call ends as declined, a group call keeps ringing for the rest.", auth },

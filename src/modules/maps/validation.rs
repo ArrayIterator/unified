@@ -1,4 +1,4 @@
-//! Map & Tagging — validation and pure geospatial math.
+//! Map & Tagging - validation and pure geospatial math.
 //!
 //! Everything here is pure: no database, no HTTP, no config.
 //! The handlers validate every client-supplied value through

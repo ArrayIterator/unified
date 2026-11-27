@@ -10,9 +10,7 @@ use super::helpers::sanitize_file_name;
 use super::types::FileRecord;
 use super::types::FilesState;
 
-// ---------------------------------------------------------------------------
 // Hook handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) fn on_file_shared(state: Arc<FilesState>, ctx: &mut HookContext) {
     let data = ctx.data.clone();

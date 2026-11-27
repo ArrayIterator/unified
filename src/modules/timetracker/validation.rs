@@ -1,4 +1,4 @@
-// timetracker — Validation helpers and small pure utilities.
+// timetracker - Validation helpers and small pure utilities.
 
 use super::*;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -11,9 +11,7 @@ use serde_json::json;
 use sha2::{Digest, Sha256};
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Helpers: validation and small utilities
-// ---------------------------------------------------------------------------
 
 pub(crate) fn require_text(value: &str, field: &str, max: usize) -> UnifiedResult<String> {
     let trimmed = value.trim();

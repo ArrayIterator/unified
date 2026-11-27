@@ -1,4 +1,4 @@
-// Projects module — subtask, dependency, comment, watcher, and attachment handlers.
+// Projects module - subtask, dependency, comment, watcher, and attachment handlers.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use super::*;
@@ -10,9 +10,7 @@ use serde_json::{Value, json};
 use std::collections::HashSet;
 use std::sync::Arc;
 
-// ---------------------------------------------------------------------------
 // Subtasks
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_task_subtasks(
     req: HttpRequest,
@@ -53,9 +51,7 @@ pub(crate) async fn list_task_subtasks(
     json::respond(result, false)
 }
 
-// ---------------------------------------------------------------------------
 // Dependencies
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_task_dependencies(
     req: HttpRequest,
@@ -255,9 +251,7 @@ pub(crate) async fn remove_task_dependency(
     json::respond(result, false)
 }
 
-// ---------------------------------------------------------------------------
 // Comments
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_task_comments(
     req: HttpRequest,
@@ -508,9 +502,7 @@ pub(crate) async fn delete_task_comment(
     json::respond(result, false)
 }
 
-// ---------------------------------------------------------------------------
 // Watchers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_task_watchers(
     req: HttpRequest,
@@ -659,9 +651,7 @@ pub(crate) async fn remove_task_watcher(
     json::respond(result, false)
 }
 
-// ---------------------------------------------------------------------------
 // Attachments (storage references only; bytes live in the Storage module)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_task_attachments(
     req: HttpRequest,

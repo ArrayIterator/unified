@@ -1,4 +1,4 @@
-// Expenses module — employee expense reports with categories,
+// Expenses module - employee expense reports with categories,
 // policies, mileage and per-diem entries, receipt references,
 // approval through the approvals flow (events only), and
 // reimbursement through the billing flow (events only).
@@ -6,41 +6,41 @@
 // Routes live under `/api/v1/expenses`:
 //
 //   Categories (admin-editable):
-//     GET/POST /categories — list / create a category.
+//     GET/POST /categories - list / create a category.
 //     GET/PATCH/DELETE /categories/{id}.
 //   Policies (per-company rules):
-//     GET/POST /policies — list / create a policy.
+//     GET/POST /policies - list / create a policy.
 //     GET/PATCH/DELETE /policies/{id}.
 //   Reports:
-//     GET/POST /reports — list / create a report (draft).
+//     GET/POST /reports - list / create a report (draft).
 //     GET/PATCH/DELETE /reports/{id}.
-//     POST /reports/{id}/submit — draft -> submitted (requests approval).
-//     POST /reports/{id}/withdraw — submitted -> draft.
-//     GET  /reports/{id}/export?format=csv|json — the report as CSV or JSON.
+//     POST /reports/{id}/submit - draft -> submitted (requests approval).
+//     POST /reports/{id}/withdraw - submitted -> draft.
+//     GET  /reports/{id}/export?format=csv|json - the report as CSV or JSON.
 //   Expenses (lines inside a report):
-//     GET/POST /reports/{id}/expenses — list / add a line.
+//     GET/POST /reports/{id}/expenses - list / add a line.
 //     GET/PATCH/DELETE /expenses/{id}.
-//     POST /expenses/{id}/receipts — attach a receipt reference.
-//     DELETE /expenses/{id}/receipts/{receipt_id} — remove a reference.
+//     POST /expenses/{id}/receipts - attach a receipt reference.
+//     DELETE /expenses/{id}/receipts/{receipt_id} - remove a reference.
 //   Reimbursements:
-//     GET  /reimbursements — list (own only unless manager).
+//     GET  /reimbursements - list (own only unless manager).
 //     GET  /reimbursements/{id}.
-//     POST /reimbursements/{id}/retry — re-request a failed reimbursement.
+//     POST /reimbursements/{id}/retry - re-request a failed reimbursement.
 //   Adjustments and refunds (separate entries, never history edits):
 //     GET/POST /reports/{id}/adjustments.
-//   Currency rates (stored rates only — never guessed):
-//     GET/POST /currency-rates — list / store a rate.
+//   Currency rates (stored rates only - never guessed):
+//     GET/POST /currency-rates - list / store a rate.
 //     GET/DELETE /currency-rates/{id}.
-//     POST /currency-rates/convert — convert with a stored rate.
+//     POST /currency-rates/convert - convert with a stored rate.
 //   Analytics:
-//     GET  /analytics/spend — spend per category / employee / period.
-//     GET  /analytics/pending-approvals — reports waiting on a decision.
-//     GET  /analytics/reimbursement-backlog — pending / failed pay-outs.
-//     GET  /analytics/violations — flagged expenses and over-limit reports.
+//     GET  /analytics/spend - spend per category / employee / period.
+//     GET  /analytics/pending-approvals - reports waiting on a decision.
+//     GET  /analytics/reimbursement-backlog - pending / failed pay-outs.
+//     GET  /analytics/violations - flagged expenses and over-limit reports.
 //   Settings:
-//     GET/PUT /settings — the configurable defaults (manager).
+//     GET/PUT /settings - the configurable defaults (manager).
 //
-// HONESTY — READ THIS FIRST. What is real in this module:
+// HONESTY - READ THIS FIRST. What is real in this module:
 // in-memory category / policy / report / expense / receipt /
 // reimbursement / adjustment / currency-rate management; a report
 // status machine (draft -> submitted -> approved / rejected ->
@@ -51,22 +51,22 @@
 // receipt missing) that are recorded on the expense and surfaced
 // to approvers, never silently auto-approved; receipt references
 // only (storage references handed to the documents / storage
-// modules — no receipt bytes live here); currency conversion
+// modules - no receipt bytes live here); currency conversion
 // from stored rates only, with the calculator module consulted
 // through its `calculator.rate_requested` event when this module
 // holds no stored rate for the pair. What is NOT built here:
 // durable storage (the DashMap stores are authoritative;
 // migration `2026-11-22-000083_expenses` is the persistence
-// target); an approval engine of any kind — approval decisions
+// target); an approval engine of any kind - approval decisions
 // arrive only as `expenses.approval.decided` events from the
 // approvals flow, and this module never decides an approval
-// itself; any payment — reimbursement pay-outs are requested
+// itself; any payment - reimbursement pay-outs are requested
 // from the billing flow with `expenses.reimbursement.requested`
 // and only ever confirmed through its paid / failed events; any
-// project or client data — project and client links are opaque
+// project or client data - project and client links are opaque
 // ids only, resolved and owned by the projects / CRM modules.
 //
-// CONFIG-DRIVEN — READ THIS FIRST. Nothing behavioural is
+// CONFIG-DRIVEN - READ THIS FIRST. Nothing behavioural is
 // hard-coded: the allowed expense kinds, the supported
 // currencies, the default currency, the default mileage and
 // per-diem rates, and the maximum report total warning level
@@ -76,7 +76,7 @@
 // per-day limit; policies carry their own mileage rate,
 // per-diem rate, report total limit, and approval chain
 // reference. The values in `ExpensesSettings::default` are
-// CONFIGURABLE DEFAULTS only — an admin change applies to
+// CONFIGURABLE DEFAULTS only - an admin change applies to
 // every validation and default that reads them, and no code
 // path consults a baked-in list instead. The one deliberate
 // exception is the report status vocabulary itself
@@ -109,7 +109,7 @@
 //
 // Receipt verification: a receipt row is an UNVERIFIED claim.
 // The storage target and key arrive as caller-supplied free
-// text and no storage lookup runs at attach time — there is no
+// text and no storage lookup runs at attach time - there is no
 // existence-check event on the bus (the storage manager answers
 // `storage.object.upload_requested` with an upload binding,
 // never with "this object exists"). The row becomes verified
@@ -120,8 +120,8 @@
 // `receipt_missing` violation, so a fabricated key can never
 // unblock a submission.
 //
-// Spend analytics: totals are grouped by (group, currency) —
-// amounts in different currencies are never summed — and count
+// Spend analytics: totals are grouped by (group, currency) -
+// amounts in different currencies are never summed - and count
 // only `submitted`, `approved`, and `reimbursed` reports.
 // `draft` reports never left the employee and `rejected`
 // reports were denied, so neither counts as spend. Refunds net
@@ -172,7 +172,7 @@
 //      `record_id`) triple for requests created before the
 //      bridge, or by an admin through the approvals API), and
 //      moves the report to `approved` or `rejected`.
-//      `changes_requested` leaves the report `submitted` — the
+//      `changes_requested` leaves the report `submitted` - the
 //      requester withdraws it to draft to revise it. The
 //      outcome is then re-emitted as `expenses.approval.decided`
 //      with `{approval_request_id, report_id, decision,
@@ -204,8 +204,8 @@
 //   5. `POST /reports/{id}/withdraw` moves a `submitted` or
 //      `rejected` report back to `draft`, clears the approval
 //      correlation ids AND the stale decision metadata
-//      (`decided_at`, `decided_by`, `decision_reason`) — a
-//      withdrawn report is a fresh draft — and emits
+//      (`decided_at`, `decided_by`, `decision_reason`) - a
+//      withdrawn report is a fresh draft - and emits
 //      `expenses.approval.cancelled` with
 //      `{approval_request_id, report_id}` so a pending chain
 //      can stand down. When a generic approvals request is
@@ -230,7 +230,7 @@
 // `calculator.rate_requested` with `{base_currency,
 // target_currency}` and uses the first rate the calculator
 // module answers with (its stored rate, if any). When neither
-// side holds a rate the conversion fails with 422 — a rate is
+// side holds a rate the conversion fails with 422 - a rate is
 // never guessed, interpolated, or fetched live from any
 // provider by this module.
 //
@@ -256,35 +256,35 @@
 //     `expenses.currency_rate.deleted`
 //   - `expenses.settings.updated`
 //   - `approval.requested` (generic approvals contract; see the
-//     contract above) — emitted on submit alongside
+//     contract above) - emitted on submit alongside
 //     `expenses.approval.requested`.
 //   - `approval.cancelled` (generic approvals cancellation;
-//     see step 5 above) — emitted on withdraw when a generic
+//     see step 5 above) - emitted on withdraw when a generic
 //     approval request is outstanding.
 //   - `calculator.rate_requested` (rate lookup; answered by the
 //     calculator module when it holds a stored rate)
 //   - `notification.requested` (approval decision and
 //     reimbursement outcome, addressed to the employee)
 // Events this module listens to:
-//   - `storage.object.stored` — a stored object confirms a
+//   - `storage.object.stored` - a stored object confirms a
 //     receipt: receipts referencing its key become verified
 //     (see the receipt verification note above).
-//   - `storage.object.deleted` — a deleted object un-verifies
+//   - `storage.object.deleted` - a deleted object un-verifies
 //     receipts referencing its key.
-//   - `approval.decided` — generic approval decision from the
+//   - `approval.decided` - generic approval decision from the
 //     approvals flow (see the contract above); correlated by the
 //     stored approvals `request_id`, then re-emitted as
 //     `expenses.approval.decided`.
-//   - `expenses.approval.decided` — approval decision from the
+//   - `expenses.approval.decided` - approval decision from the
 //     approvals flow (see the contract above).
-//   - `expenses.reimbursement.paid` — reimbursement confirmed
+//   - `expenses.reimbursement.paid` - reimbursement confirmed
 //     paid by the billing flow.
-//   - `expenses.reimbursement.failed` — reimbursement failed in
+//   - `expenses.reimbursement.failed` - reimbursement failed in
 //     the billing flow.
-//   - `payment.captured` — treated as a reimbursement payment
+//   - `payment.captured` - treated as a reimbursement payment
 //     only when the payload carries a `reimbursement_id` this
 //     module owns; anything else is ignored.
-//   - `payment.failed` — treated as a reimbursement failure
+//   - `payment.failed` - treated as a reimbursement failure
 //     only when the payload carries a `reimbursement_id` this
 //     module owns; anything else is ignored.
 
@@ -300,9 +300,7 @@ use std::sync::Arc;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct ExpensesModule {
     pub(crate) state: Arc<ExpensesState>,
@@ -543,7 +541,7 @@ impl Module for ExpensesModule {
             RouteInfo { method: "GET", path: "/api/v1/expenses/reports/{id}/adjustments", owner: "expenses", description: "List refunds and adjustments of a report (paginated, filter by kind).", auth: unified_core::auth::RouteAuth::Authenticated},
             RouteInfo { method: "POST", path: "/api/v1/expenses/reports/{id}/adjustments", owner: "expenses", description: "Record a refund or adjustment against an approved or reimbursed report (manager; reduces a still-pending reimbursement, never mutates history).", auth: unified_core::auth::RouteAuth::Authenticated},
             RouteInfo { method: "GET", path: "/api/v1/expenses/currency-rates", owner: "expenses", description: "List stored exchange rates (paginated, filter by base_currency, target_currency).", auth: unified_core::auth::RouteAuth::Authenticated},
-            RouteInfo { method: "POST", path: "/api/v1/expenses/currency-rates", owner: "expenses", description: "Store an exchange rate (manager; one pair is one row — storing a pair again updates it in place; rates are stored data, never fetched live).", auth: unified_core::auth::RouteAuth::Authenticated},
+            RouteInfo { method: "POST", path: "/api/v1/expenses/currency-rates", owner: "expenses", description: "Store an exchange rate (manager; one pair is one row - storing a pair again updates it in place; rates are stored data, never fetched live).", auth: unified_core::auth::RouteAuth::Authenticated},
             RouteInfo { method: "GET", path: "/api/v1/expenses/currency-rates/{id}", owner: "expenses", description: "Get one stored exchange rate.", auth: unified_core::auth::RouteAuth::Authenticated},
             RouteInfo { method: "DELETE", path: "/api/v1/expenses/currency-rates/{id}", owner: "expenses", description: "Delete a stored exchange rate (manager).", auth: unified_core::auth::RouteAuth::Authenticated},
             RouteInfo { method: "POST", path: "/api/v1/expenses/currency-rates/convert", owner: "expenses", description: "Convert an amount with a stored rate (own rates first, then the calculator module's stored rate; 422 when no stored rate exists).", auth: unified_core::auth::RouteAuth::Authenticated},

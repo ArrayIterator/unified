@@ -17,9 +17,7 @@ use super::types::AiUserPolicy;
 use super::types::CapReservation;
 use super::types::RateBucket;
 
-// ---------------------------------------------------------------------------
 // Shared state.
-// ---------------------------------------------------------------------------
 
 /// In-memory stores for the AI module. The hook bus is attached in
 /// `init` (the bus lives in `AppContext`); handlers use the

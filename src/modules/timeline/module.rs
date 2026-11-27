@@ -1,4 +1,4 @@
-//! Activity Timeline module. — Module.
+//! Activity Timeline module. - Module.
 //!
 //! Split from `src/modules/timeline.rs`; behaviour unchanged.
 

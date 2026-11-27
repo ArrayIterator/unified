@@ -49,9 +49,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One reusable pricing table.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS pricing_tables (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR NOT NULL,
@@ -78,9 +76,7 @@ CREATE INDEX IF NOT EXISTS idx_pricing_tables_status
 CREATE INDEX IF NOT EXISTS idx_pricing_tables_currency
     ON pricing_tables (currency);
 
--- ---------------------------------------------------------------------------
 -- One tier of a pricing table.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS pricing_tiers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     table_id UUID NOT NULL REFERENCES pricing_tables (id)
@@ -106,9 +102,7 @@ CREATE INDEX IF NOT EXISTS idx_pricing_tiers_table_sort
 CREATE INDEX IF NOT EXISTS idx_pricing_tiers_highlighted
     ON pricing_tiers (table_id, highlighted);
 
--- ---------------------------------------------------------------------------
 -- One feature row of a tier.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS pricing_tier_features (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tier_id UUID NOT NULL REFERENCES pricing_tiers (id)
@@ -126,9 +120,7 @@ CREATE INDEX IF NOT EXISTS idx_pricing_tier_features_tier_id
 CREATE INDEX IF NOT EXISTS idx_pricing_tier_features_tier_sort
     ON pricing_tier_features (tier_id, sort_order);
 
--- ---------------------------------------------------------------------------
 -- One marketplace vendor.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS marketplace_vendors (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id VARCHAR NOT NULL,
@@ -155,9 +147,7 @@ CREATE INDEX IF NOT EXISTS idx_marketplace_vendors_status
 CREATE INDEX IF NOT EXISTS idx_marketplace_vendors_company_id
     ON marketplace_vendors (company_id);
 
--- ---------------------------------------------------------------------------
 -- One commission rule: per-vendor, per-category, or global.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS marketplace_commission_rules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     scope VARCHAR NOT NULL
@@ -174,10 +164,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_marketplace_commission_rules_scope
 CREATE INDEX IF NOT EXISTS idx_marketplace_commission_rules_scope
     ON marketplace_commission_rules (scope);
 
--- ---------------------------------------------------------------------------
 -- Approval state for one vendor product. The Store module owns the
 -- product; this table holds only the approval state + vendor link.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS marketplace_product_approvals (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     product_id VARCHAR NOT NULL,
@@ -200,10 +188,8 @@ CREATE INDEX IF NOT EXISTS idx_marketplace_product_approvals_vendor_id
 CREATE INDEX IF NOT EXISTS idx_marketplace_product_approvals_status
     ON marketplace_product_approvals (status);
 
--- ---------------------------------------------------------------------------
 -- One computed commission ledger entry: exactly one per
 -- (order, product) pair.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS marketplace_commissions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     order_id VARCHAR NOT NULL,
@@ -233,9 +219,7 @@ CREATE INDEX IF NOT EXISTS idx_marketplace_commissions_order_id
 CREATE INDEX IF NOT EXISTS idx_marketplace_commissions_status
     ON marketplace_commissions (status);
 
--- ---------------------------------------------------------------------------
 -- One vendor payout request.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS marketplace_payouts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     vendor_id UUID NOT NULL REFERENCES marketplace_vendors (id)

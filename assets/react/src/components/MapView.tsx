@@ -1,7 +1,7 @@
-// Map view (Map & Tagging, task 358).
+// Map view (Map & Tagging).
 //
 // Renders the tenant's locations as pins on a Leaflet map.
-// Leaflet itself is BUNDLED (the `leaflet` npm dependency —
+// Leaflet itself is BUNDLED (the `leaflet` npm dependency -
 // its JS and CSS ship inside the React build, so the map
 // needs no CDN script). The TILES still come from the
 // configured tile provider: the tile URL, attribution, max
@@ -152,7 +152,7 @@ export default function MapView({
         className="flex items-center justify-center rounded-lg border border-border bg-surface-muted text-sm text-muted"
         style={{ height }}
       >
-        Loading map settings…
+        Loading map settings...
       </div>
     );
   }

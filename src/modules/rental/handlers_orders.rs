@@ -63,9 +63,7 @@ fn load_visible_order(
     Ok(order)
 }
 
-// ---------------------------------------------------------------------------
 // Order handlers (authenticated)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_orders(
     state: web::Data<RentalState>,
@@ -342,9 +340,7 @@ pub(crate) async fn delete_order(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Status transitions
-// ---------------------------------------------------------------------------
 
 /// Shared transition runner: loads the order (customer or
 /// manager), checks the status machine, applies the transition,
@@ -492,9 +488,7 @@ pub(crate) async fn complete_order(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Deposit handling (manager)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn handle_deposit(
     state: web::Data<RentalState>,

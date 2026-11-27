@@ -1,4 +1,4 @@
-// Gamification — Request bodies.
+// Gamification - Request bodies.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -16,9 +16,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Request bodies
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct CreateRuleRequest {
@@ -108,7 +106,7 @@ pub struct UpdateRewardRequest {
     pub active: Option<bool>,
 }
 
-/// Optional scope for a reward request (`?company_id=…&season_id=…`):
+/// Optional scope for a reward request (`?company_id=...&season_id=...`):
 /// which company's (and season's) balance the points are spent
 /// from. Absent values resolve to the active season of that scope
 /// at request time and are snapshotted onto the request.

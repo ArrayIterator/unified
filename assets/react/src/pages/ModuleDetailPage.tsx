@@ -4,7 +4,7 @@
 // (src/modules/extensions/module.rs:91); it returns the same
 // ExtensionInfo shape as the list. Enable/disable use the matching
 // POST endpoints (module.rs:95-96) and require the modules:manage
-// capability — a forbidden answer is shown honestly instead of
+// capability - a forbidden answer is shown honestly instead of
 // pretending the change worked.
 
 import { useState } from "react";
@@ -43,7 +43,7 @@ export default function ModuleDetailPage() {
     if (state.error instanceof ApiError && state.error.status === 404) {
       return (
         <Alert tone="warning" title="Module not found">
-          No module with id “{decodedId}” is registered.{" "}
+          No module with id "{decodedId}" is registered.{" "}
           <Link to="/" className="underline">
             Back to the dashboard
           </Link>
@@ -69,8 +69,8 @@ export default function ModuleDetailPage() {
         setNotice({
           tone: "success",
           text: enable
-            ? `Module “${module.name || module.id}” was enabled.`
-            : `Module “${module.name || module.id}” was disabled.`,
+            ? `Module "${module.name || module.id}" was enabled.`
+            : `Module "${module.name || module.id}" was disabled.`,
         });
         state.reload();
       })
@@ -102,7 +102,7 @@ export default function ModuleDetailPage() {
             isDisabled={mutating}
             onClick={() => handleToggle(!module.enabled)}
           >
-            {mutating ? "Saving…" : module.enabled ? "Disable" : "Enable"}
+            {mutating ? "Saving..." : module.enabled ? "Disable" : "Enable"}
           </Button>
         </div>
         <p className="mt-4 text-muted">{module.description || "No description."}</p>
@@ -124,7 +124,7 @@ export default function ModuleDetailPage() {
                   <span className="block pl-1 pt-1 text-xs text-faint">
                     Requires: {warning.required_modules.join(", ")}
                     {warning.will_auto_activate.length > 0 &&
-                      ` — enabling this module would also enable: ${warning.will_auto_activate.join(", ")}`}
+                      ` - enabling this module would also enable: ${warning.will_auto_activate.join(", ")}`}
                   </span>
                 )}
               </li>
@@ -196,7 +196,7 @@ export default function ModuleDetailPage() {
 
       <p>
         <Link to="/" className="text-sm text-accent hover:underline">
-          ← Back to all modules
+          <- Back to all modules
         </Link>
       </p>
     </div>

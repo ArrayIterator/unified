@@ -1,4 +1,4 @@
-// crm — common.
+// crm - common.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -21,9 +21,7 @@ use super::handlers_leads::*;
 use super::handlers_activities::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 pub(crate) fn new_id() -> String {
     Uuid::new_v4().to_string()
@@ -81,9 +79,7 @@ pub(crate) fn clean_optional(value: Option<String>) -> Option<String> {
         .filter(|text| !text.is_empty())
 }
 
-// ---------------------------------------------------------------------------
 // Caller and capabilities (same pattern as todos: fail closed).
-// ---------------------------------------------------------------------------
 
 /// The server-verified caller (see `unified_core::caller::Caller`):
 /// the user id identifies the actor, the server-resolved role is the
@@ -124,9 +120,7 @@ pub(crate) fn require_permission(ctx: &AppContext, role: &str, permission: &str)
     }
 }
 
-// ---------------------------------------------------------------------------
 // Tenant edge guard (C3 pilot 4, group E).
-// ---------------------------------------------------------------------------
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request
@@ -136,7 +130,7 @@ pub(crate) fn require_permission(ctx: &AppContext, role: &str, permission: &str)
 /// module calls this FIRST, before `caller` or any capability check.
 ///
 /// Records in this module carry no company field, so the guard is a
-/// fail-closed gate only — there is no per-record company check to
+/// fail-closed gate only - there is no per-record company check to
 /// apply. Real partitioning needs a `tenant_id` on the record, a
 /// C11 follow-up, not a C3 gate.
 pub(crate) fn require_tenant(
@@ -148,7 +142,7 @@ pub(crate) fn require_tenant(
 /// The company scope the caller acts in: the tenant context's
 /// company first, the verified caller's server-resolved company
 /// otherwise. Fails closed (403) when both are present and disagree
-/// — a request must not carry one company in its tenant context and
+/// - a request must not carry one company in its tenant context and
 /// another in its verified identity. The `X-Company-Id` header is
 /// NEVER trusted here: only the verified caller (company resolved
 /// from the database at authentication time) and the
@@ -173,7 +167,7 @@ pub(crate) fn caller_company(
 
 /// Writes require a resolved company: a mutating handler with no
 /// resolvable company scope is refused (403). Reads proceed on the
-/// tenant gate plus the mismatch check above — records here carry
+/// tenant gate plus the mismatch check above - records here carry
 /// no company field, so there is nothing to partition on read.
 pub(crate) fn require_caller_company(
     tenant: &unified_core::tenancy::TenantContext,

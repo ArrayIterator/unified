@@ -18,9 +18,7 @@ use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 use super::{constants::*, types::*, helpers::*, module::*, handlers_articles::*, handlers_tickets::*, handlers_categories::*};
 
-// ---------------------------------------------------------------------------
 // Shared state
-// ---------------------------------------------------------------------------
 
 /// In-memory stores for the knowledgebase. The hook bus is attached in
 /// `init` (the bus lives in `AppContext`); handlers tolerate a missing bus

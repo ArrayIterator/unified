@@ -21,9 +21,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Recordings
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_recordings(
     state: web::Data<MeetingsState>,

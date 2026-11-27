@@ -10,9 +10,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // VCS repository connections (GitHub / GitLab / Bitbucket).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = vcs_connections)]
@@ -46,9 +44,7 @@ pub struct NewVcsConnection {
     pub last_error: Option<String>,
 }
 
-// ---------------------------------------------------------------------------
 // VCS version drafts imported from a provider (never auto-published).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = vcs_version_drafts)]
@@ -86,9 +82,7 @@ pub struct NewVcsVersionDraft {
     pub assets: Value,
 }
 
-// ---------------------------------------------------------------------------
 // VCS sync history (manual and webhook-triggered sync runs).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = vcs_sync_history)]
@@ -124,10 +118,8 @@ pub struct NewVcsSyncHistory {
     pub duration_ms: i64,
 }
 
-// ---------------------------------------------------------------------------
 // VCS provider settings. Tokens live in `*_encrypted` columns and must
 // be encrypted before insert; the encryption helper is still open work.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = vcs_provider_settings)]

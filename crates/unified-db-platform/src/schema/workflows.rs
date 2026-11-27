@@ -3,11 +3,9 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Workflows (migration 000060_workflows). The self-reference
 // `workflow_runs.retried_from_run_id` gets no `joinable!` (a
 // table cannot join to itself in that form).
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     workflows (id) {

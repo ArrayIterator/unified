@@ -12,9 +12,7 @@ use uuid::Uuid;
 use super::service::{effective_allowance, resolve_branding};
 use super::types::{AllowanceMode, BrandingProfile, CompanyAllowance, GlobalAllowance, GlobalDefaults, HistoryEntry, ResolvedBranding};
 
-// ---------------------------------------------------------------------------
 // State
-// ---------------------------------------------------------------------------
 
 #[derive(Clone)]
 pub struct WhitelabelState {

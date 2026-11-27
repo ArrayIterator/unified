@@ -60,9 +60,7 @@ use super::types::Subject;
 use super::types::Thesis;
 use super::types::Transcript;
 
-// ---------------------------------------------------------------------------
 // State
-// ---------------------------------------------------------------------------
 
 /// In-memory store. The migration tables are the persistence
 /// targets; this store is the live read path (the same split the
@@ -152,7 +150,7 @@ impl AcademicState {
     /// Ask the E-Learning module whether a course exists
     /// (`elearning.course.requested`). Returns the answering result
     /// when one arrives, or `None` when nothing answers (no handler
-    /// exists in this tree yet — see the module header).
+    /// exists in this tree yet - see the module header).
     pub(crate) fn elearning_course(&self, course_id: &str) -> Option<Value> {
         let context = self.bus().emit(
             "elearning.course.requested",

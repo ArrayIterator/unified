@@ -713,14 +713,12 @@ pub(crate) async fn answer(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Draft review handlers.
 //
 // Approval records a human decision only. There is deliberately no
 // endpoint here that sends, publishes, or delivers a draft: the
 // owning module must do that through its own existing human endpoint
 // after reading the approved draft.
-// ---------------------------------------------------------------------------
 
 /// Load a draft, enforcing ownership: the author may read it, and a
 /// role holding `ai:approve` may read any draft for review.
@@ -850,7 +848,7 @@ pub(crate) async fn get_draft(
 /// separation-of-duties check for one review decision, without any
 /// store access, so it is unit-testable on its own. Only a draft
 /// can transition; approval by the draft's own author is refused
-/// (separation of duties — a second human must review); rejection
+/// (separation of duties - a second human must review); rejection
 /// by the author is allowed (withdrawing one's own draft).
 /// Callers must run this while holding the draft's entry lock
 /// (`state.drafts.get_mut`), so a concurrent approve + reject

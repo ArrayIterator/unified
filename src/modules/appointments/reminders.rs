@@ -1,4 +1,4 @@
-// appointments — reminders.
+// appointments - reminders.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -27,9 +27,7 @@ use super::handlers_appointments::*;
 use super::handlers_reminders::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Reminders
-// ---------------------------------------------------------------------------
 
 /// Queue one reminder through `scheduler.enqueue` with kind
 /// `appointments.reminders.send`. The kind is registered in the

@@ -7,7 +7,7 @@
 //
 // What this module is NOT: it does not render, modify, or seal PDF
 // bytes. It records *that* a document (identified by its SHA-256
-// hash) was signed, by whom, in what order, and when — and it proves
+// hash) was signed, by whom, in what order, and when - and it proves
 // the record afterwards with the hash-chained audit trail and the
 // completion certificate. Producing a signed PDF from the certificate
 // is a separate rendering step, outside this crate.
@@ -132,9 +132,7 @@ pub(crate) use crypto::{audit_hash_input, effective_status, issue_token, signing
 pub(crate) use handlers::{audit_handler, ceremony_handler, certificate_handler, create_request_handler, decline_handler, get_request_handler, list_requests_handler, remind_handler, send_request_handler, sign_handler, status_name, user_agent, verify_audit_handler, verify_certificate_handler};
 pub(crate) use types::{ListQuery, TenantQuery};
 
-// ---------------------------------------------------------------------------
 // Unit tests
-// ---------------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {

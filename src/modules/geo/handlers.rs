@@ -16,13 +16,11 @@ use super::{store::*, cidr::*, classification::*, lookup::*, db::*, types::*, mo
 
 
 
-// ---------------------------------------------------------------------------
 // Caller identity and capability checks (same shape as the exams and
 // webhooks modules: `X-User-Id` + `X-Role` headers, capability asked
 // through the `role.check` hook, failing closed when no handler
 // answers). Every handler in this module calls `caller` +
 // `require_permission` first, before touching any store or file.
-// ---------------------------------------------------------------------------
 pub(crate) const PERM_GEO_VIEW: &str = "geo.view";
 pub(crate) const PERM_GEO_MANAGE: &str = "geo.manage";
 
@@ -66,9 +64,7 @@ pub(crate) fn require_permission(ctx: &AppContext, role: &str, permission: &str)
 
 
 
-// ---------------------------------------------------------------------------
 // Handlers.
-// ---------------------------------------------------------------------------
 pub(crate) async fn lookup_handler(
     ctx: web::Data<Arc<AppContext>>,
     req: HttpRequest,
@@ -413,8 +409,8 @@ pub(crate) const MAXMIND_DOWNLOAD_HOST: &str = "download.maxmind.com";
 /// Resolution order: explicit override, configured `geo.download_url`,
 /// built-in MaxMind URL (requires `licenses.maxmind`). An override is
 /// only accepted when its host matches the host of the configured
-/// download URL — or the built-in MaxMind host when nothing is
-/// configured — so a caller cannot point the download at an internal
+/// download URL - or the built-in MaxMind host when nothing is
+/// configured - so a caller cannot point the download at an internal
 /// HTTP service. The host comparison is exact: a lookalike host such
 /// as `download.maxmind.com.evil.example` is rejected.
 pub(crate) fn resolve_download_url(

@@ -11,11 +11,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Printing (migration 000091_printing).
 // PaperSize carries NUMERIC columns, so it skips serde derives
 // (PgNumeric has no serde implementation).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable)]
 #[diesel(table_name = paper_sizes)]

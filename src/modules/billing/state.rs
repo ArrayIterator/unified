@@ -166,7 +166,7 @@ impl BillingState {
     }
 
     /// Hydrate the in-memory billing maps from the database (C11,
-    /// task 271): invoices (with their items), invoice payments,
+    /// invoices (with their items), invoice payments,
     /// and credit notes are loaded from the `invoices`,
     /// `invoice_items`, `invoice_payments`, and `credit_notes`
     /// tables and replace the map contents, so a restart restores
@@ -174,9 +174,9 @@ impl BillingState {
     /// credit-note number sequences are reseeded from the
     /// `invoice_sequences` table when its rows exist (falling
     /// back to the largest loaded number), so numbers are never
-    /// reused after a restart. Rows that cannot be converted —
+    /// reused after a restart. Rows that cannot be converted -
     /// an amount that does not fit in minor units, a payment or
-    /// credit note whose invoice is missing — are skipped, never
+    /// credit note whose invoice is missing - are skipped, never
     /// fatal: hydration must not fail startup on one bad row.
     /// The database has no `subscription_id` column on invoices
     /// and no currency on payments / credit notes, so hydrated
@@ -772,7 +772,7 @@ impl BillingState {
             user_id: mirror.user_id.clone(),
             company_id: mirror.company_id.clone(),
             items: vec![InvoiceItem {
-                name: format!("Subscription renewal — {}", mirror.product_id),
+                name: format!("Subscription renewal - {}", mirror.product_id),
                 quantity: 1,
                 unit_price: mirror.price,
                 line_total,
@@ -822,7 +822,7 @@ impl BillingState {
         let mut items: Vec<InvoiceItem> = Vec::new();
         if charge > 0 {
             items.push(InvoiceItem {
-                name: format!("Plan change charge — {}", mirror.product_id),
+                name: format!("Plan change charge - {}", mirror.product_id),
                 quantity: 1,
                 unit_price: charge,
                 line_total: charge,
@@ -832,7 +832,7 @@ impl BillingState {
         }
         if credit > 0 {
             items.push(InvoiceItem {
-                name: format!("Unused time credit — {previous_product_id}"),
+                name: format!("Unused time credit - {previous_product_id}"),
                 quantity: 1,
                 unit_price: -credit,
                 line_total: -credit,
@@ -1076,7 +1076,7 @@ impl BillingState {
             Err(error) => {
                 invoice.status = "draft".to_string();
                 invoice.notes = Some(format!(
-                    "Held as draft: invoice reconciliation did not pass ({}) — issue manually after review.",
+                    "Held as draft: invoice reconciliation did not pass ({}) - issue manually after review.",
                     error.message
                 ));
                 invoice.updated_at = now();
@@ -1110,7 +1110,7 @@ impl BillingState {
                 held.status = "draft".to_string();
                 held.paid_at = None;
                 held.notes = Some(format!(
-                    "Held as draft: invoice reconciliation did not pass ({}) — issue manually after review.",
+                    "Held as draft: invoice reconciliation did not pass ({}) - issue manually after review.",
                     error.message
                 ));
                 held.updated_at = now();

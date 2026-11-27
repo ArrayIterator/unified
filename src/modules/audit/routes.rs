@@ -15,9 +15,7 @@ use super::handlers::{get_entry, list_entries, verify_chain};
 use super::state::{AuditState, DEFAULT_WATERMARK_PATH, WATERMARK_PATH_ENV};
 use super::ai_capabilities::AI_CAPABILITIES;
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct AuditModule {
     pub(crate) state: Arc<AuditState>,

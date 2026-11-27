@@ -1,4 +1,4 @@
-// Card validation module — Luhn checksum, brand detection from
+// Card validation module - Luhn checksum, brand detection from
 // issuer identification number (IIN) ranges, expiry and CVV checks,
 // plus administrator-defined custom rules.
 //
@@ -44,7 +44,7 @@
 //
 // This module is stateless validation: it NEVER persists a PAN or a
 // CVV. The only stored rows are custom rules and daily validation
-// counts (date, matched rule, result, count — no PANs). Every log,
+// counts (date, matched rule, result, count - no PANs). Every log,
 // error, audit string, and hook payload carries at most the masked
 // PAN (first 6 + last 4 digits, middle masked); no full PAN is ever
 // logged, returned, or stored. Validation responses name the rule
@@ -59,7 +59,7 @@
 // Custom rules, settings, and counts are tenant business data.
 // Every HTTP route resolves the tenant through
 // `tenancy::TenantContext::from_http_request` and fails closed
-// (401) when no tenant context resolved — never falling back to the
+// (401) when no tenant context resolved - never falling back to the
 // control-plane schema. The hook answerer takes `tenant_id` from
 // the event payload and refuses (without validating) when it is
 // missing or empty. Rules are always filtered by tenant id, and a
@@ -69,8 +69,8 @@
 // # Hook contract
 //
 // Answers `cards.validate_requested` (payload: `tenant_id`,
-// `mode` (`"full"` / `"method"` / `"claim"`), `number` — the
-// normalised number is passed in the event and never stored —
+// `mode` (`"full"` / `"method"` / `"claim"`), `number` - the
+// normalised number is passed in the event and never stored -
 // plus optional `expiry` and `cvv`). Mode `"full"` requires the
 // number; modes `"method"` and `"claim"` carry no number and run
 // the brand + expiry checks only, with `masked_pan` /

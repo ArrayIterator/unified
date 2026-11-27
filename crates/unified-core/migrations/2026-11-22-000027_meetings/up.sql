@@ -45,9 +45,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One meeting room.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS meeting_rooms (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title VARCHAR NOT NULL,
@@ -85,10 +83,8 @@ CREATE INDEX IF NOT EXISTS idx_meeting_rooms_status
 CREATE INDEX IF NOT EXISTS idx_meeting_rooms_starts_at
     ON meeting_rooms (starts_at);
 
--- ---------------------------------------------------------------------------
 -- One person's stay in one room: live participant list and
 -- attendance history in the same row.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS meeting_participants (
     room_id UUID NOT NULL REFERENCES meeting_rooms (id)
         ON DELETE CASCADE ON UPDATE NO ACTION,
@@ -114,9 +110,7 @@ CREATE INDEX IF NOT EXISTS idx_meeting_participants_user_id
 CREATE INDEX IF NOT EXISTS idx_meeting_participants_status
     ON meeting_participants (room_id, status);
 
--- ---------------------------------------------------------------------------
 -- One in-meeting chat message.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS meeting_messages (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     room_id UUID NOT NULL REFERENCES meeting_rooms (id)
@@ -132,9 +126,7 @@ CREATE INDEX IF NOT EXISTS idx_meeting_messages_room_id
 CREATE INDEX IF NOT EXISTS idx_meeting_messages_created_at
     ON meeting_messages (room_id, created_at);
 
--- ---------------------------------------------------------------------------
 -- One recording (metadata only; bytes live in the storage module).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS meeting_recordings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     room_id UUID NOT NULL REFERENCES meeting_rooms (id)

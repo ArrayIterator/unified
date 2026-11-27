@@ -9,9 +9,7 @@ use super::{events::*, card_validation::*, card_settings::*, limits::*, provider
 
 
 
-// ---------------------------------------------------------------------------
 // Stripe.
-// ---------------------------------------------------------------------------
 impl ProviderAdapter {
     /// Stripe charge / authorize. Stripe's API is form-encoded.
     /// `authorize` creates the PaymentIntent with manual capture.

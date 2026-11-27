@@ -4,7 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 import path from "node:path";
 
 // React track build. The app is served by the Rust server under the /react/
-// mount, so `base` must stay "/react/" — the server worker relies on it.
+// mount, so `base` must stay "/react/" - the server worker relies on it.
 // Build output goes to assets/react/dist/<theme>/ and IS committed
 // (releases ship it), unlike the Handlebars track which has no build
 // step at all.

@@ -30,9 +30,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One stored panel connection.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS panel_connections (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR NOT NULL,
@@ -55,9 +53,7 @@ CREATE INDEX IF NOT EXISTS idx_panel_connections_kind
 CREATE INDEX IF NOT EXISTS idx_panel_connections_enabled
     ON panel_connections (enabled);
 
--- ---------------------------------------------------------------------------
 -- One record imported from a panel, with its two-way sync state.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS panel_synced_records (
     connection_id UUID NOT NULL REFERENCES panel_connections (id) ON DELETE CASCADE ON UPDATE NO ACTION,
     collection VARCHAR NOT NULL CHECK (collection IN ('clients', 'products', 'services', 'domains', 'invoices', 'server_accounts')),

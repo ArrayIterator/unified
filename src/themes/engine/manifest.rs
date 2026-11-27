@@ -1,7 +1,6 @@
-// engine — manifest.
+// engine - manifest.
 // Theme identity: constants, metadata, manifest, embedded theme.
 //
-// Split from `src/themes/engine.rs`; moved verbatim, no behaviour changes.
 
 use super::*;
 use crate::themes::assets::resolve_asset_url;

@@ -24,10 +24,8 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Provider response parsing (shapes from provider documentation, NOT
-// live-verified — see the module header).
-// ---------------------------------------------------------------------------
+// live-verified - see the module header).
 
 fn text_field(value: &Value, field: &str) -> Option<String> {
     value
@@ -184,9 +182,7 @@ pub(crate) fn parse_abstract_response(body: &str) -> UnifiedResult<Vec<FetchedHo
     Ok(out)
 }
 
-// ---------------------------------------------------------------------------
 // Fetching: rate limits, retries, SSRF-safe client.
-// ---------------------------------------------------------------------------
 
 /// Minimum-interval wait for one fetch, given the last reserved
 /// request instant. A `last_request` in the future (reserved by a
@@ -254,7 +250,7 @@ async fn wait_for_rate_limit(state: &HolidaysState, provider: &HolidayProvider) 
 }
 
 /// Parse a `Retry-After` header value: seconds, or nothing (HTTP
-/// dates are not parsed — no httpdate crate — and fall back to the
+/// dates are not parsed - no httpdate crate - and fall back to the
 /// exponential backoff). Capped at MAX_RETRY_AFTER.
 fn parse_retry_after(value: &str) -> Option<Duration> {
     value
@@ -650,7 +646,7 @@ mod tests {
         let now = Instant::now();
         let gap = Duration::from_secs(2);
         // Reserved 5s in the future by a concurrent caller: wait
-        // until then, plus the gap — never zero.
+        // until then, plus the gap - never zero.
         assert_eq!(
             min_interval_wait(Some(now + Duration::from_secs(5)), now, gap),
             Duration::from_secs(7)

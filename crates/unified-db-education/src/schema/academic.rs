@@ -3,9 +3,7 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Academic system (migration 000094_academic).
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     academic_programs (id) {

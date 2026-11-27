@@ -53,9 +53,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One employee. Only the linked user id is stored here.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS hr_employees (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id VARCHAR NOT NULL,
@@ -84,9 +82,7 @@ CREATE INDEX IF NOT EXISTS idx_hr_employees_manager_id
 CREATE INDEX IF NOT EXISTS idx_hr_employees_status
     ON hr_employees (status);
 
--- ---------------------------------------------------------------------------
 -- One position (job title) with its salary band.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS hr_positions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title VARCHAR NOT NULL,
@@ -106,9 +102,7 @@ CREATE INDEX IF NOT EXISTS idx_hr_positions_department_id
 CREATE INDEX IF NOT EXISTS idx_hr_positions_status
     ON hr_positions (status);
 
--- ---------------------------------------------------------------------------
 -- One employment contract. Salary is monthly pay in `currency`.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS hr_contracts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     employee_id UUID NOT NULL REFERENCES hr_employees (id)
@@ -131,9 +125,7 @@ CREATE INDEX IF NOT EXISTS idx_hr_contracts_employee_id
 CREATE INDEX IF NOT EXISTS idx_hr_contracts_status
     ON hr_contracts (status);
 
--- ---------------------------------------------------------------------------
 -- One leave type (annual leave, sick leave, and so on).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS hr_leave_types (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR NOT NULL,
@@ -148,9 +140,7 @@ CREATE TABLE IF NOT EXISTS hr_leave_types (
 CREATE UNIQUE INDEX IF NOT EXISTS uq_hr_leave_types_code
     ON hr_leave_types (code);
 
--- ---------------------------------------------------------------------------
 -- One employee's balance for one leave type in one calendar year.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS hr_leave_balances (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     employee_id UUID NOT NULL REFERENCES hr_employees (id)
@@ -172,9 +162,7 @@ CREATE INDEX IF NOT EXISTS idx_hr_leave_balances_employee_id
 CREATE INDEX IF NOT EXISTS idx_hr_leave_balances_year
     ON hr_leave_balances (year);
 
--- ---------------------------------------------------------------------------
 -- One leave/vacation request with its approval workflow.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS hr_leave_requests (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     employee_id UUID NOT NULL REFERENCES hr_employees (id)
@@ -203,9 +191,7 @@ CREATE INDEX IF NOT EXISTS idx_hr_leave_requests_status
 CREATE INDEX IF NOT EXISTS idx_hr_leave_requests_start_date
     ON hr_leave_requests (start_date);
 
--- ---------------------------------------------------------------------------
 -- One day of attendance, fed by TimeTracker events or entered manually.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS hr_attendance_records (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     employee_id UUID NOT NULL REFERENCES hr_employees (id)
@@ -226,10 +212,8 @@ CREATE INDEX IF NOT EXISTS idx_hr_attendance_records_employee_id
 CREATE INDEX IF NOT EXISTS idx_hr_attendance_records_work_date
     ON hr_attendance_records (work_date);
 
--- ---------------------------------------------------------------------------
 -- One payroll run for one period (YYYY-MM). Finalizing only emits
 -- `hr.payroll_run_completed`; nothing here pays anyone.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS hr_payroll_runs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     period VARCHAR NOT NULL,
@@ -249,9 +233,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_hr_payroll_runs_period
 CREATE INDEX IF NOT EXISTS idx_hr_payroll_runs_status
     ON hr_payroll_runs (status);
 
--- ---------------------------------------------------------------------------
 -- One employee's line inside a payroll run.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS hr_payroll_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     payroll_run_id UUID NOT NULL REFERENCES hr_payroll_runs (id)
@@ -274,9 +256,7 @@ CREATE INDEX IF NOT EXISTS idx_hr_payroll_items_payroll_run_id
 CREATE INDEX IF NOT EXISTS idx_hr_payroll_items_employee_id
     ON hr_payroll_items (employee_id);
 
--- ---------------------------------------------------------------------------
 -- One performance-review cycle (for example "2026 H2").
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS hr_review_cycles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR NOT NULL,
@@ -292,9 +272,7 @@ CREATE TABLE IF NOT EXISTS hr_review_cycles (
 CREATE INDEX IF NOT EXISTS idx_hr_review_cycles_status
     ON hr_review_cycles (status);
 
--- ---------------------------------------------------------------------------
 -- One performance review: rating, goals, and reviewer notes.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS hr_reviews (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     cycle_id UUID NOT NULL REFERENCES hr_review_cycles (id)
@@ -320,9 +298,7 @@ CREATE INDEX IF NOT EXISTS idx_hr_reviews_reviewer_id
 CREATE INDEX IF NOT EXISTS idx_hr_reviews_status
     ON hr_reviews (status);
 
--- ---------------------------------------------------------------------------
 -- One onboarding or offboarding checklist for one employee.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS hr_checklists (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     employee_id UUID NOT NULL REFERENCES hr_employees (id)
@@ -343,9 +319,7 @@ CREATE INDEX IF NOT EXISTS idx_hr_checklists_kind
 CREATE INDEX IF NOT EXISTS idx_hr_checklists_status
     ON hr_checklists (status);
 
--- ---------------------------------------------------------------------------
 -- One task inside a checklist.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS hr_checklist_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     checklist_id UUID NOT NULL REFERENCES hr_checklists (id)
@@ -361,10 +335,8 @@ CREATE TABLE IF NOT EXISTS hr_checklist_items (
 CREATE INDEX IF NOT EXISTS idx_hr_checklist_items_checklist_id
     ON hr_checklist_items (checklist_id);
 
--- ---------------------------------------------------------------------------
--- One employee document. Metadata only — the file itself lives in
+-- One employee document. Metadata only - the file itself lives in
 -- Storage under `storage_file_id`; no file bytes are stored here.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS hr_documents (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     employee_id UUID NOT NULL REFERENCES hr_employees (id)

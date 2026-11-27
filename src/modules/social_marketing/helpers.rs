@@ -69,9 +69,7 @@ pub(crate) fn require_manage(ctx: &AppContext, role: &str) -> UnifiedResult<()> 
     require_permission(ctx, role, PERM_SOCIAL_MANAGE)
 }
 
-// ---------------------------------------------------------------------------
 // Tenant edge guard (C3 pilot 5, group E).
-// ---------------------------------------------------------------------------
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request
@@ -190,9 +188,7 @@ pub(crate) fn paginate<T: Serialize + Clone>(
     PageResult::new(page_items, total, &pagination)
 }
 
-// ---------------------------------------------------------------------------
 // Validation
-// ---------------------------------------------------------------------------
 
 /// Validate a provider kind string.
 pub(crate) fn validate_provider_kind(raw: &str) -> UnifiedResult<ProviderKind> {
@@ -302,7 +298,7 @@ pub(crate) fn validate_max_media_items(value: i64) -> UnifiedResult<i64> {
 
 /// Validate a post-type list: each entry is a short slug
 /// (letters, digits, underscores, hyphens), no repeats, at
-/// most 50 entries. The entries are data — no type name is
+/// most 50 entries. The entries are data - no type name is
 /// checked against a hard-coded list.
 pub(crate) fn validate_post_types(types: &[String]) -> UnifiedResult<Vec<String>> {
     if types.len() > 50 {
@@ -520,9 +516,7 @@ pub(crate) fn parse_date_filter(raw: &str, field: &str) -> UnifiedResult<DateTim
     parse_timestamp(raw, field)
 }
 
-// ---------------------------------------------------------------------------
 // Tenant-scoped loaders (cross-tenant reads as 404, never 403)
-// ---------------------------------------------------------------------------
 
 fn tenant_match(row_tenant_id: &str, tenant_id: &str, id: Uuid, what: &str) -> UnifiedResult<()> {
     if row_tenant_id != tenant_id {
@@ -622,9 +616,7 @@ pub(crate) fn load_metric(
     Ok(metric)
 }
 
-// ---------------------------------------------------------------------------
 // Audit
-// ---------------------------------------------------------------------------
 
 /// Append one audit row for a change. `before` / `after` are
 /// the serialized rows (or `None` for creates / deletes).

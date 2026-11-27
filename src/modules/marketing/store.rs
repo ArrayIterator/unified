@@ -1,4 +1,4 @@
-// Marketing Automation — In-memory state and its constructors.
+// Marketing Automation - In-memory state and its constructors.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -34,9 +34,7 @@ use super::handlers_audience::*;
 use super::hooks::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // State.
-// ---------------------------------------------------------------------------
 
 pub struct MarketingState {
     pub(crate) hooks: RwLock<Option<Arc<HookBus>>>,

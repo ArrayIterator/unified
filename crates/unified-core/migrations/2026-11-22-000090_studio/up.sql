@@ -1,7 +1,7 @@
 -- Studio module tables for the Unified Pentagonal Project
 -- (`src/modules/studio.rs`): metadata-driven user-side customizer.
 -- Custom fields, validation rules, saved list views, and form
--- layouts are metadata only — this module never generates code and
+-- layouts are metadata only - this module never generates code and
 -- never alters a table at runtime. Custom values live in the
 -- generic key-value table `studio_field_values` (record_type +
 -- record_id + field_key + typed JSON value), never as new columns.
@@ -40,10 +40,8 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- Record types: the admin-editable registry of record kinds a
 -- customization may attach to (for example `crm.lead`).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS studio_record_types (
     record_type TEXT PRIMARY KEY CHECK (char_length(record_type) BETWEEN 1 AND 128),
     module_id TEXT NOT NULL CHECK (char_length(module_id) BETWEEN 1 AND 64),
@@ -54,11 +52,9 @@ CREATE TABLE IF NOT EXISTS studio_record_types (
 );
 CREATE INDEX IF NOT EXISTS idx_studio_record_types_module ON studio_record_types (module_id);
 
--- ---------------------------------------------------------------------------
 -- System fields: the owning module's own fields for a record type.
 -- `hideable = false` (or `required = true`) means a layout may
 -- never hide the field.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS studio_system_fields (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     record_type TEXT NOT NULL REFERENCES studio_record_types (record_type) ON DELETE CASCADE,
@@ -73,11 +69,9 @@ CREATE TABLE IF NOT EXISTS studio_system_fields (
 );
 CREATE INDEX IF NOT EXISTS idx_studio_system_fields_record ON studio_system_fields (record_type);
 
--- ---------------------------------------------------------------------------
 -- Custom field definitions (versioned). Custom keys must start with
 -- the `x_` prefix (enforced by the module, not by the database:
 -- the prefix is a configurable default, not a schema constant).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS studio_field_definitions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id TEXT NOT NULL DEFAULT '',
@@ -100,11 +94,9 @@ CREATE TABLE IF NOT EXISTS studio_field_definitions (
 CREATE INDEX IF NOT EXISTS idx_studio_field_definitions_record ON studio_field_definitions (record_type, company_id, status);
 CREATE INDEX IF NOT EXISTS idx_studio_field_definitions_key ON studio_field_definitions (field_key);
 
--- ---------------------------------------------------------------------------
 -- Custom values: the generic key-value store. One row per
 -- (record, field, company scope); `value` is the typed JSON value
 -- and `value_type` records the field type it was validated against.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS studio_field_values (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id TEXT NOT NULL DEFAULT '',
@@ -122,11 +114,9 @@ CREATE TABLE IF NOT EXISTS studio_field_values (
 CREATE INDEX IF NOT EXISTS idx_studio_field_values_record ON studio_field_values (record_type, record_id);
 CREATE INDEX IF NOT EXISTS idx_studio_field_values_field ON studio_field_values (field_key);
 
--- ---------------------------------------------------------------------------
 -- Saved list views: per user or per company, private or shared.
 -- `scope` is `user` for private views and `company` for shared
 -- views; it drives which default a view clears.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS studio_list_views (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id TEXT NOT NULL CHECK (char_length(user_id) BETWEEN 1 AND 200),
@@ -147,11 +137,9 @@ CREATE TABLE IF NOT EXISTS studio_list_views (
 CREATE INDEX IF NOT EXISTS idx_studio_list_views_record ON studio_list_views (record_type, company_id, user_id);
 CREATE INDEX IF NOT EXISTS idx_studio_list_views_default ON studio_list_views (record_type, is_default);
 
--- ---------------------------------------------------------------------------
 -- Form layouts: field order and visibility per record type and
 -- company, stored as metadata sections. At most one default layout
 -- per (record_type, company_id).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS studio_form_layouts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id TEXT NOT NULL DEFAULT '',

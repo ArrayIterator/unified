@@ -1,4 +1,4 @@
-// Elearning — Configurable settings (admin-editable; defaults are defaults only).
+// Elearning - Configurable settings (admin-editable; defaults are defaults only).
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -20,9 +20,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Configurable settings (admin-editable; defaults are defaults only)
-// ---------------------------------------------------------------------------
 
 /// All behaviour-shaping lists and defaults of this module. An
 /// administrator edits these through `PUT /settings`; every

@@ -24,11 +24,9 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
-// Credential encryption (write-only storage) — same `v1.` format as
+// Credential encryption (write-only storage) - same `v1.` format as
 // ai.rs, copied so the two modules stay interoperable. See the module
 // header: HMAC keystream with an HMAC tag, NOT an AEAD cipher.
-// ---------------------------------------------------------------------------
 
 type HmacSha256 = Hmac<Sha256>;
 

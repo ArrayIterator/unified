@@ -13,12 +13,10 @@ use std::sync::Arc;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Caller authentication, mirroring the bi and supervision modules:
 // identity comes from the server-verified caller, and the
 // roles module answers `role.check` on the hook bus. Fails closed:
 // no answer means not allowed.
-// ---------------------------------------------------------------------------
 
 /// Caller identity: the server-verified caller.
 pub(crate) struct Caller {
@@ -214,9 +212,7 @@ pub(crate) async fn dns_check_handler(
     json::respond(result, debug)
 }
 
-// ---------------------------------------------------------------------------
 // Module definition.
-// ---------------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {

@@ -5,10 +5,8 @@ use chrono::{DateTime, Utc};
 
 use super::types::CalendarItem;
 
-// ---------------------------------------------------------------------------
-// iCalendar (RFC 5545, hand-built — no calendar crate in Cargo.toml).
+// iCalendar (RFC 5545, hand-built - no calendar crate in Cargo.toml).
 // Follows the manual building pattern from events.rs / appointments.rs.
-// ---------------------------------------------------------------------------
 
 /// Escape a TEXT value per RFC 5545 section 3.3.11: backslash,
 /// semicolon, comma, and newlines. Folding is applied at 75

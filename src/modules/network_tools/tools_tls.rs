@@ -15,9 +15,7 @@ use std::time::{Duration, Instant};
 use super::types::ToolResult;
 use super::validation::{clamp_connect_timeout, resolve_and_guard, validate_domain};
 
-// ---------------------------------------------------------------------------
 // SSL/TLS checker.
-// ---------------------------------------------------------------------------
 
 /// Accept-any verifier used ONLY by the inspection tool: the checker
 /// must report untrusted or expired chains, not refuse the handshake.

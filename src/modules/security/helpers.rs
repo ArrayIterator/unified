@@ -4,7 +4,6 @@ use unified_core::pagination::{PageResult, PaginationParams};
 use serde::Serialize;
 use serde_json::Value;
 
-// ---------------------------------------------------------------------------
 // Hardening HTTP surface
 //
 // Every handler below reads the shared `HardeningState` (the same
@@ -13,7 +12,6 @@ use serde_json::Value;
 // pagination parameters (`page`, `per_page`, `sort`, `order`,
 // `search`, plus exact-match filters) and return
 // `PageResult::to_json()` inside the standard success envelope.
-// ---------------------------------------------------------------------------
 
 /// Paginate an already-collected, already-sorted item list.
 pub(crate) fn paginate_items<T: Serialize + Clone>(

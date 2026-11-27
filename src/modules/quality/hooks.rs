@@ -11,10 +11,8 @@ use super::helpers::tenant_matches;
 use super::state::QualityState;
 use super::types::QualityPoint;
 
-// ---------------------------------------------------------------------------
-// ERP event listeners (events only — no direct calls into other
+// ERP event listeners (events only - no direct calls into other
 // modules, and no other module is called from here)
-// ---------------------------------------------------------------------------
 
 /// Points that match an incoming ERP event: active points whose
 /// scope is the event's scope and whose `target_ref` is either
@@ -52,7 +50,7 @@ pub(crate) fn matching_points(
 /// point (`point_id`), that point is used; otherwise every active
 /// point matching the scope and target gets a requested inspection.
 /// A missing field, an unknown point, or no matching point is
-/// skipped silently — an event must never fail the emitter.
+/// skipped silently - an event must never fail the emitter.
 pub(crate) fn answer_inspection_request(state: QualityState, ctx: &mut HookContext, scope: &str) {
     let target_ref = ctx
         .get("target_ref")
@@ -121,7 +119,7 @@ pub(crate) fn answer_inspection_request(state: QualityState, ctx: &mut HookConte
     }
 }
 
-/// Answer `quality.blocks.query` — the hook form of `GET /blocks`.
+/// Answer `quality.blocks.query` - the hook form of `GET /blocks`.
 /// Given `{"target_ref", "target_kind?"}` it answers with the
 /// blocking alerts covering that target, using the same rule as
 /// `list_blocks`: an alert blocks while `blocked` is true and its
@@ -129,7 +127,7 @@ pub(crate) fn answer_inspection_request(state: QualityState, ctx: &mut HookConte
 /// and added as a result row (`{"target_ref", "target_kind",
 /// "blocks", "blocked"}`), so owning modules can refuse to proceed
 /// with a blocked record. A query without a `target_ref` gets no
-/// answer — there is nothing to match against.
+/// answer - there is nothing to match against.
 pub(crate) fn on_blocks_query(state: QualityState, ctx: &mut HookContext) {
     let Some(target_ref) = ctx
         .get("target_ref")

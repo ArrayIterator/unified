@@ -29,9 +29,7 @@ use super::store::set_resolved_main_host;
 use super::store::settings;
 use super::types::ProductScope;
 
-// ---------------------------------------------------------------------------
-// Tenant resolution — the contract the tenant middleware depends on.
-// ---------------------------------------------------------------------------
+// Tenant resolution - the contract the tenant middleware depends on.
 
 /// Normalize a Host header value: strip any `:port`, lowercase,
 /// strip one trailing dot.
@@ -74,7 +72,7 @@ fn main_host(ctx: &AppContext, cfg: &SaasDomainsSettings) -> String {
 /// (hook handlers): the configured `main_host` setting, else the
 /// main host `resolve_host` resolved and persisted at startup (or
 /// on its first call), else `localhost`. This is the same single
-/// resolution `resolve_host` uses — the hook path never invents
+/// resolution `resolve_host` uses - the hook path never invents
 /// its own fallback chain, so an unset `main_host` with a real
 /// listen host can no longer resolve as a tenant.
 pub(crate) fn hook_main_host(cfg: &SaasDomainsSettings) -> String {

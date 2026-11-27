@@ -3,10 +3,8 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Holidays (migration 000104_holidays).
 // No FKs by design (see migration notes): no joinable!s.
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     holiday_providers (id) {

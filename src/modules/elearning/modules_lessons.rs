@@ -1,4 +1,4 @@
-// Elearning — Module and lesson handlers.
+// Elearning - Module and lesson handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -20,9 +20,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Module and lesson handlers
-// ---------------------------------------------------------------------------
 
 /// Content rules for a lesson type, read from settings: types in
 /// `video_lesson_types` need a storage reference, types in

@@ -1,4 +1,4 @@
-// Third-party VCS integrations — Business logic shared by handlers and hooks.
+// Third-party VCS integrations - Business logic shared by handlers and hooks.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -134,9 +134,7 @@ pub(crate) fn rate_limit_key(provider: Provider, host: Option<&str>) -> String {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Draft creation (shared by import, sync, and webhooks).
-// ---------------------------------------------------------------------------
 
 /// Create a draft version from a provider release. The draft is always
 /// `draft` status: nothing here publishes. Emits `vcs.release.imported`.
@@ -237,9 +235,7 @@ pub(crate) fn connection_view(state: &VcsState, id: Uuid) -> UnifiedResult<Repos
     find_connection(state, id)
 }
 
-// ---------------------------------------------------------------------------
 // Provider handlers.
-// ---------------------------------------------------------------------------
 
 pub(crate) fn provider_view(state: &VcsState, provider: Provider) -> ProviderView {
     let settings = state.provider_settings(provider);

@@ -14,9 +14,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 /// Caller identity: the server-verified caller (user id plus
 /// server-resolved role, both required for capability checks),
@@ -31,7 +29,7 @@ pub(crate) struct Caller {
 /// (see `unified_core::tenancy`): this function returns the tenancy
 /// `TenantContext` (tenant id as Uuid + schema name derived only
 /// by `tenancy::schema_name()`), and the Diesel persistence wiring
-/// — when it lands — takes the Uuid from here into
+/// - when it lands - takes the Uuid from here into
 /// `tenancy::with_tenant_connection`. Fail closed:
 /// `from_http_request` answers 401 when the request did not
 /// resolve to a tenant and 403 when the resolved tenant id is not
@@ -43,7 +41,7 @@ pub(crate) struct Caller {
 /// category, policy, and everything reached through a report)
 /// carries the resolved scope's `company_id`, stamped at
 /// creation and checked on every read. A caller-supplied
-/// `company_id` is never trusted on its own — it is only ever
+/// `company_id` is never trusted on its own - it is only ever
 /// passed as the `requested` argument to `tenant_scope`, which
 /// rejects a mismatch with 403.
 pub(crate) fn resolve_tenant(req: &HttpRequest) -> UnifiedResult<TenancyContext> {
@@ -51,7 +49,7 @@ pub(crate) fn resolve_tenant(req: &HttpRequest) -> UnifiedResult<TenancyContext>
 }
 
 /// Tenant scope for a tenant-row handler, resolved through the
-/// entitlements module's `TenantScope` — the same pattern that
+/// entitlements module's `TenantScope` - the same pattern that
 /// module uses (`entitlements/tenant.rs`: the tenant context is
 /// the only trusted tenant identity, a `requested` company that
 /// differs from it is a 403, and a context with no company id is
@@ -64,8 +62,8 @@ pub(crate) fn tenant_scope(req: &HttpRequest, requested: Option<String>) -> Unif
 }
 
 /// A row belongs to the resolved tenant only when its stored
-/// `company_id` equals the scope's company. Anything else —
-/// another tenant's row, or a row with no company at all — is
+/// `company_id` equals the scope's company. Anything else -
+/// another tenant's row, or a row with no company at all - is
 /// answered 404, never 403: the caller must not learn the row
 /// exists. Rows created before tenant stamping carry no company
 /// and are therefore unreachable through tenant-scoped
@@ -166,7 +164,7 @@ pub(crate) fn optional_text(value: &Option<String>, field: &str, max: usize) -> 
 }
 
 /// Validate a value against a settings list. The list is the live
-/// admin-configured one — never a constant in this file.
+/// admin-configured one - never a constant in this file.
 pub(crate) fn require_in_list(value: &str, field: &str, allowed: &[String]) -> UnifiedResult<String> {
     let checked = require_text(value, field, MAX_SLUG_LEN)?;
     if !allowed.iter().any(|item| item == &checked) {
@@ -245,7 +243,7 @@ pub(crate) fn opt_string(data: &Value, key: &str) -> Option<String> {
 /// `submitted -> approved` and `submitted -> rejected` are only
 /// ever performed by the approval-decision event listener, and
 /// `approved -> reimbursed` only by the reimbursement-paid event
-/// listener — no HTTP handler performs those moves.
+/// listener - no HTTP handler performs those moves.
 pub(crate) fn allowed_report_transitions(from: &str) -> &'static [&'static str] {
     match from {
         REPORT_DRAFT => &[REPORT_SUBMITTED],

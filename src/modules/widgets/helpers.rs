@@ -1,4 +1,4 @@
-// Widgets — caller, capability, and tenant helpers.
+// Widgets - caller, capability, and tenant helpers.
 //
 // Mirrors `saved_views::helpers` exactly (same fail-closed shapes):
 // the caller is the server-verified JWT identity (never a header),

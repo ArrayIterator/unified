@@ -1,4 +1,4 @@
-// Projects module — burndown, velocity, flow, cycle time, and critical path reports.
+// Projects module - burndown, velocity, flow, cycle time, and critical path reports.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use super::*;
@@ -10,9 +10,7 @@ use serde_json::{Value, json};
 use std::collections::HashSet;
 use std::sync::Arc;
 
-// ---------------------------------------------------------------------------
 // Reports
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn get_burndown_report(
     req: HttpRequest,

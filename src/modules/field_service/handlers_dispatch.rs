@@ -1,4 +1,4 @@
-// field_service module — Dispatch handlers.
+// field_service module - Dispatch handlers.
 //
 // Split from the former single-file module `src/modules/field_service.rs`.
 // The module root (`field_service.rs`) re-exports the public items, so the
@@ -26,14 +26,12 @@ use super::helpers::{
 use super::state::FieldServiceState;
 use super::types::{DispatchAssignment, WorkOrder, WorkOrderStatus};
 
-// ---------------------------------------------------------------------------
 // Dispatch handlers
-// ---------------------------------------------------------------------------
 
 /// One technician's board entry: their active jobs in dispatch
 /// order, their availability, and the ordering rule. The order is
-/// a heuristic — priority first, then due date, then creation
-/// time — and is documented as such in the response: it is not a
+/// a heuristic - priority first, then due date, then creation
+/// time - and is documented as such in the response: it is not a
 /// route optimiser and carries no travel times or distances.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct TechnicianBoard {

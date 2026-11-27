@@ -29,7 +29,7 @@ struct ExpiryAlert {
 
 /// Run the warranty / licence expiry check: every asset whose
 /// warranty (or, for software, licence) ends within the 30/14/7
-/// day windows — or has already expired — gets a
+/// day windows - or has already expired - gets a
 /// `notification.requested` to its owner (and its current assignee
 /// when assigned) plus an `assets.warranty.expiring` /
 /// `assets.license.expiring` event. Returns the alerts raised.

@@ -275,9 +275,7 @@ pub(crate) fn identity_from_extensions(req: &HttpRequest) -> Option<CallerIdenti
     req.extensions().get::<CallerIdentity>().cloned()
 }
 
-// ---------------------------------------------------------------------------
-// Layer 2 — per-handler guards (defence in depth over the middleware)
-// ---------------------------------------------------------------------------
+// Layer 2 - per-handler guards (defence in depth over the middleware)
 
 /// Resolve the caller for a handler: prefer the identity the
 /// middleware stored in the request extensions, otherwise
@@ -333,7 +331,7 @@ pub(crate) async fn require_capability(
 /// the effective (possibly impersonated) identity. Used by the
 /// view-as stop endpoint: while impersonating, the effective identity
 /// is the target user, who must never be able to end (or extend) the
-/// admin's session — only the admin can.
+/// admin's session - only the admin can.
 pub(crate) async fn require_real_capability(
     req: &HttpRequest,
     ctx: &AppContext,

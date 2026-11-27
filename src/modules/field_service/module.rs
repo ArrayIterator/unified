@@ -1,4 +1,4 @@
-// Field Service / Equipment Maintenance module — equipment
+// Field Service / Equipment Maintenance module - equipment
 // registry, recurring maintenance plans, work orders with a
 // validated status machine, technician dispatch, parts
 // consumption requests, time logging, customer sign-off, and
@@ -7,58 +7,58 @@
 // Routes live under `/api/v1/field-service`:
 //
 //   Equipment types (admin-editable definitions):
-//     GET/POST /equipment-types — list / create a type.
+//     GET/POST /equipment-types - list / create a type.
 //     GET/PATCH/DELETE /equipment-types/{id}.
 //   Equipment:
-//     GET/POST /equipment — list / register equipment.
+//     GET/POST /equipment - list / register equipment.
 //     GET/PATCH/DELETE /equipment/{id}.
-//     POST /equipment/{id}/report-failure — open a corrective work
+//     POST /equipment/{id}/report-failure - open a corrective work
 //          order for a failure and request an incident.
 //   Maintenance templates (admin-editable):
 //     GET/POST /maintenance-templates.
 //     GET/PATCH/DELETE /maintenance-templates/{id}.
-//     POST /maintenance-templates/{id}/apply — create a plan from
+//     POST /maintenance-templates/{id}/apply - create a plan from
 //          a template for one equipment item.
 //   Maintenance plans:
-//     GET/POST /plans — list / create a plan.
-//     GET  /plans/due — plans due within ?days (default 7).
-//     GET  /plans/overdue — overdue plans.
-//     POST /plans/check-due — run the due/overdue check now
+//     GET/POST /plans - list / create a plan.
+//     GET  /plans/due - plans due within ?days (default 7).
+//     GET  /plans/overdue - overdue plans.
+//     POST /plans/check-due - run the due/overdue check now
 //          (alerts via `notification.requested`).
 //     GET/PATCH/DELETE /plans/{id}.
-//     POST /plans/{id}/recompute — recompute the next-due date.
+//     POST /plans/{id}/recompute - recompute the next-due date.
 //   Work orders:
-//     GET/POST /work-orders — list / create a work order.
+//     GET/POST /work-orders - list / create a work order.
 //     GET/PATCH/DELETE /work-orders/{id}.
-//     POST /work-orders/{id}/status — validated status transition.
-//     POST /work-orders/{id}/assign — assign a technician.
-//     POST /work-orders/{id}/cancel — cancel the work order.
-//     GET/POST /work-orders/{id}/items — checklist items.
+//     POST /work-orders/{id}/status - validated status transition.
+//     POST /work-orders/{id}/assign - assign a technician.
+//     POST /work-orders/{id}/cancel - cancel the work order.
+//     GET/POST /work-orders/{id}/items - checklist items.
 //     PATCH/DELETE /work-orders/{id}/items/{item_id}.
 //     POST /work-orders/{id}/items/{item_id}/complete.
-//     GET/POST /work-orders/{id}/parts — required / used parts.
+//     GET/POST /work-orders/{id}/parts - required / used parts.
 //     PATCH/DELETE /work-orders/{id}/parts/{part_id}.
-//     POST /work-orders/{id}/parts/{part_id}/consume — request
+//     POST /work-orders/{id}/parts/{part_id}/consume - request
 //          stock consumption (never decrements stock directly).
-//     POST /work-orders/{id}/time-log — log time through the
+//     POST /work-orders/{id}/time-log - log time through the
 //          timetracker module (event request).
-//     POST /work-orders/{id}/raise-incident — request an incident
+//     POST /work-orders/{id}/raise-incident - request an incident
 //          for a failure found on the job.
-//     POST /work-orders/{id}/sign-off — customer sign-off.
-//     GET  /work-orders/{id}/sign-off — the sign-off record.
-//     GET  /work-orders/{id}/report — completion report data.
+//     POST /work-orders/{id}/sign-off - customer sign-off.
+//     GET  /work-orders/{id}/sign-off - the sign-off record.
+//     GET  /work-orders/{id}/report - completion report data.
 //   Dispatch:
-//     GET  /dispatch/board — per-technician ordered job lists.
-//     GET  /dispatch/assignments — list dispatch assignments.
-//     POST /dispatch/assignments/{id}/release — release a technician.
-//     POST /dispatch/assignments/{id}/complete — mark done.
+//     GET  /dispatch/board - per-technician ordered job lists.
+//     GET  /dispatch/assignments - list dispatch assignments.
+//     POST /dispatch/assignments/{id}/release - release a technician.
+//     POST /dispatch/assignments/{id}/complete - mark done.
 //   Definitions and settings:
-//     GET  /definitions — every admin-editable value registry.
-//     POST /definitions/{kind} — add a value to a registry.
-//     DELETE /definitions/{kind}/{value} — remove a custom value.
-//     GET/PATCH /settings — module settings.
+//     GET  /definitions - every admin-editable value registry.
+//     POST /definitions/{kind} - add a value to a registry.
+//     DELETE /definitions/{kind}/{value} - remove a custom value.
+//     GET/PATCH /settings - module settings.
 //
-// HONESTY — READ THIS FIRST. What is real in this module:
+// HONESTY - READ THIS FIRST. What is real in this module:
 // in-memory equipment, plan, work-order, checklist, part,
 // dispatch-assignment, and sign-off management; the validated
 // work-order status machine; interval-based next-due computation
@@ -66,33 +66,33 @@
 // by the equipment meter reading); overdue detection; a dispatch
 // board that orders jobs by priority and due date; customer
 // sign-off records. What is NOT built here: asset records
-// themselves — equipment only stores an `asset_id` reference and
+// themselves - equipment only stores an `asset_id` reference and
 // never duplicates an asset row (warranty data is a local copy
 // refreshed from `assets.updated` events when that payload
-// carries a warranty date); user records — technicians are user
+// carries a warranty date); user records - technicians are user
 // id references and this module cannot verify that a given user
 // holds a technician capability (the roles module answers
 // `role.check` for roles, not for users, so the check happens
 // when the technician acts, through `can_act_on_order`); stock
-// decrements — consuming a part only emits
+// decrements - consuming a part only emits
 // `assets.stock.adjust_requested` and records the part as
 // `consumption_requested`, because the assets module has no
 // listener for that event yet (the integrator must add one, or
-// stock stays unchanged); time entries — logging time only emits
+// stock stays unchanged); time entries - logging time only emits
 // `timetracker.time.log_requested` because the timetracker module
 // exposes no log-request listener yet (the answer is inspected
 // and reported honestly as `handler_answered`); incident
-// creation — raising an incident only emits
+// creation - raising an incident only emits
 // `incidents.create_requested` because the incidents module
 // listens to no such event yet (again reported as
-// `handler_answered`); survey delivery — a follow-up survey is
+// `handler_answered`); survey delivery - a follow-up survey is
 // only sent when the caller supplies an existing surveys
 // distribution id, through `surveys.send_requested`, which the
 // surveys module does listen to; without one the follow-up is
 // recorded as pending and the event `field_service.survey.requested`
 // is emitted for a future listener. The dispatch board ordering
 // is a priority / due-date heuristic, documented on the endpoint
-// itself — it is not a route optimiser and never claims travel
+// itself - it is not a route optimiser and never claims travel
 // times or distances. Actual email / push delivery belongs to
 // the notifications module (this module only emits
 // `notification.requested`).
@@ -145,13 +145,13 @@
 //     `field_service.dispatch.completed`
 //   - `field_service.signoff.created`
 //   - `field_service.survey.requested`
-//   - `assets.stock.adjust_requested` (part consumption — no
+//   - `assets.stock.adjust_requested` (part consumption - no
 //     assets listener yet, see the honesty note)
-//   - `assets.maintenance.completed` (preventive completion — no
+//   - `assets.maintenance.completed` (preventive completion - no
 //     assets listener yet, see the honesty note)
-//   - `timetracker.time.log_requested` (time logging — no
+//   - `timetracker.time.log_requested` (time logging - no
 //     timetracker listener yet, see the honesty note)
-//   - `incidents.create_requested` (failure / incident raising —
+//   - `incidents.create_requested` (failure / incident raising -
 //     no incidents listener yet, see the honesty note)
 //   - `surveys.send_requested` (post-job satisfaction survey,
 //     only with a caller-supplied distribution id; the surveys
@@ -161,10 +161,10 @@
 //     shape: `{"kind", "user_id", "title", "body",
 //     "module": "field_service", "link", "priority", "channels"}`.
 // Events this module listens to:
-//   - `assets.updated` — refreshes the local warranty copy of
+//   - `assets.updated` - refreshes the local warranty copy of
 //     equipment rows that reference the asset, when the payload
 //     carries `asset_id` and `warranty_end`.
-//   - `field_service.plans.check_requested` — the event the
+//   - `field_service.plans.check_requested` - the event the
 //     scheduler emits when a `field_service.plans.check` job
 //     fires; runs the due/overdue check and emits
 //     `notification.requested` for every plan inside the alert
@@ -172,7 +172,7 @@
 //     yet, so today the check only runs on demand or through
 //     this hook.
 
-// field_service module — Module definition and registration.
+// field_service module - Module definition and registration.
 //
 // Split from the former single-file module `src/modules/field_service.rs`.
 // The module root (`field_service.rs`) re-exports the public items, so the
@@ -209,9 +209,7 @@ use super::handlers_dispatch::{complete_dispatch_assignment, dispatch_board, lis
 use super::handlers_definitions::{add_definition, delete_definition, get_settings, list_definitions, update_settings};
 use super::ai_capabilities::AI_CAPABILITIES;
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 /// The Field Service / Equipment Maintenance module.
 pub struct FieldServiceModule {

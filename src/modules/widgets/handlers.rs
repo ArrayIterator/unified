@@ -1,4 +1,4 @@
-// Widgets — HTTP handlers: list types, get / save / reset layouts.
+// Widgets - HTTP handlers: list types, get / save / reset layouts.
 //
 // Auth follows the documents / saved_views shape: the caller is the
 // server-verified JWT identity and every route asks the roles module
@@ -79,7 +79,7 @@ pub(crate) async fn list_widget_types(
 }
 
 /// `GET /api/v1/widgets/layouts/{context}`: the caller's layout for
-/// a zone — the user's own row, then the shared default row for the
+/// a zone - the user's own row, then the shared default row for the
 /// zone, then the built-in default. Requires `widgets.view`.
 pub(crate) async fn get_layout(
     ctx: web::Data<Arc<AppContext>>,
@@ -100,7 +100,7 @@ pub(crate) async fn get_layout(
 }
 
 /// `PUT /api/v1/widgets/layouts/{context}`: save a layout (pin /
-/// add / remove / reorder — the body array order IS the layout
+/// add / remove / reorder - the body array order IS the layout
 /// order). By default the caller's OWN layout is saved; with
 /// `"shared": true` the shared (team) default for the zone is saved
 /// instead. Requires `widgets.manage`.

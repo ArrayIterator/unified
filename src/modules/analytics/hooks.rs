@@ -9,9 +9,7 @@ use super::{events::*, helpers::*, types::*, views::*, inputs::*, state::*, repo
 
 
 
-// ---------------------------------------------------------------------------
 // Hook listeners: ingest events from other modules into local records.
-// ---------------------------------------------------------------------------
 pub(crate) fn record_sale_from_order(state: &Arc<AnalyticsState>, order: &Value, kind: &str) {
     let Some(order_id) = order.get("id").and_then(|value| value.as_str()) else {
         return;

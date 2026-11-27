@@ -24,7 +24,6 @@ use uuid::Uuid;
 use super::{providers::*, jwt::*, state::*, handlers_providers::*, login::*, tokens::*, totp::*, google::*, module::*};
 use unified_core::error::UnifiedResult;
 
-// ---------------------------------------------------------------------------
 // Two-factor recovery codes
 //
 // A set of 10 single-use codes per user, offered as a TOTP alternative
@@ -40,7 +39,6 @@ use unified_core::error::UnifiedResult;
 // admin), so a read-only check can never burn a single-use code and
 // can never be used to probe another user's codes. Regenerating a
 // set invalidates every previously issued code for that user.
-// ---------------------------------------------------------------------------
 
 /// How many recovery codes one generated set contains.
 pub const RECOVERY_CODE_COUNT: usize = 10;

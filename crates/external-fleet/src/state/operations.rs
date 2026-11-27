@@ -1,4 +1,4 @@
-//! Fleet state (split from state.rs; moved verbatim).
+//! Fleet state.
 
 use super::*;
 
@@ -232,7 +232,7 @@ impl FleetState {
 
 
     /// Complete a maintenance item: record the cost, mark it
-    /// completed, and — when next due values are given — create the
+    /// completed, and - when next due values are given - create the
     /// follow-up pending item that resets the schedule.
     pub fn complete_maintenance(
         &self,

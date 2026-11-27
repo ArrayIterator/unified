@@ -2,9 +2,7 @@
 //!
 //! Part of the `saas_domains` module split; see `src/modules/saas_domains.rs`.
 
-// ---------------------------------------------------------------------------
 // Event names.
-// ---------------------------------------------------------------------------
 
 pub const EVENT_TENANT_RESOLVE_REQUESTED: &str = "tenant.resolve_requested";
 

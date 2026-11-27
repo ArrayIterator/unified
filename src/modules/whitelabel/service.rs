@@ -5,9 +5,7 @@
 use super::constants::{DOMAIN_NONE};
 use super::types::{AllowanceMode, BrandingProfile, GlobalDefaults, ResolvedBranding};
 
-// ---------------------------------------------------------------------------
 // Pure resolution functions (no I/O, no locks: unit-testable)
-// ---------------------------------------------------------------------------
 
 /// Effective allowance from the global default and the per-company
 /// override mode. `inherit` (or no override) follows the global
@@ -23,7 +21,7 @@ pub fn effective_allowance(global_allow: bool, company_mode: Option<AllowanceMod
 /// Resolve branding from the three levels, field by field: tenant
 /// override, then company default, then the global defaults record.
 /// When `allowed` is false the resolved branding is the global
-/// defaults record in full — tenant and company overrides are
+/// defaults record in full - tenant and company overrides are
 /// ignored entirely, so Unified branding stays everywhere.
 pub fn resolve_branding(
     company_id: &str,

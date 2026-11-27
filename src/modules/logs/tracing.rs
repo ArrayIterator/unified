@@ -1,4 +1,4 @@
-// logs — tracing.
+// logs - tracing.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -28,9 +28,7 @@ use super::handlers::*;
 use super::hooks::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Tracing subscriber bridge
-// ---------------------------------------------------------------------------
 
 /// Collects the fields of one tracing event as debug strings.
 pub(crate) struct FieldVisitor {

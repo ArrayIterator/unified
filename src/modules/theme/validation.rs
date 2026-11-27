@@ -10,9 +10,7 @@ use super::*;
 use crate::themes::engine::{REQUIRED_TEMPLATES, ThemeAssets, ThemeManifest};
 use crate::themes::validity::validate_theme_directory;
 
-// ---------------------------------------------------------------------------
 // Validation
-// ---------------------------------------------------------------------------
 
 /// The theme-id pattern, compiled once and reused: compiling it on
 /// every `validate_theme_id` call paid a full regex compilation per
@@ -132,7 +130,7 @@ pub(crate) fn screenshot_present(dir: &Path) -> bool {
 
 pub(crate) fn template_files(dir: &Path, manifest: &ThemeManifest) -> Vec<String> {
     // Declared templates plus the required set, as `templates/<stem>.hbs`
-    // paths — the engine's shape, not the old `.html` layout mapping.
+    // paths - the engine's shape, not the old `.html` layout mapping.
     let mut names: Vec<String> = manifest.templates.clone();
     for required in REQUIRED_TEMPLATES {
         if !names.iter().any(|name| name == required) {

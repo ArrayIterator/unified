@@ -38,9 +38,7 @@ use super::types::DomainAlias;
 use super::validation::normalize_domain;
 use super::validation::validate_target;
 
-// ---------------------------------------------------------------------------
 // Alias handlers.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn create_alias(
     ctx: web::Data<Arc<AppContext>>,
@@ -287,8 +285,8 @@ pub(crate) async fn suspend_alias(
 /// Resume a suspended alias. Suspension is not terminal: only an
 /// admin may resume (the tenant cannot undo its own suspension or
 /// an admin's). The alias returns to the status its verification
-/// state implies — `verified` when verification completed before
-/// suspension, `pending_verification` otherwise — mirroring the
+/// state implies - `verified` when verification completed before
+/// suspension, `pending_verification` otherwise - mirroring the
 /// suspend event with a dedicated resumed event.
 pub(crate) async fn resume_alias(
     ctx: web::Data<Arc<AppContext>>,

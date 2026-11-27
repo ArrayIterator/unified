@@ -9,9 +9,7 @@ use super::{constants::*, vocabulary::*, events::*, settings::*, records::*, aut
 
 
 #[derive(Debug, Clone)]
-// ---------------------------------------------------------------------------
 // State.
-// ---------------------------------------------------------------------------
 /// Runtime state. The DashMap stores are the runtime authority for
 /// this round (see the module header); the migration tables are the
 /// durable target the integrator wires in. The maps are Arc-backed

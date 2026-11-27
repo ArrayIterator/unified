@@ -15,9 +15,7 @@ use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 use super::{constants::*, types::*, state::*, helpers::*, module::*, handlers_jobs::*, handlers_applicants::*, handlers_evaluations::*, handlers_offers::*};
 
-// ---------------------------------------------------------------------------
 // Interview handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_interviews(
     ctx: web::Data<Arc<AppContext>>,

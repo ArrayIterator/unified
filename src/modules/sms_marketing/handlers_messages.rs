@@ -106,7 +106,7 @@ pub(crate) async fn get_message(
 
 /// Retry one message (manager): failed, undelivered, and
 /// rate-limited queued rows may be retried. The opt-out
-/// check and the rate-limit check run again — a number that
+/// check and the rate-limit check run again - a number that
 /// opted out since the first attempt is skipped instead of
 /// sent, and a retry over the limit stays queued. The
 /// stored rendered body is reused, so a template edit after

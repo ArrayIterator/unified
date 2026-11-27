@@ -50,9 +50,7 @@ pub(crate) fn ticket_status_to_inbox(status: &str) -> &'static str {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Queue handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) fn priority_rank(priority: &str) -> u8 {
     match priority {

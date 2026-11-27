@@ -1,4 +1,4 @@
-// affiliates module — Hook listeners.
+// affiliates module - Hook listeners.
 //
 // Split from the former single-file module `src/modules/affiliates.rs`.
 // The module root (`affiliates.rs`) re-exports the public items, so the
@@ -23,9 +23,7 @@ use uuid::Uuid;
 use super::types::{AffiliateStatus, AffiliatesState, CommissionStatus};
 use super::helpers::{created, major_to_minor, record_conversion, resolve_referral};
 
-// ---------------------------------------------------------------------------
 // Hook listeners
-// ---------------------------------------------------------------------------
 
 /// `user.created` -> signup conversion. Only when the payload
 /// carries a referral signal (see `resolve_referral`); a plain

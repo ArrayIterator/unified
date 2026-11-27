@@ -1,4 +1,4 @@
-// Tax module — pure tax computation.
+// Tax module - pure tax computation.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use super::*;
@@ -23,12 +23,10 @@ use std::time::Duration;
 use url::Url;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Pure computation
-// ---------------------------------------------------------------------------
 
 /// Round a rate to 4 decimal places. Rates stay `f64`; money no
-/// longer flows through here — amounts are integer minor units
+/// longer flows through here - amounts are integer minor units
 /// (see `major_to_minor` / `minor_to_major`), so the old
 /// money-to-4-decimals rounding is gone by design: sub-cent
 /// precision is dropped at the boundary, half away from zero,
@@ -48,7 +46,7 @@ pub(crate) fn is_zero_decimal_currency(currency: &str) -> bool {
 }
 
 /// Convert a major-unit amount to integer minor units, rounding
-/// half away from zero — the same rounding the old `round_tax`
+/// half away from zero - the same rounding the old `round_tax`
 /// money math applied in cents.
 pub(crate) fn major_to_minor(amount_major: f64, currency: &str) -> i64 {
     if is_zero_decimal_currency(currency) {
@@ -90,9 +88,9 @@ pub(crate) fn div_ratio_to_minor(amount_minor: i64, divisor: f64) -> i64 {
 /// are integer minor units; rates stay `f64` fractions.
 ///
 /// This function is public, so it must be safe to call directly:
-/// it filters the rules itself — disabled rules never contribute,
+/// it filters the rules itself - disabled rules never contribute,
 /// and a rule whose `threshold_amount` the amount does not meet
-/// never contributes — and it runs the rules in `sort_order` (then
+/// never contributes - and it runs the rules in `sort_order` (then
 /// creation) order so compound taxes stack deterministically.
 /// Callers normally pass `applicable_rules` output, which is
 /// already filtered and sorted; filtering again here is what makes
@@ -102,8 +100,8 @@ pub(crate) fn div_ratio_to_minor(amount_minor: i64, divisor: f64) -> i64 {
 /// exclusive rule is computed on the amount plus earlier exclusive
 /// taxes. Inclusive rules extract the tax already inside the amount:
 /// `tax = gross - gross / (1 + rate)`. A compound flag on an
-/// inclusive rule has no effect — the line reports
-/// `compound_applied: false` — because extracting twice from the
+/// inclusive rule has no effect - the line reports
+/// `compound_applied: false` - because extracting twice from the
 /// same gross amount would double-count the tax.
 pub fn compute_tax_breakdown(amount: i64, rules: &[TaxRule], on: NaiveDate) -> TaxBreakdown {
     let mut rules: Vec<&TaxRule> = rules

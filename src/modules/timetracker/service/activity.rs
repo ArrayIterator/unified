@@ -1,7 +1,6 @@
-// service — activity.
+// service - activity.
 // Activity and usage recording, screenshots, windows.
 //
-// Split from `src/modules/timetracker/service.rs`; moved verbatim, no behaviour changes.
 
 use super::super::*;
 use super::*;
@@ -166,9 +165,7 @@ pub(crate) async fn purge_expired_screenshots(
     (removed, failed)
 }
 
-// ---------------------------------------------------------------------------
 // Handlers: activity, app usage, screenshots
-// ---------------------------------------------------------------------------
 
 /// Record one activity sample for `user_id`. Shared by the
 /// dashboard endpoint and the agent endpoint. The buyer's activity
@@ -239,7 +236,7 @@ pub(crate) fn record_activity(
 }
 
 /// Record one app / website usage interval for `user_id`. The
-/// buyer's activity level gates it (`Full` only — `Minimal`
+/// buyer's activity level gates it (`Full` only - `Minimal`
 /// collects scores, not applications), then the buyer's
 /// allowlist / blocklist is enforced on the application name and
 /// the website domain.

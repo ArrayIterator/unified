@@ -20,9 +20,7 @@ use super::constants::EVENT_ROLE_CHECK;
 use super::helpers::{hex_encode, signatures_equal};
 use super::types::{Campaign, NewsletterList, Subscriber, TrackingEvent};
 
-// ---------------------------------------------------------------------------
 // In-memory stores (same pattern as the other modules in this tree).
-// ---------------------------------------------------------------------------
 
 pub(crate) static LISTS: OnceLock<DashMap<String, NewsletterList>> = OnceLock::new();
 pub(crate) static SUBSCRIBERS: OnceLock<DashMap<String, Subscriber>> = OnceLock::new();
@@ -61,14 +59,12 @@ pub(crate) fn seen_tracking_store() -> &'static DashMap<String, ()> {
     SEEN_TRACKING.get_or_init(DashMap::new)
 }
 
-// ---------------------------------------------------------------------------
 // Caller identity and capability checks (N2).
 //
 // Same pattern as the backup and workflows modules: the caller
 // identity comes from the `X-User-Id` and `X-Role` headers, and the
 // capability is checked through the `role.check` hook, failing closed
 // when no handler answers.
-// ---------------------------------------------------------------------------
 
 /// Caller identity: the server-verified caller (user id plus
 /// server-resolved role, both required for capability checks).
@@ -127,9 +123,7 @@ pub(crate) fn authorize(
     require_permission(state, &found.role, permission)?;
     Ok(found)
 }
-// ---------------------------------------------------------------------------
 // Tenant edge guard (C3 pilot 4, gate-only).
-// ---------------------------------------------------------------------------
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request
@@ -173,9 +167,7 @@ pub(crate) fn caller_company(
     }
 }
 
-// ---------------------------------------------------------------------------
 // State.
-// ---------------------------------------------------------------------------
 
 pub struct NewsletterState {
     pub(crate) hooks: RwLock<Option<Arc<HookBus>>>,

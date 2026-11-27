@@ -3,11 +3,9 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Incidents & on-call (migration 000053_incidents). The
 // self-reference `on_call_schedules.overrides_entry_id` gets no
 // `joinable!` (a table cannot join to itself in that form).
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     incidents (id) {

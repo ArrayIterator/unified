@@ -30,10 +30,8 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One subscribed webhook endpoint. The signing secret is never
 -- serialized.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS webhook_endpoints (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR NOT NULL,
@@ -55,9 +53,7 @@ CREATE TABLE IF NOT EXISTS webhook_endpoints (
 CREATE INDEX IF NOT EXISTS idx_webhook_endpoints_active
     ON webhook_endpoints (active);
 
--- ---------------------------------------------------------------------------
 -- One webhook delivery attempt record.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS webhook_deliveries (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     endpoint_id UUID NOT NULL REFERENCES webhook_endpoints (id) ON DELETE CASCADE ON UPDATE NO ACTION,
@@ -83,10 +79,8 @@ CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_status
 CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_event
     ON webhook_deliveries (event);
 
--- ---------------------------------------------------------------------------
 -- One import job: a validated (and optionally staged) file import
 -- for one entity.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS import_jobs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     entity VARCHAR NOT NULL,
@@ -106,9 +100,7 @@ CREATE INDEX IF NOT EXISTS idx_import_jobs_entity
 CREATE INDEX IF NOT EXISTS idx_import_jobs_status
     ON import_jobs (status);
 
--- ---------------------------------------------------------------------------
 -- One export job: a generated export file for one entity.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS export_jobs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     entity VARCHAR NOT NULL,

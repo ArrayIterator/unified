@@ -1,4 +1,4 @@
-//! Logistics module — shipments, fleet, warehouses, delivery — Rate table + quote handlers.
+//! Logistics module - shipments, fleet, warehouses, delivery - Rate table + quote handlers.
 //!
 //! Split from `src/modules/logistics.rs`; behaviour unchanged.
 
@@ -367,7 +367,7 @@ pub(super) async fn quote_shipping(
         // Distance: caller-supplied wins; otherwise ask the
         // Calculator module through the distance query (see the
         // distance note in the module header). No distance is ever
-        // guessed — an unanswered query fails the quote.
+        // guessed - an unanswered query fails the quote.
         let mut distance_km = input.distance_km;
         let mut distance_source = "caller";
         if let Some(km) = distance_km {

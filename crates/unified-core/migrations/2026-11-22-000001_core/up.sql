@@ -4,9 +4,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- Roles: static default roles plus dynamically created roles.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS roles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR NOT NULL,
@@ -18,9 +16,7 @@ CREATE TABLE IF NOT EXISTS roles (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- ---------------------------------------------------------------------------
 -- Companies: multi-company / multi-site basis (immutable site basis).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS companies (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR NOT NULL,
@@ -30,9 +26,7 @@ CREATE TABLE IF NOT EXISTS companies (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- ---------------------------------------------------------------------------
 -- Users.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR NOT NULL UNIQUE,
@@ -49,9 +43,7 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE INDEX IF NOT EXISTS idx_users_company_id ON users (company_id);
 CREATE INDEX IF NOT EXISTS idx_users_is_active ON users (is_active);
 
--- ---------------------------------------------------------------------------
 -- User / role assignments (many-to-many).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS user_roles (
     user_id UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
     role_id UUID NOT NULL REFERENCES roles (id) ON DELETE CASCADE,
@@ -61,9 +53,7 @@ CREATE TABLE IF NOT EXISTS user_roles (
 
 CREATE INDEX IF NOT EXISTS idx_user_roles_role_id ON user_roles (role_id);
 
--- ---------------------------------------------------------------------------
 -- Company sites: each company may own several sites.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS company_sites (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id UUID NOT NULL REFERENCES companies (id) ON DELETE CASCADE,
@@ -77,9 +67,7 @@ CREATE TABLE IF NOT EXISTS company_sites (
 
 CREATE INDEX IF NOT EXISTS idx_company_sites_company_id ON company_sites (company_id);
 
--- ---------------------------------------------------------------------------
 -- Domains, linked to a company and optionally to one of its sites.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS domains (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR NOT NULL UNIQUE,
@@ -96,10 +84,8 @@ CREATE INDEX IF NOT EXISTS idx_domains_company_id ON domains (company_id);
 CREATE INDEX IF NOT EXISTS idx_domains_site_id ON domains (site_id);
 CREATE INDEX IF NOT EXISTS idx_domains_ssl_status ON domains (ssl_status);
 
--- ---------------------------------------------------------------------------
 -- Geo overrides: settings-defined IP range -> country mappings that win
 -- over the GeoLite database reading.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS geo_overrides (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     cidr VARCHAR NOT NULL UNIQUE,
@@ -116,9 +102,7 @@ CREATE TABLE IF NOT EXISTS geo_overrides (
 CREATE INDEX IF NOT EXISTS idx_geo_overrides_is_active ON geo_overrides (is_active);
 CREATE INDEX IF NOT EXISTS idx_geo_overrides_country_code ON geo_overrides (country_code);
 
--- ---------------------------------------------------------------------------
 -- Licenses and their activations.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS licenses (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     license_key VARCHAR NOT NULL UNIQUE,
@@ -148,10 +132,8 @@ CREATE TABLE IF NOT EXISTS license_activations (
 
 CREATE INDEX IF NOT EXISTS idx_license_activations_license_id ON license_activations (license_id);
 
--- ---------------------------------------------------------------------------
 -- Seed the static default roles. Idempotent: re-running the migration
 -- keeps existing roles untouched.
--- ---------------------------------------------------------------------------
 INSERT INTO roles (name, slug, description, is_system, permissions) VALUES
     ('Administrator', 'admin', 'Full access to every part of the system.', TRUE,
      '{"users.manage": true, "users.view": true, "roles.manage": true, "companies.manage": true, "domains.manage": true, "licenses.manage": true, "content.create": true, "content.edit": true, "content.publish": true, "content.delete": true, "media.manage": true, "settings.manage": true}'::jsonb),

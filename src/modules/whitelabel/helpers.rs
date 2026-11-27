@@ -12,9 +12,7 @@ use serde_json::{json, Value};
 
 use super::constants::{MAX_COMPANY_ID_LEN, MAX_TENANT_ID_LEN};
 
-// ---------------------------------------------------------------------------
 // Caller identity + capability checks (portals / ai module shape)
-// ---------------------------------------------------------------------------
 
 pub(crate) struct Caller {
     pub(crate) actor: String,

@@ -1,4 +1,4 @@
-//! Documents state (split from state.rs; moved verbatim).
+//! Documents state.
 
 use super::*;
 
@@ -419,7 +419,7 @@ impl DocumentsState {
 
     /// Remove a session and its parts, unless the session already
     /// finished. Aborting a `completed` session (or one mid-
-    /// completion, or one `received` — its document is already
+    /// completion, or one `received` - its document is already
     /// created and a finalize job is pending) is a conflict: the
     /// document is already finalized from it, so there is nothing
     /// left to abort.

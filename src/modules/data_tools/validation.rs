@@ -1,4 +1,4 @@
-// data_tools — Validation helpers and small pure utilities.
+// data_tools - Validation helpers and small pure utilities.
 //
 // Module-local, mirroring the documents module's shape: the caller
 // is identified by the verified `X-User-Id` / `X-Role` headers and
@@ -6,7 +6,7 @@
 // The check fails closed when the roles module does not answer.
 // Data Tools rules are platform control-plane objects (like the
 // Scheduler's jobs), so the gate is caller identity plus
-// capability, not per-tenant scoping — no `require_tenant` call.
+// capability, not per-tenant scoping - no `require_tenant` call.
 // Tenant-scoped rules are follow-up work.
 
 use super::*;
@@ -19,9 +19,7 @@ use unified_core::error::{UnifiedError, UnifiedResult};
 use unified_core::pagination::{PageResult, PaginationParams};
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 pub(crate) fn new_id() -> String {
     Uuid::new_v4().to_string()

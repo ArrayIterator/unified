@@ -1,4 +1,4 @@
-// Panel integrations module — hosting / billing panel connectors.
+// Panel integrations module - hosting / billing panel connectors.
 //
 // One hookable panel registry with a common adapter interface, so new
 // panels plug in through the registry instead of scattered code. Every

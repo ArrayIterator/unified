@@ -1,4 +1,4 @@
-//! Documents state (split from state.rs; moved verbatim).
+//! Documents state.
 
 use super::*;
 
@@ -70,7 +70,7 @@ impl DocumentsState {
     /// scanner (fail closed). A scanner that does not stream
     /// (`streams_scan` is false) gets an `Error` verdict when the
     /// file is larger than `max_chunk_ram_bytes` instead of loading
-    /// it — the cap is never exceeded on the scanner's behalf.
+    /// it - the cap is never exceeded on the scanner's behalf.
     fn run_scanners_file(&self, path: &Path, size: u64) -> Option<(ScanVerdict, Vec<String>)> {
         let cap = self.settings().max_chunk_ram_bytes;
         self.run_scanners_with(|scanner| {
@@ -97,7 +97,7 @@ impl DocumentsState {
     /// recorded status, threat label, and the name(s) of the
     /// scanner(s) that produced the verdict (`None` when no scanner
     /// is configured and the verdict is `Skipped`). The scanner is
-    /// recorded by name — never the literal `"registered"` — so the
+    /// recorded by name - never the literal `"registered"` - so the
     /// audit trail shows which scanner actually ran.
     fn record_scan(
         &self,

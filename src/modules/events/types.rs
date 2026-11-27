@@ -1,4 +1,4 @@
-// Events Manager — Public record, request, and view types.
+// Events Manager - Public record, request, and view types.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -27,9 +27,7 @@ use super::handlers_public::*;
 use super::hooks::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// Lifecycle of an event: `draft` -> `published` -> `ongoing` ->
 /// `completed`, with `cancelled` reachable from draft / published /
@@ -274,7 +272,7 @@ impl RegistrationStatus {
 /// through the store; `payment_reference` is the provider
 /// transaction id recorded by the `payment.captured` listener.
 /// `check_in_code` is the code the attendee presents at the door
-/// (the code value only — QR image rendering belongs to a client
+/// (the code value only - QR image rendering belongs to a client
 /// or a dedicated rendering service, not this module).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Registration {
@@ -371,9 +369,7 @@ pub struct EventReminder {
     pub updated_at: DateTime<Utc>,
 }
 
-// ---------------------------------------------------------------------------
 // Request bodies
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct CreateEventRequest {

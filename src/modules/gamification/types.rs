@@ -1,4 +1,4 @@
-// Gamification — Types.
+// Gamification - Types.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -16,9 +16,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// One rule of the rules engine: which action earns how many
 /// points. `company_id` None means the rule applies to every
@@ -91,7 +89,7 @@ pub struct GamificationBadge {
 }
 
 /// One audited badge award: who earned which badge, when, and
-/// why. One row per (badge, user) at most — re-earning the same
+/// why. One row per (badge, user) at most - re-earning the same
 /// badge is a no-op.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GamificationAward {
@@ -122,7 +120,7 @@ pub struct GamificationSeason {
 
 /// One reward a staff member can redeem points for. `active`
 /// rewards can be requested; `points_cost` is deducted once, on
-/// approval — never on request.
+/// approval - never on request.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GamificationReward {
     pub id: Uuid,

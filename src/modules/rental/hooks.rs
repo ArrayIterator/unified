@@ -10,9 +10,7 @@ use uuid::Uuid;
 
 /// Marker for anonymized rows is `deleted-user` (see types.rs).
 
-// ---------------------------------------------------------------------------
 // User deletion (users module owns the event)
-// ---------------------------------------------------------------------------
 
 /// `user.deleted` carries `user_id` (falling back to `id`, the
 /// same shape the forums module reads). The user's orders are
@@ -74,9 +72,7 @@ pub(crate) fn on_user_deleted(state: RentalState, ctx: &mut HookContext) {
     }));
 }
 
-// ---------------------------------------------------------------------------
 // Payments (payments module owns the events)
-// ---------------------------------------------------------------------------
 
 /// Find the order a payment event refers to. Payment payloads
 /// carry the order id under `rental_order_id` (falling back to
@@ -153,9 +149,7 @@ pub(crate) fn on_payment_refunded(state: RentalState, ctx: &mut HookContext) {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Logistics delivery (logistics module owns the event)
-// ---------------------------------------------------------------------------
 
 /// `logistics.shipment.delivered` records the shipment id on the
 /// referenced rental order so the hand-out / return flow can be
@@ -186,9 +180,7 @@ pub(crate) fn on_shipment_delivered(state: RentalState, ctx: &mut HookContext) {
     ctx.add_result(json!({ "rental": "shipment_delivered", "order_id": order_id.to_string(), "shipment_id": shipment_id }));
 }
 
-// ---------------------------------------------------------------------------
 // Contract signing (contracts module owns the event)
-// ---------------------------------------------------------------------------
 
 /// `contracts.signed` marks the rental agreement signed on every
 /// order linked to that contract id. The payload carries the

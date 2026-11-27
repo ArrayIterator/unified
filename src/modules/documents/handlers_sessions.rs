@@ -1,4 +1,4 @@
-// documents — HTTP handlers: resumable upload sessions.
+// documents - HTTP handlers: resumable upload sessions.
 
 use super::*;
 use super::validation::push_multipart_text;
@@ -16,9 +16,7 @@ use serde_json::{Value, json};
 use std::path::Path;
 use std::sync::Arc;
 
-// ---------------------------------------------------------------------------
-// Handlers — chunked / resumable upload sessions
-// ---------------------------------------------------------------------------
+// Handlers - chunked / resumable upload sessions
 
 fn session_status(session: &UploadSession, parts: &DashMap<u32, UploadPart>) -> UploadSession {
     let mut received: Vec<u32> = parts.iter().map(|entry| *entry.key()).collect();
@@ -418,7 +416,7 @@ pub(crate) async fn upload_part(
 }
 
 /// Assemble the parts in order, store the object, scan it, and
-/// create the document (or a new version) — WITHOUT hashing the
+/// create the document (or a new version) - WITHOUT hashing the
 /// whole file. LAZY FINALIZE: the upload returns as soon as all
 /// parts are received; the whole-file SHA-256 runs afterwards in
 /// the finalize worker (see `state::finalize`). The session moves

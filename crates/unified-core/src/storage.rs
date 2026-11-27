@@ -6,11 +6,11 @@
 // `StorageRegistry` and never touch provider-specific code.
 //
 // Providers:
-//   - `LocalProvider` — files under a configured base directory.
-//   - `S3Provider` — AWS S3, SigV4-signed requests over reqwest.
-//   - `R2Provider` — Cloudflare R2, S3-compatible, reuses the S3
+//   - `LocalProvider` - files under a configured base directory.
+//   - `S3Provider` - AWS S3, SigV4-signed requests over reqwest.
+//   - `R2Provider` - Cloudflare R2, S3-compatible, reuses the S3
 //     signing code with a custom endpoint.
-//   - `GoogleDriveProvider` — Google Drive (`drive.file` scope) with
+//   - `GoogleDriveProvider` - Google Drive (`drive.file` scope) with
 //     an OAuth2 access token and a refresh-token flow.
 //
 // Security rules applied by every provider:
@@ -62,9 +62,7 @@ pub use self::s3::*;
 pub use self::sftp::*;
 pub use self::validation::*;
 
-// ---------------------------------------------------------------------------
 // Provider contract.
-// ---------------------------------------------------------------------------
 
 /// The single storage contract used by backup, assets serving, and the
 /// downloader.
@@ -202,9 +200,7 @@ pub trait StorageProvider: Send + Sync {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Registry.
-// ---------------------------------------------------------------------------
 
 /// Named providers, shared through `AppContext`. Registration is
 /// interior-mutable so modules can add targets at runtime; re-registering

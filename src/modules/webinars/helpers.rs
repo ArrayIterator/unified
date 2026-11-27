@@ -12,9 +12,7 @@ use uuid::Uuid;
 use super::state::*;
 use super::types::*;
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 pub(crate) fn actor_id(req: &HttpRequest) -> UnifiedResult<String> {
     Ok(unified_core::caller::require_caller(req)?.user_id)
@@ -673,9 +671,7 @@ mod tests {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Tenant edge guard (C3 pilot 4, group C).
-// ---------------------------------------------------------------------------
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request

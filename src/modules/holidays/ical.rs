@@ -24,9 +24,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // iCal parsing (hand-rolled: no ical crate is available).
-// ---------------------------------------------------------------------------
 
 /// One parsed VEVENT: the date the holiday falls on and its name.
 #[derive(Debug, Clone)]
@@ -71,7 +69,7 @@ fn ics_unescape(value: &str) -> String {
 }
 
 /// Parse an iCal date value: `YYYYMMDD`, `YYYYMMDDTHHMMSSZ`, or
-/// `YYYYMMDDTHHMMSS` (a floating local time — the date part is what
+/// `YYYYMMDDTHHMMSS` (a floating local time - the date part is what
 /// a holiday needs). Returns None when the first 8 digits are not a
 /// valid calendar date.
 fn parse_ics_date(value: &str) -> Option<NaiveDate> {

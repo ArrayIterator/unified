@@ -12,9 +12,7 @@ use super::{constants::*, types::*, inputs::*, helpers::*, store::*, validation:
 
 
 
-// ---------------------------------------------------------------------------
 // Reports
-// ---------------------------------------------------------------------------
 pub(crate) async fn report_work_orders_by_status(
     ctx: web::Data<Arc<AppContext>>,
     state: web::Data<ManufacturingState>,

@@ -27,9 +27,7 @@ use super::types::PanelProduct;
 use super::types::PanelService;
 use super::types::validate_panel_endpoint;
 
-// ---------------------------------------------------------------------------
 // Plesk adapter.
-// ---------------------------------------------------------------------------
 
 /// Plesk JSON API (`<endpoint>/api/v2/<resource>`, header
 /// `X-API-Key: <key>`).

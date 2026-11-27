@@ -3,9 +3,7 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Calculator Enterprise (2026-11-22-000100_calculator).
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     calculator_saved_calculations (id) {

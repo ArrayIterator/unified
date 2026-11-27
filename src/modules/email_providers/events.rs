@@ -6,9 +6,7 @@ use super::{
 };
 use std::time::Duration;
 
-// ---------------------------------------------------------------------------
 // Events.
-// ---------------------------------------------------------------------------
 pub const EVENT_EMAIL_SEND_REQUESTED: &str = "email.send_requested";
 
 pub const EVENT_EMAIL_SENT: &str = "email.sent";
@@ -26,11 +24,11 @@ pub const EVENT_EMAIL_PROVIDER_WEBHOOK_VERIFY: &str = "email_provider.webhook_ve
 /// Emitted when the catalog builds a provider's settings-field list:
 /// other modules may add, remove, or replace fields. Payload
 /// `{ kind, fields }`; see `settings_fields_for_catalog` in
-/// `handlers.rs` for the result contract (task 350, addition A).
+/// `handlers.rs` for the result contract (addition A).
 pub const EVENT_EMAIL_PROVIDER_SETTINGS_FIELDS: &str = "email_provider.settings_fields";
 
 /// Emitted when the catalog lists providers: other modules may
-/// contribute provider definitions (task 354). Payload `{}`; an
+/// contribute provider definitions. Payload `{}`; an
 /// answer is one definition object or an array of them, each with
 /// at least `family: "email"`, a valid kebab-case `id`, a non-empty
 /// `display_name`, and an `adapter_kind`. See `list_catalog` in
@@ -54,9 +52,7 @@ pub const EVENT_MAIL_SEND_REQUESTED: &str = "mail.send_requested";
 
 pub const EVENT_TEMPLATE_RENDER_REQUESTED: &str = "template.render_requested";
 
-// ---------------------------------------------------------------------------
 // Limits.
-// ---------------------------------------------------------------------------
 pub(crate) const DEFAULT_TIMEOUT_SECS: u64 = 30;
 
 pub(crate) const DEFAULT_CONNECT_TIMEOUT_SECS: u64 = 10;

@@ -16,7 +16,7 @@ use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 
 use super::*;
-// Asset & Inventory module — hardware / software inventory,
+// Asset & Inventory module - hardware / software inventory,
 // assignment to users, warranty and licence expiry alerts,
 // depreciation through the Calculator module, consumable stock
 // levels, audited stock adjustments, and stock-take audits.
@@ -24,36 +24,36 @@ use super::*;
 // Routes live under `/api/v1/assets`:
 //
 //   Assets:
-//     GET/POST / — list assets / create an asset.
+//     GET/POST / - list assets / create an asset.
 //     GET/PATCH/DELETE /{id}.
-//     POST /{id}/assign — assign to a user (append-only history).
-//     POST /{id}/return — return an assigned asset.
-//     POST /{id}/retire — retire an asset.
-//     POST /{id}/dispose — dispose of an asset.
+//     POST /{id}/assign - assign to a user (append-only history).
+//     POST /{id}/return - return an assigned asset.
+//     POST /{id}/retire - retire an asset.
+//     POST /{id}/dispose - dispose of an asset.
 //     POST /{id}/send-for-repair, /{id}/return-from-repair.
-//     GET  /{id}/assignments — assignment history (never overwritten).
-//     GET  /{id}/depreciation — depreciation schedule / status.
-//     POST /{id}/depreciation/compute — ask the Calculator module
+//     GET  /{id}/assignments - assignment history (never overwritten).
+//     GET  /{id}/depreciation - depreciation schedule / status.
+//     POST /{id}/depreciation/compute - ask the Calculator module
 //          for a depreciation schedule (see the honesty note).
 //   Warranty / licence expiry:
-//     GET  /warranty/expiring?days=30 — assets whose warranty or
+//     GET  /warranty/expiring?days=30 - assets whose warranty or
 //          software licence ends within the window.
-//     POST /warranty/check — run the expiry check now (alerts via
+//     POST /warranty/check - run the expiry check now (alerts via
 //          `notification.requested`, job via `scheduler.enqueue`).
 //   Consumable stock:
-//     GET/POST /stock — list stock items / create a stock item.
+//     GET/POST /stock - list stock items / create a stock item.
 //     GET/PATCH /stock/{stock_id}.
-//     POST /stock/{stock_id}/adjust — audited quantity change
+//     POST /stock/{stock_id}/adjust - audited quantity change
 //          (reason required; low-stock alert on crossing).
-//     GET  /stock/{stock_id}/adjustments — adjustment history.
+//     GET  /stock/{stock_id}/adjustments - adjustment history.
 //   Stock takes:
-//     GET/POST /stock-takes — list / start a stock-take.
+//     GET/POST /stock-takes - list / start a stock-take.
 //     GET  /stock-takes/{id}.
-//     POST /stock-takes/{id}/lines — add a count line.
-//     PATCH /stock-takes/{id}/lines/{line_id} — record the count.
-//     POST /stock-takes/{id}/close — close with a discrepancy report.
+//     POST /stock-takes/{id}/lines - add a count line.
+//     PATCH /stock-takes/{id}/lines/{line_id} - record the count.
+//     POST /stock-takes/{id}/close - close with a discrepancy report.
 //
-// HONESTY — READ THIS FIRST. What is real in this module:
+// HONESTY - READ THIS FIRST. What is real in this module:
 // in-memory asset, assignment, stock, adjustment, stock-take, and
 // stock-take-line management; append-only assignment history (a
 // return closes the active assignment row, it never deletes or
@@ -63,7 +63,7 @@ use super::*;
 // expiry windows computed from stored dates with alerts emitted as
 // `notification.requested` to the asset owner and, when assigned,
 // the current assignee. What is NOT built here: the depreciation
-// math itself — this module never computes a depreciation figure.
+// math itself - this module never computes a depreciation figure.
 // It emits `calculator.depreciation_requested` and stores the
 // schedule the Calculator module returns; when the Calculator
 // module is not enabled, or no handler answers, the asset records
@@ -74,12 +74,12 @@ use super::*;
 // `calculator/hooks.rs::on_depreciation_requested`), so create /
 // update / compute with a depreciation method stores the schedule
 // instead of staying `pending`. Assets still holds no HTTP client
-// to the Calculator, so there is no fallback call from here — the
+// to the Calculator, so there is no fallback call from here - the
 // `pending` fallback above covers the Calculator-disabled case.
 // Actual email /
 // push delivery belongs to the notifications module (this module
 // only emits `notification.requested`); no payment, procurement,
-// or vendor order is created here — `vendor` is a plain text
+// or vendor order is created here - `vendor` is a plain text
 // reference to the vendor record kept by the procurement side,
 // and no procurement module is consulted. Warranty alerts are
 // checked on demand (`POST /warranty/check`) and through the
@@ -125,12 +125,12 @@ use super::*;
 //     `"schedule"` array (one entry per period with at least
 //     `period`, `depreciation`, and `book_value`) or an `"error"`.
 // Events this module listens to:
-//   - `assets.warranty.check_requested` — the event the scheduler
+//   - `assets.warranty.check_requested` - the event the scheduler
 //     emits when an `assets.warranty.check` job fires, following
 //     its naming rule (`backup.run` -> `backup.run_requested`);
 //     runs the expiry check and emits `notification.requested`
 //     for every asset inside the alert windows.
-//   - `manufacturing.stock.requested` — answered with per-product
+//   - `manufacturing.stock.requested` - answered with per-product
 //     levels (`{"stock": {product_id: {available, reserved,
 //     unit}}}`) for the products this module holds a stock row
 //     for. Products with no stock row are omitted, never
@@ -141,25 +141,23 @@ use super::*;
 //     `reserved` is always 0 (this module holds no reservations)
 //     and `unit` is null (stock rows carry no unit).
 //   - `assets.stock.decrement_requested` /
-//     `assets.stock.increment_requested` — POS sales and refunds
+//     `assets.stock.increment_requested` - POS sales and refunds
 //     and manufacturing consumption move stock by a positive
 //     `quantity`; the change is recorded as an audited adjustment
 //     (same shape as the HTTP adjust) and answered with
 //     `{"applied", "stock_id", "quantity_after"}`. A decrement
 //     that would take stock below zero is refused (`applied:
-//     false`, reason `insufficient_stock`) — stock is never
+//     false`, reason `insufficient_stock`) - stock is never
 //     driven negative by a hook.
-//   - `assets.stock.adjust_requested` — field-service part
+//   - `assets.stock.adjust_requested` - field-service part
 //     consumption moves stock by a signed `delta`; same audited
 //     recording and answer shape as above. A request naming a
 //     stock row that does not exist is answered `applied: false`
 //     with reason `stock_not_found`; no stock row is ever created
-//     from a hook — creation stays an admin HTTP action.
+//     from a hook - creation stays an admin HTTP action.
 
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 /// The Asset & Inventory module.
 pub struct AssetsModule {

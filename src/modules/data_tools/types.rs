@@ -1,4 +1,4 @@
-// data_tools — Types: rules, runs, scan reports, and the minimal
+// data_tools - Types: rules, runs, scan reports, and the minimal
 // document share record.
 //
 // Retention lives in `cleanup_rules` (migration 000125) as data; the
@@ -144,7 +144,7 @@ pub struct CleanupRun {
 /// Minimal document share row (migration 000125). Signed download
 /// URLs are stateless HMAC today and no sharing feature exists yet;
 /// Data Tools owns this table until the Documents module grows real
-/// sharing. The cleaner deletes only the share row — never the
+/// sharing. The cleaner deletes only the share row - never the
 /// document, never an audit event.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DocumentShareRecord {

@@ -1,4 +1,4 @@
-// Pos module — module definition and registration.
+// Pos module - module definition and registration.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use unified_core::context::AppContext;
@@ -19,9 +19,7 @@ use std::sync::{
 use uuid::Uuid;
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 /// The Point of Sale module.
 pub struct PosModule {
@@ -193,7 +191,7 @@ impl Module for PosModule {
             RouteInfo { method: "GET", path: "/api/v1/pos/receipts", owner: "pos", description: "List receipts (paginated, filter by register_id, cashier_id).", auth: unified_core::auth::RouteAuth::Authenticated},
             RouteInfo { method: "GET", path: "/api/v1/pos/receipts/{sale_id}", owner: "pos", description: "Get the receipt data of a completed sale.", auth: unified_core::auth::RouteAuth::Authenticated},
             RouteInfo { method: "GET", path: "/api/v1/pos/receipts/{sale_id}/print", owner: "pos", description: "Get the structured printable receipt lines for a completed sale.", auth: unified_core::auth::RouteAuth::Authenticated},
-            RouteInfo { method: "GET", path: "/api/v1/pos/products/search", owner: "pos", description: "Search the catalogue by text, barcode, or SKU; currently reports honestly that lookup is unavailable — no catalogue handler is registered for pos.product.search_requested yet (pending catalogue integration).", auth: unified_core::auth::RouteAuth::Authenticated},
+            RouteInfo { method: "GET", path: "/api/v1/pos/products/search", owner: "pos", description: "Search the catalogue by text, barcode, or SKU; currently reports honestly that lookup is unavailable - no catalogue handler is registered for pos.product.search_requested yet (pending catalogue integration).", auth: unified_core::auth::RouteAuth::Authenticated},
             RouteInfo { method: "GET", path: "/api/v1/pos/payment-methods", owner: "pos", description: "List the configured payment methods (paginated, filter by active).", auth: unified_core::auth::RouteAuth::Authenticated},
             RouteInfo { method: "POST", path: "/api/v1/pos/payment-methods", owner: "pos", description: "Add a payment method definition (admin).", auth: unified_core::auth::RouteAuth::Authenticated},
             RouteInfo { method: "PATCH", path: "/api/v1/pos/payment-methods/{id}", owner: "pos", description: "Update a payment method definition (admin).", auth: unified_core::auth::RouteAuth::Authenticated},

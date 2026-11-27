@@ -1,4 +1,4 @@
-// Frontend module — public pages: home, sign-in, registration,
+// Frontend module - public pages: home, sign-in, registration,
 // forgot-password, reset-password, and sign-out.
 //
 // The dashboards module owns the authenticated `/dashboard` and

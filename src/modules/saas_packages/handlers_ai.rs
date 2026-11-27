@@ -20,9 +20,7 @@ use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 use super::{constants::*, types::*, state::*, seed::*, auth::*, helpers::*, provisioning::*, handlers_packages::*, handlers_purchases::*, events::*, module::*};
 
-// ---------------------------------------------------------------------------
 // HTTP handlers -- AI and settings.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn ai_recommend_package(
     ctx: web::Data<Arc<AppContext>>,

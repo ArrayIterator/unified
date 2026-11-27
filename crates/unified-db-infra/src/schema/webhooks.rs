@@ -3,9 +3,7 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Webhooks, import, and export (2026-11-22-000018_webhooks_import_export).
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     webhook_endpoints (id) {

@@ -1,4 +1,4 @@
-// OKR / Goals — Public record, request, and view types.
+// OKR / Goals - Public record, request, and view types.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -63,7 +63,7 @@ pub struct OkrCycle {
 
 /// One objective, at company, team, or personal level. A parent
 /// objective links the alignment tree; `final_score` is set only
-/// when the cycle closes (mean key-result progress, 0.0–1.0).
+/// when the cycle closes (mean key-result progress, 0.0-1.0).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OkrObjective {
     pub id: Uuid,
@@ -85,7 +85,7 @@ pub struct OkrObjective {
 /// One key result: a target value with a unit, a start value, and
 /// a current value. Progress is always computed as
 /// (current - start) / (target - start); `current_value` is moved
-/// by linked-task completion or by a reasoned manual override —
+/// by linked-task completion or by a reasoned manual override -
 /// never by a plain hand-typed update.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OkrKeyResult {
@@ -134,7 +134,7 @@ pub struct OkrLink {
 
 /// Objective view with computed progress and status, as returned
 /// by the list / get endpoints. `progress` is the mean key-result
-/// progress (0.0–1.0, or null when the objective has no key
+/// progress (0.0-1.0, or null when the objective has no key
 /// results); `expected_progress` is the share of the cycle elapsed;
 /// `status` is `on_track`, `at_risk`, or `off_track` (or
 /// `not_started` before the cycle starts, `closed` after it
@@ -159,9 +159,7 @@ pub struct KeyResultView {
     pub completed_task_count: usize,
 }
 
-// ---------------------------------------------------------------------------
 // Request bodies
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct CreateCycleRequest {

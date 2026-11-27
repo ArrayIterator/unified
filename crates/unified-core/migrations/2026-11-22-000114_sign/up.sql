@@ -1,4 +1,4 @@
--- Sign module (`src/modules/sign/`): core e-signature —
+-- Sign module (`src/modules/sign/`): core e-signature -
 -- envelopes (signing requests) over multiple documents,
 -- signers with hashed signing tokens, signature capture with
 -- tamper evidence, reusable templates, data-driven reminder
@@ -30,7 +30,7 @@
 --     never persisted. A blank `token_hash` means no live token
 --     (draft, signed, declined, or revoked).
 --   - Signature bytes are never stored: `sign_signers.signature`
---     holds only hashes — the SHA-256 of the signature bytes
+--     holds only hashes - the SHA-256 of the signature bytes
 --     (drawn strokes, rendered typed name, or uploaded image),
 --     the SHA-256 of the document as the signer saw it, and
 --     hashes of the IP and user agent. The raw values never reach
@@ -69,7 +69,6 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- Envelopes: one signing request. `document_ids` references
 -- documents-module documents by id only; `document_hashes` holds
 -- the SHA-256 of each document as recorded at send time, aligned
@@ -77,7 +76,6 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- `sequential` or `parallel`. `template_id` records the template
 -- the envelope was built from, when there is one.
 -- `certificate_hash` is set when the envelope completes.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS sign_envelopes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -103,15 +101,13 @@ CREATE INDEX IF NOT EXISTS idx_sign_envelopes_tenant_status ON sign_envelopes (t
 CREATE INDEX IF NOT EXISTS idx_sign_envelopes_tenant_template ON sign_envelopes (tenant_id, template_id) WHERE template_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_sign_envelopes_certificate ON sign_envelopes (certificate_hash) WHERE certificate_hash IS NOT NULL;
 
--- ---------------------------------------------------------------------------
 -- Signers: one signer on an envelope. `token_hash` is the SHA-256
 -- of the current signing token (never the raw token);
 -- `token_expires_at` bounds it. `signature` is the capture
 -- evidence as JSON: `method`, `signature_hash`,
 -- `document_hash`, `typed_name`, `ip_hash`,
--- `user_agent_hash`, and `signed_at` — hashes only, never raw
+-- `user_agent_hash`, and `signed_at` - hashes only, never raw
 -- signature bytes or raw IP / user-agent values.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS sign_signers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -140,12 +136,10 @@ CREATE INDEX IF NOT EXISTS idx_sign_signers_envelope_order ON sign_signers (enve
 CREATE INDEX IF NOT EXISTS idx_sign_signers_tenant_status ON sign_signers (tenant_id, status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_sign_signers_token_hash ON sign_signers (token_hash) WHERE token_hash <> '';
 
--- ---------------------------------------------------------------------------
 -- Templates: one reusable signing template. `signer_roles` is the
 -- ordered list of signer roles (each with optional default name /
 -- email) and `fields` the template fields, both as JSON: they are
 -- data, and an envelope built from the template snapshots them.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS sign_templates (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -164,7 +158,6 @@ CREATE TABLE IF NOT EXISTS sign_templates (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_sign_templates_tenant_name ON sign_templates (tenant_id, name);
 CREATE INDEX IF NOT EXISTS idx_sign_templates_tenant_created ON sign_templates (tenant_id, created_at DESC);
 
--- ---------------------------------------------------------------------------
 -- Audit trail: one row per signing event (created, sent, viewed,
 -- signed, declined, resent, reminded, updated, cancelled,
 -- voided, expired, completed, signer added / updated / removed).
@@ -172,7 +165,6 @@ CREATE INDEX IF NOT EXISTS idx_sign_templates_tenant_created ON sign_templates (
 -- `prev_hash|id|envelope_id|action|actor|created_at|detail`; the
 -- first entry of an envelope chains from the genesis hash (64
 -- zeroes).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS sign_audit_entries (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -188,14 +180,12 @@ CREATE TABLE IF NOT EXISTS sign_audit_entries (
 CREATE INDEX IF NOT EXISTS idx_sign_audit_tenant_envelope ON sign_audit_entries (tenant_id, envelope_id, created_at ASC);
 CREATE INDEX IF NOT EXISTS idx_sign_audit_tenant_action ON sign_audit_entries (tenant_id, action, created_at DESC);
 
--- ---------------------------------------------------------------------------
 -- Certificates: one completion certificate per completed
 -- envelope. `certificate_hash` is the SHA-256 of the envelope
 -- id, document hashes, signer evidence, and completion time;
 -- `audit_head_hash` is the hash of the last audit entry, so the
 -- certificate is bound to the trail. `signers` is the signer
 -- evidence as JSON.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS sign_certificates (
     certificate_hash TEXT PRIMARY KEY CHECK (char_length(certificate_hash) = 64),
     envelope_id UUID NOT NULL,
@@ -212,13 +202,11 @@ CREATE TABLE IF NOT EXISTS sign_certificates (
 CREATE INDEX IF NOT EXISTS idx_sign_certificates_envelope ON sign_certificates (envelope_id);
 CREATE INDEX IF NOT EXISTS idx_sign_certificates_tenant ON sign_certificates (tenant_id, completed_at DESC);
 
--- ---------------------------------------------------------------------------
 -- Per-tenant sign settings. `signature_types` names the capture
 -- methods the tenant allows; `provider` names the signing
 -- provider integration to use, with its configuration in
 -- `provider_settings`. `default_reminder_schedule` is the
 -- schedule envelopes inherit when the caller sets none.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS sign_settings (
     tenant_id TEXT PRIMARY KEY CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
     signature_types JSONB NOT NULL DEFAULT '["drawn", "typed", "uploaded"]'::jsonb,

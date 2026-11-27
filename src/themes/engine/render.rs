@@ -1,7 +1,6 @@
-// engine — render.
+// engine - render.
 // Template rendering.
 //
-// Split from `src/themes/engine.rs`; moved verbatim, no behaviour changes.
 
 use super::manifest::validate_template_name;
 use super::*;
@@ -179,7 +178,7 @@ impl ThemeEngine {
 
 /// Reject a disk theme template or partial larger than
 /// `MAX_TEMPLATE_SIZE`. An unreadable file size does not fail the
-/// check — the read itself reports that error next.
+/// check - the read itself reports that error next.
 pub(crate) fn check_template_size(path: &Path, theme_id: &str, name: &str) -> UnifiedResult<()> {
     if let Ok(metadata) = std::fs::metadata(path) {
         if metadata.len() > MAX_TEMPLATE_SIZE {

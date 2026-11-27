@@ -18,9 +18,7 @@ use uuid::Uuid;
 use super::*;
 use super::helpers::{minor_to_major};
 
-// ---------------------------------------------------------------------------
 // Handlers: payroll
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_payroll_runs(
     ctx: web::Data<Arc<AppContext>>,
@@ -227,8 +225,8 @@ pub(crate) async fn compute_payroll_run(
                 // No active contract: the employee is left out, and
                 // any item from an earlier compute is removed below
                 // so it cannot disagree with the totals. They are
-                // listed as skipped either way — not only when a
-                // stale item happened to exist — so the skipped list
+                // listed as skipped either way - not only when a
+                // stale item happened to exist - so the skipped list
                 // accounts for every employee left out of the run.
                 skipped.push(no_active_contract_skip(&employee.id));
                 continue;

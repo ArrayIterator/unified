@@ -10,14 +10,12 @@ use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Human Resource Management (2026-11-22-000037_hr). Money fields are
 // `PgNumeric` (NUMERIC(19,4) in SQL); leave days are `PgNumeric`
 // (NUMERIC(10,2) in SQL). Money structs carry no serde derives
-// (PgNumeric has none) — the notes' snippets show Serialize /
+// (PgNumeric has none) - the notes' snippets show Serialize /
 // Deserialize on money structs; those derives are dropped here per
 // the repo money convention.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = hr_employees)]

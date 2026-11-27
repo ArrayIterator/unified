@@ -12,9 +12,7 @@ use super::hooks::*;
 use super::store::*;
 use super::types::*;
 
-// ---------------------------------------------------------------------------
 // Backend selection (pure functions, unit-tested below).
-// ---------------------------------------------------------------------------
 
 pub(crate) fn hash_u64(data: &[u8]) -> u64 {
     let mut hasher = Sha256::new();

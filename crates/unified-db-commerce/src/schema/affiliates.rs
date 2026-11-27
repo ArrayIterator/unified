@@ -3,12 +3,10 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Affiliates (migration 000044_affiliates). `Affiliate`,
 // `AffiliateCommissionRule`, `AffiliateConversion`,
 // `AffiliateCommission` and `AffiliatePayout` carry NUMERIC columns,
 // so per the repo header rule they skip ALL serde derives.
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     affiliates (id) {

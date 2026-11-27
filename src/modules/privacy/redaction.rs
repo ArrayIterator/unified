@@ -74,9 +74,7 @@ pub(crate) fn long_digits_re() -> &'static Regex {
     RE.get_or_init(|| Regex::new(r"\b\d{10,}\b").expect("long digits regex"))
 }
 
-// ---------------------------------------------------------------------------
 // PII redaction helpers (public, for other modules to reuse)
-// ---------------------------------------------------------------------------
 
 /// Redact an email address, keeping the first character of the
 /// local part and the full domain: `jane@example.com` becomes

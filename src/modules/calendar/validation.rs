@@ -169,8 +169,8 @@ fn bare_host(host: &str) -> &str {
 /// - an absolute http(s) URL whose host matches one of
 ///   `allowed_hosts` (the site the request arrived on), with no
 ///   embedded credentials.
-/// Everything else — `javascript:`, `data:`, `ftp:`, external
-/// hosts, credentialed URLs — is rejected, so a hook answer or an
+/// Everything else - `javascript:`, `data:`, `ftp:`, external
+/// hosts, credentialed URLs - is rejected, so a hook answer or an
 /// admin-set template can never serve a client an off-site or
 /// script URL.
 pub(crate) fn validate_create_url(raw: &str, allowed_hosts: &[&str]) -> UnifiedResult<String> {
@@ -233,7 +233,7 @@ pub(crate) fn validate_create_url(raw: &str, allowed_hosts: &[&str]) -> UnifiedR
 
 /// Validate a create-link template at save time. Templates are
 /// stored with `{start}`/`{end}`/`{title}` placeholders, so they
-/// cannot be parsed as URLs yet — this only rejects shapes that
+/// cannot be parsed as URLs yet - this only rejects shapes that
 /// could never render into a safe URL: a dangerous scheme
 /// (`javascript:`, `data:`, `vbscript:`, `file:`), a
 /// protocol-relative URL ("//evil.example/..."), or an absolute

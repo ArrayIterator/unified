@@ -8,14 +8,14 @@ use uuid::Uuid;
 
 use super::*;
 
-// --- Currency conversion (stored rates only) -------------------------------
+// Currency conversion (stored rates only)
 
 /// Find a stored rate for a pair in this module's own rates: the
 /// direct pair first, then the inverse pair derived as `1 / rate`.
 /// Returns `None` when this module stores nothing for the pair.
 /// When several rows exist for the same pair (rows stored before
 /// the create handler became an upsert), the NEWEST row by
-/// `created_at` wins — never the last row the map happens to
+/// `created_at` wins - never the last row the map happens to
 /// iterate, which is nondeterministic.
 pub(crate) fn stored_rate(state: &ExpensesState, from: &str, to: &str) -> Option<f64> {
     let mut direct: Option<(f64, chrono::DateTime<chrono::Utc>)> = None;
@@ -54,7 +54,7 @@ pub(crate) fn calculator_rate(bus: &HookBus, from: &str, to: &str) -> Option<f64
 
 /// Resolve a conversion rate from stored data only: this module's
 /// own stored rates first, then the calculator module's stored
-/// rates. Returns `None` when no stored rate exists anywhere —
+/// rates. Returns `None` when no stored rate exists anywhere -
 /// the caller then fails the conversion instead of guessing.
 pub(crate) fn resolve_rate(state: &ExpensesState, bus: &HookBus, from: &str, to: &str) -> Option<f64> {
     if from == to {

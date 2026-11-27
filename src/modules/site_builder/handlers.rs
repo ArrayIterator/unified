@@ -1,4 +1,4 @@
-// Site Builder — HTTP handlers.
+// Site Builder - HTTP handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -25,9 +25,7 @@ use super::validation::*;
 use super::rendering::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Inputs
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct PageInput {
@@ -80,9 +78,7 @@ pub(crate) struct OrderInput {
     ids: Vec<String>,
 }
 
-// ---------------------------------------------------------------------------
 // Page handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_pages(
     ctx: web::Data<Arc<AppContext>>,
@@ -307,9 +303,7 @@ pub(crate) async fn delete_page(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Block handlers
-// ---------------------------------------------------------------------------
 
 /// Blocks of one page, paginated with the standard
 /// `PaginationParams` / `PageResult` (blocks are ordered by their
@@ -523,9 +517,7 @@ pub(crate) async fn reorder_blocks(
     api_json::success_response(page.blocks.clone(), 200)
 }
 
-// ---------------------------------------------------------------------------
 // Section handlers
-// ---------------------------------------------------------------------------
 
 /// Sections of one page, paginated with the standard
 /// `PaginationParams` / `PageResult` (sections are ordered by their
@@ -749,9 +741,7 @@ pub(crate) async fn reorder_sections(
     api_json::success_response(page.sections.clone(), 200)
 }
 
-// ---------------------------------------------------------------------------
 // Publish flow and rendering
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn publish_page(
     ctx: web::Data<Arc<AppContext>>,

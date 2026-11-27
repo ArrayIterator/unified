@@ -1,4 +1,4 @@
-/* Site builder editor — GrapeJS (task 353).
+/* Site builder editor - GrapeJS.
  *
  * Admin page script for `/admin/site-builder` (content template
  * `admin-site-builder`). This replaces the old vanilla-TypeScript
@@ -49,9 +49,7 @@ import type { Component, ComponentDefinition, Editor, TraitProperties } from "gr
 import "grapesjs/dist/css/grapes.min.css";
 import "./editor.css";
 
-// ---------------------------------------------------------------------------
 // Small utilities
-// ---------------------------------------------------------------------------
 
 type JsonValue =
   | string
@@ -127,9 +125,7 @@ function errorMessage(body: unknown, fallback: string): string {
   return typeof message === "string" && message ? message : fallback;
 }
 
-// ---------------------------------------------------------------------------
 // API client (same CSRF + envelope contract as the old editor)
-// ---------------------------------------------------------------------------
 
 let csrfToken: string | null = null;
 let csrfTokenRequest: Promise<string | null> | null = null;
@@ -228,9 +224,7 @@ async function request<T>(url: string, method?: string, payload?: unknown): Prom
   return requestOnce<T>(url, verb, payload, token, false);
 }
 
-// ---------------------------------------------------------------------------
 // Block definitions: server type <-> GrapeJS component
-// ---------------------------------------------------------------------------
 
 /** Content object for one block (free-form per type). */
 type BlockContent = Record<string, unknown>;
@@ -375,7 +369,7 @@ const BUILTIN_DEFS: BlockDef[] = [
     category: "Blocks",
     // No traits: a text block edits in place (double-click the text).
     traits: [],
-    defaultContent: () => ({ html: "Write something…" }),
+    defaultContent: () => ({ html: "Write something..." }),
     inner: (content) => [
       {
         type: "text",
@@ -430,7 +424,7 @@ const BUILTIN_DEFS: BlockDef[] = [
     label: "Gallery",
     category: "Blocks",
     traits: [
-      areaTrait("images", "Image URLs (one per line)", "https://…/one.jpg\nhttps://…/two.jpg"),
+      areaTrait("images", "Image URLs (one per line)", "https://.../one.jpg\nhttps://.../two.jpg"),
     ],
     defaultContent: () => ({ images: [] }),
     inner: (content) => {
@@ -636,9 +630,7 @@ function blockComponent(
   } as ComponentDefinition;
 }
 
-// ---------------------------------------------------------------------------
 // Editor state
-// ---------------------------------------------------------------------------
 
 let editor: Editor | null = null;
 let currentPage: SiteBuilderPage | null = null;
@@ -741,9 +733,7 @@ function deleteSelectedBlock(): void {
     });
 }
 
-// ---------------------------------------------------------------------------
 // GrapeJS setup
-// ---------------------------------------------------------------------------
 
 function registerTextareaTrait(ed: Editor): void {
   // GrapeJS core ships no multi-line trait; this one renders a
@@ -818,9 +808,7 @@ function initEditor(): Editor {
   return ed;
 }
 
-// ---------------------------------------------------------------------------
 // Pages and sections (vanilla DOM, same IDs as the template)
-// ---------------------------------------------------------------------------
 
 function loadPages(): void {
   if (!pageList) {
@@ -879,7 +867,7 @@ async function loadPage(id: string): Promise<void> {
       editorPanel.hidden = false;
     }
     if (editorMeta) {
-      editorMeta.textContent = `${page.title} — slug: ${page.slug} — status: ${page.status} — theme: ${page.theme_id}`;
+      editorMeta.textContent = `${page.title} - slug: ${page.slug} - status: ${page.status} - theme: ${page.theme_id}`;
     }
     if (!editor) {
       editor = initEditor();
@@ -907,9 +895,7 @@ function refreshCurrent(): void {
   }
 }
 
-// ---------------------------------------------------------------------------
 // Boot
-// ---------------------------------------------------------------------------
 
 document.addEventListener("DOMContentLoaded", () => {
   statusBox = byId("sb-status");
@@ -1140,7 +1126,7 @@ document.addEventListener("DOMContentLoaded", () => {
           showStatus(`Page ${verb}.`, "success");
           loadPages();
           if (editorMeta) {
-            editorMeta.textContent = `${page.title} — slug: ${page.slug} — status: ${page.status} — theme: ${page.theme_id}`;
+            editorMeta.textContent = `${page.title} - slug: ${page.slug} - status: ${page.status} - theme: ${page.theme_id}`;
           }
         })
         .catch((error: Error) => {

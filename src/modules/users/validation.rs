@@ -1,4 +1,4 @@
-// users module — Validation.
+// users module - Validation.
 //
 // Split from the former single-file module `src/modules/users.rs`.
 // The module root (`users.rs`) re-exports the public items, so the

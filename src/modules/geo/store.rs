@@ -8,9 +8,7 @@ use uuid::Uuid;
 
 
 
-// ---------------------------------------------------------------------------
 // In-memory store (used when no database pool is attached to the context).
-// ---------------------------------------------------------------------------
 pub(crate) static OVERRIDES: OnceLock<DashMap<Uuid, GeoOverride>> = OnceLock::new();
 
 

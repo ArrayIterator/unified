@@ -66,9 +66,7 @@ fn record_delivery(
     delivery
 }
 
-// ---------------------------------------------------------------------------
 // Hand-out (manager): reserved -> out
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn handover_order(
     state: web::Data<RentalState>,
@@ -131,9 +129,7 @@ pub(crate) async fn handover_order(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Return (manager): out -> returned, with late-fee computation
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn return_order(
     state: web::Data<RentalState>,
@@ -217,9 +213,7 @@ pub(crate) async fn return_order(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Deliveries (authenticated)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_deliveries(
     state: web::Data<RentalState>,
@@ -310,9 +304,7 @@ pub(crate) async fn get_delivery(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Damage reports (authenticated)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_damage_reports(
     state: web::Data<RentalState>,

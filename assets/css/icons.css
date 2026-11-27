@@ -11,7 +11,7 @@
  *   - a parent .icon-animated, which runs each icon's OWN declared
  *     animation (icons declare it with data-animation="..." in their
  *     icon file; the sprite builder copies it onto the <symbol> and
- *     the Rust accessor emits it as data-icon-animation — see
+ *     the Rust accessor emits it as data-icon-animation - see
  *     assets/icons/ANIMATION.md),
  *   - :hover on the icon itself (same: its own declared animation).
  * No module names appear in this file: which icons animate is data,

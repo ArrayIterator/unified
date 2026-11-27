@@ -3,13 +3,13 @@
 //!
 //! Paths and fetch policy come from environment variables with
 //! safe defaults (there is no `scripting` section in the server
-//! config file yet — a config-file section is the documented
+//! config file yet - a config-file section is the documented
 //! follow-up, not a silent default):
 //!
-//! * `UNIFIED_SCRIPTING_MODULES_DIR` — default `modules`
-//! * `UNIFIED_SCRIPTING_STORAGE_DIR` — default `data/scripting-storage`
-//! * `UNIFIED_SCRIPTING_HTTP_ALLOWLIST` — comma-separated hosts
-//! * `UNIFIED_SCRIPTING_ALLOW_LOOPBACK` — `1` enables the loopback
+//! * `UNIFIED_SCRIPTING_MODULES_DIR` - default `modules`
+//! * `UNIFIED_SCRIPTING_STORAGE_DIR` - default `data/scripting-storage`
+//! * `UNIFIED_SCRIPTING_HTTP_ALLOWLIST` - comma-separated hosts
+//! * `UNIFIED_SCRIPTING_ALLOW_LOOPBACK` - `1` enables the loopback
 //!   fetch exception (development only, default off)
 
 use std::collections::HashMap;

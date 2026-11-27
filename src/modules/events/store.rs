@@ -1,4 +1,4 @@
-// Events Manager — In-memory state and its constructors.
+// Events Manager - In-memory state and its constructors.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -27,9 +27,7 @@ use super::handlers_public::*;
 use super::hooks::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Shared state
-// ---------------------------------------------------------------------------
 
 /// In-memory stores for events. The hook bus is attached in `init`
 /// (the bus lives in `AppContext`); handlers tolerate a missing bus

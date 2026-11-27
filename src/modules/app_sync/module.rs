@@ -19,9 +19,7 @@ use super::{constants::*, helpers::*, types::*, tokens::*, inputs::*, handlers::
 
 
 
-// ---------------------------------------------------------------------------
 // Module definition.
-// ---------------------------------------------------------------------------
 pub struct AppSyncModule;
 
 

@@ -1,11 +1,9 @@
-//! eSignature external module (split from lib.rs; moved verbatim).
+//! eSignature external module.
 
 use super::*;
 
 
-// ---------------------------------------------------------------------------
 // Validation helpers
-// ---------------------------------------------------------------------------
 
 pub(crate) fn valid_email(email: &str) -> bool {
     if email.is_empty() || email.len() > 254 {
@@ -135,9 +133,7 @@ fn hex_encode(bytes: &[u8]) -> String {
     out
 }
 
-// ---------------------------------------------------------------------------
 // Signing-link tokens (HMAC-SHA256, expiring, single-purpose)
-// ---------------------------------------------------------------------------
 
 /// Read the HMAC secret from the environment. There is no default
 /// and no fallback: a missing or too-short secret is a startup/
@@ -215,9 +211,7 @@ pub(crate) fn verify_token(
     Ok((request_id, signer_id, expires_at))
 }
 
-// ---------------------------------------------------------------------------
 // Hash-chained audit trail
-// ---------------------------------------------------------------------------
 
 /// Hash input for one audit event. Kept in a single function so the
 /// append path and the verify path can never drift apart.

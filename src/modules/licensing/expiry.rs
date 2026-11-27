@@ -31,9 +31,7 @@ use std::time::{Duration, Instant};
 use uuid::Uuid;
 use super::{keys::*, store::*, hooks::*, types::*, validation::*, handlers::*, products::*, helpers::*, product_handlers::*, verify::*, offline::*, distribution::*, releases::*, module::*};
 
-// ---------------------------------------------------------------------------
 // Expiry scan: `license.expiring`.
-// ---------------------------------------------------------------------------
 
 /// Event emitted when a license enters an expiry warning window (or
 /// has already expired). Payload: `{"license_id", "license_key",

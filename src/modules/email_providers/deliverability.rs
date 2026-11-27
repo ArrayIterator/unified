@@ -1,9 +1,9 @@
 //! email_providers - deliverability headers.
 //!
 //! Shared computation for the anti-spam headers every send carries
-//! (task 354). One function, used by the SMTP family (lettre raw
+//! . One function, used by the SMTP family (lettre raw
 //! headers via `build_lettre_message`) and by every HTTP API adapter
-//! through its documented custom-headers mechanism — never
+//! through its documented custom-headers mechanism - never
 //! per-adapter copies.
 //!
 //! Rules:
@@ -40,9 +40,9 @@ pub const HEADER_FEEDBACK_ID: &str = "Feedback-ID";
 /// Callers must have validated the sender address first (the
 /// adapters do); an empty sender simply yields no List-Unsubscribe
 /// value. Header values are validated to be single-line: a value
-/// containing CR or LF is dropped (it cannot occur — the sender
+/// containing CR or LF is dropped (it cannot occur - the sender
 /// address is validated and the unsubscribe URL is validated as an
-/// http(s) URL at connection write time — but a header injection
+/// http(s) URL at connection write time - but a header injection
 /// must never depend on a caller elsewhere getting that right).
 pub fn deliverability_headers(
     message: &EmailMessage,

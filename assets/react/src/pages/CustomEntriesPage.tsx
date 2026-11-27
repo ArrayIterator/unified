@@ -2,7 +2,7 @@
 //
 // ONE component renders any custom post type: it loads the
 // definition (GET /api/v1/content/post-types) and builds the list
-// + form from `supports` and `fields` — no per-type code exists.
+// + form from `supports` and `fields` - no per-type code exists.
 // Field inputs follow the field type (see
 // docs/integration/CUSTOM_POST_TYPES.md for the value shapes).
 
@@ -35,7 +35,7 @@ import {
 } from "@theme/components/controls";
 
 function fieldValueLabel(value: unknown): string {
-  if (value === null || value === undefined) return "—";
+  if (value === null || value === undefined) return "-";
   if (typeof value === "boolean") return value ? "Yes" : "No";
   if (Array.isArray(value)) return value.map(String).join(", ");
   if (typeof value === "object") return JSON.stringify(value);
@@ -121,7 +121,7 @@ function FieldInput({
       return (
         <Select
           items={[
-            { id: "", label: "— Select —" },
+            { id: "", label: "- Select -" },
             ...options.map((option) => ({ id: option, label: option })),
           ]}
           selectedKey={typeof value === "string" ? value : ""}
@@ -317,11 +317,11 @@ export default function CustomEntriesPage() {
                     {entry.title || entry.slug}
                   </p>
                   <p className="mt-0.5 text-xs text-faint">
-                    /{entry.slug} · {entry.status}
+                    /{entry.slug} - {entry.status}
                     {definition.fields.length > 0 &&
-                      ` · ${definition.fields
+                      ` - ${definition.fields
                         .map((field) => `${field.label}: ${fieldValueLabel(entry.fields[field.key])}`)
-                        .join(" · ")}`}
+                        .join(" - ")}`}
                   </p>
                 </div>
                 <Button
@@ -465,7 +465,7 @@ function EntryForm({
         />
         <div className="flex gap-2">
           <Button color="primary" isDisabled={saving} onClick={submit}>
-            {saving ? "Saving…" : "Save"}
+            {saving ? "Saving..." : "Save"}
           </Button>
           <Button color="secondary" onClick={onCancel}>
             Cancel

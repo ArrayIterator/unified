@@ -2,7 +2,6 @@
 //!
 //! Part of the `certificates` module split; see `src/modules/certificates.rs`.
 
-// ---------------------------------------------------------------------------
 // Events.
 //
 // The core bus (`unified_core::hooks::events`) defines only `ssl.renew`
@@ -13,7 +12,6 @@
 // there (for example `pub const SSL_RENEWED: &str = "ssl.renewed";`)
 // and switch the emits below to those constants; the audit module
 // would then also need the new names in its `AUDITED_EVENTS` list.
-// ---------------------------------------------------------------------------
 
 /// Emitted after a renewal succeeds. Payload: `domain`,
 /// `provider`, `ssl_expires_at`, `completed: true`.

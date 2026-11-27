@@ -16,9 +16,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 pub const OVERALL_OPERATIONAL: &str = "operational";
 pub const OVERALL_DEGRADED: &str = "degraded";
@@ -181,9 +179,7 @@ pub struct ComponentStatusView {
     pub uptime_90d: f64,
 }
 
-// ---------------------------------------------------------------------------
 // State
-// ---------------------------------------------------------------------------
 
 pub struct StatusPageState {
     // Visible crate-wide: the sibling handler/helper modules read

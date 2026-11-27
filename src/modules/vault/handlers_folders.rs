@@ -29,9 +29,7 @@ use super::types::UpdateFolderRequest;
 use super::types::VaultDocument;
 use super::types::VaultFolder;
 
-// ---------------------------------------------------------------------------
 // Folder handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_folders(
     ctx: web::Data<Arc<AppContext>>,

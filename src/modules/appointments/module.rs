@@ -1,4 +1,4 @@
-// appointments — module.
+// appointments - module.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -28,9 +28,7 @@ use super::handlers_staff::*;
 use super::handlers_appointments::*;
 use super::handlers_reminders::*;
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct AppointmentsModule {
     pub(crate) state: AppointmentsState,

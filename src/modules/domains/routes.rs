@@ -25,9 +25,7 @@ use super::ai_capabilities::AI_CAPABILITIES;
 const EVENT_WHITELABEL_DOMAIN_REQUESTED: &str = "whitelabel.domain.requested";
 const EVENT_WHITELABEL_SENDER_REQUESTED: &str = "whitelabel.sender.requested";
 
-// ---------------------------------------------------------------------------
 // Module definition.
-// ---------------------------------------------------------------------------
 
 pub struct DomainsModule;
 

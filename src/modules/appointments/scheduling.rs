@@ -1,4 +1,4 @@
-// appointments — scheduling.
+// appointments - scheduling.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -27,9 +27,7 @@ use super::handlers_appointments::*;
 use super::handlers_reminders::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Availability, slots, and conflicts
-// ---------------------------------------------------------------------------
 
 /// Effective buffer / cancellation values for one service: the
 /// per-service override wins, otherwise the module setting.

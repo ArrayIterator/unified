@@ -12,14 +12,10 @@ use super::{types::*, state::*, analysis::*, module::*};
 
 
 
-// ---------------------------------------------------------------------------
 // Handlers
-// ---------------------------------------------------------------------------
-// ---------------------------------------------------------------------------
 // Caller identity and capability checks (same trusted-parameter
 // pattern as the tenants module: X-User-Id plus X-Role headers,
 // `role.check` hook, fail closed).
-// ---------------------------------------------------------------------------
 pub(crate) const PERM_SEO_VIEW: &str = "seo:view";
 pub(crate) const PERM_SEO_MANAGE: &str = "seo:manage";
 
@@ -787,9 +783,7 @@ mod tests {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Tenant edge guard (C3 pilot 4, group C).
-// ---------------------------------------------------------------------------
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request

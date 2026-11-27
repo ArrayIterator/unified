@@ -188,11 +188,11 @@
           return;
         }
         if (!payload.html) {
-          showStatus("The canvas is empty — add some content before saving.", "error");
+          showStatus("The canvas is empty - add some content before saving.", "error");
           return;
         }
         saveButton.disabled = true;
-        saveButton.textContent = "Saving…";
+        saveButton.textContent = "Saving...";
         var url = templateId
           ? "/api/v1/email-templates/" + encodeURIComponent(templateId)
           : "/api/v1/email-templates";

@@ -1,4 +1,4 @@
-// Auditors & Public Link Sharing module — temporary sandbox
+// Auditors & Public Link Sharing module - temporary sandbox
 //
 // Split into submodules; the full module documentation lives in `module.rs`.
 

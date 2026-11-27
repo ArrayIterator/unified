@@ -20,11 +20,9 @@ use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 use super::{constants::*, types::*, state::*, seed::*, helpers::*, provisioning::*, handlers_packages::*, handlers_purchases::*, handlers_ai::*, events::*, module::*};
 
-// ---------------------------------------------------------------------------
 // Viewer identity and capability checks (same trusted-parameter
 // pattern as the e-learning module: X-User-Id plus X-Role headers,
 // `role.check` hook, fail closed).
-// ---------------------------------------------------------------------------
 
 /// Caller identity: the server-verified caller (user id plus
 /// server-resolved role, both required for capability checks),

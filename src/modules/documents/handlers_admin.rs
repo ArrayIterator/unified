@@ -1,4 +1,4 @@
-// documents — HTTP handlers: settings, domains, and hook handlers.
+// documents - HTTP handlers: settings, domains, and hook handlers.
 
 use super::*;
 use super::validation::{may_view_company_quota, resolve_caller_company_id};
@@ -13,9 +13,7 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
 
-// ---------------------------------------------------------------------------
-// Handlers — allowlist (admin)
-// ---------------------------------------------------------------------------
+// Handlers - allowlist (admin)
 
 pub(crate) async fn list_allowlist(
     state: web::Data<Arc<DocumentsState>>,
@@ -207,9 +205,7 @@ pub(crate) async fn delete_allowlist(
     json::success_response(json!({ "deleted": true, "id": path.as_str() }), 200)
 }
 
-// ---------------------------------------------------------------------------
-// Handlers — quotas, scanners, settings, downloads
-// ---------------------------------------------------------------------------
+// Handlers - quotas, scanners, settings, downloads
 
 pub(crate) async fn quota_usage(
     state: web::Data<Arc<DocumentsState>>,

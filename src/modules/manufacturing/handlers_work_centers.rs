@@ -11,9 +11,7 @@ use super::{constants::*, types::*, inputs::*, helpers::*, store::*, validation:
 
 
 
-// ---------------------------------------------------------------------------
 // Work center handlers
-// ---------------------------------------------------------------------------
 pub(crate) async fn list_work_centers(
     ctx: web::Data<Arc<AppContext>>,
     state: web::Data<ManufacturingState>,

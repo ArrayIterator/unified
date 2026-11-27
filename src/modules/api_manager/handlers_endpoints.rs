@@ -21,9 +21,7 @@ use super::{API_KEY_HEADER, ApiEndpoint, ApiManagerState, CreateEndpointInput, R
     resolve_input_support, strip_public_prefix, validate_method, validate_path, validate_payload,
     validate_rules};
 
-// ---------------------------------------------------------------------------
 // Endpoint handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_endpoints(
     state: web::Data<ApiManagerState>,
@@ -746,7 +744,7 @@ pub(crate) async fn resolve_handler(
 
 /// Public versioned gateway: resolves any request under
 /// `/public/{version}/{path...}` against the registry and reports
-/// the match. Resolution only — dispatching into the matched core
+/// the match. Resolution only - dispatching into the matched core
 /// route handler is NOT IMPLEMENTED (this endpoint never executes
 /// the handler; there is no in-process dispatcher from a resolved
 /// registry row to an actix route, and building one would have to

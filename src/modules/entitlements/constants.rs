@@ -2,9 +2,7 @@
 
 use unified_core::hooks::events;
 
-// ---------------------------------------------------------------------------
 // Events, capabilities, vocabularies, limits.
-// ---------------------------------------------------------------------------
 
 /// Emitted when an entitlement is created or a lapsed module is
 /// re-granted. Payload: `{"company_id", "module_id",
@@ -69,7 +67,7 @@ pub(crate) const SAAS_PACKAGE_CANCELLED_EVENT: &str = "saas_packages.cancelled";
 /// "granted_via_id", "source_ref", "actor_id"}`. `granted_via_id`
 /// is the package/preset id (a UUID) when the grant names one;
 /// `source_ref` is the subscription id (a store string) for a
-/// subscription grant — the entitlements mirror stores it as the
+/// subscription grant - the entitlements mirror stores it as the
 /// row's `source_ref`, which is what a later
 /// subscription-cancel lapses the row through. The constants live
 /// as plain strings (not imports) because the tenants module is
@@ -85,8 +83,8 @@ pub(crate) const TENANT_MODULE_REVOKED_EVENT: &str = "tenant.module.revoked";
 /// the codebase: no module in the tree emits that event today; the
 /// documented provisioning emitters are `saas_packages` (package
 /// provisioning) and `store` (checkout). An emitter must name
-/// itself in the payload (`emitter`); anything else — including a
-/// missing emitter — is rejected, never minted. This stops
+/// itself in the payload (`emitter`); anything else - including a
+/// missing emitter - is rejected, never minted. This stops
 /// accidental or cross-module minting; it is not authentication
 /// against a compromised in-process emitter (hook payloads are
 /// trusted input, same as the header identity model documented in

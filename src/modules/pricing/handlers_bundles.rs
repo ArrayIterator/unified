@@ -1,4 +1,4 @@
-// pricing — handlers bundles.
+// pricing - handlers bundles.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -248,9 +248,7 @@ pub(crate) async fn price_bundle(
     }
 }
 
-// ---------------------------------------------------------------------------
 // HTTP handlers: proration.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn compute_proration(
     ctx: web::Data<Arc<AppContext>>,

@@ -18,9 +18,7 @@ use unified_core::pagination::{PageResult, PaginationParams};
 use unified_core::provider_registry::{ProviderDefinition, valid_provider_id};
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // HTTP handlers.
-// ---------------------------------------------------------------------------
 pub struct EmailProviderState {
     pub(crate) hooks: RwLock<Option<Arc<HookBus>>>,
     pub(crate) debug: AtomicBool,
@@ -57,16 +55,12 @@ impl EmailProviderState {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Caller identity and capability checks (same trusted-parameter
 // pattern as the tenants module: X-User-Id plus X-Role headers,
 // `role.check` hook, fail closed). Every mutating or sending
 // handler below requires `email_providers:manage`; read views
 // return masked connections only, so they stay open.
-// ---------------------------------------------------------------------------
-// ---------------------------------------------------------------------------
 // Tenant edge guard (C3 pilot 4, group B).
-// ---------------------------------------------------------------------------
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request
@@ -164,10 +158,10 @@ pub(crate) fn require_permission(
     }
 }
 
-/// The provider catalog (task 354): built-ins come from the
-/// registry catalog — iterate `catalog()`, not the enum, so a
+/// The provider catalog: built-ins come from the
+/// registry catalog - iterate `catalog()`, not the enum, so a
 /// provider added through the registry appears with no code
-/// change — and `email_provider.definitions` hook answers are
+/// change - and `email_provider.definitions` hook answers are
 /// merged in. A hook answer is one definition object or an array
 /// of them; it must carry a valid id, a non-empty display name,
 /// and an adapter kind, and a built-in wins on id collision.
@@ -179,7 +173,7 @@ pub(crate) async fn list_catalog() -> HttpResponse {
     let mut seen: HashSet<String> = HashSet::new();
     // `entries`, not `catalog`: a local named `catalog` would shadow
     // the imported `catalog()` function and `catalog()` in the loop
-    // would try to call the Vec (E0618 — the same shadowing bug
+    // would try to call the Vec (E0618 - the same shadowing bug
     // that exists in ai/types.rs).
     let mut entries: Vec<Value> = Vec::new();
     for def in catalog() {
@@ -216,7 +210,7 @@ pub(crate) async fn list_catalog() -> HttpResponse {
 }
 
 /// One catalog entry from a registry definition. A hook-provided
-/// definition has no enum kind, so its setup notes are empty —
+/// definition has no enum kind, so its setup notes are empty -
 /// its free-tier and best-for text lives in the description.
 fn catalog_entry_for_definition(def: &ProviderDefinition) -> Value {
     // from_str is inherent and already returns Option<Self>.
@@ -234,16 +228,16 @@ fn catalog_entry_for_definition(def: &ProviderDefinition) -> Value {
 }
 
 /// Settings fields for one provider kind, after the
-/// `email_provider.settings_fields` hook has had its say (task 350,
+/// `email_provider.settings_fields` hook has had its say (
 /// addition A).
 ///
 /// Contract: the catalog builds the base list from the registry
 /// definition, then emits `email_provider.settings_fields` with
 /// `{ kind, fields }`. A hook handler may contribute one of:
-/// - `{ "add": [field, ...] }` — fields appended to the base list
+/// - `{ "add": [field, ...] }` - fields appended to the base list
 ///   (a field whose `key` already exists replaces the base field);
-/// - `{ "remove": ["key", ...] }` — base fields dropped by key;
-/// - `{ "fields": [field, ...] }` — the whole list replaced.
+/// - `{ "remove": ["key", ...] }` - base fields dropped by key;
+/// - `{ "fields": [field, ...] }` - the whole list replaced.
 /// Malformed contributions are ignored, never fatal: a broken hook
 /// must not break the catalog. Field objects use the same shape as
 /// `SettingsFieldDef` (`key`, `label`, `type`, `required`, `secret`,
@@ -256,7 +250,7 @@ pub(crate) fn settings_fields_for_catalog(kind: EmailProviderKind) -> Vec<Settin
     settings_fields_for_definition_catalog(&def)
 }
 
-/// The same hook pass for a definition directly (task 354): a
+/// The same hook pass for a definition directly: a
 /// hook-provided definition has no enum kind, so the catalog reads
 /// its fields here.
 pub(crate) fn settings_fields_for_definition_catalog(
@@ -934,7 +928,7 @@ pub(crate) fn send_input_to_message(
         template_id: input.template_id.clone(),
         variables: input.variables.clone().unwrap_or_default(),
         metadata: input.metadata.clone().unwrap_or_default(),
-        // Deliverability flags (task 354): bulk sends get the full
+        // Deliverability flags: bulk sends get the full
         // header set by default; transactional sends only when the
         // caller opts in; opt-out suppresses every header.
         bulk: input.bulk.unwrap_or(false),
@@ -1126,7 +1120,7 @@ pub(crate) async fn send_batch_handler(
         template_id: input.template_id.clone(),
         variables: input.variables.clone(),
         metadata: input.metadata.clone(),
-        // A batch send is a bulk send by definition (task 354):
+        // A batch send is a bulk send by definition: 
         // the full deliverability header set applies.
         bulk: Some(true),
         include_unsubscribe: input.include_unsubscribe,

@@ -10,9 +10,7 @@ use uuid::Uuid;
 
 use super::{InboxAssignment, InboxCannedReply, InboxThread};
 
-// ---------------------------------------------------------------------------
 // Shared state
-// ---------------------------------------------------------------------------
 
 /// In-memory stores for the inbox. The hook bus is attached in
 /// `init` (the bus lives in `AppContext`); handlers tolerate a

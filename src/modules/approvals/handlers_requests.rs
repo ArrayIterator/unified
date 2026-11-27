@@ -1,4 +1,4 @@
-// Generic Approvals — Approval request handlers.
+// Generic Approvals - Approval request handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -27,9 +27,7 @@ use super::handlers_dashboards::*;
 use super::hooks::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
-// Requests — creation
-// ---------------------------------------------------------------------------
+// Requests - creation
 
 /// Shared request creation used by the HTTP endpoint and by the
 /// `approval.requested` hook handler. A definition with no active
@@ -297,9 +295,7 @@ pub(crate) async fn request_history(
     }
 }
 
-// ---------------------------------------------------------------------------
-// Requests — decisions and lifecycle
-// ---------------------------------------------------------------------------
+// Requests - decisions and lifecycle
 
 /// Apply a terminal decision to a request: persist the new status,
 /// stamp who decided, and answer the requesting module on the bus.

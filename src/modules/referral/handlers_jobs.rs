@@ -19,7 +19,7 @@ use super::state::ReferralState;
 use super::types::{EVENT_ELIGIBILITY_SET, JobEligibility, SetEligibilityRequest};
 
 /// List job eligibility rows (paginated, filter by job,
-/// eligible; search is not applicable — rows are keyed by
+/// eligible; search is not applicable - rows are keyed by
 /// job id). Jobs with no row are eligible by default and do
 /// not appear here until an administrator sets them.
 pub(crate) async fn list_eligibility(
@@ -78,7 +78,7 @@ pub(crate) async fn list_eligibility(
 }
 
 /// Get the eligibility row of one job. A job with no row is
-/// eligible by default — this endpoint answers 404 for it,
+/// eligible by default - this endpoint answers 404 for it,
 /// like every other get-one handler in this tree.
 pub(crate) async fn get_eligibility(
     state: web::Data<ReferralState>,

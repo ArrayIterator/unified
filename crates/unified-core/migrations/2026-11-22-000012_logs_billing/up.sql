@@ -45,10 +45,8 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One log entry: application, access, or error log, with redacted
 -- structured context.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS app_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     seq BIGINT NOT NULL,
@@ -82,10 +80,8 @@ CREATE INDEX IF NOT EXISTS idx_app_logs_timestamp
 CREATE INDEX IF NOT EXISTS idx_app_logs_request_id
     ON app_logs (request_id);
 
--- ---------------------------------------------------------------------------
 -- Log viewer settings (singleton row): retention in days and the
 -- maximum number of entries kept.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS logs_settings (
     key VARCHAR PRIMARY KEY CHECK (key = 'global'),
     retention_days INTEGER NOT NULL DEFAULT 30 CHECK (retention_days >= 0),
@@ -94,10 +90,8 @@ CREATE TABLE IF NOT EXISTS logs_settings (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- ---------------------------------------------------------------------------
 -- An invoice, built from an order or directly. The number is
 -- unique and never reused; the sequence is monotonic.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS invoices (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     number VARCHAR NOT NULL,
@@ -137,11 +131,9 @@ CREATE INDEX IF NOT EXISTS idx_invoices_status
 CREATE INDEX IF NOT EXISTS idx_invoices_due_date
     ON invoices (due_date);
 
--- ---------------------------------------------------------------------------
 -- One line of an invoice. `tax_amount` is the tax for the line;
 -- `line_total` is the net amount when tax is exclusive and the
 -- gross amount when tax is inclusive.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS invoice_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     invoice_id UUID NOT NULL REFERENCES invoices (id) ON DELETE CASCADE ON UPDATE NO ACTION,
@@ -158,10 +150,8 @@ CREATE TABLE IF NOT EXISTS invoice_items (
 CREATE INDEX IF NOT EXISTS idx_invoice_items_invoice_id
     ON invoice_items (invoice_id);
 
--- ---------------------------------------------------------------------------
 -- One payment recorded against an invoice. Partial payments are
 -- normal: each one updates the invoice balance and status.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS invoice_payments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     invoice_id UUID NOT NULL REFERENCES invoices (id) ON DELETE CASCADE ON UPDATE NO ACTION,
@@ -176,11 +166,9 @@ CREATE TABLE IF NOT EXISTS invoice_payments (
 CREATE INDEX IF NOT EXISTS idx_invoice_payments_invoice_id
     ON invoice_payments (invoice_id);
 
--- ---------------------------------------------------------------------------
 -- A credit note issued against an invoice. It reduces the invoice
 -- balance; when the balance reaches zero the invoice reads as
 -- `credited`.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS credit_notes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     invoice_id UUID NOT NULL REFERENCES invoices (id) ON DELETE CASCADE ON UPDATE NO ACTION,
@@ -196,11 +184,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_credit_notes_number
 CREATE INDEX IF NOT EXISTS idx_credit_notes_invoice_id
     ON credit_notes (invoice_id);
 
--- ---------------------------------------------------------------------------
 -- Billing configuration (singleton row): invoice number prefix,
 -- default tax rate, tax-inclusive handling, payment terms, and the
 -- reminder schedules (days before / after the due date).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS billing_settings (
     key VARCHAR PRIMARY KEY CHECK (key = 'global'),
     invoice_prefix VARCHAR NOT NULL DEFAULT 'INV',
@@ -213,11 +199,9 @@ CREATE TABLE IF NOT EXISTS billing_settings (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- ---------------------------------------------------------------------------
 -- Monotonic number sequences: one row per sequence name
 -- (`invoice`, `credit_note`). `next_value` is the next number to
 -- hand out; it is never reused and never reset.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS invoice_sequences (
     name VARCHAR PRIMARY KEY CHECK (name IN ('invoice', 'credit_note')),
     next_value BIGINT NOT NULL DEFAULT 1 CHECK (next_value >= 1),

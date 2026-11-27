@@ -1,4 +1,4 @@
-// risk — handlers plans.
+// risk - handlers plans.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -22,9 +22,7 @@ use super::handlers_templates::*;
 use super::handlers_instances::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Handlers: mitigation plans and tasks
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_plans_for_risk(
     state: web::Data<Arc<RiskState>>,
@@ -472,9 +470,7 @@ pub(crate) async fn delete_task(
     json::respond(result, false)
 }
 
-// ---------------------------------------------------------------------------
 // Handlers: review check and alerts history
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn review_check(
     state: web::Data<Arc<RiskState>>,
@@ -494,8 +490,8 @@ pub(crate) async fn review_check(
         Err(error) => return json::error_response(&error, false),
     };
     // `run_review_check` treats a missing company as "all
-    // companies" — its own tests pin that shape and a system path
-    // may rely on it — so the gate lives HERE, at the handler: the
+    // companies" - its own tests pin that shape and a system path
+    // may rely on it - so the gate lives HERE, at the handler: the
     // company to scan is resolved from the caller scope first, and
     // an unresolved caller may never run the scan at all.
     let requested_company = body

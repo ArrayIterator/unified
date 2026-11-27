@@ -20,14 +20,12 @@ use super::state::CertificatesState;
 use super::state::normalize_domain;
 use super::state::now;
 
-// ---------------------------------------------------------------------------
 // CLI handlers.
 //
 // The CLI builds its own state from the config file (the module state
 // is not initialized in the CLI path: `build_cli_registry` never runs
 // `init_all`), so every command loads the configuration fresh, builds
 // the lenient storage, and does the work directly.
-// ---------------------------------------------------------------------------
 
 fn cli_state() -> UnifiedResult<(Arc<CertificatesState>, Arc<HookBus>)> {
     let config = AppConfig::load_default().unwrap_or_default();

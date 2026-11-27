@@ -51,9 +51,7 @@ fn now() -> DateTime<Utc> {
     Utc::now()
 }
 
-// ---------------------------------------------------------------------
 // Records
-// ---------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Vehicle {
@@ -175,9 +173,7 @@ pub struct MaintenanceItem {
     pub updated_at: DateTime<Utc>,
 }
 
-// ---------------------------------------------------------------------
 // Request bodies
-// ---------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct VehicleInput {
@@ -301,9 +297,7 @@ pub struct VehicleTypesInput {
     pub types: Vec<String>,
 }
 
-// ---------------------------------------------------------------------
 // Store
-// ---------------------------------------------------------------------
 
 /// In-memory fleet store. All maps are keyed by record id; the
 /// tenant filter is applied by every method, never by callers.

@@ -1,4 +1,4 @@
-// hosting module — Module definition.
+// hosting module - Module definition.
 //
 // Split from the former single-file module `src/modules/hosting.rs`.
 // The module root (`hosting.rs`) re-exports the public items, so the
@@ -30,9 +30,7 @@ use super::handlers_accounts::{activate_account, cancel_account, create_account,
 use super::hooks::{observe_domain_verify, observe_ssl_completion, record_order_claim};
 use super::ai_capabilities::{AI_CAPABILITIES};
 
-// ---------------------------------------------------------------------------
 // Module definition.
-// ---------------------------------------------------------------------------
 
 pub struct HostingModule {
     pub(crate) state: Arc<HostingState>,
@@ -76,7 +74,7 @@ impl Module for HostingModule {
         // Store (plans are sold as store products), Domains (accounts
         // are bound to a registered domain; SSL state is surfaced
         // through the domains module and its ssl.renewed /
-        // ssl.swapped / ssl.swap events — there is no separate ssl
+        // ssl.swapped / ssl.swap events - there is no separate ssl
         // module id), Network
         // (domain syntax checks and the DNS / TLS probe behind domain
         // verification).

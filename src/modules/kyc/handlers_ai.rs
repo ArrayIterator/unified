@@ -39,7 +39,7 @@ struct CasePath {
 ///
 /// 1. The case must be `submitted` or `more_info_requested`.
 /// 2. The tenant must have an active default verification
-///    context — without one the run is refused (400), because
+///    context - without one the run is refused (400), because
 ///    there is no declared behaviour for the AI to follow.
 /// 3. The context is resolved with its active extra
 ///    instructions, and the case's document metadata is sent

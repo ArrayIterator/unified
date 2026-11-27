@@ -41,11 +41,9 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One scoped MCP server: the sellable unit. A customer buys "MCP for
 -- my site" and gets one of these, mounted at
 -- `/api/v1/mcp/servers/{id or slug}/mcp`.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS mcp_servers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     slug VARCHAR NOT NULL,
@@ -83,9 +81,7 @@ CREATE INDEX IF NOT EXISTS idx_mcp_servers_status
 CREATE INDEX IF NOT EXISTS idx_mcp_servers_is_public
     ON mcp_servers (is_public);
 
--- ---------------------------------------------------------------------------
 -- MCP module configuration (single row, key 'global').
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS mcp_settings (
     key VARCHAR PRIMARY KEY CHECK (key = 'global'),
     read_only_role VARCHAR,

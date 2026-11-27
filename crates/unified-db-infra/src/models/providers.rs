@@ -10,9 +10,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Providers (2026-11-22-000010_providers).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = provider_connections)]
@@ -90,9 +88,7 @@ pub struct NewProviderServer {
     pub remote_created_at: Option<String>,
 }
 
-// ---------------------------------------------------------------------------
 // Panels (2026-11-22-000013_panels).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = panel_connections)]

@@ -37,9 +37,9 @@
 --     express. The indexes below keep the conflict and resolution
 --     lookups fast.
 --   - Migration number: 000072 after the integration renumber
---     (000070 when written; the pre-renumber collisions — 000068
---     twice, 000100 out of sequence — were resolved by the
---     gapless renumber, see docs/integration/INTEGRATION_NOTES_INTEGRATION2.md §4).
+--     (000070 when written; the pre-renumber collisions - 000068
+--     twice, 000100 out of sequence - were resolved by the
+--     gapless renumber, see docs/integration/INTEGRATION_NOTES_INTEGRATION2.md sec. 4).
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 

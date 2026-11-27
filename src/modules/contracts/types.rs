@@ -1,4 +1,4 @@
-// Contracts — Types.
+// Contracts - Types.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -19,9 +19,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// Lifecycle of a contract: `draft` -> `sent` ->
 /// `partially_signed` -> `signed` -> `active` -> `expired` /
@@ -121,7 +119,7 @@ impl SigningOrder {
 
 /// One contract template. `body` holds the template text with
 /// `{{placeholder}}` markers; `placeholders` is the closed list
-/// of names the body may use — any other marker in the body is
+/// of names the body may use - any other marker in the body is
 /// rejected at save time. Values are substituted server-side and
 /// HTML-escaped at render time.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -186,7 +184,7 @@ pub struct Contract {
 }
 
 /// One signer of a contract. Only the SHA-256 hash of the signing
-/// token is stored — the raw token is returned once, at creation
+/// token is stored - the raw token is returned once, at creation
 /// and at resend, and never persisted or logged.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContractSigner {

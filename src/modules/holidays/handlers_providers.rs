@@ -24,9 +24,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Handlers: providers (platform reference data).
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_providers(
     ctx: web::Data<Arc<AppContext>>,

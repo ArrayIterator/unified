@@ -13,9 +13,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Signed URLs (revocable hub download tokens).
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn issue_signed_url(
     state: web::Data<StorageManagerState>,
@@ -261,7 +259,7 @@ pub(crate) async fn redeem_download(
     let debug = ctx.is_debug();
     let token = token.into_inner();
     // Hash-keyed lookup with a constant-time compare: the presented
-    // token is hashed once and matched against stored hashes —
+    // token is hashed once and matched against stored hashes -
     // never a linear `==` scan over token values.
     let presented_hash = signed_url_token_hash(&token);
     let record = state

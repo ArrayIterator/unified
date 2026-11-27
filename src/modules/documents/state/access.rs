@@ -1,4 +1,4 @@
-//! Documents state (split from state.rs; moved verbatim).
+//! Documents state.
 
 use super::*;
 

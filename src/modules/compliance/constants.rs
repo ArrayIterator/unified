@@ -1,4 +1,4 @@
-//! Compliance Center module — GDPR / ISO support: data export — Module constants.
+//! Compliance Center module - GDPR / ISO support: data export - Module constants.
 //!
 //! Split from `src/modules/compliance.rs`; behaviour unchanged.
 
@@ -42,6 +42,6 @@ pub const COMPLIANCE_RETENTION_JOB_KIND: &str = "compliance.retention.review";
 /// own review before the scheduler ever ran it.
 pub(super) const RETENTION_REVIEW_REQUESTED: &str = "compliance.retention.review_requested";
 /// Event emitted when a retention review run is created by a
-/// review request (announcement only — it carries no dispatch).
+/// review request (announcement only - it carries no dispatch).
 pub(super) const RETENTION_REVIEW_CREATED: &str = "compliance.retention.review.created";
 pub(super) const DELETION_ITEM_EXECUTED: &str = "compliance.deletion.item.executed";

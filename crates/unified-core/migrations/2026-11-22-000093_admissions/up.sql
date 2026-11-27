@@ -50,9 +50,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One admission period (academic year + term).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS admission_periods (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     academic_year VARCHAR NOT NULL,
@@ -75,9 +73,7 @@ CREATE INDEX IF NOT EXISTS idx_admission_periods_status
 CREATE INDEX IF NOT EXISTS idx_admission_periods_open_date
     ON admission_periods (open_date);
 
--- ---------------------------------------------------------------------------
 -- One per-program, per-level seat quota inside a period.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS admission_period_quotas (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     period_id UUID NOT NULL REFERENCES admission_periods (id) ON DELETE CASCADE,
@@ -92,9 +88,7 @@ CREATE TABLE IF NOT EXISTS admission_period_quotas (
 CREATE INDEX IF NOT EXISTS idx_admission_period_quotas_period_id
     ON admission_period_quotas (period_id);
 
--- ---------------------------------------------------------------------------
 -- One selection stage definition of a period.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS admission_stage_definitions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     period_id UUID NOT NULL REFERENCES admission_periods (id) ON DELETE CASCADE,
@@ -112,9 +106,7 @@ CREATE TABLE IF NOT EXISTS admission_stage_definitions (
 CREATE INDEX IF NOT EXISTS idx_admission_stage_definitions_period_id
     ON admission_stage_definitions (period_id);
 
--- ---------------------------------------------------------------------------
 -- One document a period requires from every applicant.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS admission_required_documents (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     period_id UUID NOT NULL REFERENCES admission_periods (id) ON DELETE CASCADE,
@@ -130,9 +122,7 @@ CREATE TABLE IF NOT EXISTS admission_required_documents (
 CREATE INDEX IF NOT EXISTS idx_admission_required_documents_period_id
     ON admission_required_documents (period_id);
 
--- ---------------------------------------------------------------------------
 -- One application for one period.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS admission_applications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     period_id UUID NOT NULL REFERENCES admission_periods (id) ON DELETE CASCADE,
@@ -165,9 +155,7 @@ CREATE INDEX IF NOT EXISTS idx_admission_applications_status
 CREATE INDEX IF NOT EXISTS idx_admission_applications_program
     ON admission_applications (period_id, program_id, level);
 
--- ---------------------------------------------------------------------------
 -- One recorded score for one application in one stage.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS admission_application_scores (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     application_id UUID NOT NULL REFERENCES admission_applications (id) ON DELETE CASCADE,
@@ -187,9 +175,7 @@ CREATE INDEX IF NOT EXISTS idx_admission_application_scores_application_id
 CREATE INDEX IF NOT EXISTS idx_admission_application_scores_stage_id
     ON admission_application_scores (stage_id);
 
--- ---------------------------------------------------------------------------
 -- One checklist item: one required document for one application.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS admission_checklist_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     application_id UUID NOT NULL REFERENCES admission_applications (id) ON DELETE CASCADE,
@@ -213,9 +199,7 @@ CREATE INDEX IF NOT EXISTS idx_admission_checklist_items_application_id
 CREATE INDEX IF NOT EXISTS idx_admission_checklist_items_status
     ON admission_checklist_items (status);
 
--- ---------------------------------------------------------------------------
 -- One waitlist entry.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS admission_waitlist_entries (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     period_id UUID NOT NULL REFERENCES admission_periods (id) ON DELETE CASCADE,
@@ -234,9 +218,7 @@ CREATE INDEX IF NOT EXISTS idx_admission_waitlist_entries_application_id
 CREATE INDEX IF NOT EXISTS idx_admission_waitlist_entries_status
     ON admission_waitlist_entries (period_id, status, position);
 
--- ---------------------------------------------------------------------------
 -- One announced result for one application.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS admission_results (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     period_id UUID NOT NULL REFERENCES admission_periods (id) ON DELETE CASCADE,
@@ -256,9 +238,7 @@ CREATE INDEX IF NOT EXISTS idx_admission_results_period_id
 CREATE INDEX IF NOT EXISTS idx_admission_results_published
     ON admission_results (period_id, published);
 
--- ---------------------------------------------------------------------------
 -- One admin-editable setting (vocabulary or default).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS admission_settings (
     key VARCHAR PRIMARY KEY,
     value VARCHAR NOT NULL,

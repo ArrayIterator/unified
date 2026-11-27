@@ -9,9 +9,7 @@ use std::sync::{Arc, RwLock};
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // State
-// ---------------------------------------------------------------------------
 
 pub struct NotificationsState {
     pub(crate) hooks: RwLock<Arc<HookBus>>,

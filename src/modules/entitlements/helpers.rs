@@ -9,9 +9,7 @@ use serde_json::json;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Capability checks and caller identity.
-// ---------------------------------------------------------------------------
 
 /// Fail when no role was supplied or the roles module does not grant
 /// `permission` for it (the licensing module's
@@ -78,7 +76,7 @@ pub(crate) fn caller_of(req: &HttpRequest) -> CallerInfo {
 /// `X-Role` role slug). Query parameters (`?viewer_role=` /
 /// `?viewer_id=`) and body fields are never identity here: anyone
 /// who can name a role slug in a URL could otherwise authorize
-/// themselves. Both headers are required — the same rule as the
+/// themselves. Both headers are required - the same rule as the
 /// bank-transfer module's `admin_caller`: a caller missing either
 /// header is anonymous and gets 401 before any capability is
 /// consulted; a caller whose role lacks the capability gets 403
@@ -91,9 +89,7 @@ pub(crate) fn admin_caller(req: &HttpRequest) -> UnifiedResult<CallerInfo> {
     })
 }
 
-// ---------------------------------------------------------------------------
 // Tenant edge guard (C3 pilot 5, group A).
-// ---------------------------------------------------------------------------
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request
@@ -108,7 +104,7 @@ pub(crate) fn admin_caller(req: &HttpRequest) -> UnifiedResult<CallerInfo> {
 /// requires a company in the context and refuses a requested
 /// company that differs from it); the admin handlers in
 /// `handlers_admin.rs` are the platform-admin surface and are
-/// gate-only — they act on the body/query company by design, so no
+/// gate-only - they act on the body/query company by design, so no
 /// caller-company match is applied there.
 pub(crate) fn require_tenant(
     req: &HttpRequest,
@@ -119,7 +115,7 @@ pub(crate) fn require_tenant(
 /// The company scope the caller acts in: the tenant context's
 /// company first, the verified caller's server-resolved company
 /// otherwise. Fails closed (403) when both are present and disagree
-/// — a request must not carry one company in its tenant context and
+/// - a request must not carry one company in its tenant context and
 /// another in its verified identity. The `X-Company-Id` header is
 /// NEVER trusted here: only the verified caller (company resolved
 /// from the database at authentication time) and the
@@ -148,7 +144,7 @@ pub(crate) fn caller_company(
 /// (see `crate::modules::tenants::records`), so the resolution is:
 /// an explicitly named tenant id must parse as a UUID; otherwise
 /// the company id itself must parse as a UUID and IS the tenant
-/// id. Anything else fails closed with 400 — the row is never
+/// id. Anything else fails closed with 400 - the row is never
 /// written with a defaulted or invented tenant id. There is no
 /// separate company -> tenant lookup in the tree to consult.
 pub(crate) fn resolve_grant_tenant_id(

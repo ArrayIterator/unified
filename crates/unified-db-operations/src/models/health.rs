@@ -31,13 +31,11 @@ pub struct NewHealthCheck {
     pub ok: bool,
 }
 
-// ---------------------------------------------------------------------------
 // Advisor + Risk (2026-11-22-000039_advisor_risk). The notes' structs
 // omit `Selectable` and cite a `check_for_backend` convention that
 // does not exist in this file (0 occurrences); normalised to the
 // file's `Queryable, Selectable, Serialize` / `Insertable,
 // Deserialize` convention.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = advisor_suggestions)]

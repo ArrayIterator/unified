@@ -1,4 +1,4 @@
-//! Curriculum module — competency-based school curricula. — Grade-component mapping handlers.
+//! Curriculum module - competency-based school curricula. - Grade-component mapping handlers.
 //!
 //! Split from `src/modules/curriculum.rs`; behaviour unchanged.
 
@@ -31,7 +31,7 @@ use actix_web::{web, HttpRequest, HttpResponse};
 use serde_json::{json, Value};
 use std::sync::Arc;
 
-/// List the grade-component mappings (academic component id →
+/// List the grade-component mappings (academic component id ->
 /// basic competency id), sorted by component id. The mapping table
 /// is the admin-managed bridge that lets `academic.grade.recorded`
 /// events resolve to curriculum competencies.
@@ -60,7 +60,7 @@ pub(super) async fn list_component_mappings(
 /// Create one grade-component mapping. The basic competency must
 /// exist in this module; the academic component id is an opaque
 /// reference owned by the academic module and is stored as given
-/// (one mapping per component — a second row for the same component
+/// (one mapping per component - a second row for the same component
 /// is a conflict). Grades recorded before the mapping exists stay
 /// unmapped; creating the row does not rewrite them.
 pub(super) async fn create_component_mapping(

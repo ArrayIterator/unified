@@ -1,4 +1,4 @@
-//! Presets + Setup Wizard module. — Wizard steps. Closed vocabulary of step names (see the module header: the same closed-set pattern as `ProductCategory`). A preset may store any ordered subset of these names as its step list; the wizard stores that list and navigates by index, so step order is data.
+//! Presets + Setup Wizard module. - Wizard steps. Closed vocabulary of step names (see the module header: the same closed-set pattern as `ProductCategory`). A preset may store any ordered subset of these names as its step list; the wizard stores that list and navigates by index, so step order is data.
 //!
 //! Split from `src/modules/presets.rs`; behaviour unchanged.
 

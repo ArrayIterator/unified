@@ -1,4 +1,4 @@
-//! Compliance Center module — GDPR / ISO support: data export — Types.
+//! Compliance Center module - GDPR / ISO support: data export - Types.
 //!
 //! Split from `src/modules/compliance.rs`; behaviour unchanged.
 

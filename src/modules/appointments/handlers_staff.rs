@@ -1,4 +1,4 @@
-// appointments — handlers staff.
+// appointments - handlers staff.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -27,9 +27,7 @@ use super::handlers_appointments::*;
 use super::handlers_reminders::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Handlers: staff availability
-// ---------------------------------------------------------------------------
 
 pub(crate) fn validate_availability(
     kind: &str,
@@ -329,9 +327,7 @@ pub(crate) async fn delete_staff_availability(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Handlers: staff-service assignments
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_staff_services(
     ctx: web::Data<Arc<AppContext>>,
@@ -457,9 +453,7 @@ pub(crate) async fn unassign_staff_service(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Handlers: staff calendar (JSON + iCalendar)
-// ---------------------------------------------------------------------------
 
 pub(crate) fn staff_appointments_in_range(
     state: &AppointmentsState,
@@ -559,5 +553,5 @@ pub(crate) async fn staff_calendar_ics(
             blocks.push(ics_appointment_block(appointment, &service));
         }
     }
-    ics_response(build_ics(&blocks, &format!("Appointments — {staff_user_id}")))
+    ics_response(build_ics(&blocks, &format!("Appointments - {staff_user_id}")))
 }

@@ -44,7 +44,7 @@ const SAN_OID: &[u8] = &[0x55, 0x1D, 0x11];
 /// the new certificate. Replacing the whole `Arc<SslStorage>` behind a
 /// holder (see `the server http::cert_swap::CertStoreSwap::swap_store`)
 /// does NOT change a `ServerConfig` that was already built from the
-/// old `Arc` — only `ServerConfig`s built after the swap see the new
+/// old `Arc` - only `ServerConfig`s built after the swap see the new
 /// store. The per-certificate path above is the one that changes live
 /// traffic.
 pub struct SslStorage {
@@ -551,7 +551,6 @@ pub fn server_config(storage: &Arc<SslStorage>) -> UnifiedResult<ServerConfig> {
     Ok(config)
 }
 
-// ---------------------------------------------------------------------------
 // Advanced certificate management: inspection, config validation,
 // swap with rollback, and revocation.
 //
@@ -562,7 +561,6 @@ pub fn server_config(storage: &Arc<SslStorage>) -> UnifiedResult<ServerConfig> {
 // the server keep running on the self-signed fallback for the bad
 // domains. Private keys are never included in any value returned here:
 // callers only ever see fingerprints and metadata.
-// ---------------------------------------------------------------------------
 
 /// Days before expiry at which a certificate counts as `expiring`.
 pub const CERT_EXPIRING_DAYS: i64 = 30;

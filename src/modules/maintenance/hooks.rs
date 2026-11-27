@@ -1,4 +1,4 @@
-// Maintenance module — hook handlers.
+// Maintenance module - hook handlers.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use unified_core::context::AppContext;
@@ -16,9 +16,7 @@ use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Hook handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) fn on_maintenance_check(state: Arc<MaintenanceState>, _ctx: &mut HookContext) {
     // Runs the time-based transitions without an HTTP request (for

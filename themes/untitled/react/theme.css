@@ -480,7 +480,7 @@
 }
 
 @layer base {
-    /* DARK MODE VARIABLES — flipped under `.dark`, the class the
+    /* DARK MODE VARIABLES - flipped under `.dark`, the class the
        app's theme toggle adds to <html> (see assets/react/src/theme.ts).
        The starter kit uses `.dark-mode`; this theme uses `.dark`. */
 

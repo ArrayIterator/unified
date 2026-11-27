@@ -9,9 +9,7 @@ use super::{events::*, paper::*, thermal::*, profiles::*, jobs::*, state::*, aut
 
 
 
-// ---------------------------------------------------------------------------
 // Hook handlers (other modules talk to printing through these)
-// ---------------------------------------------------------------------------
 pub(crate) fn on_print_job_requested(state: Arc<PrintingState>, ctx: &mut HookContext) {
     let payload = ctx.data.clone();
     let requested_by = payload
@@ -23,7 +21,7 @@ pub(crate) fn on_print_job_requested(state: Arc<PrintingState>, ctx: &mut HookCo
         serde_json::from_value(payload);
     // A hook payload may carry the caller's tenant (billing does
     // not yet); without it the job is tenant-less and visible to
-    // every tenant — see `tenant_visible` in `auth.rs`.
+    // every tenant - see `tenant_visible` in `auth.rs`.
     let tenant_id = ctx
         .data
         .get("tenant_id")
@@ -97,7 +95,7 @@ pub(crate) fn on_print_jobs_list_requested(state: Arc<PrintingState>, ctx: &mut 
         .map(str::to_string);
     // Hook callers should pass their tenant id so the list is
     // tenant-scoped; without it the list is unscoped (billing
-    // does not pass one yet) — see `tenant_visible` in `auth.rs`.
+    // does not pass one yet) - see `tenant_visible` in `auth.rs`.
     let tenant_filter = payload
         .get("tenant_id")
         .and_then(|value| value.as_str())

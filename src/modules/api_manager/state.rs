@@ -20,9 +20,7 @@ use super::{AccessAuditRow, AccessRuleRow, ApiAccessAuditEntry, ApiAccessRule, A
     normalize_path_template, parse_version_number, path_template_matches, sort_version_ids,
     strip_public_prefix, validate_prefix};
 
-// ---------------------------------------------------------------------------
 // State
-// ---------------------------------------------------------------------------
 
 #[derive(Clone)]
 pub struct ApiManagerState {
@@ -565,7 +563,6 @@ impl ApiManagerState {
         self.persist_access_audit_entry(&entry);
     }
 
-    // ------------------------------------------------------------------
     // Persistence of the access rules and audit trail (migration
     // 000004: `api_access_rules`, `api_access_audit`).
     //
@@ -578,7 +575,6 @@ impl ApiManagerState {
     // because the in-memory state stays authoritative and must never
     // fail an admin request. A failed write is therefore retried by
     // the next create/update/delete of the same row.
-    // ------------------------------------------------------------------
 
     /// Load access rules and the audit trail from the database into
     /// the in-memory state. Each store loads only while it is still

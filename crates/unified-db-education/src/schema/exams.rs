@@ -3,10 +3,8 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Online exams (migration 000095_exams).
 // No FKs by design (see migration notes): no joinable!s.
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     exam_question_banks (id) {

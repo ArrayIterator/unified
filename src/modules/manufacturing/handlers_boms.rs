@@ -11,9 +11,7 @@ use super::{constants::*, types::*, inputs::*, helpers::*, store::*, validation:
 
 
 
-// ---------------------------------------------------------------------------
 // BOM handlers
-// ---------------------------------------------------------------------------
 pub(crate) async fn list_boms(
     ctx: web::Data<Arc<AppContext>>,
     state: web::Data<ManufacturingState>,

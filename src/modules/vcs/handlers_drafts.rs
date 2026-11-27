@@ -1,4 +1,4 @@
-// Third-party VCS integrations — Version draft, sync history, and asset download handlers.
+// Third-party VCS integrations - Version draft, sync history, and asset download handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -56,9 +56,7 @@ pub(crate) async fn list_sync_history(
     json::respond(result, debug)
 }
 
-// ---------------------------------------------------------------------------
 // Draft handlers and release-asset download.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_drafts(
     ctx: web::Data<Arc<AppContext>>,

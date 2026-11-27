@@ -1,4 +1,4 @@
-// Documents module — chunked / resumable uploads, multi-file upload,
+// Documents module - chunked / resumable uploads, multi-file upload,
 // per-module allowlists, pluggable virus scanning, versioning,
 // per-file access control with signed expiring download URLs,
 // quotas, and preview metadata.
@@ -7,23 +7,23 @@
 // the default provider is `LocalProvider` under `data/documents/`.
 // This module builds no second storage layer; stored objects are
 // addressed by validated, scope-free storage keys, dated:
-// `<kind>/YYYY/MM/DD/<uuidv7>[.<ext>]` — the SAME shape for tenant
+// `<kind>/YYYY/MM/DD/<uuidv7>[.<ext>]` - the SAME shape for tenant
 // and control-plane content (`kind` is `documents`, `media`, or
 // `others`; the date is the UTC upload date; `<ext>` is the
 // validated original extension, `[a-z0-9]{1,10}` lowercased, or
 // absent). The key carries NO scope and NO tenant id: there is no
 // `tenants/<tenancy-id>/` or `system/` prefix. The tenant/system
-// distinction lives in the provider layer — `StorageScope::root`
+// distinction lives in the provider layer - `StorageScope::root`
 // resolves the provider root (`tenants/<tenant-id>` or `system`)
 // at runtime from the scope, and the provider only ever sees the
-// rooted (effective) key — plus the DB metadata
+// rooted (effective) key - plus the DB metadata
 // (`documents.scope`, `documents.company_id`). A later change to
 // the tenancy-id logic therefore never requires re-keying objects:
 // only the scope-to-root mapping changes. Per-tenant backup is
 // DB-driven (list the tenant's documents via
 // `documents.company_id`) plus the tenant's provider root, not
 // prefix-based on the key. File names are fresh
-// UUIDv7s — one per upload, never the checksum — so the same content
+// UUIDv7s - one per upload, never the checksum - so the same content
 // uploaded twice is two distinct objects, listings sort by creation
 // (UUIDv7 is time-ordered), and the name is known at upload start.
 // SHA-256 is still computed at finalize and stored in the DB metadata
@@ -54,21 +54,21 @@
 //
 // Visibility (public / private): every document carries a
 // `visibility` column (`public` | `private`, default `private`;
-// migration 000123). The stored key is visibility-neutral — the
+// migration 000123). The stored key is visibility-neutral - the
 // area lives in the provider key (`{root}/{area}/{key}`), so a
 // flip MOVES the object between the public and private areas and
 // the URL never changes. Files are served from `/files/*` (never
-// from `/api/v1/*` — the API is JSON-only):
+// from `/api/v1/*` - the API is JSON-only):
 //   GET /files/public/{key}   zero checks: no auth, no DB read.
 //                              Found -> serve; miss -> fall through
 //                              to the app's normal 404 handling.
 //   GET /files/private/{key}  the access lock (4-rule flow):
-//                              rule 1 — load the DB row +
+//                              rule 1 - load the DB row +
 //                              visibility; public -> skip the
-//                              header check, serve. Rule 2 —
+//                              header check, serve. Rule 2 -
 //                              private -> check the header (or a
-//                              signed `?token=`). Rule 3 — valid ->
-//                              proceed. Rule 4 — found -> serve,
+//                              signed `?token=`). Rule 3 - valid ->
+//                              proceed. Rule 4 - found -> serve,
 //                              not found -> 404. ALL failures ->
 //                              404 uniform (never 401/403), with an
 //                              S3-style XML error body.
@@ -79,8 +79,8 @@
 // public, unpublish flips it back private (see the content hooks
 // below).
 //
-// Role-scoped media listing (task 355, `list_visible` in
-// validation.rs — the LIST endpoint itself filters; the UI never
+// Role-scoped media listing (`list_visible` in
+// validation.rs - the LIST endpoint itself filters; the UI never
 // receives a row the caller may not see):
 //   - `GET /api/v1/documents/picker` (the embed picker): PUBLIC
 //     documents only, for EVERY role. Content embeds a public
@@ -89,7 +89,7 @@
 //   - `GET /api/v1/documents` (the manager list): admins
 //     (`documents:admin`) see public + private in the company
 //     scope; author / editor roles see every public document in
-//     scope plus their OWN private documents — so they can mark
+//     scope plus their OWN private documents - so they can mark
 //     their own uploads public ("mark as public", the flip
 //     endpoint, owner-or-admin, scan gate applies). Another
 //     owner's private document never appears: not its name, its
@@ -101,11 +101,11 @@
 //     requires ownership or the admin capability.
 //
 // Lazy finalize: a chunked upload returns as soon as all parts
-// are received — the whole-file SHA-256 does NOT run on the
+// are received - the whole-file SHA-256 does NOT run on the
 // request path. The session moves to `received` and a `pending`
 // row is created in `finalize_jobs` (migration 000123); the
 // worker hashes the stored object afterwards (idle-only draining,
-// 2–4 concurrent jobs, 24h starvation guard), then either stores
+// 2-4 concurrent jobs, 24h starvation guard), then either stores
 // the checksum (`verified`) or fails the job (mismatch ->
 // `failed`, object deleted, session `failed`,
 // `document.finalize.failed` emitted). The document row carries
@@ -139,7 +139,7 @@
 //     POST   /{id}/versions/{version}/restore
 //                                            restore a version (new version)
 //     POST   /{id}/rescan                   re-run the virus scan (admin)
-//   Folders (migration 000132, task 355):
+// Folders (migration 000132):
 //     GET    /folders                       folder tree (nested, with
 //                                            direct document counts)
 //     POST   /folders                       create a folder
@@ -159,7 +159,7 @@
 //     POST   /uploads/sessions/{id}/parts   upload one part
 //     POST   /uploads/sessions/{id}/complete
 //                                            assemble + store + finalize
-//                                            (lazy hash — see above)
+//                                            (lazy hash - see above)
 //     DELETE /uploads/sessions/{id}         abort (delete partial parts)
 //     POST   /uploads/sessions/purge-expired
 //                                            delete expired sessions (admin)
@@ -195,7 +195,7 @@
 // This module also LISTENS to the content module:
 //   - `content.published` / `content.unpublished`: attached media
 //     flips public on publish and back to private on unpublish
-//     (best-effort detached tasks — the hook bus is synchronous
+//     (best-effort detached tasks - the hook bus is synchronous
 //     and the flip is async; the explicit `POST /{id}/flip`
 //     endpoint is the reliable path).
 // Quota checks ask the Storage Management module through its
@@ -208,7 +208,7 @@
 // locally. A quota rejection is always fail-closed: the upload is
 // refused with 409 and `document.quota.exceeded` is emitted.
 //
-// Virus scanning — pluggable, nothing bundled:
+// Virus scanning - pluggable, nothing bundled:
 //   Implement `DocumentScanner` (`scan(bytes) -> ScanVerdict`) and
 //   register it with `DocumentsState::register_scanner` (or
 //   `DocumentsModule::register_scanner`). Scanners are listed at
@@ -219,7 +219,7 @@
 //   `Clean` -> allowed; `Infected` -> blocked, always;
 //   `Pending` -> blocked; `Error` -> blocked; `Skipped` -> allowed
 //   ONLY when the admin setting `allow_unscanned_downloads` is true
-//   (default false — fail closed), and every skipped download is
+//   (default false - fail closed), and every skipped download is
 //   audit-logged through `document.downloaded` with
 //   `"scan_status": "skipped"`.
 //
@@ -257,9 +257,7 @@ use actix_multipart::Multipart;
 use actix_web::web;
 use std::sync::Arc;
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct DocumentsModule {
     state: Arc<DocumentsState>,

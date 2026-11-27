@@ -7,9 +7,7 @@ use std::sync::Arc;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Hook handlers.
-// ---------------------------------------------------------------------------
 
 /// Read a string field from a hook payload, trying several key
 /// spellings. Emitters disagree on field names, so a lapse that
@@ -73,7 +71,7 @@ pub(crate) fn on_check_requested(state: Arc<EntitlementsState>, ctx: &mut HookCo
 }
 
 /// Answer a write check query: writes are allowed only while the
-/// module is entitled — locked and read-only-grace both refuse.
+/// module is entitled - locked and read-only-grace both refuse.
 /// Same licensing leg as `on_check_requested` (stashed context),
 /// so the hook gate and the HTTP path agree.
 pub(crate) fn on_write_check_requested(state: Arc<EntitlementsState>, ctx: &mut HookContext) {
@@ -104,15 +102,15 @@ pub(crate) fn on_write_check_requested(state: Arc<EntitlementsState>, ctx: &mut 
 
 /// Record a grant requested by another module (SaaS packages
 /// provisioning, store checkout). Control-plane sources are read
-/// only through this command and the owning modules' events —
+/// only through this command and the owning modules' events -
 /// never by querying their tables directly.
 ///
 /// The emitter must name itself (`emitter` in the payload) and
 /// be on the `GRANT_EMITTERS` allowlist (`saas_packages`,
-/// `store` — the only provisioning modules documented to emit
+/// `store` - the only provisioning modules documented to emit
 /// this event, verified: no module in the tree emits it today).
-/// Anything else — a missing emitter, or an emitter outside the
-/// allowlist — is rejected with `granted: false` and mints
+/// Anything else - a missing emitter, or an emitter outside the
+/// allowlist - is rejected with `granted: false` and mints
 /// nothing. This stops any in-process emitter from minting
 /// entitlements for any company/module; it is not authentication
 /// against a compromised in-process emitter (hook payloads are
@@ -162,7 +160,7 @@ pub(crate) fn on_grant_requested(state: Arc<EntitlementsState>, ctx: &mut HookCo
     // The tenant namespace id: an explicitly named tenant id, else
     // the company id itself when it is a tenant UUID (the tenants
     // module uses the tenant id as the company id). A non-UUID
-    // company with no explicit tenant fails closed — no row is
+    // company with no explicit tenant fails closed - no row is
     // minted with a defaulted tenant id.
     let tenant_id =
         match resolve_grant_tenant_id(hook_string(ctx, &["tenant_id"]).as_deref(), &company_id) {
@@ -199,7 +197,7 @@ pub(crate) fn on_grant_requested(state: Arc<EntitlementsState>, ctx: &mut HookCo
 }
 
 /// Answer the AI suggestion query from the denied-attempt log.
-/// Only counts are shared — never buyer personal data.
+/// Only counts are shared - never buyer personal data.
 pub(crate) fn on_ai_suggest_requested(state: Arc<EntitlementsState>, ctx: &mut HookContext) {
     let company_id = hook_string(ctx, &["company_id"]);
     let Some(company_id) = company_id else { return };
@@ -215,7 +213,7 @@ pub(crate) fn on_ai_suggest_requested(state: Arc<EntitlementsState>, ctx: &mut H
 }
 
 /// A license lapsed (`license.revoked`, or the expiry scan's
-/// `license.expiring` — which only notes, never lapses). The
+/// `license.expiring` - which only notes, never lapses). The
 /// licensing payload carries `license_id` and no company id; the
 /// licensing leg of the effective check already reflects the
 /// revocation on the next read, and any stored license-sourced row
@@ -299,7 +297,7 @@ pub(crate) fn on_package_cancelled(state: Arc<EntitlementsState>, ctx: &mut Hook
 /// agree. `granted_via` maps onto this module's source kinds;
 /// `preset` and `builtin` map onto nothing: a preset is a settings
 /// bundle, not a purchase source, and a builtin (non-sellable)
-/// module needs no entitlement at all — the gate already allows
+/// module needs no entitlement at all - the gate already allows
 /// it. The row's `source_id` is the tenant id: the grant record
 /// itself lives in `tenant_module_grants`, keyed by tenant and
 /// module. The purchase behind the grant rides `source_ref`:
@@ -451,8 +449,8 @@ mod tests {
         let company_id = Uuid::now_v7().to_string();
         // No stored row: the module is entitled only through the
         // licensing leg (implicit owner entitlement for a sellable
-        // core module). Stored-rows-only denies it — the old hook
-        // behaviour — while both the HTTP path and the hook path
+        // core module). Stored-rows-only denies it - the old hook
+        // behaviour - while both the HTTP path and the hook path
         // now allow it.
         assert_eq!(
             state.effective(None, &company_id, "core_mod").state,

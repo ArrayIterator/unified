@@ -4,7 +4,6 @@
 
 use crate::modules::ai;
 
-// ---------------------------------------------------------------------------
 
 /// AI capabilities this module exposes through the AI module's
 /// contract. The capability is non-PII: inputs are redacted before

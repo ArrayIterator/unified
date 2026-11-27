@@ -8,9 +8,7 @@ use super::selection::*;
 use super::store::*;
 use super::types::*;
 
-// ---------------------------------------------------------------------------
 // Views.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct BalancerView {

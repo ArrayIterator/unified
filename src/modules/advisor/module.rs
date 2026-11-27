@@ -112,9 +112,7 @@ use super::ai_capabilities::AI_CAPABILITIES;
 
 
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 pub struct AdvisorModule {
     pub(crate) state: Arc<AdvisorState>,
 }

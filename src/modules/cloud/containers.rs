@@ -1,4 +1,4 @@
-// cloud module — app deployment through the connectors.
+// cloud module - app deployment through the connectors.
 //
 // A `CloudApp` is a deployed application: a plan (the resource tier)
 // plus a Docker or Kubernetes connection plus an image. Deploying
@@ -35,9 +35,7 @@ use super::providers::handlers::{
 use super::providers::types::{ContainerPort, CreateServerRequest, ProviderKind};
 use super::providers::{provider_registry, ProviderConnection};
 
-// ---------------------------------------------------------------------------
 // Types and store.
-// ---------------------------------------------------------------------------
 
 /// One deployed application.
 #[derive(Debug, Clone, Serialize)]
@@ -106,9 +104,7 @@ fn app_url(connection: &ProviderConnection, ports: &Option<Vec<ContainerPort>>) 
     Some(format!("http://{host}:{host_port}"))
 }
 
-// ---------------------------------------------------------------------------
 // Handlers.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn create_app(
     ctx: web::Data<Arc<AppContext>>,

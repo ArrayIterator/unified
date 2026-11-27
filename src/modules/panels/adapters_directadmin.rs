@@ -26,9 +26,7 @@ use super::types::PanelProduct;
 use super::types::PanelServerAccount;
 use super::types::validate_panel_endpoint;
 
-// ---------------------------------------------------------------------------
 // DirectAdmin adapter.
-// ---------------------------------------------------------------------------
 
 /// DirectAdmin API (`<endpoint>/CMD_API_*?json=yes`, HTTP basic auth
 /// with the user and either the password or a login key).

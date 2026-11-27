@@ -1,7 +1,7 @@
 // Diesel models for the forums domain of the unified-db-platform bounded context.
 //
 // Tables are defined by migration 2026-11-22-000110_forums. They had
-// no Diesel bindings before C11 (task 271): the forums module kept
+// no Diesel bindings before C11: the forums module kept
 // its live data in memory and the tables were persistence targets
 // only. The structs below mirror that migration exactly; the
 // runtime types live in `src/modules/forums/types.rs` and the
@@ -15,9 +15,7 @@ use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Forums (migration 000110_forums).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = forums)]

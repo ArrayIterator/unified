@@ -18,9 +18,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Shared state
-// ---------------------------------------------------------------------------
 
 /// In-memory stores for auditors and public links. The hook bus is
 /// attached in `init` (the bus lives in `AppContext`); handlers
@@ -79,7 +77,7 @@ impl AuditorsState {
 
     /// Register the shareable kinds this platform serves. Until a
     /// kind is registered, link creation for it fails closed by
-    /// design — the registry rejects the kind before the owning
+    /// design - the registry rejects the kind before the owning
     /// module is ever asked. Registration is data only (kind name,
     /// views, description); the owning module still enforces
     /// `allow_public_link` and actor permission through its own
@@ -87,11 +85,11 @@ impl AuditorsState {
     /// denied.
     ///
     /// Kinds registered here:
-    ///   - `network_tools_run` / `["summary"]` — a network-tools
+    ///   - `network_tools_run` / `["summary"]` - a network-tools
     ///     run result. The network_tools module answers
     ///     `sharing.allow_check` for it (owner-only), so links for
     ///     it work end to end once registered.
-    ///   - `project` / `["board", "summary"]` — a project board or
+    ///   - `project` / `["board", "summary"]` - a project board or
     ///     summary (batch 5 contract). NOTE: the projects module
     ///     does NOT answer `sharing.allow_check` yet, so links for
     ///     this kind still fail closed at the check until the
@@ -135,7 +133,7 @@ impl AuditorsState {
 
     /// Append one entry to the auditor action log and emit
     /// `auditors.action` for the audit module. Every auditor action
-    /// — allowed and denied — goes through here.
+    /// - allowed and denied - goes through here.
     pub(crate) fn log_auditor_action(
         &self,
         actor: &str,

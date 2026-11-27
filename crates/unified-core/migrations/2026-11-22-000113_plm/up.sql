@@ -58,12 +58,10 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- Stages: one lifecycle stage definition per row. `allowed_transitions`
 -- is the list of stage slugs a version may move to from here;
 -- `required_approvals` is how many approved version approvals
 -- must exist before a version may enter this stage.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS plm_stages (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -82,7 +80,6 @@ CREATE TABLE IF NOT EXISTS plm_stages (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_plm_stages_tenant_slug ON plm_stages (tenant_id, slug);
 CREATE INDEX IF NOT EXISTS idx_plm_stages_tenant_order ON plm_stages (tenant_id, sort_order);
 
--- ---------------------------------------------------------------------------
 -- Versions: one product revision. `product_id` references a
 -- products-module product by id only. The revision is three
 -- integers rendered as `major.minor.patch`; `status` is the
@@ -91,7 +88,6 @@ CREATE INDEX IF NOT EXISTS idx_plm_stages_tenant_order ON plm_stages (tenant_id,
 -- of the same product. `product_deleted` is set by the
 -- `product.deleted` listener so a deleted product's history
 -- stays visible.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS plm_versions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -116,7 +112,6 @@ CREATE INDEX IF NOT EXISTS idx_plm_versions_tenant_product ON plm_versions (tena
 CREATE INDEX IF NOT EXISTS idx_plm_versions_tenant_status ON plm_versions (tenant_id, status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_plm_versions_supersedes ON plm_versions (supersedes_version_id) WHERE supersedes_version_id IS NOT NULL;
 
--- ---------------------------------------------------------------------------
 -- ECOs: one engineering change order. `code` is unique per
 -- tenant (for example `ECO-0001`). `eco_type` is a value from
 -- the tenant's settings list. `affected_product_ids` and
@@ -124,7 +119,6 @@ CREATE INDEX IF NOT EXISTS idx_plm_versions_supersedes ON plm_versions (supersed
 -- `affected_version_ids` references PLM versions by id.
 -- `approval_steps` is the ordered, data-driven approval
 -- workflow for this ECO, stored as JSON.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS plm_ecos (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -147,14 +141,12 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_plm_ecos_tenant_code ON plm_ecos (tenant_i
 CREATE INDEX IF NOT EXISTS idx_plm_ecos_tenant_status ON plm_ecos (tenant_id, status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_plm_ecos_tenant_type ON plm_ecos (tenant_id, eco_type, created_at DESC);
 
--- ---------------------------------------------------------------------------
 -- Approvals: one decision record per row. `entity_type` is
 -- `eco` (the decision is for step `step_index` of that ECO's
 -- `approval_steps`) or `version` (a stage-entry approval;
 -- `step_index` is 0 and the record counts towards the target
 -- stage's `required_approvals` gate). `decision` is `pending`,
 -- `approved`, or `rejected`.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS plm_approvals (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -174,13 +166,11 @@ CREATE TABLE IF NOT EXISTS plm_approvals (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_plm_approvals_eco_step ON plm_approvals (entity_id, step_index) WHERE entity_type = 'eco';
 CREATE INDEX IF NOT EXISTS idx_plm_approvals_entity ON plm_approvals (tenant_id, entity_type, entity_id, created_at ASC);
 
--- ---------------------------------------------------------------------------
 -- BOM versions: one snapshot per row. `bom_id` references a
 -- manufacturing BOM by id only; `version_number` is strictly
 -- increasing per BOM. `eco_id` links the snapshot to the ECO
 -- that drove the change, when there is one. `snapshot` is the
 -- component/line snapshot as stored at versioning time.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS plm_bom_versions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -196,12 +186,10 @@ CREATE TABLE IF NOT EXISTS plm_bom_versions (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_plm_bom_versions_tenant_bom_number ON plm_bom_versions (tenant_id, bom_id, version_number);
 CREATE INDEX IF NOT EXISTS idx_plm_bom_versions_eco ON plm_bom_versions (eco_id) WHERE eco_id IS NOT NULL;
 
--- ---------------------------------------------------------------------------
 -- Audit trail: one row per lifecycle event (stage change,
 -- version creation, ECO status change, approval decision, BOM
 -- versioning). `from_value` / `to_value` carry the old and new
 -- status, decision, or version number.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS plm_audit_entries (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -217,11 +205,9 @@ CREATE TABLE IF NOT EXISTS plm_audit_entries (
 CREATE INDEX IF NOT EXISTS idx_plm_audit_tenant_entity ON plm_audit_entries (tenant_id, entity_type, entity_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_plm_audit_tenant_action ON plm_audit_entries (tenant_id, action, created_at DESC);
 
--- ---------------------------------------------------------------------------
 -- Per-tenant PLM settings. `eco_types` is the data-driven list
 -- ECO creation validates against; `require_eco_for_bom` makes
 -- an ECO link mandatory on every BOM version when true.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS plm_settings (
     tenant_id TEXT PRIMARY KEY CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
     eco_types JSONB NOT NULL DEFAULT '["design_change", "material_change", "process_change", "cost_reduction", "compliance", "supplier_change"]'::jsonb,

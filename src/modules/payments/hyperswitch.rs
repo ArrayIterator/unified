@@ -10,9 +10,7 @@ use super::{events::*, card_validation::*, card_settings::*, limits::*, provider
 
 
 
-// ---------------------------------------------------------------------------
 // Hyperswitch (Juspay open-source payment switch).
-// ---------------------------------------------------------------------------
 impl ProviderAdapter {
     /// Hyperswitch charge / authorize. One unified API: POST
     /// /payments with the amount in minor units. `confirm` is true

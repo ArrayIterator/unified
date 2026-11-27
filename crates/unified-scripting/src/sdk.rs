@@ -58,7 +58,7 @@ pub const SDK_VERSION: &str = "0.1.0";
 // HTTP request's tenant, or from the event payload) and cleared
 // after; `Unified.db` reads it and fails closed without one.
 // Thread-local because all JavaScript runs on the one worker
-// thread — no lock, no cross-call leakage.
+// thread - no lock, no cross-call leakage.
 thread_local! {
     static CURRENT_TENANT: Cell<Option<Uuid>> = const { Cell::new(None) };
 }
@@ -74,18 +74,18 @@ pub(crate) fn set_current_tenant(tenant: Option<Uuid>) {
     CURRENT_TENANT.with(|cell| cell.set(tenant));
 }
 
-// ------------------------------------------------------------ host
+// host
 
 /// Host services the SDK functions are backed by. Built once by
 /// the integration layer from the `AppContext` (see `host.rs`) or
 /// directly by tests. Everything behind it is the real server:
 /// the real hook bus, the real database pool, the real filesystem
-/// root — no fakes.
+/// root - no fakes.
 pub struct SdkHost {
     /// The server hook bus. `hooks.emit` emits on it;
     /// `hooks.on` registrations are forwarded to it by the loader.
     pub bus: Arc<HookBus>,
-    /// Read-only settings snapshot (curated keys only — never
+    /// Read-only settings snapshot (curated keys only - never
     /// secrets). Built at startup from the application config.
     pub config: HashMap<String, JsonValue>,
     /// Database pool, when a database is configured. `None` makes
@@ -122,10 +122,10 @@ impl SdkHost {
     }
 }
 
-// ------------------------------------------------------- declarations
+// declarations
 
 /// One route a module declared: the HTTP method and the path
-/// pattern (`/users/:id` — `:name` segments match one path
+/// pattern (`/users/:id` - `:name` segments match one path
 /// segment and land in `req.params`).
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct RouteEntry {
@@ -135,7 +135,7 @@ pub struct RouteEntry {
 
 /// What a module declared while its script evaluated. The worker
 /// reads this after evaluation to build the summary, the route
-/// catalog entries, and the HookBus forwarders. Plain data only —
+/// catalog entries, and the HookBus forwarders. Plain data only -
 /// the handler functions live in the JavaScript-side tables.
 #[derive(Debug, Default)]
 pub struct ModuleDeclarations {
@@ -192,7 +192,7 @@ impl SdkState {
     }
 }
 
-// ------------------------------------------------------- JSON bridge
+// JSON bridge
 
 /// Convert a Rust JSON value into a JavaScript value.
 pub fn js_from_json<'a>(ctx: &Ctx<'a>, value: &JsonValue) -> QjsResult<Value<'a>> {
@@ -247,7 +247,7 @@ fn raise_unified(ctx: &Ctx<'_>, error: unified_core::error::UnifiedError) -> rqu
     raise(ctx, &error.to_string())
 }
 
-// -------------------------------------------------------- validation
+// validation
 
 fn validate_event_name(event: &str) -> UnifiedResult<()> {
     if event.is_empty() || event.len() > 128 {
@@ -308,7 +308,7 @@ fn validate_route_pattern(pattern: &str) -> UnifiedResult<()> {
     Ok(())
 }
 
-// --------------------------------------------------------- bootstrap
+// bootstrap
 
 /// JavaScript evaluated once per module context, before the module
 /// script. Holds the module's declared handlers in JavaScript-side
@@ -367,7 +367,7 @@ globalThis.__unified_call_hooks = function (event, dataJson) {
 };
 "#;
 
-// ------------------------------------------------------------- global
+// global
 
 /// Build the `Unified` global object for one module context.
 /// Every function below is backed by the real host services in

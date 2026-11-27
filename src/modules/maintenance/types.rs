@@ -1,4 +1,4 @@
-// Maintenance module — types, status constants, and shared state.
+// Maintenance module - types, status constants, and shared state.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use unified_core::context::AppContext;
@@ -17,9 +17,7 @@ use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// Lifecycle of a maintenance window.
 pub const STATUS_SCHEDULED: &str = "scheduled";
@@ -90,9 +88,7 @@ pub struct MaintenanceModeRequest {
     pub message: Option<String>,
 }
 
-// ---------------------------------------------------------------------------
 // State
-// ---------------------------------------------------------------------------
 
 /// Decide what `refresh` should do with the global maintenance
 /// flag. Returns `Some(desired)` when the flag must be synced to

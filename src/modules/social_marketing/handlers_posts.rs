@@ -5,7 +5,7 @@
 //! through the network's provider adapter and stores one
 //! publish result per account on the post row. Scheduling
 //! only records `send_at` and emits `social.post.scheduled`
-//! for a scheduler to pick up — this module runs no
+//! for a scheduler to pick up - this module runs no
 //! scheduled-post runner.
 
 use actix_web::{HttpRequest, HttpResponse, web};
@@ -127,7 +127,7 @@ pub(crate) async fn list_posts(
 /// Every target account must belong to the post's network,
 /// and the post type must be one of the network row's post
 /// types. Media are references by document / storage id
-/// only — this module never stores or fetches the bytes.
+/// only - this module never stores or fetches the bytes.
 pub(crate) async fn create_post(
     state: web::Data<SocialMarketingState>,
     req: HttpRequest,
@@ -485,7 +485,7 @@ pub(crate) async fn schedule_post(
 
 /// Cancel a post (manager): a draft, scheduled, or failed
 /// post becomes cancelled. Published posts cannot be
-/// cancelled — unpublishing is the network's own action,
+/// cancelled - unpublishing is the network's own action,
 /// not this module's.
 pub(crate) async fn cancel_post(
     state: web::Data<SocialMarketingState>,

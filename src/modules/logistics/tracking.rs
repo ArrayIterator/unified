@@ -1,4 +1,4 @@
-//! Logistics module — shipments, fleet, warehouses, delivery — Public tracking (no auth — token-gated, rate-limited; see header).
+//! Logistics module - shipments, fleet, warehouses, delivery - Public tracking (no auth - token-gated, rate-limited; see header).
 //!
 //! Split from `src/modules/logistics.rs`; behaviour unchanged.
 

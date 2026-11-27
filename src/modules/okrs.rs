@@ -1,4 +1,4 @@
-// OKR / Goals module — objectives and key results at company,
+// OKR / Goals module - objectives and key results at company,
 // team, and personal levels, with cycles / quarters, check-ins,
 // cycle-end scoring, computed status, alignment (objective to
 // parent objective, key result to project / task), and progress

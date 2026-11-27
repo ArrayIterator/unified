@@ -1,4 +1,4 @@
-// Webhooks Manager — outgoing webhook endpoints and deliveries.
+// Webhooks Manager - outgoing webhook endpoints and deliveries.
 //
 // Routes under `/api/v1/webhooks`:
 //

@@ -1,4 +1,4 @@
-// Tenant Destroy module — the irreversible end of a tenant lifecycle.
+// Tenant Destroy module - the irreversible end of a tenant lifecycle.
 //
 // Destroy is NEVER one click. A tenant is destroyed only through the
 // full flow below, and every step is reversible until the final schema
@@ -33,8 +33,8 @@
 //      error, counted, and after a configured number of failures the
 //      confirmation locks for a configured lockout period.
 //   4. SECOND APPROVER: when the settings rule says the tenant is
-//      above the size/age threshold, a second admin — a different
-//      user than the requester, enforced — must approve. The
+//      above the size/age threshold, a second admin - a different
+//      user than the requester, enforced - must approve. The
 //      requester's own approval never counts.
 //   5. SUSPENSION + GRACE: on final confirmation the tenant is
 //      suspended first (`tenant.suspended` is emitted, serving
@@ -45,7 +45,7 @@
 //   6. FINAL DESTROY: only after grace expiry, only from
 //      `suspended_grace`: the tenant moves to `deprovisioning`
 //      through the tenants module's `begin_deprovision` helper
-//      (the single source of truth for the tenant record — this
+//      (the single source of truth for the tenant record - this
 //      module keeps NO parallel destroyed-tenants store), the
 //      tenant schema is dropped through
 //      `unified_core::tenancy::drop_tenant_schema` (never by building
@@ -67,13 +67,13 @@
 //      `tenant.backup_cleanup_requested`, and
 //      `tenant.search_index_cleanup_requested` (tenant id plus schema
 //      name) and stays in `destroyed_pending_external_cleanup` until
-//      every item is confirmed — by the owning module's
+//      every item is confirmed - by the owning module's
 //      `tenant.<area>_cleanup.completed` event, or by an admin through
 //      the confirm endpoint. Only then is the request `destroyed`.
 //
 // TENANT-SCOPED DATA ACCESS (standing rule). Every destroy step
 // resolves its data through tenant context and through the owning
-// module's own events — never by querying another module's tables
+// module's own events - never by querying another module's tables
 // directly, and never against the main/control-plane database for
 // tenant business data:
 //   - The destroy request and the control-plane tenant row are
@@ -100,26 +100,26 @@
 // Routes live under `/api/v1/tenants` (same prefix as the tenants
 // module, so the integrator merges the two route sets):
 //
-//   POST   /destroy-requests — request a destroy (destroy).
-//   GET    /destroy-requests — list destroy requests (destroy_read).
-//   GET    /destroy-requests/{id} — one destroy request (destroy_read).
-//   POST   /destroy-requests/{id}/export-proof — attach an export
+//   POST   /destroy-requests - request a destroy (destroy).
+//   GET    /destroy-requests - list destroy requests (destroy_read).
+//   GET    /destroy-requests/{id} - one destroy request (destroy_read).
+//   POST   /destroy-requests/{id}/export-proof - attach an export
 //          job id as proof (destroy).
-//   POST   /destroy-requests/{id}/confirm — typed slug
+//   POST   /destroy-requests/{id}/confirm - typed slug
 //          confirmation (destroy, requester only).
-//   POST   /destroy-requests/{id}/approve-second — second approver
+//   POST   /destroy-requests/{id}/approve-second - second approver
 //          (destroy, must differ from the requester).
-//   POST   /destroy-requests/{id}/cancel — cancel (destroy).
-//   POST   /destroy-requests/{id}/execute — final destroy, only
+//   POST   /destroy-requests/{id}/cancel - cancel (destroy).
+//   POST   /destroy-requests/{id}/execute - final destroy, only
 //          after grace expiry (destroy).
-//   GET    /destroy-requests/{id}/grace — grace/expiry info
+//   GET    /destroy-requests/{id}/grace - grace/expiry info
 //          (destroy_read).
-//   POST   /destroy-requests/{id}/external-cleanup/confirm —
+//   POST   /destroy-requests/{id}/external-cleanup/confirm -
 //          confirm one external cleanup item (destroy).
-//   POST   /destroy-requests/process-due — run the due-destroy
+//   POST   /destroy-requests/process-due - run the due-destroy
 //          sweep for grace-expired requests (destroy).
-//   GET    /destroy-settings — configurable defaults (destroy_read).
-//   PUT    /destroy-settings — update the defaults (destroy).
+//   GET    /destroy-settings - configurable defaults (destroy_read).
+//   PUT    /destroy-settings - update the defaults (destroy).
 //
 // Events emitted on the hook bus:
 //   - `tenant.destroy_requested` (tenancy constant
@@ -144,16 +144,16 @@
 //   - `tenant.destroy.failed` (fail-closed alert: drop failed, or
 //     the schema still exists after the drop)
 //
-// Events this module listens to (all read defensively — a missing
+// Events this module listens to (all read defensively - a missing
 // field or an unknown request is skipped, never an error):
-//   - `export.completed` — marks the matching request `export_ready`.
+//   - `export.completed` - marks the matching request `export_ready`.
 //   - `tenant.storage_cleanup.completed`,
 //     `tenant.backup_cleanup.completed`,
-//     `tenant.search_index_cleanup.completed` — confirm one external
+//     `tenant.search_index_cleanup.completed` - confirm one external
 //     cleanup item.
-//   - `tenant.destroyed.check` — hook query answered with
+//   - `tenant.destroyed.check` - hook query answered with
 //     `{"tenant_id", "destroyed"}` for the provisioning guard.
-//   - `tenant.destroy_due` — scheduler dispatch signal; the handler
+//   - `tenant.destroy_due` - scheduler dispatch signal; the handler
 //     only lists due requests, it never drops anything (hook
 //     handlers have no `AppContext`). The scheduler arm runs the
 //     sweep itself: it rebuilds the `AppContext` from the handles
@@ -168,15 +168,15 @@
 // the same sweep through `POST /destroy-requests/process-due`.
 //
 // Hook queries this module sends (fail closed when unanswered):
-//   - `tenant.lookup` — `{"tenant_id", "tenant": null}`; the tenants
+//   - `tenant.lookup` - `{"tenant_id", "tenant": null}`; the tenants
 //     module answers with the tenant record (or a `tenant` object in
 //     the results). No answer means the tenant cannot be resolved
 //     and the flow refuses to proceed.
-//   - `export.lookup` — `{"export_id", "export": null}`; the
+//   - `export.lookup` - `{"export_id", "export": null}`; the
 //     import/export module answers with the export job status.
-//   - `role.check` — capability checks, fail closed.
+//   - `role.check` - capability checks, fail closed.
 //
-// HONESTY — READ THIS FIRST. What is real in this module:
+// HONESTY - READ THIS FIRST. What is real in this module:
 // in-memory destroy-request / destroyed-tenants management with the
 // full state machine above; typed confirmation with attempt counting
 // and lockout; settings-driven second-approver rule and grace
@@ -189,19 +189,19 @@
 // stores are authoritative; the migration snippet for the
 // `tenant_destroy_requests` and `destroyed_tenants` tables is in the
 // builder report for the integrator to add to the tenants
-// migration — this module creates no second migration); the tenant
+// migration - this module creates no second migration); the tenant
 // record itself and its lifecycle statuses (the tenants module owns
 // them); the export job itself (the import/export module owns it);
 // subdomain storage and release (the saas_domains module owns it);
 // the actual deletion of stored files, backups, and search indexes
-// (the owning modules own that — this module only requests and
+// (the owning modules own that - this module only requests and
 // tracks it). The scheduler dispatch arm for `tenant.destroy_due`
 // exists (the scheduler module owns it): it rebuilds the
 // `AppContext` from the handles stored at scheduler `init` and
 // calls `process_due_destroys` here; this module declares the kind
 // and offers the sweep.
 //
-// CONFIG-DRIVEN — READ THIS FIRST. Nothing behavioural is
+// CONFIG-DRIVEN - READ THIS FIRST. Nothing behavioural is
 // hard-coded: the grace period, the second-approver age/size
 // thresholds, the failed-confirmation limit and lockout, and the
 // export entity name all live in `TenantDestroySettings`, editable
@@ -217,15 +217,15 @@
 // exactly like the import/export module. Capability checks use the
 // `role.check` hook and fail closed (no answer means not allowed).
 //
-// OPEN — known gaps, recorded honestly instead of hidden:
+// OPEN - known gaps, recorded honestly instead of hidden:
 //   - The tenants module (`src/modules/tenants.rs`) does not exist
 //     yet (parallel builder B2 owns it), so `tenant.lookup` has no
 //     answerer today and every destroy step fails closed with a
 //     clear "tenant record unavailable" error until B2 lands the
 //     listener. B2 must answer `tenant.lookup` with the tenant
-//     record: `id`, `slug`, `status`, `created_at` (required — the
+//     record: `id`, `slug`, `status`, `created_at` (required - the
 //     second-approver age rule needs it), `data_size_bytes`
-//     (optional — the size rule is skipped when absent),
+//     (optional - the size rule is skipped when absent),
 //     `destroyed_at` and `export_reference` when present. B2 must
 //     also listen to `tenant.suspended` (flip the tenant to
 //     `suspended`), `tenant.resumed` (resume serving),
@@ -279,7 +279,7 @@
 //     was done instead. No migration has ever run against live
 //     PostgreSQL, so the destroy flow is NOT proven live.
 
-// Tenant Destroy module — destroy lifecycle: export, confirmation, suspension, final destroy.
+// Tenant Destroy module - destroy lifecycle: export, confirmation, suspension, final destroy.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use super::*;
@@ -307,13 +307,11 @@ use serde_json::{Value, json};
 use std::sync::{Arc, OnceLock, RwLock};
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
-// Tenant resolution seam — the ONLY way this module reads a tenant
+// Tenant resolution seam - the ONLY way this module reads a tenant
 // record. The tenants module answers the `tenant.lookup` hook query;
 // this module never queries the tenants tables (or any other
 // module's tables) directly. Fail closed: no answer, or an answer
 // that does not match the requested id, refuses to proceed.
-// ---------------------------------------------------------------------------
 
 /// Parse one hook result value into a `TenantRef`. Accepts either a
 /// bare tenant object (`{"id", "slug", ...}`) or an object carrying
@@ -400,9 +398,7 @@ pub(crate) fn tenant_already_destroyed(tenant: &TenantRef) -> bool {
     tenant.status == STATUS_DESTROYED || tenant.status == "deleted" || tenant.destroyed_at.is_some()
 }
 
-// ---------------------------------------------------------------------------
 // Export verification seam.
-// ---------------------------------------------------------------------------
 
 /// Read the tenant an export job belongs to from one hook answer
 /// value. The import/export module scopes a full-tenant export to
@@ -411,7 +407,7 @@ pub(crate) fn tenant_already_destroyed(tenant: &TenantRef) -> bool {
 /// event carries that same `company_id`; a future `export.lookup`
 /// answer may carry `tenant_id` instead. Accepts either key, on the
 /// answer object itself or on its nested `export` object. Returns
-/// `None` when the answer carries no tenant linkage at all — the
+/// `None` when the answer carries no tenant linkage at all - the
 /// caller must then treat the binding as unverified, never as
 /// belonging to the requesting tenant.
 pub(crate) fn export_tenant_binding(value: &Value) -> Option<Uuid> {
@@ -505,9 +501,7 @@ pub(crate) fn mark_export_ready(
     );
 }
 
-// ---------------------------------------------------------------------------
 // Second-approver rule (settings-driven, never hard-coded).
-// ---------------------------------------------------------------------------
 
 /// Evaluate the second-approver rule for a tenant. Returns
 /// `Some(reason)` when a second approver is required, `None` when
@@ -549,10 +543,8 @@ pub(crate) fn second_approval_requirement(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Suspension + grace (shared core: typed confirmation and second
 // approval both end here).
-// ---------------------------------------------------------------------------
 
 /// Suspend the tenant and start the grace period. Only ever called
 /// after export proof, typed confirmation, and (when required) the
@@ -614,10 +606,8 @@ pub(crate) fn enter_suspension_and_grace(
     Ok(())
 }
 
-// ---------------------------------------------------------------------------
 // Final destroy (shared core: manual execute endpoint and scheduler
 // sweep both run this, with identical gates).
-// ---------------------------------------------------------------------------
 
 /// Record a failure that happened after the schema drop on the
 /// request (last error + audit trail + `tenant.destroy.failed`
@@ -704,7 +694,7 @@ pub(crate) fn run_final_destroy(
         ));
     }
     // Move the tenant record to `deprovisioning` through the
-    // tenants module — the single source of truth for destroy
+    // tenants module - the single source of truth for destroy
     // state. Skipped when a previous attempt already moved it
     // there, so a retry after a failed drop resumes instead of
     // failing the transition (`deprovisioning` ->
@@ -810,7 +800,7 @@ pub(crate) fn run_final_destroy(
     // The tenant record moves through the tenants module only:
     // record the export reference, then finish deprovisioning
     // (status `deleted`, `destroyed_at` stamped, `tenant.deleted`
-    // emitted). The row IS the guard record now — no parallel
+    // emitted). The row IS the guard record now - no parallel
     // store is written. A failure here is recorded on the request
     // like a drop failure: the schema is already gone, so the
     // operator must see exactly where the flow stopped.

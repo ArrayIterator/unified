@@ -9,7 +9,7 @@
 //! referenced by id. Money: this module carries no money
 //! fields, so there is no floating point money anywhere in it.
 //! Quantities are whole units (`i64`); a DO never invents a
-//! quantity — shipped quantities come from the snapshot taken
+//! quantity - shipped quantities come from the snapshot taken
 //! at creation time, and returned quantities are recorded
 //! against that snapshot.
 
@@ -49,7 +49,7 @@ pub(crate) const DEFAULT_RESET_RULE: &str = "yearly";
 pub(crate) const DEFAULT_PAPER_SIZE_CODE: &str = "A4";
 
 /// Default print output kind (`paper`, `pdf`, `thermal`,
-/// `email` — the printing module's vocabulary).
+/// `email` - the printing module's vocabulary).
 pub(crate) const DEFAULT_OUTPUT_KIND: &str = "paper";
 
 /// Capability names checked through the `role.check` hook.
@@ -117,9 +117,7 @@ pub(crate) const RESET_RULES: &[&str] = &["yearly", "monthly", "never"];
 /// nothing was returned yet (`none`, the pre-return value).
 pub(crate) const RETURN_SCOPES: &[&str] = &["full", "partial", "none"];
 
-// ---------------------------------------------------------------------------
 // Pure domain functions (unit-tested below)
-// ---------------------------------------------------------------------------
 
 /// Period key for the number sequence: the part of the number
 /// that resets. `yearly` keys on the calendar year, `monthly`
@@ -180,7 +178,7 @@ pub fn valid_prefix(prefix: &str) -> bool {
 /// terminal. Anything else is rejected. Note `delivered` is
 /// additionally gated in the handler: a DO may only move to
 /// delivered when a proof of delivery is linked (see
-/// `requires_proof_for_delivery` in settings) — the pure
+/// `requires_proof_for_delivery` in settings) - the pure
 /// machine allows the edge, the handler enforces the proof.
 pub fn can_transition(from: DeliveryNoteStatus, to: DeliveryNoteStatus) -> bool {
     use DeliveryNoteStatus::{Cancelled, Delivered, Draft, InTransit, Issued, Returned};
@@ -215,7 +213,7 @@ pub fn total_returned(items: &[DeliveryNoteItem]) -> i64 {
 /// Return scope of a DO from its items: `full` when every
 /// shipped unit came back, `partial` when some (but not all)
 /// did, `none` when nothing came back. A DO with no shipped
-/// units at all reads as `none` — there is nothing to return.
+/// units at all reads as `none` - there is nothing to return.
 pub fn return_scope(items: &[DeliveryNoteItem]) -> &'static str {
     let shipped = total_shipped(items);
     let returned = total_returned(items);
@@ -275,7 +273,7 @@ pub fn validate_return_quantities(
 /// item inputs: ordered and shipped quantities both start at
 /// the supplied quantity (the snapshot freezes what leaves
 /// the warehouse), returned starts at zero. A non-positive
-/// quantity is rejected — a DO never carries a zero or
+/// quantity is rejected - a DO never carries a zero or
 /// negative line.
 pub fn snapshot_items(
     inputs: &[DeliveryNoteItemInput],
@@ -470,9 +468,7 @@ pub fn render_thermal_lines(
     lines
 }
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// DO status. Serialized snake_case.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -536,7 +532,7 @@ pub struct DeliveryParty {
 }
 
 /// One line item of a DO. `product_id` references a product
-/// by id only (no foreign key — products live in the store /
+/// by id only (no foreign key - products live in the store /
 /// assets modules). `quantity_ordered` and
 /// `quantity_shipped` are frozen at creation; only
 /// `quantity_returned` grows, through the return endpoint.
@@ -559,7 +555,7 @@ pub struct DeliveryNoteItem {
 }
 
 /// One delivery note. `shipment_id` links the
-/// logistics shipment by id only (no foreign key — shipments
+/// logistics shipment by id only (no foreign key - shipments
 /// live in the logistics module); `rental_order_id` links a
 /// rental order the same way when the shipment came from a
 /// rental; `company_id` links the issuing company by id only.
@@ -567,7 +563,7 @@ pub struct DeliveryNoteItem {
 /// warehouse are snapshots taken at creation time. Delivery
 /// proof is a logistics `ProofOfDelivery` id plus the
 /// recipient signature metadata stored here (the logistics
-/// proof itself may carry no signature — see the module
+/// proof itself may carry no signature - see the module
 /// header).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeliveryNote {
@@ -578,7 +574,7 @@ pub struct DeliveryNote {
     pub shipment_id: Option<Uuid>,
     /// `linked` (the shipment id was confirmed through the
     /// `logistics.shipment.lookup` hook query), `unverified`
-    /// (no handler answered the query — see the module
+    /// (no handler answered the query - see the module
     /// header), or `none` (no shipment linked).
     pub shipment_link_status: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -674,9 +670,7 @@ impl Default for DeliveryNoteSettings {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Request bodies
-// ---------------------------------------------------------------------------
 
 /// One item input for DO creation: the product reference, a
 /// description, the quantity leaving the warehouse, its unit,
@@ -829,7 +823,7 @@ pub struct UpdateItemRequest {
 /// the status to move to; when omitted the DO moves to its
 /// next forward status (draft -> issued, issued ->
 /// in_transit, in_transit -> delivered). `delivered` through
-/// this endpoint still needs a linked proof of delivery —
+/// this endpoint still needs a linked proof of delivery -
 /// use the deliver endpoint to attach one.
 #[derive(Debug, Deserialize)]
 pub struct AdvanceRequest {
@@ -886,7 +880,7 @@ pub struct CancelRequest {
 
 /// Print a DO: queue a print job through the printing module
 /// and return the print-ready document inline. All fields are
-/// optional — settings supply the defaults.
+/// optional - settings supply the defaults.
 #[derive(Debug, Deserialize)]
 pub struct PrintRequest {
     #[serde(default, skip_serializing_if = "Option::is_none")]

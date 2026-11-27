@@ -80,7 +80,7 @@ export const DateRangePicker = ({ value: valueProp, defaultValue, onChange, onAp
             <AriaGroup>
                 {({ isInvalid }) => (
                     <Button size={size} color="secondary" iconLeading={CalendarIcon} className={cx(isInvalid && "ring-error_subtle outline-error")}>
-                        {!value ? <span className="text-placeholder">Select dates</span> : `${formattedStartDate} – ${formattedEndDate}`}
+                        {!value ? <span className="text-placeholder">Select dates</span> : `${formattedStartDate} - ${formattedEndDate}`}
                     </Button>
                 )}
             </AriaGroup>
@@ -128,7 +128,7 @@ export const DateRangePicker = ({ value: valueProp, defaultValue, onChange, onAp
                                 <div className="flex justify-between gap-3 border-t border-secondary p-4">
                                     <div className="hidden items-center gap-2 md:flex">
                                         <InputDateBase slot="start" size="sm" />
-                                        <div className="text-md text-quaternary">–</div>
+                                        <div className="text-md text-quaternary">-</div>
                                         <InputDateBase slot="end" size="sm" />
                                     </div>
                                     <div className="grid w-full grid-cols-2 gap-3 md:flex md:w-auto">

@@ -8,9 +8,7 @@ use super::{types::*, analysis::*, handlers::*, module::*};
 
 
 #[derive(Clone)]
-// ---------------------------------------------------------------------------
 // State
-// ---------------------------------------------------------------------------
 pub struct SeoState {
     pub settings: Arc<RwLock<SeoSettings>>,
     pub analyses: Arc<DashMap<Uuid, SeoAnalysis>>,

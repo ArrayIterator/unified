@@ -1,4 +1,4 @@
--- Roll back migration 000134 (task 358): drop the Map & Tagging
+-- Roll back migration 000134: drop the Map & Tagging
 -- tables. Locations, links, layers, geofences, positions, kind /
 -- role / provider definitions and per-tenant map settings are all
 -- removed; nothing else references them (other modules keep their

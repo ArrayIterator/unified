@@ -12,9 +12,7 @@ use super::{constants::*, types::*, inputs::*, state::*, helpers::*, handlers_in
 
 
 
-// ---------------------------------------------------------------------------
 // Rotation handlers
-// ---------------------------------------------------------------------------
 pub(crate) async fn list_rotations(
     ctx: web::Data<Arc<AppContext>>,
     state: web::Data<IncidentsState>,

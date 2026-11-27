@@ -24,9 +24,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Public link handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn create_link(
     ctx: web::Data<Arc<AppContext>>,
@@ -77,7 +75,7 @@ pub(crate) async fn create_link(
         // SERVER-SIDE enforcement of the target's allow flag: the
         // owning module answers `sharing.allow_check` from the
         // record's own `allow_public_link` flag. A false answer is
-        // a 403 — never just hidden in the UI.
+        // a 403 - never just hidden in the UI.
         if !check_allow_public_link(&ctx.hooks, &scope, &caller.actor) {
             state.log_auditor_action(
                 &caller.actor,
@@ -124,7 +122,7 @@ pub(crate) async fn create_link(
             }),
         );
         // HMAC-signed payload for the link, when a secret is
-        // configured. A missing secret means no signed payload —
+        // configured. A missing secret means no signed payload -
         // the link still works through the token.
         let secret_key = ctx
             .config
@@ -187,7 +185,7 @@ pub(crate) async fn list_links(
             .iter()
             .map(|entry| entry.value().clone())
             // Company scope first: links carry no company of
-            // their own, so the creator is the company proxy — a
+            // their own, so the creator is the company proxy - a
             // scoped caller sees only links they created.
             .filter(|link| link_in_scope(link, &scope, &caller.actor))
             .filter(|link| match kind_filter.as_deref() {
@@ -441,12 +439,12 @@ pub(crate) async fn list_shareable_kinds(
 }
 
 /// PUBLIC route: validate a link token and return its scope
-/// descriptor. No identity headers, no capability check — the link
+/// descriptor. No identity headers, no capability check - the link
 /// token IS the credential, and it grants read-only access to
 /// exactly one scoped resource. Serves NO resource content: the
 /// owning module serves content after validating the link through
 /// `core::sharing::validate_public_link` itself. Gated by the API
-/// Manager `ApiAccessRule` for this path (default deny — see the
+/// Manager `ApiAccessRule` for this path (default deny - see the
 /// module header). Every attempt is written to the access log and
 /// a failed attempt feeds the hardening lockout.
 pub(crate) async fn get_public_by_token(
@@ -484,7 +482,7 @@ pub(crate) async fn get_public_by_token(
         let link_id = state.links_by_hash.get(&token_hash).map(|entry| *entry.value());
         let link = link_id.and_then(|id| state.links.get(&id).map(|entry| entry.value().clone()));
         let outcome = validate_public_link(link.as_ref(), &presented, &requested, now);
-        // Every attempt is logged — allowed AND denied — with only
+        // Every attempt is logged - allowed AND denied - with only
         // hashes of the IP and user agent.
         let attempt = access_attempt(link_id, ip.as_deref(), agent.as_deref(), &outcome, now);
         let attempt_entry = PublicLinkAccessLogEntry {
@@ -601,10 +599,10 @@ mod tests {
         (web::Data::new(Arc::new(ctx)), web::Data::new(state))
     }
 
-    /// The company the handler tests act as (C3 task 315).
+    /// The company the handler tests act as (C3).
     const TEST_COMPANY_ID: &str = "22222222-3333-4444-8555-666666666666";
 
-    /// A request scoped to the test company (C3 task 315):
+    /// A request scoped to the test company (C3):
     /// mutation handlers require a resolved company, so the
     /// happy-path tests carry one on both the tenant context and
     /// the verified caller.

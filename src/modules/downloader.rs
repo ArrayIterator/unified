@@ -1,4 +1,4 @@
-//! Downloader module — file downloads with progress, pause / resume /
+//! Downloader module - file downloads with progress, pause / resume /
 //!
 //! Split into one file per concern under `downloader/`; this file only
 //! declares the submodules and re-exports the public API. The full

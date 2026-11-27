@@ -10,11 +10,9 @@ use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
-// Supervision (migration 000063_supervision; batch 5 notes §d, field
+// Supervision (migration 000063_supervision; batch 5 notes sec. d, field
 // lists expanded into full structs). Money structs carry no serde
 // derives.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = supervision_assignments)]

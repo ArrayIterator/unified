@@ -1,4 +1,4 @@
-// ESG module — Environmental, Social, and Governance
+// ESG module - Environmental, Social, and Governance
 // sustainability reporting: admin-defined metric definitions
 // and reporting-framework definitions as data, reporting
 // periods with open / closed status, metric values per period
@@ -12,33 +12,33 @@
 // Routes live under `/api/v1/esg`:
 //
 //   Frameworks:
-//     GET/POST /frameworks — list / create.
+//     GET/POST /frameworks - list / create.
 //     GET/PATCH/DELETE /frameworks/{framework_id}.
 //   Metrics:
-//     GET/POST /metrics — list / create.
+//     GET/POST /metrics - list / create.
 //     GET/PATCH/DELETE /metrics/{metric_id}.
 //   Periods:
-//     GET/POST /periods — list / create.
+//     GET/POST /periods - list / create.
 //     GET/PATCH/DELETE /periods/{period_id}.
 //     POST /periods/{period_id}/close, /reopen.
 //     GET  /periods/{period_id}/summary.
 //     GET  /periods/{period_id}/export.json, /export.csv.
 //   Entries:
-//     GET/POST /entries — list / record (upsert per
+//     GET/POST /entries - list / record (upsert per
 //       metric, period, scope).
 //     GET/PATCH/DELETE /entries/{entry_id}.
 //     GET  /entries/{entry_id}/history.
 //   Targets:
-//     GET/POST /targets — list / set (replace per metric,
+//     GET/POST /targets - list / set (replace per metric,
 //       period, scope).
 //     GET/PATCH/DELETE /targets/{target_id}.
 //   Audit:
-//     GET  /audit — list the audit trail.
+//     GET  /audit - list the audit trail.
 //   AI:
-//     POST /ai/{capability} — one registered capability
+//     POST /ai/{capability} - one registered capability
 //       through the AI module's gated runner.
 //
-// HONESTY — READ THIS FIRST. What is real in this module:
+// HONESTY - READ THIS FIRST. What is real in this module:
 // in-memory framework, metric, period, entry, history,
 // target, and audit management; metric definitions as data
 // (category, unit, data type, frequency, framework tags are
@@ -61,11 +61,11 @@
 // durable storage until the migration runs (the DashMap
 // stores are authoritative; migration
 // `2026-11-22-000119_esg` is the persistence target);
-// anything from the compliance module — ESG is
+// anything from the compliance module - ESG is
 // sustainability metrics, not regulatory compliance, and
 // this module does not duplicate compliance features; live
 // verification of scope ids against the company module
-// (scopes are plain reference ids — the company module emits
+// (scopes are plain reference ids - the company module emits
 // no company.created / company.deleted lifecycle events, so
 // there is nothing to listen to, and this module never
 // assumes another module's tables); deletion of a framework,
@@ -89,14 +89,14 @@
 //     to 100% attainment or matching a boolean target)
 //   - `esg.period.closed`
 //   - `notification.requested` (helper available; no handler
-//     sends one today — delivery belongs to the notifications
+//     sends one today - delivery belongs to the notifications
 //     module when a future flow needs it).
 // Events this module listens to:
-//   - `user.deleted` — anonymizes the user's frameworks,
+//   - `user.deleted` - anonymizes the user's frameworks,
 //     metrics, periods, entries, history, targets, and audit
 //     rows to `deleted-user`; rows are never deleted.
 //   - No company events: the company module emits no
-//     lifecycle events (verified from source — it only
+//     lifecycle events (verified from source - it only
 //     answers `company.exists` and `company.create_requested`
 //     requests), so scopes stay plain reference ids.
 

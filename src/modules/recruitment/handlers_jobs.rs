@@ -15,9 +15,7 @@ use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 use super::{constants::*, types::*, state::*, helpers::*, module::*, handlers_applicants::*, handlers_interviews::*, handlers_evaluations::*, handlers_offers::*};
 
-// ---------------------------------------------------------------------------
 // Job handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) fn public_job_view(job: &Job) -> Value {
     json!({
@@ -388,10 +386,8 @@ pub(crate) async fn close_job(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Public job handlers (no auth; gated by the API Manager
 // ApiAccessRule for these paths -- see the module header).
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_public_jobs(
     ctx: web::Data<Arc<AppContext>>,

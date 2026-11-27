@@ -1,4 +1,4 @@
-// Form Builder module — form definitions with drag-drop field
+// Form Builder module - form definitions with drag-drop field
 // order, embed codes, a submissions inbox, server-side validation,
 // spam protection, and submission mapping to CRM leads, support
 // tickets, or tasks.
@@ -6,30 +6,30 @@
 // Routes live under `/api/v1/forms`:
 //
 //   Forms (admin):
-//     GET/POST / — list forms / create a form (with fields).
+//     GET/POST / - list forms / create a form (with fields).
 //     GET/PATCH/DELETE /{id}.
-//     GET  /{id}/embed — embed code (render + submit URLs, script
+//     GET  /{id}/embed - embed code (render + submit URLs, script
 //       and iframe snippets) for the form.
 //   Fields (admin):
 //     GET/POST /{id}/fields.
 //     GET/PATCH/DELETE /{id}/fields/{field_id}.
-//     POST /{id}/fields/reorder — reorder fields by id list.
+//     POST /{id}/fields/reorder - reorder fields by id list.
 //   Submissions inbox (admin):
-//     GET  /{id}/submissions — paginated, filter by status.
+//     GET  /{id}/submissions - paginated, filter by status.
 //     GET  /{id}/submissions/export?format=csv|json.
-//     GET  /submissions/{submission_id} — one submission with its
+//     GET  /submissions/{submission_id} - one submission with its
 //       values.
-//     POST /submissions/{submission_id}/read — mark read.
-//     POST /submissions/{submission_id}/spam — mark spam.
-//     POST /submissions/{submission_id}/remap — retry the mapping.
+//     POST /submissions/{submission_id}/read - mark read.
+//     POST /submissions/{submission_id}/spam - mark spam.
+//     POST /submissions/{submission_id}/remap - retry the mapping.
 //   Public (no auth; see the public-access note below):
-//     GET  /public/{slug} — public render: the form definition as
+//     GET  /public/{slug} - public render: the form definition as
 //       JSON for embedding.
-//     POST /public/{slug}/submit — public submit: honeypot plus
+//     POST /public/{slug}/submit - public submit: honeypot plus
 //       per-IP rate limit plus per-form hourly cap, server-side
 //       validation with the same rules as defined, then mapping.
 //
-// HONESTY — READ THIS FIRST. What is real in this module:
+// HONESTY - READ THIS FIRST. What is real in this module:
 // in-memory form, field, submission, and submission-value
 // management; the full field-type set (text, textarea, email,
 // number, select, multi-select, checkbox, radio, date, file,
@@ -37,7 +37,7 @@
 // value bounds, regex patterns (compiled and rejected when
 // invalid), allowed values for choice fields, and conditional
 // visibility (`show_when`: field B shows only when field A equals
-// X — hidden fields are skipped by validation and never stored);
+// X - hidden fields are skipped by validation and never stored);
 // server-side validation on submit using exactly the defined
 // rules; spam protection (honeypot field, per-IP rate limit of 10
 // submissions per form per hour, per-form cap of 200 submissions
@@ -46,14 +46,14 @@
 // submission; and `forms.created`, `forms.updated`,
 // `forms.submission.received`, and `forms.submission.mapped`
 // events on the hook bus. What is NOT built here: actual CRM lead
-// / ticket / task creation — the owning modules (CRM, tickets,
+// / ticket / task creation - the owning modules (CRM, tickets,
 // tasks) must register a `forms.mapping.requested` handler that
 // answers `{"created": true, "id": "..."}` for the requested
 // target (`crm_lead`, `support_ticket`, or `task`) with the
 // payload shape `{"target", "form_id", "submission_id", "title",
 // "fields": {target_field: value}}`. Until such a handler exists
 // the mapping is recorded as `failed` with the error "no mapping
-// handler registered for target ..." — mapping failures are
+// handler registered for target ..." - mapping failures are
 // logged on the submission, never silent, and can be retried
 // through `/submissions/{id}/remap`. File upload itself is NOT
 // done here either: a `file` field carries a storage-module key
@@ -67,9 +67,9 @@
 // an endpoint is public only when a rule exists with
 // `public_access: true`, and denied outright when a rule exists
 // with `allowed: false`). There is no reusable per-request
-// "is this endpoint public?" helper to call from a handler — the
+// "is this endpoint public?" helper to call from a handler - the
 // check lives in the API Manager middleware / `resolve_public`
-// path — so the public routes below rely on that gate: an
+// path - so the public routes below rely on that gate: an
 // administrator must create the matching `ApiAccessRule` rows for
 // `GET /api/v1/forms/public/*` and `POST
 // /api/v1/forms/public/*/submit`. The routes are registered in
@@ -97,7 +97,7 @@
 //     `{"created": false, "error": "..."}`)
 // Events this module listens to: none.
 
-// forms — types.
+// forms - types.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -188,9 +188,7 @@ pub(crate) const PERM_FORMS_VIEW: &str = "forms.view";
 
 pub(crate) const PERM_FORMS_MANAGE: &str = "forms.manage";
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// Lifecycle of a form. Allowed transitions (enforced by
 /// `update_form`; a move to the same status is a no-op):
@@ -378,9 +376,7 @@ pub struct FormSubmissionValue {
     pub created_at: DateTime<Utc>,
 }
 
-// ---------------------------------------------------------------------------
 // Request bodies
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct CreateFieldRequest {

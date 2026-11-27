@@ -13,7 +13,7 @@
 -- Notes on the mapping (the in-memory DashMap store is still
 -- authoritative; see TODO.md):
 --   - `vendors.payment_reference` is a reference only (for example
---     "bank transfer — details on file with finance"): raw bank
+--     "bank transfer - details on file with finance"): raw bank
 --     account details are never stored here. `vendors.rating` is a
 --     manual quality rating, 1..=5, when set. `vendors.status` is
 --     `active`, `inactive`, or `suspended` (`VendorStatus`);
@@ -52,9 +52,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One vendor.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS vendors (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(200) NOT NULL,
@@ -76,9 +74,7 @@ CREATE TABLE IF NOT EXISTS vendors (
 CREATE INDEX IF NOT EXISTS idx_vendors_status ON vendors (status);
 CREATE INDEX IF NOT EXISTS idx_vendors_name ON vendors (name);
 
--- ---------------------------------------------------------------------------
 -- One purchase order.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS purchase_orders (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     po_number VARCHAR(32) NOT NULL UNIQUE,
@@ -105,9 +101,7 @@ CREATE INDEX IF NOT EXISTS idx_purchase_orders_status ON purchase_orders (status
 CREATE INDEX IF NOT EXISTS idx_purchase_orders_category ON purchase_orders (category);
 CREATE INDEX IF NOT EXISTS idx_purchase_orders_po_number ON purchase_orders (po_number);
 
--- ---------------------------------------------------------------------------
 -- One purchase order line.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS purchase_order_lines (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     purchase_order_id UUID NOT NULL REFERENCES purchase_orders (id) ON DELETE CASCADE,
@@ -123,9 +117,7 @@ CREATE TABLE IF NOT EXISTS purchase_order_lines (
 );
 CREATE INDEX IF NOT EXISTS idx_purchase_order_lines_po_id ON purchase_order_lines (purchase_order_id);
 
--- ---------------------------------------------------------------------------
 -- One approval workflow row for a purchase order.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS purchase_order_approvals (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     purchase_order_id UUID NOT NULL REFERENCES purchase_orders (id) ON DELETE CASCADE,
@@ -138,9 +130,7 @@ CREATE TABLE IF NOT EXISTS purchase_order_approvals (
 CREATE INDEX IF NOT EXISTS idx_purchase_order_approvals_po_id ON purchase_order_approvals (purchase_order_id);
 CREATE INDEX IF NOT EXISTS idx_purchase_order_approvals_decision ON purchase_order_approvals (decision);
 
--- ---------------------------------------------------------------------------
 -- One goods receipt against a purchase order line.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS goods_receipts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     purchase_order_id UUID NOT NULL REFERENCES purchase_orders (id) ON DELETE CASCADE,
@@ -154,9 +144,7 @@ CREATE TABLE IF NOT EXISTS goods_receipts (
 CREATE INDEX IF NOT EXISTS idx_goods_receipts_po_id ON goods_receipts (purchase_order_id);
 CREATE INDEX IF NOT EXISTS idx_goods_receipts_line_id ON goods_receipts (line_id);
 
--- ---------------------------------------------------------------------------
 -- One spend budget, scoped to a category, a vendor, or both.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS procurement_budgets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     category VARCHAR(80),

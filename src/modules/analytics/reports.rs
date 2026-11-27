@@ -9,9 +9,7 @@ use super::{events::*, helpers::*, types::*, views::*, inputs::*, state::*, hook
 
 
 
-// ---------------------------------------------------------------------------
 // Report computation.
-// ---------------------------------------------------------------------------
 pub(crate) const VALID_METRICS: [&str; 6] = [
 
     "revenue",

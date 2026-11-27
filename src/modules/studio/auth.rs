@@ -8,9 +8,7 @@ use unified_core::json;
 use unified_core::tenancy::CallerScope;
 use unified_core::tenancy::TenantContext as TenancyContext;
 
-// ---------------------------------------------------------------------------
 // Caller identity and capability checks.
-// ---------------------------------------------------------------------------
 
 pub(crate) struct Caller {
     pub(crate) actor: String,
@@ -30,7 +28,7 @@ const MAX_COMPANY_LEN: usize = 128;
 /// (see `unified_core::tenancy`): this function returns the tenancy
 /// `TenantContext` (tenant id as Uuid + schema name derived only
 /// by `tenancy::schema_name()`), and the Diesel persistence wiring
-/// — when it lands — takes the Uuid from here into
+/// - when it lands - takes the Uuid from here into
 /// `tenancy::with_tenant_connection`. Fail closed:
 /// `from_http_request` answers 401 when the request did not
 /// resolve to a tenant and 403 when the resolved tenant id is not
@@ -45,7 +43,7 @@ const MAX_COMPANY_LEN: usize = 128;
 /// `company_id` that disagrees with it is rejected; list endpoints
 /// only return rows of the caller's company plus global rows.
 /// Platform is an explicit, positively-decided scope (control-plane
-/// request by a verified admin with no resolvable company) — a
+/// request by a verified admin with no resolvable company) - a
 /// caller with no resolvable company is unresolved and reads
 /// global rows only, never any company's rows.
 ///
@@ -121,11 +119,10 @@ pub(crate) fn guard(
     Ok(call)
 }
 
-// ---------------------------------------------------------------------------
 // Company scoping.
 //
 // The caller's company is resolved from server-side sources only
-// — never from a request body or query filter, which are
+// - never from a request body or query filter, which are
 // client-asserted. A `company_id` carried in the body or query is
 // verified against the scope resolved here instead (see
 // `CallerScope::require_company_scope` and
@@ -135,7 +132,6 @@ pub(crate) fn guard(
 // shared `CallerScope` in `unified_core::tenancy`: platform is an
 // explicitly-decided scope, and an unresolved caller reads global
 // rows only.
-// ---------------------------------------------------------------------------
 
 /// Resolve the company scope the caller acts under, from
 /// server-side sources only, most authoritative first:
@@ -281,7 +277,7 @@ mod tests {
 
     #[test]
     fn can_access_record_platform_scope_is_explicit() {
-        // Platform reads any record — but only as the explicitly
+        // Platform reads any record - but only as the explicitly
         // decided `Platform` scope, never from an absent company.
         assert!(CallerScope::Platform.can_access_record("company-a"));
         assert!(CallerScope::Platform.can_access_record(""));
@@ -387,7 +383,7 @@ mod tests {
     #[test]
     fn resolve_caller_company_unresolved_on_tenant_host_without_company() {
         // No company anywhere, admin caller, but the request
-        // resolved to a tenant host: NOT platform — platform needs
+        // resolved to a tenant host: NOT platform - platform needs
         // a control-plane request. Unresolved reads global only.
         let ctx = test_ctx();
         let req = tenant_host_request();

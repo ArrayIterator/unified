@@ -29,7 +29,7 @@ use super::*;
 /// can resolve recipients: a payload with no `user_id`, `user_ids`
 /// or `audience` is rejected by the notifications module and the
 /// alert is never delivered. The payload never contains a key, a
-/// URL, or a response body — only ids, the country/year, and the
+/// URL, or a response body - only ids, the country/year, and the
 /// short failure reason.
 pub(crate) fn sync_failure_payload(
     tenant_id: &str,
@@ -124,9 +124,7 @@ pub(crate) async fn fetch_holidays_for_provider(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Sync engine.
-// ---------------------------------------------------------------------------
 
 /// Upsert fetched holidays for one (country, year) into the shared
 /// store, deduplicated by (country, date, name). Returns how many
@@ -484,7 +482,7 @@ mod tests {
     async fn manual_sync_summary_reports_scheduler_status_manual() {
         // A config whose provider does not exist fails fast with no
         // network: the summary still carries scheduler_status
-        // "manual", never "queued" — a manual sync runs inline
+        // "manual", never "queued" - a manual sync runs inline
         // only and must not claim a scheduler job was enqueued.
         let state = HolidaysState::default();
         let bus = HookBus::new();

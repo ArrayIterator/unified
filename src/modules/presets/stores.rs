@@ -1,4 +1,4 @@
-//! Presets + Setup Wizard module. — In-memory stores (authoritative at runtime; see the module header).
+//! Presets + Setup Wizard module. - In-memory stores (authoritative at runtime; see the module header).
 //!
 //! Split from `src/modules/presets.rs`; behaviour unchanged.
 

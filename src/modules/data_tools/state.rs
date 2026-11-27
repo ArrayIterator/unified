@@ -1,4 +1,4 @@
-// data_tools — In-memory state and the resolver.
+// data_tools - In-memory state and the resolver.
 //
 // The DashMap stores are the runtime authority (same convention as
 // the other batch modules); the tables in migration 000125 are the
@@ -21,9 +21,7 @@ use std::sync::{Arc, Mutex, RwLock, TryLockError};
 use unified_core::error::{UnifiedError, UnifiedResult};
 use unified_core::hooks::HookBus;
 
-// ---------------------------------------------------------------------------
 // State
-// ---------------------------------------------------------------------------
 
 pub struct DataToolsState {
     pub(crate) hooks: RwLock<Arc<HookBus>>,
@@ -36,7 +34,7 @@ pub struct DataToolsState {
     /// Documents module (see the migration header).
     pub(crate) shares: DashMap<String, DocumentShareRecord>,
     /// Serializes runs: one cleanup at a time. `try_lock` is used on
-    /// purpose — a second concurrent run gets 409 instead of waiting,
+    /// purpose - a second concurrent run gets 409 instead of waiting,
     /// and a hook handler that re-enters a run can never deadlock on
     /// this lock. The guard is only ever held across synchronous map
     /// work and hook emission, never across an await.
@@ -304,7 +302,7 @@ impl DataToolsState {
 
     /// Dry-run preview: counts per target, zero deletes, guaranteed
     /// (the scan path never calls a delete, for owned targets or
-    /// through the hook — owners receive `dry_run: true`).
+    /// through the hook - owners receive `dry_run: true`).
     pub fn scan(&self) -> ScanReport {
         let at = now();
         let run_id = format!("scan-{}", new_id());

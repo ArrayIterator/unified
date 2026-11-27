@@ -1,4 +1,4 @@
-// pricing — store.
+// pricing - store.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -249,9 +249,7 @@ pub(crate) fn coupon_usability(
     None
 }
 
-// ---------------------------------------------------------------------------
 // Helpers.
-// ---------------------------------------------------------------------------
 
 pub(crate) fn new_id() -> String {
     Uuid::new_v4().to_string()

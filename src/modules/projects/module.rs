@@ -1,4 +1,4 @@
-// Projects module — module definition and registration.
+// Projects module - module definition and registration.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use super::*;
@@ -12,9 +12,7 @@ use actix_web::web;
 use serde_json::{Value, json};
 use std::sync::Arc;
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct ProjectsModule {
     pub(crate) state: Arc<ProjectsState>,

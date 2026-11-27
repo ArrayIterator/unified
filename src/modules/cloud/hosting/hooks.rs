@@ -1,4 +1,4 @@
-// hosting module — Hook listeners.
+// hosting module - Hook listeners.
 //
 // Split from the former single-file module `src/modules/hosting.rs`.
 // The module root (`hosting.rs`) re-exports the public items, so the
@@ -25,9 +25,7 @@ use uuid::Uuid;
 use super::types::{DomainObservation, HostingState, OrderClaim};
 use super::helpers::parse_expiry;
 
-// ---------------------------------------------------------------------------
 // Hook listeners (store / domains / SSL observations).
-// ---------------------------------------------------------------------------
 
 /// Record a store order as a provisioning claim when any of its items
 /// buys a hosting plan (the item's store product id matches a plan's
@@ -76,8 +74,8 @@ pub(crate) fn record_order_claim(state: &Arc<HostingState>, data: &Value) {
 
 /// Record domain / SSL facts from a `domain.verify` report. Only a
 /// report with a passing DNS check counts as a verified domain. A
-/// failed report is recorded too — as `exists: false` with a failed
-/// SSL state — so the requirement check can surface the failure
+/// failed report is recorded too - as `exists: false` with a failed
+/// SSL state - so the requirement check can surface the failure
 /// instead of treating the domain as unverified (or, worse, as
 /// verified).
 pub(crate) fn observe_domain_verify(state: &Arc<HostingState>, data: &Value) {

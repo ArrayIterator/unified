@@ -1,4 +1,4 @@
-//! Cloudflare connector module. — Constants.
+//! Cloudflare connector module. - Constants.
 //!
 //! Split from `src/modules/cloudflare.rs`; behaviour unchanged.
 

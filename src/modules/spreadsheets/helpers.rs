@@ -71,9 +71,7 @@ pub(crate) fn require_manage(ctx: &AppContext, role: &str) -> UnifiedResult<()> 
     require_permission(ctx, role, PERM_SPREADSHEETS_MANAGE)
 }
 
-// ---------------------------------------------------------------------------
 // Tenant edge guard (C3 pilot 5, group E).
-// ---------------------------------------------------------------------------
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request
@@ -221,9 +219,7 @@ pub fn today_string() -> String {
     Utc::now().format("%Y-%m-%d").to_string()
 }
 
-// ---------------------------------------------------------------------------
 // Validation
-// ---------------------------------------------------------------------------
 
 /// Validate a workbook title and optional description.
 pub(crate) fn validate_workbook_input(
@@ -382,9 +378,7 @@ pub(crate) fn validate_settings(settings: &SpreadsheetSettings) -> UnifiedResult
     Ok(())
 }
 
-// ---------------------------------------------------------------------------
 // Tenant-scoped loaders (cross-tenant reads as 404, never 403)
-// ---------------------------------------------------------------------------
 
 fn tenant_match(row_tenant_id: &str, tenant_id: &str, id: Uuid, what: &str) -> UnifiedResult<()> {
     if row_tenant_id != tenant_id {
@@ -481,9 +475,7 @@ pub(crate) fn load_share(
     Ok(share)
 }
 
-// ---------------------------------------------------------------------------
 // Cells: write + recalculate + version
-// ---------------------------------------------------------------------------
 
 /// Build a fresh cell row from a typed value: classify the
 /// value, compute its typed result, and fill in the ids.
@@ -700,9 +692,7 @@ pub(crate) fn apply_cell_write(
     previous
 }
 
-// ---------------------------------------------------------------------------
 // Views
-// ---------------------------------------------------------------------------
 
 /// A workbook view with its sheets and share count attached.
 pub(crate) fn workbook_view(state: &SpreadsheetsState, workbook: &Workbook) -> Value {
@@ -739,9 +729,7 @@ pub(crate) fn sheet_view(state: &SpreadsheetsState, sheet: &Sheet) -> Value {
 
 use std::collections::HashMap;
 
-// ---------------------------------------------------------------------------
 // CSV (pure functions, unit-tested below)
-// ---------------------------------------------------------------------------
 
 /// Parse CSV text into rows of fields. Handles quoted fields
 /// (with `""` escapes), commas and newlines inside quotes, and

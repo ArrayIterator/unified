@@ -1,4 +1,4 @@
-// Gamification — Ledger / balance / points handlers.
+// Gamification - Ledger / balance / points handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -16,9 +16,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Ledger / balance / points handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_ledger(
     ctx: web::Data<Arc<AppContext>>,

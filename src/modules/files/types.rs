@@ -32,9 +32,7 @@ pub(crate) const PERM_FILES_VIEW: &str = "files.view";
 /// delete, move.
 pub(crate) const PERM_FILES_MANAGE: &str = "files.manage";
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FileRecord {
@@ -73,9 +71,7 @@ pub struct MoveRequest {
     pub folder_id: String,
 }
 
-// ---------------------------------------------------------------------------
 // State
-// ---------------------------------------------------------------------------
 
 pub struct FilesState {
     pub(crate) hooks: RwLock<Arc<HookBus>>,
@@ -124,7 +120,7 @@ impl FilesState {
 
     /// Disk path for a file record: `data/files/<folder>/<record-id>`.
     /// Both segments are validated as single path components and the
-    /// resolved path is verified to stay inside `base_dir` — the
+    /// resolved path is verified to stay inside `base_dir` - the
     /// same containment rule as the scripting storage SDK
     /// (`resolve_module_path`): an absolute path or a `..` escape
     /// in either segment is refused instead of silently joining it
@@ -232,9 +228,7 @@ impl FilesState {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Caller authentication and tenant scoping
-// ---------------------------------------------------------------------------
 
 /// Caller identity: the server-verified caller (user id plus
 /// server-resolved role, both required for capability checks),
@@ -281,7 +275,7 @@ pub(crate) fn require_permission(
     }
 }
 
-/// The caller's company scope, resolved server-side — never taken
+/// The caller's company scope, resolved server-side - never taken
 /// from a request body or a query filter. Precedence, most
 /// authoritative first (see `CallerScope` in
 /// `unified_core::tenancy`):
@@ -295,7 +289,7 @@ pub(crate) fn require_permission(
 /// positively-decided scope, never a fallback: it requires no
 /// resolvable company AND a control-plane request AND a verified
 /// admin role (`CallerScope::decide`). Any other caller with no
-/// company is `Unresolved` and reads global rows only — the old
+/// company is `Unresolved` and reads global rows only - the old
 /// no-company-means-platform behaviour was the HIGH-3 hole and is
 /// gone.
 pub(crate) fn resolve_caller_company(
@@ -500,7 +494,7 @@ mod tests {
     /// Platform is a positive decision, not a fallback: it needs a
     /// control-plane request (no resolved tenant context) AND a
     /// verified admin role. A tenant-host request or a non-admin
-    /// caller with no company is Unresolved — and denied
+    /// caller with no company is Unresolved - and denied
     /// company-owned records.
     #[test]
     fn resolve_caller_company_platform_requires_control_plane_admin() {

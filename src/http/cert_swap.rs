@@ -31,7 +31,7 @@
 //
 // Wiring (already live in the server startup, `server.rs`):
 // the server builder creates the swap holder from the storage,
-// builds the TLS config from it, and registers the swap hooks —
+// builds the TLS config from it, and registers the swap hooks -
 // exactly the three lines below, in that order. This file does
 // not touch `server.rs`.
 //

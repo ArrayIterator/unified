@@ -3,9 +3,7 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Webinars (migration 000081_webinars).
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     webinars (id) {

@@ -36,9 +36,7 @@ use super::{expiry::*, store::*, hooks::*, types::*, validation::*, handlers::*,
 /// download links.
 pub(crate) type HmacSha256 = Hmac<Sha256>;
 
-// ---------------------------------------------------------------------------
 // Key generation: XXXX-XXXX-XXXX-XXXX with a checksum character.
-// ---------------------------------------------------------------------------
 
 /// Alphabet without ambiguous characters (no 0/O, 1/I/L).
 pub(crate) const KEY_ALPHABET: &[u8] = b"ABCDEFGHJKLMNPQRSTUVWXYZ23456789";

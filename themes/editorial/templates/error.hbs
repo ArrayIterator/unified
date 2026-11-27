@@ -17,7 +17,7 @@
     <section class="error-card" role="alert">
       <svg class="icon icon-xl empty-state-icon" aria-hidden="true"><use href="#icon-alert"></use></svg>
       {{#if code}}<p class="error-code">{{code}}</p>{{/if}}
-      <h1>{{#if title}}{{title}}{{else}}Something went wrong{{/if}}</h1>
+      <h1>{{#if title}}{{title}}{{else}}Error{{/if}}</h1>
       {{#if message}}<p class="error-message">{{message}}</p>{{/if}}
       {{#if request_id}}<p class="error-request">Request id: {{request_id}}</p>{{/if}}
       <p class="error-actions">

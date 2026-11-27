@@ -15,9 +15,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 use super::{constants::*, helpers::*, types::*, state::*, handlers_pools::*, forecast::*, events::*, module::*};
 
-// ---------------------------------------------------------------------------
 // Plan handlers.
-// ---------------------------------------------------------------------------
 
 /// After a plan changes state, check the pool for overcommit and emit
 /// `planner.overcommit` with the numbers when allocations exceed

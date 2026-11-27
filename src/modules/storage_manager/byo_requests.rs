@@ -5,9 +5,7 @@ use serde::Deserialize;
 use serde_json::Value;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // BYO request bodies.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct UpdateByoSettingsRequest {

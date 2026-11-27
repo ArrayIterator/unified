@@ -1,4 +1,4 @@
-// Multi-Cluster module — clusters of Unified nodes and provider pools,
+// Multi-Cluster module - clusters of Unified nodes and provider pools,
 // node registration with HMAC-signed node-to-node authentication, health
 // probing, and mutual sync between clusters.
 //
@@ -14,13 +14,13 @@
 // between nodes. Conflicts are resolved last-write-wins on `updated_at`
 // and every conflict is recorded twice: in the sync log entry and as a
 // first-class conflict record an admin can list, inspect (both
-// payloads) and resolve (`keep_local`, `keep_remote` or `dismiss`) —
+// payloads) and resolve (`keep_local`, `keep_remote` or `dismiss`) -
 // overwrites are never silent. A dry-run mode reports what would change
 // without applying anything.
 //
 // Reliability: a failed sync domain enters a retry queue with
 // exponential backoff (settings-driven); after the configured maximum
-// attempts it becomes dead-letter — visible to admins, never retried
+// attempts it becomes dead-letter - visible to admins, never retried
 // automatically, retryable or discardable by hand. An aggregate sync
 // health endpoint reports node health, failing plans, open conflicts,
 // pending retries and dead-letters at a glance.

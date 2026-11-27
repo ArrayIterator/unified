@@ -1,4 +1,4 @@
-// Webhooks — State.
+// Webhooks - State.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -23,9 +23,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // State.
-// ---------------------------------------------------------------------------
 
 pub(crate) static HOOK_BUS: OnceLock<Arc<HookBus>> = OnceLock::new();
 pub(crate) static ENDPOINTS: OnceLock<DashMap<Uuid, WebhookEndpoint>> = OnceLock::new();

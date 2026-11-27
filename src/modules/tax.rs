@@ -17,12 +17,12 @@
 // `tax:manage` for rule / settings / filing writes, `tax:file` for
 // filing submission, `tax:manage_connectors` for connector writes.
 //
-// Interconnection happens only through the hook bus — this module
+// Interconnection happens only through the hook bus - this module
 // never calls another module directly.
 //
 // Events emitted:
 //   - `tax.rule_created`, `tax.rule_updated`, `tax.rule_deleted`
-//   - `tax.computed` — after a tax computation, with the source id
+//   - `tax.computed` - after a tax computation, with the source id
 //     and the line-by-line breakdown. The source document (invoice
 //     or order) is never mutated.
 //   - `tax.settings_updated`
@@ -39,16 +39,16 @@
 //     available regardless of the audit module's list.
 //
 // Events consumed:
-//   - `invoice.created` — the real event the billing module emits
+//   - `invoice.created` - the real event the billing module emits
 //     when an invoice is created. The brief also names
 //     `billing.invoice_created`; that name does not exist in the
 //     billing module, so this module subscribes to both spellings
 //     and de-duplicates by source id, so a computation is stored
 //     exactly once no matter which spelling arrives.
-//   - `order.created` — the real event the store / billing flow
+//   - `order.created` - the real event the store / billing flow
 //     emits. `billing.order_created` is subscribed as an alias in
 //     the same way.
-//   - `tax.filing.check_requested` — the filing-reminder check. The
+//   - `tax.filing.check_requested` - the filing-reminder check. The
 //     scheduler module only dispatches its own fixed job kinds, so
 //     there is no scheduler kind to register for this check; the
 //     check runs through this event and through
@@ -58,8 +58,8 @@
 // pattern: a connector credential (API key or signing secret) is
 // accepted once, encrypted with a key derived from
 // `app.secret_key`, and stored only as ciphertext. The encryption is
-// a versioned (`v1.`) HMAC keystream with an HMAC tag — not an AEAD
-// cipher — because no AEAD crate is in `Cargo.toml` yet; when one is
+// a versioned (`v1.`) HMAC keystream with an HMAC tag - not an AEAD
+// cipher - because no AEAD crate is in `Cargo.toml` yet; when one is
 // added, replace `encrypt_tax_credential` / `decrypt_tax_credential`
 // and bump the version prefix so old values can be re-encrypted on
 // next write. No response, log line, hook payload, or audit record

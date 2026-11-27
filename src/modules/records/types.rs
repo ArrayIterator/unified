@@ -1,4 +1,4 @@
-// records — Shared types: constants, enums, records, and request/response shapes.
+// records - Shared types: constants, enums, records, and request/response shapes.
 
 use unified_core::hooks::events;
 use chrono::{DateTime, Utc};
@@ -17,9 +17,7 @@ pub const PERM_RECORDS_READ: &str = "records:read";
 /// Purge records under the retention policy.
 pub const PERM_RECORDS_MANAGE: &str = "records:manage";
 
-// ---------------------------------------------------------------------------
 // Types.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize)]
 pub struct SystemRecord {
@@ -60,9 +58,7 @@ pub struct PurgeInput {
     pub keep_days: Option<u32>,
 }
 
-// ---------------------------------------------------------------------------
 // State.
-// ---------------------------------------------------------------------------
 
 /// Events this module subscribes to. The audit-subscribed events are
 /// listed first, then the task events and `user.deleted`.

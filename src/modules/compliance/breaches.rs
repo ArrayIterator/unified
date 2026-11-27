@@ -1,4 +1,4 @@
-//! Compliance Center module — GDPR / ISO support: data export — Breach-log handlers.
+//! Compliance Center module - GDPR / ISO support: data export - Breach-log handlers.
 //!
 //! Split from `src/modules/compliance.rs`; behaviour unchanged.
 

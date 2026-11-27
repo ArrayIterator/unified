@@ -3,11 +3,9 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Smart inbox (migration 000054_inbox). The self-reference
 // `inbox_threads.merged_into` gets no `joinable!` (a table cannot
 // join to itself in that form).
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     inbox_threads (id) {

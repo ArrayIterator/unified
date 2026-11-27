@@ -11,9 +11,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 pub(crate) fn actor_id(req: &HttpRequest) -> UnifiedResult<String> {
     Ok(unified_core::caller::require_caller(req)?.user_id)
@@ -134,13 +132,11 @@ pub(crate) fn change_conversation_status(
     Ok(())
 }
 
-// ---------------------------------------------------------------------------
 // Connector authorization and config redaction
-// ---------------------------------------------------------------------------
 //
 // Connectors are owned per user, like conversations: the creator is
-// the owner and only the owner — or a platform admin (`admin` /
-// `super_admin` role) — may read, update or delete one. Every
+// the owner and only the owner - or a platform admin (`admin` /
+// `super_admin` role) - may read, update or delete one. Every
 // connector operation additionally requires the
 // `ai-support.connectors.manage` capability, checked through the
 // `role.check` hook exactly like the other capability-checked
@@ -213,9 +209,7 @@ pub(crate) fn authorize_connectors(
     Ok(found)
 }
 
-// ---------------------------------------------------------------------------
 // Tenant edge guard (C3 pilot 4, group E).
-// ---------------------------------------------------------------------------
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request
@@ -225,7 +219,7 @@ pub(crate) fn authorize_connectors(
 /// module calls this FIRST, before `caller` or any capability check.
 ///
 /// Records in this module carry no company field, so the guard is a
-/// fail-closed gate only — there is no per-record company check to
+/// fail-closed gate only - there is no per-record company check to
 /// apply. Real partitioning needs a `tenant_id` on the record, a
 /// C11 follow-up, not a C3 gate.
 pub(crate) fn require_tenant(
@@ -237,7 +231,7 @@ pub(crate) fn require_tenant(
 /// The company scope the caller acts in: the tenant context's
 /// company first, the verified caller's server-resolved company
 /// otherwise. Fails closed (403) when both are present and disagree
-/// — a request must not carry one company in its tenant context and
+/// - a request must not carry one company in its tenant context and
 /// another in its verified identity. The `X-Company-Id` header is
 /// NEVER trusted here: only the verified caller (company resolved
 /// from the database at authentication time) and the
@@ -262,7 +256,7 @@ pub(crate) fn caller_company(
 
 /// Writes require a resolved company: a mutating handler with no
 /// resolvable company scope is refused (403). Reads proceed on the
-/// tenant gate plus the mismatch check above — records here carry
+/// tenant gate plus the mismatch check above - records here carry
 /// no company field, so there is nothing to partition on read.
 pub(crate) fn require_caller_company(
     tenant: &unified_core::tenancy::TenantContext,
@@ -322,7 +316,7 @@ pub(crate) fn is_secret_config_key(key: &str) -> bool {
 
 /// Redact secret-bearing fields in a connector config, recursively.
 /// Secret values become `"********"`; every other value is kept
-/// verbatim. The stored config is never modified — callers only
+/// verbatim. The stored config is never modified - callers only
 /// ever receive the redacted copy.
 pub(crate) fn mask_config_value(value: &serde_json::Value) -> serde_json::Value {
     match value {

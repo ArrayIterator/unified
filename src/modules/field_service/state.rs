@@ -1,4 +1,4 @@
-// field_service module — Shared state.
+// field_service module - Shared state.
 //
 // Split from the former single-file module `src/modules/field_service.rs`.
 // The module root (`field_service.rs`) re-exports the public items, so the
@@ -20,9 +20,7 @@ use uuid::Uuid;
 
 use super::types::{DefinitionValue, DispatchAssignment, Equipment, EquipmentType, FieldServiceSettings, IntervalUnitDef, MaintenancePlan, MaintenanceTemplate, Signoff, WorkOrder, WorkOrderItem, WorkOrderPart};
 
-// ---------------------------------------------------------------------------
 // Shared state
-// ---------------------------------------------------------------------------
 
 /// In-memory stores for field service. The hook bus is attached in
 /// `init` (the bus lives in `AppContext`); handlers tolerate a

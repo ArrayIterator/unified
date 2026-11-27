@@ -24,11 +24,9 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
-// CONFIG — configurable defaults (operator-overridable without code
+// CONFIG - configurable defaults (operator-overridable without code
 // changes; the values below are the shipped defaults, not constants
 // of the domain).
-// ---------------------------------------------------------------------------
 
 /// Default provider when a config does not name one explicitly.
 /// (CONFIG: the seeded provider with this id; see `seed_providers`.)

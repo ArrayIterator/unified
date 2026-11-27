@@ -1,4 +1,4 @@
-// records — HTTP handlers.
+// records - HTTP handlers.
 
 use super::service::{
     caller, parse_record_filters, record_matches, require_permission, retention_configured,
@@ -14,9 +14,7 @@ use chrono::Utc;
 use serde_json::Value;
 use std::sync::Arc;
 
-// ---------------------------------------------------------------------------
 // Handlers (read-only except the retention purge).
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_records(
     ctx: web::Data<Arc<AppContext>>,

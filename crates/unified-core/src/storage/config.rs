@@ -1,7 +1,6 @@
-// storage — config.
+// storage - config.
 // Storage target configuration and provider construction.
 //
-// Split from `crates/unified-core/src/storage.rs`; moved verbatim, no behaviour changes.
 
 use super::*;
 use crate::error::{UnifiedError, UnifiedResult};
@@ -19,9 +18,7 @@ use std::net::IpAddr;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::{Arc, OnceLock, RwLock};
-// ---------------------------------------------------------------------------
 // Storage kind.
-// ---------------------------------------------------------------------------
 
 /// The kind of a storage target. Serialized in snake case
 /// (`local`, `s3`, `google_drive`, `r2`, `sftp`).
@@ -52,7 +49,7 @@ impl StorageKind {
     }
 
     /// The registry definition for this kind, if one is registered
-    /// (C12, task 269). Every built-in kind has one; `None` only when
+    /// (C12). Every built-in kind has one; `None` only when
     /// the registry was built without seeds (tests).
     pub fn definition(&self) -> Option<Arc<ProviderDefinition>> {
         provider_registry().get("storage", self.as_str())
@@ -115,20 +112,18 @@ pub const SECRET_CONFIG_FIELDS: [&str; 6] = [
     "sftp_password",
 ];
 
-// ---------------------------------------------------------------------------
 // Target configuration.
-// ---------------------------------------------------------------------------
 
 /// One storage target, as declared in configuration or created through
 /// the storage API. Secrets are stored in this struct only in memory;
-/// they are never logged and never serialized into API responses —
+/// they are never logged and never serialized into API responses -
 /// use `masked_config` for display.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct StorageTargetConfig {
     pub name: String,
     pub kind: StorageKind,
-    /// Registry definition id (C12, task 269) that overrides `kind`
+    /// Registry definition id (C12) that overrides `kind`
     /// when set: the target is built by the factory registered for
     /// that id instead of the built-in constructor for `kind`. This
     /// is how a provider an admin registered through the provider
@@ -219,7 +214,7 @@ impl Default for StorageTargetConfig {
 
 impl StorageTargetConfig {
     /// Validate the target: name, kind, and the fields its kind
-    /// requires. Secret values are checked for presence only — their
+    /// requires. Secret values are checked for presence only - their
     /// values never appear in any error message.
     pub fn validate(&self) -> UnifiedResult<()> {
         validate_target_name(&self.name)?;
@@ -447,9 +442,7 @@ pub fn provider_from_config(
     }
 }
 
-// ---------------------------------------------------------------------------
-// Registry-defined kinds (C12, task 269).
-// ---------------------------------------------------------------------------
+// Registry-defined kinds (C12).
 
 /// A factory that builds a storage provider from a target
 /// configuration plus the configured extra allowed hosts.
@@ -467,8 +460,8 @@ fn storage_kind_factories() -> &'static RwLock<HashMap<String, StorageKindFactor
 }
 
 /// Register (or replace) the factory for a registry definition id.
-/// This is how a provider added through the provider registry — no
-/// code change, no enum variant — gets a storage target: register
+/// This is how a provider added through the provider registry - no
+/// code change, no enum variant - gets a storage target: register
 /// its definition, then register its factory under the same id, once
 /// at startup or from an extension.
 pub fn register_storage_kind_factory(id: &str, factory: StorageKindFactory) -> UnifiedResult<()> {

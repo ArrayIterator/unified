@@ -2,9 +2,7 @@
 //!
 //! Part of the `academic` module split; see `src/modules/academic.rs`.
 
-// ---------------------------------------------------------------------------
 // Capabilities (checked through the `role.check` hook; fail closed).
-// ---------------------------------------------------------------------------
 
 /// Read academic records (own records for students; own classes for
 /// lecturers).
@@ -41,7 +39,7 @@ pub(crate) const MAX_MINUTES_PER_DAY: u64 = 1440;
 /// Highest score accepted on any grade component.
 pub(crate) const MAX_SCORE: f64 = 100.0;
 
-// --- CONFIGURABLE DEFAULTS (see the module header) -----------------------
+// CONFIGURABLE DEFAULTS (see the module header)
 // These values apply only when no admin definition or setting exists
 // yet. They are defaults, not hard-coded business rules: every one of
 // them can be replaced at runtime through the definitions or settings

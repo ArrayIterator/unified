@@ -118,7 +118,6 @@ pub(crate) fn on_payment_failed(state: Arc<NotificationsState>, ctx: &mut HookCo
     }
 }
 
-// ---------------------------------------------------------------------------
 // Domain-event listeners.
 //
 // Every other module's important events that were NOT already covered

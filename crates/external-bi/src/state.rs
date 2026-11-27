@@ -1,11 +1,9 @@
-//! BI external module (split from lib.rs; moved verbatim).
+//! BI external module.
 
 use super::*;
 
 
-// ---------------------------------------------------------------------------
 // Module state (in-memory, per-tenant)
-// ---------------------------------------------------------------------------
 
 /// All module state. Held behind one `Arc` shared by the module
 /// struct, its hook handlers, and its HTTP handlers.

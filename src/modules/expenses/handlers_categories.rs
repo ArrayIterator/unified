@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// --- Handlers: categories ---------------------------------------------------
+// Handlers: categories
 
 pub(crate) async fn list_categories(
     ctx: web::Data<Arc<AppContext>>,

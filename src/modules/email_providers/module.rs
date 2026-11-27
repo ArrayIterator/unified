@@ -15,20 +15,20 @@
 // Mailtrap, Elastic Email, SMTP2GO, MailerSend, ZeptoMail,
 // SendLayer, SocketLabs, SMTP.com, Campaign Monitor
 // (Transactional SMTP), Plunk, Courier, Loops, OneSignal Email
-// (generic HTTP adapters — see `adapters.rs`), generic SMTP
+// (generic HTTP adapters - see `adapters.rs`), generic SMTP
 // (direct lettre transport from the connection's own host, port,
-// TLS mode and credentials — the old Mail Manager delegation is
+// TLS mode and credentials - the old Mail Manager delegation is
 // gone; see the SMTP note in `adapters.rs`), 26 mailbox SMTP
 // presets (Gmail / Yahoo / Outlook, Zoho / Zoho EU, Proton,
 // Yandex, Fastmail, iCloud, GMX, Mail.com, AOL, QQ, 163, 126,
 // Sina, Mail.ru, Posteo, Migadu, Mailfence, StartMail, Runbox,
 // Kolab Now, Infomaniak, OVH, Gandi, Namecheap, DreamHost,
-// MXroute — the preset relay comes from the provider registry
+// MXroute - the preset relay comes from the provider registry
 // definition; a connection may override host, port, and TLS mode),
 // and local sendmail (direct spawn of the sendmail binary, no
 // credentials at all, the default builtin).
 //
-// Deliverability headers (task 354): bulk sends get
+// Deliverability headers: bulk sends get
 // List-Unsubscribe (mailto + the connection's unsubscribe_url
 // when set), List-Unsubscribe-Post (RFC 8058 one-click),
 // Precedence: bulk, X-Auto-Response-Suppress: All, and Feedback-ID
@@ -47,7 +47,7 @@
 // Credentials live only on the connection record, are never logged,
 // and are never returned by any API response: read views expose only
 // which credential fields are configured. The OAuth secrets added
-// by task 350 (SMTP password, OAuth client secret, access / refresh
+// by (SMTP password, OAuth client secret, access / refresh
 // tokens) are stored ENCRYPTED (`crypto.rs`, `v1.` format, key
 // `app.secret_key`); the pre-existing API-key fields keep their
 // original write-only treatment. Provider API hosts are allow-listed
@@ -83,14 +83,14 @@
 //   (or `{ error }`) using the adapter's signature check.
 //   Emits `email_provider.settings_fields` with `{ kind, fields }`
 //   when the catalog builds a provider's field list; another module
-//   may add, remove, or replace fields — see
+//   may add, remove, or replace fields - see
 //   `settings_fields_for_catalog` in `handlers.rs` for the result
 //   contract.
 //   Emits `email_provider.definitions` with `{}` when the catalog
 //   is built; another module may answer with one provider
 //   definition object or an array of them (a `ProviderDefinition`
 //   JSON object: `id`, `display_name`, `adapter_kind`, and the
-//   fields the adapter needs — `smtp_host`/`smtp_port`/`smtp_tls`
+//   fields the adapter needs - `smtp_host`/`smtp_port`/`smtp_tls`
 //   for the generic SMTP adapter, `http_api` for the generic HTTP
 //   adapter, `credentials_shape` for the settings page). Answers
 //   with an invalid id, an empty display name, or an empty
@@ -98,7 +98,7 @@
 //   Hook-provided definitions appear in the catalog with their
 //   settings fields and description, but they have no enum kind,
 //   so they cannot be used for sending until a factory is
-//   registered for their adapter kind — see `registry.rs`.
+//   registered for their adapter kind - see `registry.rs`.
 //   Emits `email_provider.connected`, `email_provider.connection.created`,
 //   `email_provider.connection.deleted`, `email_provider.oauth_linked`,
 //   `email_provider.oauth_refreshed`, `email.sent`, `email.failed`.
@@ -121,9 +121,7 @@ use unified_core::json as api_json;
 use unified_core::modules::{Module, ModuleRegistry, RouteInfo};
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 pub struct EmailProvidersModule {
     pub(crate) state: Arc<EmailProviderState>,
 }
@@ -162,7 +160,7 @@ impl Module for EmailProvidersModule {
         self.state.set_hooks(ctx.hooks.clone());
         // Capture app.secret_key for OAuth secret encryption
         // (crypto.rs): no secret at boot means None, not a fallback
-        // — storing an OAuth secret is refused and adapters needing
+        // - storing an OAuth secret is refused and adapters needing
         // one fail closed.
         let secret = ctx
             .config

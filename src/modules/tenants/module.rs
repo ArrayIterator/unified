@@ -1,6 +1,6 @@
 //! tenants - module.
 
-// Tenants — control-plane tenant registry, lifecycle, and provisioning.
+// Tenants - control-plane tenant registry, lifecycle, and provisioning.
 //
 // This module OWNS the control-plane tenant tables (`tenants`,
 // `tenant_provisioning_steps`, `tenant_module_grants`; migration
@@ -9,8 +9,8 @@
 // never appears in the module offerings and no customer buys it.
 //
 // TENANT-SCOPED DATA ACCESS (standing rule). Every module resolves
-// its data through the tenant context — tenant id (uuidv7) +
-// tenant schema + package entitlements — and never queries the
+// its data through the tenant context - tenant id (uuidv7) +
+// tenant schema + package entitlements - and never queries the
 // main / control-plane database directly for tenant business data.
 // The control-plane tables (`tenants`, subscriptions, domains,
 // billing, licensing) live in the `public` schema and are accessed
@@ -44,23 +44,23 @@
 // `tenant_provisioning_steps` first and consulted before it runs.
 //
 // Provisioning pipeline (idempotent, every step audit-logged):
-//   1. `create_record` — tenant row (uuidv7 generated server-side
+//   1. `create_record` - tenant row (uuidv7 generated server-side
 //      via `Uuid::now_v7()`, never client-supplied; slug validated
 //      against the configurable rules and the reserved-label
 //      deny-list from the tenant settings).
-//   2. `create_schema` — schema creation through the tenancy
+//   2. `create_schema` - schema creation through the tenancy
 //      helper only (see the integration seam below; this file
 //      builds no schema statements itself).
-//   3. `run_migrations` — tenant migrations inside that schema
+//   3. `run_migrations` - tenant migrations inside that schema
 //      through the tenancy helper.
-//   4. `register_subdomain` — emits `site.provision_requested`
+//   4. `register_subdomain` - emits `site.provision_requested`
 //      for the domains module to claim; never calls the domains
 //      module internals directly.
-//   5. `grant_modules` — enables the purchased modules ONLY after
+//   5. `grant_modules` - enables the purchased modules ONLY after
 //      `check_module_entitlement` passes for each one; a module
 //      the tenant is not entitled to is recorded as skipped with
 //      a warning and is never provisioned.
-//   6. `activate` — status becomes `active` and `tenant.provisioned`
+//   6. `activate` - status becomes `active` and `tenant.provisioned`
 //      is emitted.
 // A failed step marks the tenant `provision_failed` and stops the
 // pipeline; `POST /{id}/provision/retry` resumes it. The subdomain
@@ -76,8 +76,8 @@
 // `src/modules/saas_domains.rs` (`resolve_host` /
 // `resolve_host_with`) plus crates/unified-core/src/middleware.rs` (the contract).
 // This module's `register_hooks` answers a different query,
-// `tenant.lookup`, for the destroy flow (B3) — the tenant record
-// by id — and registers no resolver for `tenant.resolve_requested`.
+// `tenant.lookup`, for the destroy flow (B3) - the tenant record
+// by id - and registers no resolver for `tenant.resolve_requested`.
 // Suspension stops serving through the middleware contract, which
 // already blocks suspended tenants: this module emits
 // `tenant.suspended` plus an audit record and does not re-implement
@@ -157,7 +157,7 @@
 //   - `site.provision_requested` is EMITTED by this module, never
 //     answered: the domains module answers it.
 //
-// Integration seams (B1 — `unified_core::tenancy`). The tenancy
+// Integration seams (B1 - `unified_core::tenancy`). The tenancy
 // helpers live in crates/unified-core/src/tenancy.rs`, owned by builder B1; this
 // file imports `schema_name`, `TenantContext`, and
 // `run_tenant_migrations` from there and calls them only through
@@ -174,7 +174,7 @@
 //     and runs the embedded migrations inside it; there is no
 //     separate `create_tenant_schema` and no schema-string form)
 //
-// Destroy-flow extension point (B3 — `tenant_destroy.rs`). The
+// Destroy-flow extension point (B3 - `tenant_destroy.rs`). The
 // destroy flow is NOT in this file. It extends this module through
 // the public helpers `begin_deprovision`,
 // `set_export_reference`, and `finish_deprovision_as_deleted`
@@ -214,10 +214,10 @@
 //   DELETE /api/v1/tenants/{id}/modules/{module_id}
 //
 // Capabilities:
-//   - `tenants:view` — read tenants, provisioning status, grants,
+//   - `tenants:view` - read tenants, provisioning status, grants,
 //     settings, tenant context.
-//   - `tenants:manage` — suspend, resume, grant, revoke, settings.
-//   - `tenants:provision` — create tenants and retry provisioning.
+//   - `tenants:manage` - suspend, resume, grant, revoke, settings.
+//   - `tenants:provision` - create tenants and retry provisioning.
 
 use unified_core::hooks::{HookBus, HookContext};
 use unified_core::modules::{Module, RouteInfo, RouteVersionSupport};
@@ -230,9 +230,7 @@ use super::{constants::*, vocabulary::*, events::*, settings::*, records::*, sta
 
 
 
-// ---------------------------------------------------------------------------
 // Module definition.
-// ---------------------------------------------------------------------------
 /// The Tenants module: control-plane tenant registry, lifecycle,
 /// and provisioning. Not a sellable product.
 pub struct TenantsModule {

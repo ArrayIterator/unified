@@ -13,9 +13,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Report handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_reports(
     ctx: web::Data<Arc<AppContext>>,
@@ -506,9 +504,7 @@ pub(crate) async fn export_report(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Schedule handlers
-// ---------------------------------------------------------------------------
 
 
 pub(crate) async fn list_schedules(
@@ -737,9 +733,7 @@ pub(crate) async fn run_schedule_now(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Forecast handlers
-// ---------------------------------------------------------------------------
 
 
 pub(crate) async fn forecast_revenue(
@@ -937,9 +931,7 @@ pub(crate) async fn forecast_churn(
     }
 }
 
-// ---------------------------------------------------------------------------
 // KPI dashboard handlers
-// ---------------------------------------------------------------------------
 
 /// Compute one KPI from the mirror rows. Returns `None` (with the
 /// caller recording `insufficient_data`) when the metric's source

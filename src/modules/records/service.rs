@@ -1,4 +1,4 @@
-// records — Internal service helpers shared by the handlers.
+// records - Internal service helpers shared by the handlers.
 
 use super::*;
 use unified_core::context::AppContext;
@@ -43,12 +43,10 @@ pub(crate) fn retention_configured(ctx: &AppContext) -> bool {
         != 0
 }
 
-// ---------------------------------------------------------------------------
 // Caller identity and capability checks (same shape as the cards and
 // search modules: `X-User-Id` identifies the actor, `X-Role` carries
 // the role slug the capability check runs against, `role.check`
-// answers; no answer means not allowed — fail closed).
-// ---------------------------------------------------------------------------
+// answers; no answer means not allowed - fail closed).
 
 struct Caller {
     /// Captured for audit parity with the other modules; the records
@@ -90,11 +88,9 @@ pub(crate) fn require_permission(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Shared list / export filters. Both handlers parse the same
 // `PaginationParams` through these helpers so the export can never
 // drift away from the list filters again.
-// ---------------------------------------------------------------------------
 
 /// The parsed list/export filters: exact-match fields plus an
 /// inclusive `from` / `to` window on `created_at` and a free-text

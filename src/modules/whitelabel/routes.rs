@@ -15,9 +15,7 @@ use super::handlers_admin::{get_admin_allowance, get_admin_defaults, get_admin_p
 use super::handlers_branding::{delete_my_branding, get_my_allowance, get_my_branding, get_public_branding, list_my_history, put_my_branding};
 use super::state::{WhitelabelState};
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct WhitelabelModule {
     pub(crate) state: WhitelabelState,

@@ -17,9 +17,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Handlers: contracts
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_contracts_for_employee(
     ctx: web::Data<Arc<AppContext>>,

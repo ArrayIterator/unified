@@ -24,9 +24,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- Cloudflare connector settings (singleton row).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS cloudflare_settings (
     key VARCHAR PRIMARY KEY CHECK (key = 'global'),
     api_token_encrypted TEXT NOT NULL DEFAULT '',
@@ -36,9 +34,7 @@ CREATE TABLE IF NOT EXISTS cloudflare_settings (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- ---------------------------------------------------------------------------
 -- One cache-purge record.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS cloudflare_purge_history (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     zone_id VARCHAR NOT NULL,

@@ -1,4 +1,4 @@
-// Client Portal (white-label) module — one branded portal per
+// Client Portal (white-label) module - one branded portal per
 // company: logo, colours, custom domain / subdomain, configurable
 // pages (which sections are visible, in which order) and menus, plus
 // read-only client data views (my invoices, tickets, downloads,
@@ -8,28 +8,28 @@
 // Routes live under `/api/v1/portals`:
 //
 //   Portals (admin):
-//     GET/POST / — list portals / create a portal.
+//     GET/POST / - list portals / create a portal.
 //     GET/PATCH/DELETE /{id}.
-//     GET  /{id}/analytics — page-view analytics (paginated views
+//     GET  /{id}/analytics - page-view analytics (paginated views
 //       plus totals).
 //   Portal menus (admin):
 //     GET/POST /{id}/menus.
 //     GET/PATCH/DELETE /{id}/menus/{menu_id}.
-//     POST /{id}/menus/reorder — reorder menus by id list.
+//     POST /{id}/menus/reorder - reorder menus by id list.
 //   Public (no auth; see the public-access note below):
-//     GET  /public/{slug} — public portal branding, visible
+//     GET  /public/{slug} - public portal branding, visible
 //       sections and menus; records a page view and emits
 //       `portals.page.viewed`.
 //   Client data (authenticated client, scoped server-side):
-//     GET  /{slug}/my — the caller's portal home: branding plus a
+//     GET  /{slug}/my - the caller's portal home: branding plus a
 //       per-section record count for the caller.
-//     GET  /{slug}/my/invoices — the caller's invoices only.
-//     GET  /{slug}/my/tickets — the caller's tickets only.
-//     GET  /{slug}/my/downloads — the caller's downloads only.
-//     GET  /{slug}/my/subscriptions — the caller's subscriptions only.
-//     GET  /{slug}/my/licenses — the caller's licenses only.
+//     GET  /{slug}/my/invoices - the caller's invoices only.
+//     GET  /{slug}/my/tickets - the caller's tickets only.
+//     GET  /{slug}/my/downloads - the caller's downloads only.
+//     GET  /{slug}/my/subscriptions - the caller's subscriptions only.
+//     GET  /{slug}/my/licenses - the caller's licenses only.
 //
-// HONESTY — READ THIS FIRST. What is real in this module:
+// HONESTY - READ THIS FIRST. What is real in this module:
 // in-memory portal, menu, page-view, and read-only projection
 // management; validated hex colours, slugs, hostnames, and section
 // lists; per-company portals with unique slugs and unique custom
@@ -40,12 +40,12 @@
 // per-portal cap; and `portals.created`, `portals.updated`,
 // `portals.page.viewed`, and `portals.menu.updated` events on the
 // hook bus. What is NOT built here: actual domain provisioning
-// (the domains module owns domains — this module only stores the
+// (the domains module owns domains - this module only stores the
 // requested custom domain and emits `portals.domain.requested` so
 // the domains module can verify and provision it; until the
 // domains module claims that event, `domain_status` stays
 // `requested`); a second auth system (client login uses the auth
-// manager — this module resolves the caller server-side from the
+// manager - this module resolves the caller server-side from the
 // verified caller and the tenant context, and never trusts the
 // `X-Company-Id` header, exactly like the events module); and live billing / ticket / store / licensing
 // data: the `my/*` views are a read-only projection built from
@@ -56,7 +56,7 @@
 // `license.issued`, `license.activated`, `license.suspended`,
 // `license.revoked`, `download.started`, `download.finished`).
 // Records created before this module started, or announced without
-// a company id and a user id, are not in the projection — the
+// a company id and a user id, are not in the projection - the
 // owning modules remain the source of truth and this module never
 // writes back to them. The logo is metadata only (storage target
 // + key, exactly like the events module cover image): the bytes
@@ -67,9 +67,9 @@
 // an endpoint is public only when a rule exists with
 // `public_access: true`, and denied outright when a rule exists
 // with `allowed: false`). There is no reusable per-request
-// "is this endpoint public?" helper to call from a handler — the
+// "is this endpoint public?" helper to call from a handler - the
 // check lives in the API Manager middleware / `resolve_public`
-// path — so the public route below relies on that gate: an
+// path - so the public route below relies on that gate: an
 // administrator must create the matching `ApiAccessRule` row for
 // `GET /api/v1/portals/public/*`. The route is registered in
 // `route_info()` with `route_version_support()` defaulting to

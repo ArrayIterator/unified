@@ -1,4 +1,4 @@
-// Webhooks — Types.
+// Webhooks - Types.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -23,9 +23,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Types.
-// ---------------------------------------------------------------------------
 
 /// One subscribed endpoint. The signing secret is never serialized.
 #[derive(Debug, Clone)]

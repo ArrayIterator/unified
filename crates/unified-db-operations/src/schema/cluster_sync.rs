@@ -3,9 +3,7 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Cluster sync reliability (migration 000082_cluster_sync_reliability).
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     cluster_sync_conflicts (id) {

@@ -9,9 +9,7 @@ use super::{events::*, card_validation::*, card_settings::*, limits::*, provider
 
 
 
-// ---------------------------------------------------------------------------
 // PayPal.
-// ---------------------------------------------------------------------------
 impl ProviderAdapter {
     /// PayPal charge / authorize. With a payment method token the order
     /// is created and captured (or authorized) in one call chain;

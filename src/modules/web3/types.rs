@@ -3,9 +3,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-// ---------------------------------------------------------------------------
 // Chain kind
-// ---------------------------------------------------------------------------
 
 /// The chain family a network belongs to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -38,9 +36,7 @@ impl ChainKind {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Records (in-memory store; persistence targets in migration 000066)
-// ---------------------------------------------------------------------------
 
 /// One configured chain network. `api_key_encrypted` is write-only:
 /// it is never serialized, never logged, and only its presence is
@@ -232,9 +228,7 @@ pub struct LedgerEntry {
     pub content_sha256: String,
 }
 
-// ---------------------------------------------------------------------------
 // Request bodies
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct CreateNetworkRequest {
@@ -329,9 +323,7 @@ pub struct UpdateSettingsRequest {
     pub max_poll_transactions: Option<u32>,
 }
 
-// ---------------------------------------------------------------------------
 // Provider-facing value types
-// ---------------------------------------------------------------------------
 
 /// Chain status as reported by the provider.
 #[derive(Debug, Clone, Serialize)]

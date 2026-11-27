@@ -5,9 +5,7 @@ use super::{constants::*, types::*, inputs::*, helpers::*, validation::*, stock:
 
 
 
-// ---------------------------------------------------------------------------
 // Loaders
-// ---------------------------------------------------------------------------
 pub(crate) fn load_bom(state: &ManufacturingState, id: &str) -> UnifiedResult<Bom> {
     state
         .boms

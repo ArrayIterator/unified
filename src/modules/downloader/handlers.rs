@@ -23,9 +23,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Caller identity and destination confinement.
-// ---------------------------------------------------------------------------
 
 /// Caller identity: the server-verified caller (user id plus
 /// server-resolved role, both required for capability checks),
@@ -66,9 +64,7 @@ fn require_permission(ctx: &AppContext, role: &str, permission: &str) -> Unified
     }
 }
 
-// ---------------------------------------------------------------------------
 // Tenant edge guard (C3 pilot 4, group E).
-// ---------------------------------------------------------------------------
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request
@@ -78,7 +74,7 @@ fn require_permission(ctx: &AppContext, role: &str, permission: &str) -> Unified
 /// module calls this FIRST, before `caller` or any capability check.
 ///
 /// Records in this module carry no company field, so the guard is a
-/// fail-closed gate only — there is no per-record company check to
+/// fail-closed gate only - there is no per-record company check to
 /// apply. Real partitioning needs a `tenant_id` on the record, a
 /// C11 follow-up, not a C3 gate.
 fn require_tenant(req: &HttpRequest) -> UnifiedResult<unified_core::tenancy::TenantContext> {
@@ -88,7 +84,7 @@ fn require_tenant(req: &HttpRequest) -> UnifiedResult<unified_core::tenancy::Ten
 /// The company scope the caller acts in: the tenant context's
 /// company first, the verified caller's server-resolved company
 /// otherwise. Fails closed (403) when both are present and disagree
-/// — a request must not carry one company in its tenant context and
+/// - a request must not carry one company in its tenant context and
 /// another in its verified identity. The `X-Company-Id` header is
 /// NEVER trusted here: only the verified caller (company resolved
 /// from the database at authentication time) and the
@@ -113,7 +109,7 @@ fn caller_company(
 
 /// Writes require a resolved company: a mutating handler with no
 /// resolvable company scope is refused (403). Reads proceed on the
-/// tenant gate plus the mismatch check above — records here carry
+/// tenant gate plus the mismatch check above - records here carry
 /// no company field, so there is nothing to partition on read.
 fn require_caller_company(
     tenant: &unified_core::tenancy::TenantContext,
@@ -213,9 +209,7 @@ pub(crate) fn resolve_destination(raw: &str, url: &url::Url) -> UnifiedResult<Pa
     Ok(parent.join(file_name))
 }
 
-// ---------------------------------------------------------------------------
 // Handlers.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn create_job(
     ctx: web::Data<Arc<AppContext>>,

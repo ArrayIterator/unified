@@ -12,9 +12,7 @@ use super::state::*;
 use super::types::*;
 use super::validation::*;
 
-// ---------------------------------------------------------------------------
 // Handlers: settings
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn get_settings(
     ctx: web::Data<Arc<AppContext>>,

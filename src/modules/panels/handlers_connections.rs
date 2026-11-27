@@ -34,9 +34,7 @@ use super::types::PanelKind;
 use super::types::capabilities_for;
 use super::types::validate_connection;
 
-// ---------------------------------------------------------------------------
 // Handlers.
-// ---------------------------------------------------------------------------
 
 /// Catalog of panel kinds and their capabilities.
 pub(crate) async fn list_kinds(ctx: web::Data<Arc<AppContext>>, req: HttpRequest) -> HttpResponse {

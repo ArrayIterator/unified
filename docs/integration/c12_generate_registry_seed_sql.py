@@ -7,7 +7,7 @@ Regenerate with:
   python3 docs/integration/c12_generate_registry_seed_sql.py --ids gmail,yahoo > <subset>
 The DDL header/footer in up.sql is hand-written; only the INSERT block below
 comes from this script. The --ids filter emits INSERTs for the listed
-provider ids only (task 354 migration 000131 uses it for the 43 new
+provider ids only (migration 000131 uses it for the 43 new
 email providers).
 """
 import argparse
@@ -66,7 +66,7 @@ def main():
                 parser.error(
                     f"ambiguous provider id {token}: matches "
                     + ", ".join(f"{row['family']}:{row['id']}" for row in matches)
-                    + " — qualify it as family:id"
+                    + " - qualify it as family:id"
                 )
             selected.extend(matches)
         rows = selected

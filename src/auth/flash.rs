@@ -16,11 +16,8 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
-/// Minimum flash message TTL (5 seconds).
 pub const MIN_TTL: Duration = Duration::from_secs(5);
-/// Maximum flash message TTL (60 seconds).
 pub const MAX_TTL: Duration = Duration::from_secs(60);
-/// Default flash message TTL (10 seconds).
 pub const DEFAULT_TTL: Duration = Duration::from_secs(10);
 /// Minimum per-kind threshold (items per kind per session).
 pub const MIN_THRESHOLD: u64 = 10;

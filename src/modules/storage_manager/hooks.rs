@@ -7,9 +7,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Hook handlers.
-// ---------------------------------------------------------------------------
 
 /// Answer `storage.object.upload_requested`: resolve the caller's
 /// module to a bucket (module binding -> company default -> global

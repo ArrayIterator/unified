@@ -1,4 +1,4 @@
-// pricing — proration.
+// pricing - proration.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -31,9 +31,7 @@ use super::handlers_bundles::*;
 use super::handlers_reconciliation::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Proration engine (pure).
-// ---------------------------------------------------------------------------
 
 /// Input for one proration computation.
 #[derive(Debug, Clone, Serialize, Deserialize)]

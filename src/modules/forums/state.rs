@@ -25,9 +25,7 @@ use unified_core::error::{UnifiedError, UnifiedResult};
 use unified_core::hooks::HookBus;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Shared state
-// ---------------------------------------------------------------------------
 
 /// In-memory stores for the forums. The hook bus is attached in
 /// `init` (the bus lives in `AppContext`); handlers tolerate a
@@ -118,7 +116,7 @@ impl ForumState {
     }
 
     /// Hydrate the in-memory forums maps from the database (C11,
-    /// task 271): forums, categories, threads, posts, post edits,
+    /// forums, categories, threads, posts, post edits,
     /// votes, reports, moderation actions, subscriptions, polls,
     /// poll options, poll votes, and reputations are loaded from
     /// the `forum*` tables and replace the map contents, so a

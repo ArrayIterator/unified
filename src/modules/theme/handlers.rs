@@ -79,9 +79,7 @@ async fn discover_themes_blocking(state: &ThemeState) -> Vec<ThemeInfo> {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_themes(state: web::Data<ThemeState>) -> HttpResponse {
     let themes = discover_themes_blocking(&state).await;
@@ -186,10 +184,8 @@ pub(crate) async fn get_active_theme(state: web::Data<ThemeState>) -> HttpRespon
     }
 }
 
-// ---------------------------------------------------------------------------
 // Hook handlers (ERP interconnection: Site Builder and SaaS ask the
 // Theme module through these events instead of calling it directly).
-// ---------------------------------------------------------------------------
 
 /// Answer `theme.exists` (from the Site Builder) with `{"exists": bool}`
 /// from the module's theme discovery. A discovered theme counts as
@@ -223,7 +219,7 @@ pub(crate) fn on_theme_exists(state: &ThemeState, ctx: &mut HookContext) {
 
 /// Answer `theme.render_block` (from the Site Builder). This module has
 /// no template rendering engine of its own, so no rendering applies and
-/// the fragment is returned unchanged — both as the `html` result the
+/// the fragment is returned unchanged - both as the `html` result the
 /// task contract asks for and via `context.set("html", ...)`, which is
 /// what the Site Builder's `render_block` actually reads.
 pub(crate) fn on_theme_render_block(ctx: &mut HookContext) {
@@ -251,8 +247,8 @@ pub(crate) fn on_theme_render_block(ctx: &mut HookContext) {
 }
 
 /// Answer `theme.activate_requested` (from the SaaS module) by running
-/// the module's own activation logic — id validation, theme validation,
-/// `set_active`, and a synchronous persist of the state file — and
+/// the module's own activation logic - id validation, theme validation,
+/// `set_active`, and a synchronous persist of the state file - and
 /// reporting `{"activated": bool}`.
 pub(crate) fn on_theme_activate_requested(state: &ThemeState, ctx: &mut HookContext) {
     let theme_id = ctx

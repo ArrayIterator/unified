@@ -1,4 +1,4 @@
-// Hosting module — hosting plans and hosting accounts.
+// Hosting module - hosting plans and hosting accounts.
 //
 // A hosting plan is a sellable resource bundle (disk / CPU / RAM /
 // bandwidth, price, billing cycle) optionally linked to a store product
@@ -13,9 +13,9 @@
 // behind domain verification). There is no separate `ssl` module in
 // this codebase: TLS/SSL is a core HTTP-layer capability
 // (`unified_core::tls`, ACME in `crate::http::server`), surfaced to
-// modules through the Domains module — domain `ssl_status` /
+// modules through the Domains module - domain `ssl_status` /
 // `ssl_expires_at` plus the `ssl.renewed` / `ssl.swapped` / `ssl.swap`
-// hook events — and
+// hook events - and
 // through the Network module's TLS probe. Requiring `domains` and
 // `network` is therefore the closest real declaration of the SSL
 // capability, and this module never invents an `ssl` module id.
@@ -38,7 +38,7 @@
 //     `hosting.account.cancelled`, and `hosting.requirements.checked`.
 //
 // Persistence: in-memory stores (DashMap), exactly like the Store
-// module. The Diesel tables for this module do not exist yet — see the
+// module. The Diesel tables for this module do not exist yet - see the
 // migration + `schema.rs` snippet in the delivery report; once they
 // are applied, persistence follows the Domains module pattern (insert
 // on create, update on change, load from the pool when one is

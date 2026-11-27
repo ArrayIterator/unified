@@ -3,9 +3,7 @@
 use unified_core::error::{UnifiedError, UnifiedResult};
 use serde::{Deserialize, Serialize};
 
-// ---------------------------------------------------------------------------
 // Money (integer minor units; never f64)
-// ---------------------------------------------------------------------------
 
 /// A decimal-safe amount: integer minor units plus an ISO 4217
 /// currency code. Two-decimal currencies store cents (1999 = 19.99

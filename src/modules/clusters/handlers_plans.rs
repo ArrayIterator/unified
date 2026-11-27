@@ -1,4 +1,4 @@
-// clusters — HTTP handlers: sync plans.
+// clusters - HTTP handlers: sync plans.
 
 use super::*;
 use unified_core::context::AppContext;
@@ -44,9 +44,7 @@ struct UpdatePlanRequest {
     peer_secret: Option<String>,
 }
 
-// ---------------------------------------------------------------------------
 // Sync plan handlers.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_plans(
     ctx: web::Data<Arc<AppContext>>,
@@ -235,7 +233,7 @@ pub(crate) async fn get_plan(
 /// Apply an update request to a plan record. When the update changes
 /// the sync shape (direction or domains) the incremental cursors are
 /// cleared: `last_success_at` is the `since` cursor for pulls and it
-/// only makes sense for the previous shape — after the change the
+/// only makes sense for the previous shape - after the change the
 /// first pull must fetch everything the new shape covers instead of
 /// skipping items the old shape never pulled.
 fn apply_plan_update(

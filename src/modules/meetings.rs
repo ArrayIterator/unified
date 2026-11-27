@@ -1,4 +1,4 @@
-//! Meetings module — Zoom-like video meetings over WebRTC.
+//! Meetings module - Zoom-like video meetings over WebRTC.
 //!
 //! Split into one file per concern under `meetings/`; this file only
 //! declares the submodules and re-exports the public API. The full

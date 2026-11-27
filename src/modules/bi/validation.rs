@@ -207,7 +207,7 @@ pub(crate) fn load_dashboard(state: &BiState, raw_id: &str) -> UnifiedResult<BiK
 /// `company_id` must be the caller's company resolved server-side
 /// (see `caller_company` in `state.rs`); `None` means the caller has no
 /// resolvable company, i.e. an unresolved caller, who may read only
-/// global (empty-`company_id`) shared reports — never another
+/// global (empty-`company_id`) shared reports - never another
 /// company's shared report (the shared `CallerScope::Unresolved`
 /// rule; platform access is never the default for a missing
 /// company). Never pass `None` for a caller whose company could
@@ -233,9 +233,7 @@ pub(crate) fn escape_csv_field(field: &str) -> String {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Source data: mirror ingestion + read hooks
-// ---------------------------------------------------------------------------
 
 /// Read one string field from an event payload, trying each key in
 /// order. Source events carry the same value under different key
@@ -282,7 +280,7 @@ pub(crate) fn payload_time(data: &Value, keys: &[&str]) -> Option<DateTime<Utc>>
     None
 }
 
-/// Resolve the caller's company for a WRITE (C3 task 315, strict by
+/// Resolve the caller's company for a WRITE (C3, strict by
 /// default): a write requires a resolved company scope, so an
 /// unresolved caller is refused with 403 instead of silently
 /// writing a global (unscoped) record. Mutation handlers call

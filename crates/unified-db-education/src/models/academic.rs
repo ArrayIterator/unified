@@ -10,11 +10,9 @@ use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Academic system (migration 000094_academic).
 // Structs carrying NUMERIC columns skip serde derives (PgNumeric
 // has no serde implementation), per the repo header rule.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable)]
 #[diesel(table_name = academic_programs)]

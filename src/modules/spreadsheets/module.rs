@@ -29,9 +29,7 @@ use unified_core::error::UnifiedResult;
 use unified_core::hooks::{HookBus, HookContext};
 use unified_core::modules::{Module, ModuleRegistry, RouteInfo, RouteVersionSupport};
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct SpreadsheetsModule {
     pub(crate) state: SpreadsheetsState,
@@ -61,7 +59,7 @@ impl Module for SpreadsheetsModule {
     }
 
     fn description(&self) -> &'static str {
-        "Spreadsheet workbooks with multiple sheets, each a grid of cells (A1 notation; text, number, boolean, date, empty, formula, and error values), a small server-side formula evaluator (arithmetic with precedence, cell references and ranges, comparisons, and a data-driven function registry — SUM, AVERAGE, COUNT, COUNTA, MIN, MAX, PRODUCT, IF, ROUND, ABS, CONCAT, TODAY, LEN, UPPER, LOWER, TRIM, NOT, AND, OR) with circular-reference detection and topological recalculation on every write, per-workbook sharing with data-driven viewer / editor roles, token-gated public-link sharing that is off by default, version history as full cell snapshots with a change log and restore, and CSV import / export plus JSON export (no XLSX: no XLSX crate is in the workspace)."
+        "Spreadsheet workbooks with multiple sheets, each a grid of cells (A1 notation; text, number, boolean, date, empty, formula, and error values), a small server-side formula evaluator (arithmetic with precedence, cell references and ranges, comparisons, and a data-driven function registry - SUM, AVERAGE, COUNT, COUNTA, MIN, MAX, PRODUCT, IF, ROUND, ABS, CONCAT, TODAY, LEN, UPPER, LOWER, TRIM, NOT, AND, OR) with circular-reference detection and topological recalculation on every write, per-workbook sharing with data-driven viewer / editor roles, token-gated public-link sharing that is off by default, version history as full cell snapshots with a change log and restore, and CSV import / export plus JSON export (no XLSX: no XLSX crate is in the workspace)."
     }
 
     fn is_core(&self) -> bool {
@@ -225,11 +223,11 @@ impl Module for SpreadsheetsModule {
     fn route_info(&self) -> Vec<RouteInfo> {
         let auth = unified_core::auth::RouteAuth::Authenticated;
         vec![
-            RouteInfo { method: "GET", path: "/api/v1/spreadsheets/public/{token}", owner: "spreadsheets", description: "PUBLIC (token-gated): read one workbook through its public link — sheets with cells, read-only; unknown, disabled, and revoked tokens all answer 404.", auth: unified_core::auth::RouteAuth::Public },
+            RouteInfo { method: "GET", path: "/api/v1/spreadsheets/public/{token}", owner: "spreadsheets", description: "PUBLIC (token-gated): read one workbook through its public link - sheets with cells, read-only; unknown, disabled, and revoked tokens all answer 404.", auth: unified_core::auth::RouteAuth::Public },
             RouteInfo { method: "GET", path: "/api/v1/spreadsheets/workbooks", owner: "spreadsheets", description: "List workbooks the caller owns or is shared on (paginated, filter by owner_id, updated range; search by title/description).", auth },
             RouteInfo { method: "POST", path: "/api/v1/spreadsheets/workbooks", owner: "spreadsheets", description: "Create a workbook with its initial sheets (manager).", auth },
             RouteInfo { method: "GET", path: "/api/v1/spreadsheets/workbooks/{workbook_id}", owner: "spreadsheets", description: "Get one workbook with its sheets and share count.", auth },
-            RouteInfo { method: "PATCH", path: "/api/v1/spreadsheets/workbooks/{workbook_id}", owner: "spreadsheets", description: "Update a workbook (owner or editor): title, description, or the public-link toggle — enabling mints a fresh token returned once.", auth },
+            RouteInfo { method: "PATCH", path: "/api/v1/spreadsheets/workbooks/{workbook_id}", owner: "spreadsheets", description: "Update a workbook (owner or editor): title, description, or the public-link toggle - enabling mints a fresh token returned once.", auth },
             RouteInfo { method: "DELETE", path: "/api/v1/spreadsheets/workbooks/{workbook_id}", owner: "spreadsheets", description: "Delete a workbook with its sheets, cells, shares, and versions (owner only).", auth },
             RouteInfo { method: "GET", path: "/api/v1/spreadsheets/workbooks/{workbook_id}/sheets", owner: "spreadsheets", description: "List the sheets of a workbook (paginated, search by title).", auth },
             RouteInfo { method: "POST", path: "/api/v1/spreadsheets/workbooks/{workbook_id}/sheets", owner: "spreadsheets", description: "Add a sheet to a workbook (manager).", auth },

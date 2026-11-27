@@ -1,4 +1,4 @@
-// Elearning — Types.
+// Elearning - Types.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -20,13 +20,11 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// One course. `price_minor` is the price in the smallest currency
 /// unit (cents); 0 means free. `thumbnail_ref` is a reference into
-/// the shared documents store — a documents document id, or a
+/// the shared documents store - a documents document id, or a
 /// `/files/public/{key}` (or `/files/private/{key}`) URL from the
 /// media picker; the documents module owns the bytes.
 /// `certificate_enabled` decides whether completion issues a
@@ -186,7 +184,7 @@ pub struct AttemptAnswer {
 /// `max_score` and `percent`; `passed` is `percent >= pass_mark`.
 /// `started_at` is when the learner first fetched the quiz
 /// questions: the quiz time limit is measured from it, not from
-/// submission. Correct answers are never stored in the serialized attempt —
+/// submission. Correct answers are never stored in the serialized attempt -
 /// they are attached on read only when the quiz allows review
 /// (see `QuizAttemptView`).
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -233,7 +231,7 @@ pub struct AttemptReviewItem {
 /// One certificate issued on course completion. `code` is the
 /// public verifiable code; `content_sha256` is the SHA-256
 /// fingerprint of the canonical certificate payload (learner,
-/// course, date, issuer, code) — the value handed to the
+/// course, date, issuer, code) - the value handed to the
 /// anchoring flow. `status` is `valid` or `revoked`.
 /// `anchor_status` is `none`, `requested`, `confirmed`, or
 /// `failed`; anchoring itself lives in the Web3 module.

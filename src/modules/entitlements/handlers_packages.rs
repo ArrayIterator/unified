@@ -15,9 +15,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Handlers: package / product-set changes.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn apply_package_change(
     req: HttpRequest,
@@ -129,7 +127,7 @@ pub(crate) async fn apply_package_change(
                 // entitled, so leaving the rows active would let
                 // the tenant re-enable the dropped module. Lapse
                 // the rows of the replaced source (the source
-                // named in this change — a package change re-applies
+                // named in this change - a package change re-applies
                 // the same source with a new module set); a module
                 // covered by another source never reaches this
                 // branch, and `apply_source_lapse` re-checks that
@@ -309,7 +307,7 @@ pub(crate) async fn confirm_package_change(
             .into_iter()
             .next();
         // Confirming mutates tenant activation and entitlement
-        // rows, so it needs the manage capability — a read-only
+        // rows, so it needs the manage capability - a read-only
         // role must not be able to confirm (or discard) a change.
         require_capability(&ctx, role.as_deref(), PERM_ENTITLEMENTS_MANAGE)?;
         let scope = TenantScope::resolve(&req, None)?;

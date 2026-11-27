@@ -1,4 +1,4 @@
-// forms — handlers submissions.
+// forms - handlers submissions.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -25,9 +25,7 @@ use super::module::*;
 use super::handlers_forms::*;
 use super::handlers_fields::*;
 
-// ---------------------------------------------------------------------------
 // Submission handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_submissions(
     ctx: web::Data<Arc<AppContext>>,
@@ -312,9 +310,7 @@ pub(crate) async fn remap_submission(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Public render + submit
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn get_public_form(
     ctx: web::Data<Arc<AppContext>>,
@@ -324,7 +320,7 @@ pub(crate) async fn get_public_form(
     // No capability check here on purpose: this is the public form
     // render for embedding. The API Manager gate (ApiAccessRule
     // with public_access for this path, default deny) is what makes
-    // it public — see the module header.
+    // it public - see the module header.
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {
         let form = load_form_by_slug(&state, &path.into_inner())?;
@@ -368,7 +364,7 @@ pub(crate) async fn submit_public_form(
 ) -> HttpResponse {
     // No capability check here on purpose: this is the public
     // submit endpoint. It is protected by the API Manager gate
-    // (default deny), the honeypot, and the rate limits instead —
+    // (default deny), the honeypot, and the rate limits instead -
     // see the module header.
     let debug = ctx.is_debug();
     let result: UnifiedResult<Value> = (|| {

@@ -15,9 +15,7 @@ use super::handlers_taxonomy::{create_tag, create_taxonomy_node, delete_tag, del
 use super::hooks::{on_vcs_release_imported, on_vcs_software_validate};
 use super::ai_capabilities::AI_CAPABILITIES;
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct SoftwareModule {
     pub(crate) state: Arc<SoftwareState>,

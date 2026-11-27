@@ -35,9 +35,7 @@ use super::types::SmtpSettings;
 use super::types::SmtpSettingsInput;
 use super::{caller_company, require_company_for_write, require_tenant};
 
-// ---------------------------------------------------------------------------
 // HTTP handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn get_settings(
     state: web::Data<Arc<MailState>>,

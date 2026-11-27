@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// --- Loaders ---------------------------------------------------------------
+// Loaders
 
 pub(crate) fn load_category(state: &ExpensesState, raw_id: &str) -> UnifiedResult<ExpenseCategory> {
     let id = parse_uuid(raw_id, "category")?;
@@ -100,7 +100,7 @@ pub(crate) fn refresh_report_total(state: &ExpensesState, report_id: Uuid) {
 /// Refresh the report-level violation flags: a report whose total
 /// exceeds its policy limit (or the settings warning level when
 /// the report has no policy) is flagged `over_report_total`.
-/// The flag is advisory — it never blocks submission.
+/// The flag is advisory - it never blocks submission.
 pub(crate) fn refresh_report_violations(state: &ExpensesState, report_id: Uuid) {
     let settings = state.settings();
     let Some(mut report) = state.reports.get_mut(&report_id) else {

@@ -1,13 +1,11 @@
-// Projects module — sprint, phase, cycle, and program validation helpers.
+// Projects module - sprint, phase, cycle, and program validation helpers.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use super::*;
 use unified_core::error::{UnifiedError, UnifiedResult};
 use chrono::{DateTime, Utc};
 
-// ---------------------------------------------------------------------------
 // Section-private helpers (s4_ prefix; nothing here is defined in s1)
-// ---------------------------------------------------------------------------
 
 /// Trimmed, non-empty text, or `None` when the input is absent or blank.
 pub(crate) fn s4_clean_text(value: Option<String>) -> Option<String> {

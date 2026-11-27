@@ -1,4 +1,4 @@
-// Contracts — Contract handlers.
+// Contracts - Contract handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -19,9 +19,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Contract handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_contracts(
     ctx: web::Data<Arc<AppContext>>,
@@ -241,7 +239,7 @@ pub(crate) async fn get_contract(
 /// A sealed contract (signed or later) cannot be edited: the
 /// content hash proves the sealed content. The audited escape
 /// hatch is voiding the contract and renewing it into a new
-/// draft — voided contracts themselves stay immutable so the
+/// draft - voided contracts themselves stay immutable so the
 /// audit trail can never be rewritten.
 pub(crate) async fn update_contract(
     ctx: web::Data<Arc<AppContext>>,
@@ -446,7 +444,7 @@ pub(crate) async fn activate_contract(
         transition(&contract, ContractStatus::Active, "activate")?;
         // An already-ended contract must not become active: it
         // would read as expired at once. Expiry alerts are
-        // scheduled only here, on activation — never on send.
+        // scheduled only here, on activation - never on send.
         reject_activation_if_ended(&contract, Utc::now())?;
         contract.status = ContractStatus::Active;
         contract.updated_at = Utc::now();

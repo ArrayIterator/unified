@@ -17,9 +17,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Handlers: positions
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_positions(
     ctx: web::Data<Arc<AppContext>>,

@@ -8,9 +8,7 @@ use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 use super::types::{CommunityAnnouncement, CommunityCategory, CommunityFlag, CommunityMember, CommunityModerationAction, CommunityPost, CommunityPostEdit, CommunitySettings, CommunityTopic, CommunityVote};
 
-// ---------------------------------------------------------------------------
 // Shared state
-// ---------------------------------------------------------------------------
 
 /// In-memory stores for the community. The hook bus is attached in
 /// `init` (the bus lives in `AppContext`); handlers tolerate a

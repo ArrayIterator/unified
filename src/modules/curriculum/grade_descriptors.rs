@@ -1,4 +1,4 @@
-//! Curriculum module — competency-based school curricula. — Grade descriptor handlers.
+//! Curriculum module - competency-based school curricula. - Grade descriptor handlers.
 //!
 //! Split from `src/modules/curriculum.rs`; behaviour unchanged.
 

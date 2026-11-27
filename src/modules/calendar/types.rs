@@ -13,9 +13,7 @@ use super::constants::DEFAULT_WEEKEND_DAYS;
 use super::constants::DEFAULT_WORK_END;
 use super::constants::DEFAULT_WORK_START;
 
-// ---------------------------------------------------------------------------
 // Shared item shape.
-// ---------------------------------------------------------------------------
 
 /// One dated item contributed by an owning module. Unknown JSON
 /// fields are ignored so modules may attach extras without
@@ -48,7 +46,7 @@ pub struct CalendarItem {
     /// knows it. Items carrying a tenant_id different from the
     /// caller's tenant are excluded server-side (see
     /// `aggregate_items`); an item with no tenant_id is trusted
-    /// only when `is_system` is set — otherwise it is excluded
+    /// only when `is_system` is set - otherwise it is excluded
     /// the same way, so an unscoped item from another tenant's
     /// module can never leak in.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -134,7 +132,7 @@ pub struct NonWorkingDay {
 }
 
 /// One overlap hint: two items of the same owner whose intervals
-/// intersect. Hints only — the calendar never blocks a creation.
+/// intersect. Hints only - the calendar never blocks a creation.
 #[derive(Debug, Clone, Serialize)]
 pub struct ConflictHint {
     pub first_module: String,
@@ -145,13 +143,11 @@ pub struct ConflictHint {
     pub overlap_end: String,
 }
 
-// ---------------------------------------------------------------------------
 // Stored records (in-memory authoritative store; the migration
 // defines the persistence targets).
-// ---------------------------------------------------------------------------
 
 /// A revocable iCal subscription feed. Only the SHA-256 hash of
-/// the issued token is stored — never the raw token.
+/// the issued token is stored - never the raw token.
 #[derive(Debug, Clone, Serialize)]
 pub struct CalendarFeed {
     pub id: Uuid,
@@ -240,9 +236,7 @@ pub struct CalendarSource {
     pub updated_at: DateTime<Utc>,
 }
 
-// ---------------------------------------------------------------------------
 // Request / response shapes.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct CalendarViewQuery {

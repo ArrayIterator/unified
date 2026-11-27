@@ -1,4 +1,4 @@
-// Maintenance module — input validation, pagination, and sorting.
+// Maintenance module - input validation, pagination, and sorting.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use unified_core::context::AppContext;
@@ -16,21 +16,17 @@ use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 pub(crate) fn parse_window_id(raw: &str) -> UnifiedResult<Uuid> {
     Uuid::parse_str(raw)
         .map_err(|_| UnifiedError::bad_request(format!("Invalid maintenance window id \"{raw}\"")))
 }
 
-// ---------------------------------------------------------------------------
 // Caller identity and capability checks (same trusted-parameter
 // pattern as the tax module: X-User-Id plus X-Role headers,
 // `role.check` hook, fail closed). Every handler checks a
 // capability first, before any state refresh or mutation.
-// ---------------------------------------------------------------------------
 
 /// Capability names checked through the `role.check` hook.
 pub const PERM_MAINTENANCE_VIEW: &str = "maintenance:view";
@@ -78,9 +74,7 @@ pub(crate) fn require_permission(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Tenant edge guard (C3 pilot 4, group E).
-// ---------------------------------------------------------------------------
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request
@@ -90,7 +84,7 @@ pub(crate) fn require_permission(
 /// module calls this FIRST, before `caller` or any capability check.
 ///
 /// Records in this module carry no company field, so the guard is a
-/// fail-closed gate only — there is no per-record company check to
+/// fail-closed gate only - there is no per-record company check to
 /// apply. Real partitioning needs a `tenant_id` on the record, a
 /// C11 follow-up, not a C3 gate.
 pub(crate) fn require_tenant(
@@ -102,7 +96,7 @@ pub(crate) fn require_tenant(
 /// The company scope the caller acts in: the tenant context's
 /// company first, the verified caller's server-resolved company
 /// otherwise. Fails closed (403) when both are present and disagree
-/// — a request must not carry one company in its tenant context and
+/// - a request must not carry one company in its tenant context and
 /// another in its verified identity. The `X-Company-Id` header is
 /// NEVER trusted here: only the verified caller (company resolved
 /// from the database at authentication time) and the
@@ -127,7 +121,7 @@ pub(crate) fn caller_company(
 
 /// Writes require a resolved company: a mutating handler with no
 /// resolvable company scope is refused (403). Reads proceed on the
-/// tenant gate plus the mismatch check above — records here carry
+/// tenant gate plus the mismatch check above - records here carry
 /// no company field, so there is nothing to partition on read.
 pub(crate) fn require_caller_company(
     tenant: &unified_core::tenancy::TenantContext,

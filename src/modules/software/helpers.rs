@@ -8,9 +8,7 @@ use serde_json::{json};
 use super::state::SoftwareState;
 use super::types::{Release, ReleaseFile, Software, SoftwareVersion};
 
-// ---------------------------------------------------------------------------
 // Caller identity and capability checks.
-// ---------------------------------------------------------------------------
 
 /// The server-verified caller (see `unified_core::caller::Caller`):
 /// the user id identifies the actor, the server-resolved role is the
@@ -54,9 +52,7 @@ pub(crate) fn require_permission(ctx: &AppContext, role: &str, permission: &str)
     }
 }
 
-// ---------------------------------------------------------------------------
-// Tenant edge guard (C3 pilot 3, task 314, group C).
-// ---------------------------------------------------------------------------
+// Tenant edge guard (C3 pilot 3, group C).
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request
@@ -74,7 +70,7 @@ pub(crate) fn require_tenant(
 /// The company scope the caller acts in: the tenant context's
 /// company first, the verified caller's server-resolved company
 /// otherwise. Fails closed (403) when both are present and disagree
-/// — a request must not carry one company in its tenant context and
+/// - a request must not carry one company in its tenant context and
 /// another in its verified identity. The `X-Company-Id` header is
 /// NEVER trusted here: only the verified caller (company resolved
 /// from the database at authentication time) and the
@@ -99,7 +95,7 @@ pub(crate) fn caller_company(
     }
 }
 
-/// Resolve the caller's company for a WRITE (C3 task 315, strict by
+/// Resolve the caller's company for a WRITE (C3, strict by
 /// default): a write requires a resolved company scope, so an
 /// unresolved caller is refused with 403 instead of silently
 /// writing a global (unscoped) record. Mutation handlers call
@@ -127,7 +123,7 @@ pub(crate) fn require_company_for_write(
 /// so the record is never stored unscoped under a scoped caller.
 /// When no caller scope is known, a body company is refused: an
 /// unresolved caller may not claim a company (the shared
-/// `CallerScope::Unresolved` rule); omitting the company is refused (C3 task 315):
+/// `CallerScope::Unresolved` rule); omitting the company is refused (C3):
 /// a write requires a resolved company scope.
 pub(crate) fn require_company_match(
     tenant: &unified_core::tenancy::TenantContext,
@@ -193,11 +189,11 @@ pub(crate) fn require_record_in_company_scope(
 }
 
 /// Fail closed (403) when a stored record is outside the caller's
-/// company scope FOR A WRITE (C3 task 315, strict by default).
+/// company scope FOR A WRITE (C3, strict by default).
 /// Unlike the read check above (rule A), a write requires an exact
 /// company match: a company caller may write only their own
-/// company's records — global (unscoped) records are platform-only
-/// — and an unresolved caller may write nothing. Mutation handlers
+/// company's records - global (unscoped) records are platform-only
+/// - and an unresolved caller may write nothing. Mutation handlers
 /// call this right after loading the record they mutate; handlers
 /// that only read the record, or load a parent to scope a child
 /// write, keep the read check.
@@ -214,12 +210,10 @@ pub(crate) fn require_record_writable_in_company_scope(
 }
 
 
-// ---------------------------------------------------------------------------
 // Parent scope: versions, releases and files inherit the vendor
 // company of the software record they belong to. A version with no
 // software link, and a release/file whose parent chain is missing,
 // is global (no company to scope by).
-// ---------------------------------------------------------------------------
 
 /// The vendor company of a version's parent software record, or
 /// `None` for a standalone version / a dangling software link.
@@ -256,7 +250,7 @@ pub(crate) fn file_company(state: &SoftwareState, file: &ReleaseFile) -> Option<
 /// Load a software record and verify it is in the caller scope: a
 /// missing record and an out-of-scope record both surface as
 /// `not_found` for the load itself only when the caller has no
-/// scope information to distinguish them — here a missing record
+/// scope information to distinguish them - here a missing record
 /// is 404 and an out-of-scope record is 403, matching the
 /// module's existing foreign-record handling.
 pub(crate) fn require_software_in_scope(

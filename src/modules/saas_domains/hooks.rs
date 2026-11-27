@@ -24,13 +24,11 @@ use super::types::SubdomainAllocation;
 use super::validation::normalize_domain;
 use super::validation::validate_label;
 
-// ---------------------------------------------------------------------------
 // Hook handlers.
-// ---------------------------------------------------------------------------
 
 /// Flip a matching alias to `verified` when the verification module
 /// reports a completed verification. Only this event may flip an
-/// alias to verified — there is deliberately no API endpoint that
+/// alias to verified - there is deliberately no API endpoint that
 /// does it. Payload: `{"domain": ..., "verified": true}` (or
 /// `{"alias_id": ..., "verified": true}`).
 ///
@@ -70,7 +68,6 @@ pub(crate) fn apply_verification_completed(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Product-subdomain hook handlers.
 //
 // Hook handlers receive no `AppContext` and no hook bus, so they can
@@ -82,14 +79,13 @@ pub(crate) fn apply_verification_completed(
 // paths that verify entitlements and emit the lifecycle events.
 // This is the same limitation the alias-verification handler
 // already documents, not a new pattern.
-// ---------------------------------------------------------------------------
 
 /// Flip a matching product subdomain to verified when the
 /// verification module reports a completed verification. Accepts
 /// the real payload shape (`{"domain", "status": "verified", ...}`
 /// or `{"product_subdomain_id", "verified": true}`); the existing
 /// alias handler only reads the `verified` boolean, which the
-/// verification module does not send — product subdomains accept
+/// verification module does not send - product subdomains accept
 /// both shapes here.
 pub(crate) fn apply_product_verification_completed(
     domain: Option<&str>,
@@ -219,7 +215,7 @@ pub(crate) fn claim_product_subdomain_from_event(
 /// `POST /subdomains` endpoint creates it.
 ///
 /// Trust basis (same as the product claim): `site.provision_requested`
-/// is trusted when its `source` is `tenants` — the tenants module
+/// is trusted when its `source` is `tenants` - the tenants module
 /// emits it only from its provisioning pipeline, for a tenant it
 /// created under a package, after the tenant record itself was
 /// validated. The handler, not this function, enforces the source;
@@ -232,7 +228,7 @@ pub(crate) fn claim_product_subdomain_from_event(
 /// quota reached). Idempotent: an existing live allocation for the
 /// same (tenant, host) is returned, never duplicated. A
 /// `pending_approval` allocation is returned as-is (the caller
-/// decides whether that counts as claimed — the
+/// decides whether that counts as claimed - the
 /// `site.provision_requested` handler only reports `claimed: true`
 /// for an `active` allocation, so a pending one stays
 /// `subdomain_pending` on the tenant until an admin approves it).
@@ -302,7 +298,7 @@ pub(crate) fn claim_tenant_subdomain_from_event(
 /// `saas_domains.subdomain.release_requested` from the tenant-destroy
 /// flow (schema already dropped and verified; serving already stopped
 /// at suspension). Generic allocations move straight to `released`
-/// (they carry no grace period — a released allocation stops
+/// (they carry no grace period - a released allocation stops
 /// resolving immediately). Product subdomains move to `released`
 /// with the configured grace period, exactly like a package
 /// cancellation, so an in-grace host resolves as blocked with reason
@@ -409,7 +405,7 @@ pub(crate) fn apply_entitlement_revoked(
 /// the tenant holds exactly one live product subdomain; with
 /// several, the event is skipped as ambiguous (the whitelabel
 /// module must carry `product_subdomain_id` for multi-product
-/// tenants — see the integration notes). Unverified domains are
+/// tenants - see the integration notes). Unverified domains are
 /// never attached: only `whitelabel.domain.verified` is listened
 /// to, never `.requested`. The domain is attached only when it is
 /// unclaimed in every store (product subdomains, reservations,

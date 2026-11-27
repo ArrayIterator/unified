@@ -1,4 +1,4 @@
-// Projects module — project member and methodology handlers.
+// Projects module - project member and methodology handlers.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use super::*;
@@ -9,9 +9,7 @@ use actix_web::{HttpRequest, HttpResponse, web};
 use serde_json::{Value, json};
 use std::sync::Arc;
 
-// ---------------------------------------------------------------------------
 // Project members
-// ---------------------------------------------------------------------------
 
 /// Cleanup after a member is removed: unassign their open tasks in
 /// the project (done and cancelled tasks keep their assignee as
@@ -337,9 +335,7 @@ pub(crate) async fn remove_project_member(
     json::respond(result, false)
 }
 
-// ---------------------------------------------------------------------------
 // Methodologies
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_methodologies(state: web::Data<Arc<ProjectsState>>) -> HttpResponse {
     let _state = state;

@@ -1,4 +1,4 @@
-// Generic Approvals — Approval definition handlers.
+// Generic Approvals - Approval definition handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -27,9 +27,7 @@ use super::handlers_dashboards::*;
 use super::hooks::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Definitions
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_definitions(
     ctx: web::Data<Arc<AppContext>>,

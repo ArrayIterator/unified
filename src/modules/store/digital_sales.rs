@@ -126,9 +126,7 @@ pub(crate) async fn download_sample(
     json::respond(result, false)
 }
 
-// ---------------------------------------------------------------------------
 // Digital products: downloads, royalties, payouts, settings
-// ---------------------------------------------------------------------------
 
 /// Create a signed expiring download link for one file of a digital
 /// product the caller bought. This reuses the existing signed-link
@@ -856,9 +854,7 @@ pub(crate) async fn update_watermark_format(
     json::respond(result, false)
 }
 
-// ---------------------------------------------------------------------------
 // Vendor / company payout linkage
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn vendor_payout_summary(
     state: web::Data<Arc<StoreState>>,

@@ -1,4 +1,4 @@
-// Webhooks — Handlers.
+// Webhooks - Handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -23,9 +23,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Handlers.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_events(ctx: web::Data<Arc<AppContext>>, req: HttpRequest) -> HttpResponse {
     let debug = ctx.is_debug();

@@ -1,4 +1,4 @@
-// documents — Shared types: constants, enums, records, and request/response shapes.
+// documents - Shared types: constants, enums, records, and request/response shapes.
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -18,10 +18,8 @@ pub(crate) const MAX_UPLOAD_BYTES: u64 = 100 * 1024 * 1024;
 /// Default chunk size for resumable upload sessions (1 MiB).
 const DEFAULT_CHUNK_SIZE: u64 = 1024 * 1024;
 
-/// Smallest accepted chunk size (64 KiB).
 pub(crate) const MIN_CHUNK_SIZE: u64 = 64 * 1024;
 
-/// Largest accepted chunk size (8 MiB).
 pub(crate) const MAX_CHUNK_SIZE: u64 = 8 * 1024 * 1024;
 
 /// Default lifetime of an upload session (24 hours).
@@ -33,34 +31,25 @@ pub(crate) const DEFAULT_SIGNED_URL_SECS: u64 = 3_600;
 /// Maximum lifetime of a signed download URL (7 days).
 pub(crate) const MAX_SIGNED_URL_SECS: u64 = 604_800;
 
-// ---------------------------------------------------------------------------
 // Document metadata (migration 000124): length caps for the text
 // fields and the key rules for `custom_metadata`. The database
 // enforces the same caps with CHECK constraints; these are the
 // application-side errors, raised before any row is touched.
-// ---------------------------------------------------------------------------
 
-/// Maximum length of a document title (512 characters).
 pub(crate) const MAX_METADATA_TITLE_LEN: usize = 512;
 
-/// Maximum length of alt text (512 characters).
 pub(crate) const MAX_METADATA_ALT_TEXT_LEN: usize = 512;
 
-/// Maximum length of a caption (1024 characters).
 pub(crate) const MAX_METADATA_CAPTION_LEN: usize = 1024;
 
-/// Maximum length of a description (4096 characters).
 pub(crate) const MAX_METADATA_DESCRIPTION_LEN: usize = 4096;
 
-/// Maximum length of one `custom_metadata` key (64 characters).
 pub(crate) const MAX_METADATA_KEY_LEN: usize = 64;
 
 /// Maximum number of keys held in `custom_metadata` after a merge.
 pub(crate) const MAX_CUSTOM_METADATA_KEYS: usize = 100;
 
-// ---------------------------------------------------------------------------
 // Permissions (capability names checked through the `role.check` hook).
-// ---------------------------------------------------------------------------
 
 pub(crate) const PERM_READ: &str = "documents:read";
 
@@ -68,9 +57,7 @@ pub(crate) const PERM_WRITE: &str = "documents:write";
 
 pub(crate) const PERM_ADMIN: &str = "documents:admin";
 
-// ---------------------------------------------------------------------------
-// Virus scanner — pluggable interface. No scanner is bundled.
-// ---------------------------------------------------------------------------
+// Virus scanner - pluggable interface. No scanner is bundled.
 
 /// Verdict of one virus scan.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -177,9 +164,7 @@ impl ScanStatus {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Storage layout — tenant / system / temp paths.
-// ---------------------------------------------------------------------------
+// Storage layout - tenant / system / temp paths.
 
 /// Content kind: the second path segment of every stored object key.
 /// Exactly three values exist; a new kind is a code change, never a
@@ -299,7 +284,7 @@ impl ExtensionRegistry {
     }
 
     /// Known kind for an extension (already lowercased by the
-    /// caller, or any case — lookup lowercases). `None` for an
+    /// caller, or any case - lookup lowercases). `None` for an
     /// unknown extension.
     pub(crate) fn kind_for(&self, extension: &str) -> Option<ContentKind> {
         self.kinds.get(&extension.to_ascii_lowercase()).copied()
@@ -330,7 +315,7 @@ impl ExtensionRegistry {
 
 /// Where a stored object belongs: one tenant's tree, or the
 /// control-plane (main-site) tree. Constructed explicitly at the
-/// call site — there is no `Default` and no fallthrough, so a
+/// call site - there is no `Default` and no fallthrough, so a
 /// tenant upload can never silently land in the system tree.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StorageScope {
@@ -366,7 +351,7 @@ impl StorageArea {
     }
 
     /// Parse an area from a URL segment or a `visibility` value.
-    /// Anything else is rejected — fail closed.
+    /// Anything else is rejected - fail closed.
     pub(crate) fn from_str(value: &str) -> Option<Self> {
         match value {
             "public" => Some(Self::Public),
@@ -394,7 +379,7 @@ impl StorageScope {
     }
 
     /// Provider-side root for this scope, resolved at runtime from
-    /// the scope — NEVER part of the stored key. The stored key is
+    /// the scope - NEVER part of the stored key. The stored key is
     /// scope-free (`<kind>/YYYY/MM/DD/<uuidv7>[.<ext>]`); the
     /// provider only ever sees the rooted (effective) key
     /// (`provider_key`), and the DB only ever stores the scope-free
@@ -443,7 +428,7 @@ impl StorageScope {
     }
 
     /// Parse a scope token produced by `token`. `None` for anything
-    /// else (including a malformed UUID) — fail closed.
+    /// else (including a malformed UUID) - fail closed.
     pub(crate) fn from_token(value: &str) -> Option<Self> {
         if value == "system" {
             return Some(Self::System);
@@ -460,7 +445,7 @@ impl StorageScope {
 /// fallback/browsability aid only (S3/CDN Content-Type inference
 /// when metadata is not carried, human-readable keys in the
 /// console); the source of truth for MIME stays the metadata stored
-/// in the DB / set as object metadata at upload — never derive
+/// in the DB / set as object metadata at upload - never derive
 /// Content-Type from the extension at serve time.
 pub(crate) fn storage_extension(file_name: &str) -> Option<String> {
     let ext = file_name.rsplit('.').next()?;
@@ -482,19 +467,19 @@ pub(crate) fn storage_extension(file_name: &str) -> Option<String> {
 /// Build the validated storage key for one content object.
 ///
 /// Layout (date is the UTC upload date):
-/// `<kind>/YYYY/MM/DD/<uuidv7>[.<ext>]` — the SAME shape for tenant
+/// `<kind>/YYYY/MM/DD/<uuidv7>[.<ext>]` - the SAME shape for tenant
 /// and system content alike. The key carries NO scope and NO tenant
 /// id: there is no `tenants/<tenancy-id>/` or `system/` prefix.
 /// The tenant/system distinction lives in the provider layer
 /// (`StorageScope::root`, resolved at runtime from the scope) and
 /// in the DB metadata (`documents.scope`, `documents.company_id`),
-/// never in the key — so a later change to the tenancy-id logic
+/// never in the key - so a later change to the tenancy-id logic
 /// never requires re-keying objects.
 ///
 /// The file name is a FRESH UUIDv7 (`Uuid::now_v7()`, the tree-wide
-/// helper) plus the validated original extension — the SAME scheme
+/// helper) plus the validated original extension - the SAME scheme
 /// for tenant and system content. A fresh name can never collide
-/// (the same content uploaded twice is two distinct objects — the
+/// (the same content uploaded twice is two distinct objects - the
 /// "upload freely" semantics), UUIDv7 is time-ordered so listings
 /// sort by creation, and the name is known at upload start, before
 /// any byte is hashed. The SHA-256 is NOT part of the key: it is
@@ -563,9 +548,7 @@ pub(crate) fn build_object_key(
     Ok(key)
 }
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// One document: the current version plus its access scope.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -574,7 +557,7 @@ pub struct DocumentRecord {
     pub name: String,
     /// Display title. Defaults to the uploaded file name (`name`)
     /// on upload; the owner may rename it through
-    /// `PATCH /api/v1/documents/{id}`. Never empty at runtime —
+    /// `PATCH /api/v1/documents/{id}`. Never empty at runtime -
     /// the `#[serde(default)]` only keeps old serialized records
     /// (written before migration 000124) parseable.
     #[serde(default)]
@@ -706,7 +689,7 @@ pub struct UploadSession {
 /// alone cannot carry that (no per-job status, attempts or error).
 ///
 /// Runtime authority is the in-memory `finalize_jobs` DashMap
-/// (this module writes no Diesel rows yet — see the module header
+/// (this module writes no Diesel rows yet - see the module header
 /// for the C11 limitation); the table is the persistence target
 /// and the schema of the future write-through.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -859,9 +842,7 @@ pub struct DocumentPreview {
 /// matching the files module folder limit).
 pub(crate) const MAX_FOLDER_NAME_LEN: usize = 128;
 
-// ---------------------------------------------------------------------------
-// Folders (migration 000132, task 355)
-// ---------------------------------------------------------------------------
+// Folders (migration 000132)
 
 /// One folder in the documents media library. Folders are a
 /// grouping only: they never change a document's stored key, its
@@ -984,7 +965,7 @@ pub struct UpdateAllowlistRequest {
 
 /// Body of `PATCH /api/v1/documents/{id}`. Every field is
 /// optional; absent fields are left alone. `title` must be
-/// non-empty when present (it always has a value — the file name
+/// non-empty when present (it always has a value - the file name
 /// default). The optional text fields clear on an empty string.
 /// `custom_metadata` merges by key into the stored object: a key
 /// whose value is JSON null is REMOVED, any other value sets or
@@ -1282,7 +1263,7 @@ mod tests {
         assert_eq!(StorageArea::from_str(""), None);
         assert_eq!(StorageArea::from_str("PUBLIC"), None);
         // Visibility values map to areas; anything else is private
-        // (fail closed — never treated as public).
+        // (fail closed - never treated as public).
         assert_eq!(StorageArea::from_visibility("public"), StorageArea::Public);
         assert_eq!(StorageArea::from_visibility("private"), StorageArea::Private);
         assert_eq!(StorageArea::from_visibility("unlisted"), StorageArea::Private);
@@ -1386,7 +1367,7 @@ mod tests {
     fn object_key_extension_rules() {
         // Every upload mints a fresh UUIDv7, so the same content
         // with a different extension is a different key (a separate
-        // copy) — intended, consistent with no dedup.
+        // copy) - intended, consistent with no dedup.
         let pdf = build_object_key(
             Some(test_tenant()),
             ContentKind::Documents,

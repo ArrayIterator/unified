@@ -24,9 +24,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 // AI capabilities (AI Capabilities Contract, see `crate::modules::ai`).
 //
 // Declared here, registered once in `init`, grounded through the
@@ -121,7 +119,7 @@ pub(crate) async fn ai_capability(
     let input = body.into_inner().input;
     // Tenant edge guard (C3 pilot 3): fail closed without a
     // resolved tenant, then resolve the caller company scope
-    // from the verified caller only — never the X-Company-Id
+    // from the verified caller only - never the X-Company-Id
     // header. The AI runner below resolves its own company; the
     // scope here also gates the lesson grounding that follows.
     let _tenant = match require_tenant(&req) {

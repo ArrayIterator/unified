@@ -10,9 +10,7 @@ use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Dashboards and reseller links (2026-11-22-000006_dashboards_reseller).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = reseller_links)]
@@ -68,9 +66,7 @@ pub struct NewDashboardSettings {
     pub key: String,
 }
 
-// ---------------------------------------------------------------------------
 // Hosting (2026-11-22-000007_hosting).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable)]
 #[diesel(table_name = hosting_plans)]

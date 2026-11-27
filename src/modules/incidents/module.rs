@@ -115,9 +115,7 @@ use super::ai_capabilities::AI_CAPABILITIES;
 
 
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 pub struct IncidentsModule {
     pub(crate) state: IncidentsState,
 }

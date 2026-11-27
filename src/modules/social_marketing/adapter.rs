@@ -1,5 +1,5 @@
 //! Provider adapter interface: publishing goes through
-//! one of two adapters, chosen by the network's kind — the
+//! one of two adapters, chosen by the network's kind - the
 //! generic HTTP adapter (POST JSON to the configured API
 //! base plus the configured publish path, with the
 //! configured auth) or the log-only test provider (records
@@ -247,7 +247,7 @@ pub(crate) fn truncate_error(text: &str) -> String {
     if text.len() <= 500 {
         text.to_string()
     } else {
-        format!("{}…", &text[..500])
+        format!("{}...", &text[..500])
     }
 }
 

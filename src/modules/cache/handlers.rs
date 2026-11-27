@@ -9,9 +9,7 @@ use serde_json::Value;
 use std::sync::Arc;
 use super::types::{CacheEntryView, CacheStatusView, InvalidateRequest, PERM_MANAGE, PERM_READ, PERM_WRITE, SetEntryRequest, authorize, cache_value_to_json, ttl_from_request};
 
-// ---------------------------------------------------------------------------
 // Handlers.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn get_status(ctx: web::Data<Arc<AppContext>>, req: HttpRequest) -> HttpResponse {
     let debug = ctx.is_debug();

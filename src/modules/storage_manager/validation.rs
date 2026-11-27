@@ -17,9 +17,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Validation helpers.
-// ---------------------------------------------------------------------------
 
 pub(crate) fn require_text(value: &str, field: &str, max: usize) -> UnifiedResult<String> {
     let trimmed = value.trim();
@@ -359,7 +357,7 @@ fn is_private_or_link_local(addr: &std::net::IpAddr) -> bool {
 /// Net change one upload makes over a previous object of the same
 /// key: an overwrite counts only the size delta and zero new files.
 /// Pure helper so the delta is computed the same way everywhere
-/// (and inside the quota guard — see `upload_object`).
+/// (and inside the quota guard - see `upload_object`).
 pub(crate) fn upload_delta(previous_size: Option<i64>, size_bytes: i64) -> (i64, i64) {
     match previous_size {
         Some(old) => (size_bytes - old, 0),
@@ -547,7 +545,7 @@ pub(crate) fn check_plan_limits(
 
 /// Check the quotas that apply to one upload (module, then user,
 /// then company, then the buyer's active plan). `delta_bytes` /
-/// `delta_files` are the net change the upload makes — an overwrite
+/// `delta_files` are the net change the upload makes - an overwrite
 /// counts only the size delta and zero new files, so re-uploading
 /// the same key cannot double-count. Hard failures win over soft
 /// warnings: a soft crossing in an early scope never hides a hard
@@ -758,8 +756,8 @@ pub(crate) fn release_plan_reservation(
 /// the daily rollup. An overwrite of an existing key counts only the
 /// size delta (and zero new files) everywhere, and keeps the
 /// original `created_at`. When `apply_quota` is false the explicit
-/// quota counters are left untouched — the caller reserved them
-/// already (see `reserve_quota`) — but the object row and the daily
+/// quota counters are left untouched - the caller reserved them
+/// already (see `reserve_quota`) - but the object row and the daily
 /// rollup are still recorded.
 pub(crate) fn record_stored(
     state: &StorageManagerState,
@@ -834,7 +832,7 @@ pub(crate) fn record_stored(
                     module_id: owner_module.to_string(),
                     // First record of the day for this scope: totals
                     // are seeded from the NET delta of this record,
-                    // not the absolute size — an overwrite (delta
+                    // not the absolute size - an overwrite (delta
                     // files 0, possibly negative delta bytes) must
                     // not inflate the day's totals with the full
                     // object size.
@@ -1025,7 +1023,7 @@ mod tests {
             .get(&format!("{date}|{bucket_id}||u-1|files"))
             .expect("daily row must exist");
         // Totals are seeded from the net delta (200 bytes, 0 new
-        // files) — not the absolute 1200 bytes / 1 file.
+        // files) - not the absolute 1200 bytes / 1 file.
         assert_eq!(row.bytes_total, 200);
         assert_eq!(row.objects_total, 0);
         assert_eq!(row.bytes_delta, 200);

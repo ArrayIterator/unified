@@ -3,10 +3,8 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
-// Todos (migration 000035_todos; batch 2 notes §7). The notes write
+// Todos (migration 000035_todos; batch 2 notes sec. 7). The notes write
 // `Integer`/`BigInt`; normalised to the file's `Int4`/`Int8` style.
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     todo_lists (id) {

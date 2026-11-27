@@ -3,10 +3,8 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Expenses (migration 000088_expenses). Money is stored in minor
 // units (BIGINT), so no NUMERIC columns and serde derives apply.
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     expense_categories (id) {

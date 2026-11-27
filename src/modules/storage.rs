@@ -1,4 +1,4 @@
-// Storage module — HTTP access to the storage targets.
+// Storage module - HTTP access to the storage targets.
 //
 // Routes under `/api/v1/storage`:
 //
@@ -34,7 +34,7 @@
 // and SFTP providers additionally verify against their durable
 // sidecar on every plain download.
 //
-// Quotas: this is the raw provider API — it has no owner or tenant
+// Quotas: this is the raw provider API - it has no owner or tenant
 // scope, so the hub quotas (storage-manager) cannot apply here.
 // Targets created through this API may carry an optional
 // `quota_bytes` / `max_objects` in their config, enforced here on

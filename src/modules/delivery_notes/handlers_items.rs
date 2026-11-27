@@ -163,7 +163,7 @@ pub(crate) async fn get_item(
 /// Update one line of a draft DO. Ordered and shipped stay in
 /// step unless the caller changes one explicitly (a short
 /// shipment corrects `quantity_shipped` down); returned is
-/// never set here — only the return endpoint moves it.
+/// never set here - only the return endpoint moves it.
 pub(crate) async fn update_item(
     state: web::Data<DeliveryNoteState>,
     ctx: web::Data<Arc<AppContext>>,
@@ -242,7 +242,7 @@ pub(crate) async fn update_item(
 }
 
 /// Remove one line from a draft DO. The last line cannot be
-/// removed: a DO with no items is not a document — delete the
+/// removed: a DO with no items is not a document - delete the
 /// DO instead.
 pub(crate) async fn delete_item(
     state: web::Data<DeliveryNoteState>,

@@ -1,4 +1,4 @@
-// Global Search — HTTP handlers.
+// Global Search - HTTP handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -21,9 +21,7 @@ use super::service::*;
 use super::hooks::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Handlers.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn search(
     state: web::Data<Arc<SearchState>>,

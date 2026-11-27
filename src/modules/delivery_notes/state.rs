@@ -10,9 +10,7 @@ use std::sync::{Arc, RwLock};
 use unified_core::hooks::HookBus;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Shared state
-// ---------------------------------------------------------------------------
 
 /// In-memory stores for the delivery notes module. The hook bus
 /// is attached in `init` (the bus lives in `AppContext`);
@@ -58,7 +56,7 @@ impl DeliveryNoteState {
     /// Emit a hook query and return the answering context, or
     /// `None` when no handler is registered for the event.
     /// Callers treat an unanswered query as "unknown", never
-    /// as a denial — see the shipment-link note in the module
+    /// as a denial - see the shipment-link note in the module
     /// header.
     pub(crate) fn query(
         &self,

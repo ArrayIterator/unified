@@ -1,4 +1,4 @@
-// Projects module — workload, Gantt, timeline, and calendar handlers.
+// Projects module - workload, Gantt, timeline, and calendar handlers.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use super::*;
@@ -10,9 +10,7 @@ use chrono::{DateTime, Utc};
 use serde_json::{Value, json};
 use std::sync::Arc;
 
-// ---------------------------------------------------------------------------
 // Workload
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn get_project_workload(
     req: HttpRequest,
@@ -125,9 +123,7 @@ pub(crate) async fn get_project_workload(
     json::respond(result, false)
 }
 
-// ---------------------------------------------------------------------------
 // Views: Gantt, timeline, calendar
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn get_project_gantt(
     req: HttpRequest,

@@ -1,4 +1,4 @@
-// users module — User handlers.
+// users module - User handlers.
 //
 // Split from the former single-file module `src/modules/users.rs`.
 // The module root (`users.rs`) re-exports the public items, so the
@@ -29,7 +29,6 @@ use super::requests::{AssignRoleInput, CreateUserInput, UpdateUserInput, UserRol
 use super::validation::{db_pool, hash_password, is_unique_violation, validate_email, validate_name, validate_password};
 use super::hooks::db_role_ids;
 
-// ---------------------------------------------------------------------------
 // Caller identity and capabilities.
 //
 // Every handler below resolves the caller from the `X-User-Id` /
@@ -38,7 +37,6 @@ use super::hooks::db_role_ids;
 // modules. The check is fail-closed: the hook payload presets
 // `"allowed": false`, and only an explicit `true` answer grants
 // access, so a missing roles handler (or a silent one) denies.
-// ---------------------------------------------------------------------------
 
 /// Capability names checked through the `role.check` hook.
 pub(crate) const PERM_USERS_VIEW: &str = "users.view";
@@ -127,7 +125,7 @@ pub(crate) fn can_read_user(ctx: &AppContext, caller: &Caller, user_id: Uuid) ->
 
 /// Authorize an update: managers may update any record; a user may
 /// update only their own record, and only their profile fields
-/// (name, email, password) — never `is_active` or `company_id`.
+/// (name, email, password) - never `is_active` or `company_id`.
 pub(crate) fn authorize_update(
     ctx: &AppContext,
     caller: &Caller,

@@ -186,9 +186,7 @@ pub(crate) fn hashes_equal(a: &str, b: &str) -> bool {
     diff == 0
 }
 
-// ---------------------------------------------------------------------------
 // Validation (save time)
-// ---------------------------------------------------------------------------
 
 pub(crate) fn validate_trigger(trigger: &WorkflowTrigger) -> UnifiedResult<()> {
     match trigger.kind {

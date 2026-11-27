@@ -1,4 +1,4 @@
-// Tax module — filing handlers.
+// Tax module - filing handlers.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use super::*;
@@ -23,9 +23,7 @@ use std::time::Duration;
 use url::Url;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Handlers: filings
-// ---------------------------------------------------------------------------
 
 /// Run the filing-reminder check for one company: refresh the
 /// current and previous period filings for every jurisdiction that
@@ -404,9 +402,7 @@ pub(crate) async fn check_due_filings(
     json::respond(result, false)
 }
 
-// ---------------------------------------------------------------------------
 // Handlers: filing submission through a connector
-// ---------------------------------------------------------------------------
 
 /// File one filing through a connector. The `example` kind is a
 /// clearly-marked example provider mapping: it performs no network
@@ -539,7 +535,7 @@ pub(crate) async fn submit_through_connector(
 /// requirement, so an `upcoming` filing may be filed before its due
 /// date. Concurrent submits of the same filing are serialised by
 /// the per-filing mutex (`filing_submit_lock`), held for the whole
-/// check–submit–record sequence, so two requests cannot both pass
+/// check-submit-record sequence, so two requests cannot both pass
 /// the "already submitted" check and file twice.
 pub(crate) async fn submit_filing(
     ctx: web::Data<Arc<AppContext>>,

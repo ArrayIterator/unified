@@ -10,9 +10,7 @@ use super::{events::*, card_validation::*, card_settings::*, limits::*, provider
 
 
 
-// ---------------------------------------------------------------------------
 // Midtrans.
-// ---------------------------------------------------------------------------
 impl ProviderAdapter {
     /// Midtrans charge (Core API). The order reference is the
     /// order's reference when the caller threaded one, otherwise a
@@ -80,7 +78,7 @@ impl ProviderAdapter {
     /// ("10000.00") or a number; either way it is major units.
     /// The amount is converted from the decimal string with
     /// integer arithmetic, never through f64, and a missing or
-    /// unreadable amount is an error — never a silent zero.
+    /// unreadable amount is an error - never a silent zero.
     pub(crate) fn midtrans_capture_amount(body: &Value) -> UnifiedResult<(i64, String)> {
         let currency = body
             .get("currency")

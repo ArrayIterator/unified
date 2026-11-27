@@ -1,4 +1,4 @@
-// OKR / Goals — Hook-bus listeners.
+// OKR / Goals - Hook-bus listeners.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};

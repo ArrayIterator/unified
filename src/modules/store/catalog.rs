@@ -20,9 +20,7 @@ use super::signing::{build_signed_url, record_download};
 use super::state::{StoreState, now};
 use super::types::{CatalogEntry, CreateCatalogEntry, DownloadEntitlement, PackageQuery, PERM_STORE_CATALOG_MANAGE, UpdateCatalogEntry, UpdateCheckRequest};
 
-// ---------------------------------------------------------------------------
 // Update API (WordPress-style version checks and package downloads)
-// ---------------------------------------------------------------------------
 
 /// Caller identity: the server-verified caller (user id plus
 /// server-resolved role, both required for capability checks),

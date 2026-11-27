@@ -13,9 +13,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // In-memory stores (same pattern as the downloader job store).
-// ---------------------------------------------------------------------------
 
 pub(crate) static CONNECTIONS: OnceLock<DashMap<Uuid, ProviderConnection>> = OnceLock::new();
 
@@ -37,9 +35,7 @@ pub(crate) fn inventory_store() -> &'static DashMap<Uuid, CachedInventory> {
     INVENTORY.get_or_init(DashMap::new)
 }
 
-// ---------------------------------------------------------------------------
 // Provider registry: the plug-in point for adapters.
-// ---------------------------------------------------------------------------
 
 /// Factory that builds an adapter for one stored connection.
 pub type ProviderFactory = Arc<
@@ -206,9 +202,7 @@ pub fn provider_registry() -> &'static ProviderRegistry {
     })
 }
 
-// ---------------------------------------------------------------------------
 // Inventory cache and sync.
-// ---------------------------------------------------------------------------
 
 pub(crate) fn inventory_ttl() -> Duration {
     Duration::from_secs(DEFAULT_INVENTORY_TTL_SECS)

@@ -1,4 +1,4 @@
-// Marketing Automation — Sequence and enrollment handlers.
+// Marketing Automation - Sequence and enrollment handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -30,9 +30,7 @@ use super::handlers_audience::*;
 use super::hooks::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Sequence handlers.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct SequenceInput {
@@ -265,7 +263,7 @@ pub(crate) async fn delete_sequence(
     }
 }
 
-// --- Steps ---
+// Steps
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct StepInput {
@@ -510,7 +508,7 @@ pub(crate) async fn delete_step(
     }
 }
 
-// --- Enrollment ---
+// Enrollment
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct EnrollInput {

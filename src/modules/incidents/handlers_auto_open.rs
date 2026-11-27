@@ -13,9 +13,7 @@ use super::{constants::*, types::*, inputs::*, state::*, helpers::*, handlers_in
 
 
 
-// ---------------------------------------------------------------------------
 // Auto-open rules + Service Monitor listener
-// ---------------------------------------------------------------------------
 pub(crate) async fn list_auto_open(
     ctx: web::Data<Arc<AppContext>>,
     state: web::Data<IncidentsState>,

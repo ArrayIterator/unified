@@ -51,9 +51,7 @@ use super::types::ResolveGradeAppeal;
 use super::types::Transcript;
 use super::types::UpdateGrade;
 
-// ---------------------------------------------------------------------------
 // Handlers: grades
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_grades_for_enrollment(
     ctx: web::Data<Arc<AppContext>>,
@@ -276,9 +274,7 @@ pub(crate) async fn get_final_grade(
     json::respond(result, debug)
 }
 
-// ---------------------------------------------------------------------------
 // Handlers: grade appeals
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_grade_appeals(
     ctx: web::Data<Arc<AppContext>>,
@@ -533,9 +529,7 @@ pub(crate) async fn resolve_grade_appeal(
     json::respond(result, debug)
 }
 
-// ---------------------------------------------------------------------------
 // Handlers: transcripts
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_transcripts(
     ctx: web::Data<Arc<AppContext>>,

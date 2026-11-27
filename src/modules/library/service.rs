@@ -14,7 +14,7 @@ use super::{COPY_AVAILABLE, COPY_ON_LOAN, COPY_RESERVED, FINE_PENDING, HOLD_FULF
 /// Resolve the active loan policy for a member type and item type:
 /// an exact match first, then the member type with item type
 /// `"all"`, then a default policy for member type `"default"`.
-/// Fails with 409 when no policy matches — checkout must never
+/// Fails with 409 when no policy matches - checkout must never
 /// fall back to a baked-in number.
 pub(crate) fn resolve_policy(
     state: &LibraryState,

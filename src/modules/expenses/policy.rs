@@ -4,7 +4,7 @@ use chrono::Utc;
 
 use super::*;
 
-// --- Policy rates and violation checks -------------------------------------
+// Policy rates and violation checks
 
 /// Mileage rate for a report: the policy rate when the report has
 /// a policy with one, otherwise the settings default. The rate is
@@ -82,7 +82,7 @@ pub(crate) fn compute_violations(state: &ExpensesState, report: &ExpenseReport, 
             // row on its own is an unverified claim: the caller
             // supplies the storage target and key as free text,
             // and no storage lookup runs at attach time (there is
-            // no existence-check event on the bus — the storage
+            // no existence-check event on the bus - the storage
             // manager answers `storage.object.upload_requested`
             // with an upload binding, never with "this object
             // exists"). The row becomes verified only when the

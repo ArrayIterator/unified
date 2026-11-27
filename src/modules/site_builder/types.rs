@@ -1,4 +1,4 @@
-// Site Builder — Public record, request, and view types.
+// Site Builder - Public record, request, and view types.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};

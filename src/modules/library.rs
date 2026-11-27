@@ -1,4 +1,4 @@
-//! Library module — Library module — catalog, copies, members, loans, holds, fines,
+//! Library module - Library module - catalog, copies, members, loans, holds, fines,
 //!
 //! Split into submodules by concern; the public API is
 //! re-exported below. The full route map and module notes

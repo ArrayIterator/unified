@@ -1,4 +1,4 @@
-// timetracker — HTTP handlers: activity and usage reports, screenshots.
+// timetracker - HTTP handlers: activity and usage reports, screenshots.
 
 use super::*;
 use unified_core::context::AppContext;

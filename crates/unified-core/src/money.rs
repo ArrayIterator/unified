@@ -38,7 +38,7 @@ const MAX_MAJOR: f64 = 92_233_720_368_547_758.0;
 
 /// Convert a two-decimal major-unit float to integer minor units,
 /// rounding half away from zero. Returns `None` for non-finite
-/// values and for magnitudes that would overflow `i64` — never
+/// values and for magnitudes that would overflow `i64` - never
 /// silently saturates.
 pub fn major_to_minor_checked(major: f64) -> Option<i64> {
     if !major.is_finite() || major.abs() > MAX_MAJOR {

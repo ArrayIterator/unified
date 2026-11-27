@@ -18,9 +18,7 @@ use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 use super::{constants::*, types::*, state::*, helpers::*, module::*, handlers_articles::*, handlers_tickets::*};
 
-// ---------------------------------------------------------------------------
 // Category handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn create_category(
     ctx: web::Data<Arc<AppContext>>,

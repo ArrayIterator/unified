@@ -3,9 +3,7 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
-// Storage manager (migration 000033_storage_manager; batch 2 notes §5).
-// ---------------------------------------------------------------------------
+// Storage manager (migration 000033_storage_manager; batch 2 notes sec. 5).
 
 diesel::table! {
     storage_buckets (id) {

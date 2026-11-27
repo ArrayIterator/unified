@@ -21,9 +21,7 @@ use super::types::{
     MAX_POLL_QUESTION_LEN, VotePollRequest,
 };
 
-// ---------------------------------------------------------------------------
 // Poll handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn create_poll(
     ctx: web::Data<Arc<AppContext>>,

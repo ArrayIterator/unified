@@ -1,4 +1,4 @@
-// admissions module — Period summary report.
+// admissions module - Period summary report.
 //
 // Split from the former single-file module `src/modules/admissions.rs`.
 // The module root (`admissions.rs`) re-exports the public items, so the
@@ -23,9 +23,7 @@ use super::helpers::{caller, caller_company, require_permission, require_tenant}
 use super::state::AdmissionsState;
 use super::types::{Application, ChecklistItem};
 
-// ---------------------------------------------------------------------------
 // Handlers: period summary report
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn period_summary(
     ctx: web::Data<Arc<AppContext>>,

@@ -11,9 +11,7 @@ use super::{constants::*, settings::*, types::*, module::*, helpers::*, inputs::
 
 
 
-// ---------------------------------------------------------------------------
 // Handlers: AI (smart module)
-// ---------------------------------------------------------------------------
 pub(crate) async fn ai_draft_questions(
     ctx: web::Data<Arc<AppContext>>,
     state: web::Data<ExamsStateRef>,
@@ -60,7 +58,7 @@ pub(crate) async fn ai_draft_questions(
         // The AI module's Caller is the type `run_ai_capability`
         // takes; it carries the same actor and role as this
         // module's caller. Company resolution goes through the AI
-        // module's helper (verified caller first; task 317 removed header trust).
+        // module's helper (verified caller first; removed header trust).
         let ai_caller = crate::modules::ai::Caller {
             actor: caller.actor.clone(),
             role: caller.role.clone(),

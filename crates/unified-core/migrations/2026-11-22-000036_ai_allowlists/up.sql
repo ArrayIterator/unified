@@ -50,9 +50,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One company's AI access policy (one row per company).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS ai_company_policies (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id UUID NOT NULL UNIQUE REFERENCES companies (id)
@@ -70,10 +68,8 @@ CREATE TABLE IF NOT EXISTS ai_company_policies (
 CREATE INDEX IF NOT EXISTS idx_ai_company_policies_enabled
     ON ai_company_policies (enabled);
 
--- ---------------------------------------------------------------------------
 -- One user's AI access policy (one row per user), set by an admin of
 -- the user's company or by a platform admin.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS ai_user_policies (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL UNIQUE REFERENCES users (id)
@@ -95,9 +91,7 @@ CREATE INDEX IF NOT EXISTS idx_ai_user_policies_company_id
 CREATE INDEX IF NOT EXISTS idx_ai_user_policies_enabled
     ON ai_user_policies (enabled);
 
--- ---------------------------------------------------------------------------
 -- One user's own API key. Credentials are write-only.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS ai_personal_keys (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL UNIQUE REFERENCES users (id)
@@ -121,9 +115,7 @@ CREATE INDEX IF NOT EXISTS idx_ai_personal_keys_provider_kind
 CREATE INDEX IF NOT EXISTS idx_ai_personal_keys_enabled
     ON ai_personal_keys (enabled);
 
--- ---------------------------------------------------------------------------
 -- One user's own MCP servers. Auth tokens are write-only.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS ai_user_mcp_servers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users (id)
@@ -143,10 +135,8 @@ CREATE INDEX IF NOT EXISTS idx_ai_user_mcp_servers_user_id
 CREATE INDEX IF NOT EXISTS idx_ai_user_mcp_servers_enabled
     ON ai_user_mcp_servers (enabled);
 
--- ---------------------------------------------------------------------------
 -- Identity columns on the usage audit trail (000030_ai created this
 -- table without them).
--- ---------------------------------------------------------------------------
 ALTER TABLE ai_usage_records
     ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users (id)
         ON DELETE SET NULL ON UPDATE NO ACTION,

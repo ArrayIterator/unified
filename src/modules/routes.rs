@@ -1,4 +1,4 @@
-// Routes module — admin API for customizable page routes.
+// Routes module - admin API for customizable page routes.
 //
 // HTTP API under `/api/v1/routes`:
 //
@@ -31,7 +31,7 @@
 // section (`RoutesSection`) with the legacy `app.dashboard_path`
 // config value as a deprecated fallback for `user_dashboard`
 // (`routes.user_dashboard` is canonical; the legacy value only
-// applies when the canonical one is unset — see
+// applies when the canonical one is unset - see
 // `RouteRegistry::apply_legacy_dashboard_path`). `init` attaches
 // that shared instance to this module, so the admin API, the server
 // redirect handler, and the theme engine all read and write the

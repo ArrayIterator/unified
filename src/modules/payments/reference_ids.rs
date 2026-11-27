@@ -5,9 +5,7 @@ use super::{events::*, card_validation::*, card_settings::*, limits::*, provider
 
 
 
-// ---------------------------------------------------------------------------
-// Batch 18: payment reference ids (BEGIN — append-only section)
-// ---------------------------------------------------------------------------
+// Batch 18: payment reference ids (BEGIN - append-only section)
 //
 // The provider-facing reference for every charge, payout, refund,
 // and subscription name in this module is a reference in the single

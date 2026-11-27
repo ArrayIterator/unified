@@ -78,9 +78,7 @@ pub(crate) fn field_type_infos() -> Vec<FieldTypeInfo> {
     ]
 }
 
-// ---------------------------------------------------------------------------
 // Handlers: field definitions.
-// ---------------------------------------------------------------------------
 
 pub(crate) fn validate_new_definition(
     state: &StudioState,

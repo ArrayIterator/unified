@@ -1,4 +1,4 @@
-// Tickets module — escalation rule handlers.
+// Tickets module - escalation rule handlers.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use unified_core::context::AppContext;
@@ -17,9 +17,7 @@ use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Escalation rules
-// ---------------------------------------------------------------------------
 
 pub(crate) fn validate_escalation_trigger(trigger: &str) -> UnifiedResult<()> {
     if !matches!(trigger, "sla_breach" | "no_response") {

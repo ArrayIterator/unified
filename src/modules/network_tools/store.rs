@@ -10,11 +10,9 @@ use std::time::{Instant};
 use uuid::Uuid;
 use super::types::{NetworkToolCertWatch, NetworkToolRun, NetworkToolSavedCheck, NetworkToolUptimeEvent, NetworkToolUptimeMonitor};
 
-// ---------------------------------------------------------------------------
 // In-memory stores (authoritative until the integrator lands the
 // schema.rs / models.rs additions; the Diesel helpers below mirror
 // them 1:1 and take over as the read path once a pool is attached).
-// ---------------------------------------------------------------------------
 
 pub(crate) static SAVED_CHECKS: OnceLock<DashMap<Uuid, NetworkToolSavedCheck>> = OnceLock::new();
 
@@ -84,11 +82,9 @@ pub(crate) fn db_pool(ctx: &AppContext) -> Option<unified_core::db::DbPool> {
     ctx.db.read().expect("db lock poisoned").clone()
 }
 
-// ---------------------------------------------------------------------------
 // Diesel helpers (persistence path; in-memory stores above stay the
 // read path until the integrator adds the matching `table!` blocks
 // to crates/unified-core/src/db/schema.rs` - see the delivery report).
-// ---------------------------------------------------------------------------
 
 pub(crate) fn db_insert_run(pool: &unified_core::db::DbPool, run: &NetworkToolRun) -> UnifiedResult<()> {
     use unified_core::db::schema::network_tool_runs::dsl as runs_dsl;

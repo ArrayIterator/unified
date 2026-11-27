@@ -1,4 +1,4 @@
-//! Curriculum module — competency-based school curricula. — Helpers.
+//! Curriculum module - competency-based school curricula. - Helpers.
 //!
 //! Split from `src/modules/curriculum.rs`; behaviour unchanged.
 
@@ -77,9 +77,7 @@ pub(super) fn require_permission(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Tenant edge guard (C3 pilot 4, group B).
-// ---------------------------------------------------------------------------
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request
@@ -186,7 +184,7 @@ pub(super) fn require_code(value: &str, field: &str) -> UnifiedResult<String> {
 }
 
 /// Validate a value against a settings list. The list is the live
-/// admin-configured one — never a constant in this file.
+/// admin-configured one - never a constant in this file.
 pub(super) fn require_in_list(
     value: &str,
     field: &str,
@@ -304,7 +302,7 @@ pub(super) fn now() -> DateTime<Utc> {
 /// handler answers `exists: false` the request is rejected.
 ///
 /// The answer is read from the hook RESULTS (the tree's hook-query
-/// convention — see the logistics module's `lookup_order`), with a
+/// convention - see the logistics module's `lookup_order`), with a
 /// fallback to the payload `exists` key for answerers that set it
 /// there instead. Reading the payload alone is wrong: the emitted
 /// payload is the request, not the answer. A confirmed student is
@@ -395,7 +393,7 @@ pub(super) fn grade_label_for(settings: &CurriculumSettings, score: f64) -> Opti
 /// A scoped match (a row whose `domain_id` is the requested domain)
 /// wins immediately. Unscoped rows are collected and resolved
 /// deterministically: the narrowest score range wins, then the
-/// earliest created row, then the smallest id — so the result never
+/// earliest created row, then the smallest id - so the result never
 /// depends on DashMap iteration order.
 pub(super) fn descriptor_for(
     state: &CurriculumState,
@@ -523,7 +521,7 @@ mod tests {
         assert_eq!(grade_label_for(&settings, 0.0).as_deref(), Some("E"));
         assert_eq!(grade_label_for(&settings, 100.0).as_deref(), Some("A"));
         // The bands are contiguous half-open intervals, so every
-        // score in [0, 100] labels — including values that used to
+        // score in [0, 100] labels - including values that used to
         // fall in the gaps between bands (89.995 matched no band).
         assert_eq!(grade_label_for(&settings, 89.995).as_deref(), Some("B"));
         assert_eq!(grade_label_for(&settings, 89.9999).as_deref(), Some("B"));

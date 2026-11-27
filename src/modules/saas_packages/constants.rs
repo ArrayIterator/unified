@@ -185,9 +185,7 @@ pub(crate) const OUTCOME_FAILED: &str = "failed";
 /// owning module has claimed it yet (see the OPEN notes).
 pub(crate) const OUTCOME_REQUESTED: &str = "requested";
 
-// ---------------------------------------------------------------------------
 // AI capabilities (smart module).
-// ---------------------------------------------------------------------------
 
 /// The AI capabilities this module declares. Recommendations are
 /// suggestions only: they never purchase or provision anything.

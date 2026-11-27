@@ -96,9 +96,7 @@ pub(crate) const EVENT_AI_SUMMARIZE_REQUESTED: &str = "phone.ai.summarize_call_r
 /// auditable); only the identity is anonymized.
 pub(crate) const DELETED_USER_ID: &str = "deleted-user";
 
-// ---------------------------------------------------------------------------
 // Pure domain functions (unit-tested below)
-// ---------------------------------------------------------------------------
 
 /// Call status machine. Allowed transitions:
 /// ringing -> active, held (hold before answer is a no-op in
@@ -166,7 +164,7 @@ pub fn next_ring_targets(members: &[QueueMember], strategy: RingStrategy) -> Vec
 /// Resolve one IVR key press against a menu's nodes: the node
 /// whose `key` matches (case-insensitive for letters, exact
 /// for digits and `*` / `#`). `None` when the menu has no node
-/// for the key — the caller hears the menu again, it is not an
+/// for the key - the caller hears the menu again, it is not an
 /// error.
 pub fn resolve_ivr_key<'a>(nodes: &'a [IvrNode], key: &str) -> Option<&'a IvrNode> {
     let wanted = key.trim().to_lowercase();
@@ -235,7 +233,7 @@ pub fn in_time_window(start: Option<&str>, end: Option<&str>, now_minutes: i64) 
 /// Evaluate the tenant's routing rules for one incoming call:
 /// active rules in `priority` order (lowest first), the first
 /// rule whose caller pattern matches and whose time window
-/// contains `now_minutes` wins. `None` when no rule matches —
+/// contains `now_minutes` wins. `None` when no rule matches -
 /// the caller falls through to the tenant default (direct call
 /// or the default queue), never to an invented target.
 pub fn evaluate_routing_rules<'a>(
@@ -262,7 +260,7 @@ pub fn evaluate_routing_rules<'a>(
 /// Parse the AI call-summary output into the summary text
 /// stored on the call log. The model is asked to return JSON
 /// with `summary` (a short paragraph); the output may carry
-/// surrounding prose, so the first `{` … last `}` span is
+/// surrounding prose, so the first `{` ... last `}` span is
 /// parsed first. When no JSON is found, plain-text output is
 /// accepted as the summary itself (trimmed, capped at 5000
 /// characters). `None` when the output is empty.
@@ -312,9 +310,7 @@ pub fn valid_ivr_key(key: &str) -> bool {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// Call status. Serialized snake_case.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -561,7 +557,7 @@ impl SignalKind {
 }
 
 /// IVR node action: what one key press does. The target is
-/// data (a queue code, a user id, or a menu code) — never a
+/// data (a queue code, a user id, or a menu code) - never a
 /// hard-coded destination.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -682,7 +678,7 @@ pub struct CallParticipant {
 /// One stored signalling message (store-and-forward). The
 /// server stores it, broadcasts it on the shared WebSocket
 /// hub, and keeps it until the recipient fetches it from the
-/// signals inbox — so a reconnecting client does not lose an
+/// signals inbox - so a reconnecting client does not lose an
 /// offer or ICE candidate sent while offline. `payload` is
 /// the SDP or ICE JSON object, opaque to the server. Media
 /// never passes through here: only signalling.
@@ -850,7 +846,7 @@ pub struct IvrNode {
 /// case-insensitively as a substring) and answered with
 /// `response_template`, or handed to the AI capability named
 /// by `ai_capability` when set (the AI answers routine
-/// questions and can route or escalate — it never books or
+/// questions and can route or escalate - it never books or
 /// charges anything on its own).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AutoResponseScript {
@@ -903,7 +899,7 @@ pub struct CallRecording {
 
 /// Per-tenant phone settings. `recording_requires_consent`
 /// defaults to true and is the only switch that can relax the
-/// consent gate — it can only be turned off by a manager, and
+/// consent gate - it can only be turned off by a manager, and
 /// recordings started while it is off still record
 /// `consent_given: false` on the row so the gap stays visible.
 #[derive(Debug, Clone, Serialize, Deserialize)]

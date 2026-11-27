@@ -3,14 +3,12 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Document vault (migration 000052_vault). Only one `joinable!`
 // per table pair is allowed, so `vault_documents ->
-// vault_document_versions (current_version_id)` is omitted — the
+// vault_document_versions (current_version_id)` is omitted - the
 // `vault_document_versions -> vault_documents (document_id)`
 // direction is kept. The self-reference
 // `vault_folders.parent_id` gets no `joinable!`.
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     vault_folders (id) {

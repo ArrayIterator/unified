@@ -1,4 +1,4 @@
-// surveys module — Distribution handlers.
+// surveys module - Distribution handlers.
 //
 // Split from the former single-file module `src/modules/surveys.rs`.
 // The module root (`surveys.rs`) re-exports the public items, so the
@@ -30,9 +30,7 @@ use super::helpers::{
 };
 use super::service::{schedule_distribution, send_distribution_invitations};
 
-// ---------------------------------------------------------------------------
 // Distribution handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_distributions(
     ctx: web::Data<Arc<AppContext>>,

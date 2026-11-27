@@ -10,9 +10,7 @@ use uuid::Uuid;
 
 use super::{PERM_LIBRARY_CATALOG, PERM_LIBRARY_CIRCULATE, PERM_LIBRARY_MANAGE};
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 /// Constant-time string comparison, so token verification does not
 /// leak how many leading characters matched.
@@ -55,7 +53,7 @@ pub(crate) fn caller(req: &HttpRequest) -> UnifiedResult<Caller> {
 /// Diesel persistence is not wired yet (the DashMap stores are
 /// authoritative; migration `2026-11-22-000091_library` is the
 /// persistence target), so there is no `DbPool` in this module
-/// and `with_tenant_connection` has no call site here yet — when
+/// and `with_tenant_connection` has no call site here yet - when
 /// the Diesel writers land, all data access goes through
 /// `tenancy::with_tenant_connection(pool, tenant.tenant_id, ...)`.
 /// Until then, company scoping is enforced at the handler level:
@@ -79,15 +77,15 @@ pub(crate) fn require_tenant(req: &HttpRequest) -> UnifiedResult<tenancy::Tenant
 /// authoritative first: the verified caller's company
 /// (`caller::caller_from(req).company_id`), then the tenant
 /// context's company. Fails closed (403) when both are present and
-/// disagree — a request must not carry one company for the caller
+/// disagree - a request must not carry one company for the caller
 /// and another in its tenant context.
 ///
 /// The `X-Company-Id` header is NOT a source: it is
 /// client-asserted, so trusting it would let any JWT caller claim
 /// another company (the old header fallback was that hole). The
 /// `user.company_requested` hook is not consulted here either:
-/// this function takes no `AppContext`, and the tenant context —
-/// required first by every handler in this module — is the
+/// this function takes no `AppContext`, and the tenant context -
+/// required first by every handler in this module - is the
 /// authoritative source. A caller with no resolvable company is
 /// `Unresolved` and reads global rows only; platform is an
 /// explicitly-decided scope (`CallerScope::decide`: control-plane
@@ -120,7 +118,7 @@ pub(crate) fn caller_company(
 /// so the record is never stored unscoped under a scoped caller.
 /// A platform caller may store any body company (or none); an
 /// unresolved caller may not claim a company at all and is refused
-/// when the body omits one (C3 task 315): a write requires a resolved company scope.
+/// when the body omits one (C3): a write requires a resolved company scope.
 pub(crate) fn require_company_match(
     tenant: &tenancy::TenantContext,
     req: &HttpRequest,
@@ -156,7 +154,7 @@ pub(crate) fn require_company_match_for(
 /// record; a company caller reads their own company's rows plus
 /// global (unscoped) rows; an unresolved caller reads global rows
 /// ONLY. There is no "no scope matches everything" arm: with no
-/// resolved company, company-owned records do NOT match — the old
+/// resolved company, company-owned records do NOT match - the old
 /// no-scope-matches-everything shape let any caller without a company read
 /// every company's records.
 pub(crate) fn in_company_scope(record_company_id: &Option<String>, scope: &CallerScope) -> bool {
@@ -181,11 +179,11 @@ pub(crate) fn require_record_in_company_scope(
 }
 
 /// Fail closed (403) when a stored record is outside the caller's
-/// company scope FOR A WRITE (C3 task 315, strict by default).
+/// company scope FOR A WRITE (C3, strict by default).
 /// Unlike the read check above (rule A), a write requires an exact
 /// company match: a company caller may write only their own
-/// company's records — global (unscoped) records are platform-only
-/// — and an unresolved caller may write nothing. Mutation handlers
+/// company's records - global (unscoped) records are platform-only
+/// - and an unresolved caller may write nothing. Mutation handlers
 /// call this right after loading the record they mutate; handlers
 /// that only read the record, or load a parent to scope a child
 /// write, keep the read check.
@@ -193,7 +191,7 @@ pub(crate) fn require_record_writable_in_company_scope(
     record_company_id: &Option<String>,
     scope: &CallerScope,
 ) -> UnifiedResult<()> {
-    // The shared write guard (C3 task 315): platform may write
+    // The shared write guard (C3): platform may write
     // any scope, a company caller only its own company (global
     // is platform-only), an unresolved caller nothing.
     scope.require_company_scope(record_company_id.as_deref().unwrap_or(""))

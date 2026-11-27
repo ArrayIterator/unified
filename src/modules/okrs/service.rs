@@ -1,4 +1,4 @@
-// OKR / Goals — Business logic shared by handlers and hooks.
+// OKR / Goals - Business logic shared by handlers and hooks.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -26,7 +26,7 @@ use super::hooks::*;
 use super::module::*;
 
 /// Progress of one key result: (current - start) / (target -
-/// start), clamped to 0.0–1.0. A zero target range scores 1.0 when
+/// start), clamped to 0.0-1.0. A zero target range scores 1.0 when
 /// the current value reached the target, else 0.0.
 pub(crate) fn key_result_progress(key_result: &OkrKeyResult) -> f64 {
     let span = key_result.target_value - key_result.start_value;

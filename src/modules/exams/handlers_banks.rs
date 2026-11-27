@@ -11,9 +11,7 @@ use super::{constants::*, settings::*, types::*, module::*, helpers::*, inputs::
 
 
 
-// ---------------------------------------------------------------------------
 // Handlers: question banks
-// ---------------------------------------------------------------------------
 pub(crate) async fn list_banks(
     ctx: web::Data<Arc<AppContext>>,
     state: web::Data<ExamsStateRef>,

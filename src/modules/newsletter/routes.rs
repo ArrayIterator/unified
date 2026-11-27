@@ -22,9 +22,7 @@ use super::tracking::{track_click, track_open};
 use super::webhooks::{overall_stats, provider_webhook};
 use super::ai_capabilities::AI_CAPABILITIES;
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct NewsletterModule {
     pub(crate) state: Arc<NewsletterState>,

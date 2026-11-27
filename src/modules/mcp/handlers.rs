@@ -468,7 +468,7 @@ pub(crate) async fn list_prompts(ctx: web::Data<Arc<AppContext>>) -> HttpRespons
 ///
 /// SANCTIONED CARVE-OUT from the standard API envelope
 /// (`unified_core::json`): the response is JSON-RPC 2.0, not
-/// `{"data": ...}`, because that is the MCP wire protocol — wrapping
+/// `{"data": ...}`, because that is the MCP wire protocol - wrapping
 /// a JSON-RPC response in the envelope would break every MCP client.
 /// A malformed (non-JSON-RPC) body is still answered with the
 /// standard error envelope, since no JSON-RPC id exists to echo.

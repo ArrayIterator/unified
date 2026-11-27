@@ -1,4 +1,4 @@
-// Third-party VCS integrations — Repository connection handlers.
+// Third-party VCS integrations - Repository connection handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -33,9 +33,7 @@ use super::handlers_drafts::*;
 use super::webhooks::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Connection handlers.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_connections(
     ctx: web::Data<Arc<AppContext>>,
@@ -362,9 +360,7 @@ pub(crate) async fn disable_connection(
     )
 }
 
-// ---------------------------------------------------------------------------
 // Provider releases, import, sync, and sync history.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_connection_releases(
     ctx: web::Data<Arc<AppContext>>,

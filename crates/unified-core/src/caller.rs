@@ -5,7 +5,7 @@
 //! session token once and inserts exactly one `auth::Caller` into
 //! the request extensions. This module converts that verified
 //! identity into the [`Caller`] view handlers already use (string
-//! user id, primary role, company id) — it never reads a request
+//! user id, primary role, company id) - it never reads a request
 //! header, and it never trusts any other extension type. The
 //! `X-User-Id` / `X-Role` / `X-User-Roles` / `X-Company-Id`
 //! headers are self-asserted: any unauthenticated client can send
@@ -24,7 +24,7 @@
 //!   server-resolved role and capability checks through the
 //!   `role.check` hook answer from the roles module's store. When
 //!   no database pool is attached (or the lookup fails), roles
-//!   stay empty and the checks fail closed exactly as before —
+//!   stay empty and the checks fail closed exactly as before -
 //!   the actor identity (`user_id`) is real and verified either
 //!   way. Token scopes (`auth::Caller::has_scope`) remain the
 //!   capability source for scope-gated routes; both are minted
@@ -33,7 +33,7 @@
 //!   from the database (`users.company_id`) at authentication
 //!   time and attaches it to `auth::Caller`; this view copies it
 //!   through, so [`Caller::company_id`] is the server-resolved
-//!   company — the first source in the company resolution order
+//!   company - the first source in the company resolution order
 //!   (verified Caller company, then tenant-context company, then
 //!   the `user.company_requested` hook answer). When the user has
 //!   no company, or the lookup could not run or failed, it stays
@@ -166,7 +166,7 @@ impl Caller {
 /// Read the server-verified caller: convert the [`AuthCaller`] the
 /// auth middleware attached to the request extensions into the
 /// handler-facing [`Caller`] view. Returns an anonymous caller when
-/// the middleware attached nothing — never headers, never a default
+/// the middleware attached nothing - never headers, never a default
 /// role. Only `auth::Caller` is ever read from extensions; a
 /// `caller::Caller` value in extensions is not trusted.
 pub fn caller_from(req: &HttpRequest) -> Caller {
@@ -213,7 +213,7 @@ mod tests {
         assert_eq!(caller.company_id.as_deref(), Some("company-1"));
         assert_eq!(caller.tenant_id.as_deref(), Some("tenant-1"));
         assert!(caller.has_role("admin"));
-        // Without a resolved company the view carries none — never
+        // Without a resolved company the view carries none - never
         // an invented one.
         let unresolved = AuthCaller::verified(
             Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap(),

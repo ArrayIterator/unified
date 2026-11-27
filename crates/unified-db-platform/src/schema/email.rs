@@ -3,9 +3,7 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Email and newsletter (2026-11-22-000016_email_newsletter).
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     email_connections (id) {

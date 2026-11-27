@@ -3,9 +3,7 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Admissions (migration 000093_admissions).
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     admission_periods (id) {

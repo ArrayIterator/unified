@@ -2,7 +2,7 @@
 -- column, nullable checksums (lazy finalize), session status values
 -- for the lazy-finalize flow, and the finalize_jobs table.
 -- The in-memory DashMap store is authoritative at runtime; these
--- tables are the durable persistence targets (see C11, task 271).
+-- tables are the durable persistence targets (see C11).
 
 -- 1. `documents.visibility`: enum public/private, default private.
 -- The user calls this "is_public"; it is an enum column, NOT a

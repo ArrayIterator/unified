@@ -1,4 +1,4 @@
-//! Map & Tagging — provider abstraction.
+//! Map & Tagging - provider abstraction.
 //!
 //! A provider is one tile source behind ONE interface: a tile
 //! URL template with `{z}` / `{x}` / `{y}` placeholders (plus
@@ -6,7 +6,7 @@
 //! `{key}` browser-key placeholder), an attribution string, a
 //! maximum zoom, an optional subdomain list, and a free-form
 //! options object. The built-ins are OpenStreetMap (Leaflet
-//! default, free, no key), Mapbox, and Google Maps — but the
+//! default, free, no key), Mapbox, and Google Maps - but the
 //! registry is data, not a switch: an admin adds any
 //! open-source tile server or fully custom tile API as a
 //! provider row through the providers API, and a tenant picks
@@ -28,7 +28,7 @@ use unified_core::error::{UnifiedError, UnifiedResult};
 
 /// Resolve a tile URL template for the browser: substitute the
 /// stored browser key into `{key}`. Returns `None` when the
-/// provider needs a key and none is stored — the caller then
+/// provider needs a key and none is stored - the caller then
 /// serves `tile_url: null` and the map shows an honest "this
 /// provider needs an API key" note instead of broken tiles.
 /// `{s}` is deliberately left in place: the tile client

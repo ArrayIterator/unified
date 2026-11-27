@@ -25,9 +25,7 @@ use super::types::PanelProduct;
 use super::types::PanelServerAccount;
 use super::types::validate_panel_endpoint;
 
-// ---------------------------------------------------------------------------
 // cPanel / WHM adapter.
-// ---------------------------------------------------------------------------
 
 /// WHM JSON API (`<endpoint>/json-api/<call>?api.version=1`, auth
 /// header `WHM <user>:<token>`).

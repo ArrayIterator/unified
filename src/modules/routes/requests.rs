@@ -1,4 +1,4 @@
-// routes module — Request types.
+// routes module - Request types.
 //
 // Split from the former single-file module `src/modules/routes.rs`.
 // The module root (`routes.rs`) re-exports the public items, so the
@@ -19,9 +19,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::sync::{Arc, RwLock};
 
-// ---------------------------------------------------------------------------
 // Request types.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct SetOverrideInput {

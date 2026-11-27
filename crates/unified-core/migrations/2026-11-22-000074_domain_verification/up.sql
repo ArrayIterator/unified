@@ -1,7 +1,7 @@
 -- Domain Verification module tables for the Unified Pentagonal Project
 -- (`src/modules/domain_verification.rs`): admin-determined DNS
 -- verification settings (versioned rows), per-domain verification
--- tokens (SHA-256 hash only — the raw token is never stored), and the
+-- tokens (SHA-256 hash only - the raw token is never stored), and the
 -- DNS check attempt history. PostgreSQL only.
 -- Run with diesel_migrations (embedded via src/db/mod.rs).
 --
@@ -38,10 +38,8 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- Admin-determined verification settings, versioned. One row per save;
 -- the highest `version` row is live.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS domain_verification_settings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     version BIGINT NOT NULL,
@@ -75,10 +73,8 @@ INSERT INTO domain_verification_settings (
     10, 5, 10, 604800, 3600, 'system'
 ) ON CONFLICT (version) DO NOTHING;
 
--- ---------------------------------------------------------------------------
 -- One issued verification token per domain alias. Raw tokens are never
 -- stored: only the SHA-256 hex digest (`token_hash`).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS domain_verification_tokens (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     domain TEXT NOT NULL,
@@ -103,9 +99,7 @@ CREATE INDEX IF NOT EXISTS domain_verification_tokens_alias_idx
 CREATE INDEX IF NOT EXISTS domain_verification_tokens_status_idx
     ON domain_verification_tokens (status, expires_at);
 
--- ---------------------------------------------------------------------------
 -- One row per DNS check attempt inside a verify call.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS domain_verification_attempts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     token_id UUID NOT NULL REFERENCES domain_verification_tokens (id) ON DELETE CASCADE,

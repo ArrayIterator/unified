@@ -10,9 +10,7 @@ use super::{constants::*, settings::*, types::*, module::*, helpers::*, inputs::
 
 
 
-// ---------------------------------------------------------------------------
 // Handlers: settings
-// ---------------------------------------------------------------------------
 pub(crate) async fn get_settings(
     ctx: web::Data<Arc<AppContext>>,
     state: web::Data<ExamsStateRef>,

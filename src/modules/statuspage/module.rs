@@ -62,9 +62,7 @@ use super::*;
 //   - `statuspage.status.changed` (when the derived overall status changes)
 
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 //
 // Note: this module registers no hook handlers. The overall status is
 // recomputed with the application context on every request

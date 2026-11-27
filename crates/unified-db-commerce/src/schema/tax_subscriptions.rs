@@ -3,9 +3,7 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Tax Management (2026-11-22-000038_tax).
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     tax_rules (id) {
@@ -124,9 +122,7 @@ diesel::table! {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Subscriptions (2026-11-22-000040_subscriptions).
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     subscriptions (id) {

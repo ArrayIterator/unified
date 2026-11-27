@@ -31,9 +31,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One saved field-mapping template.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS mapping_templates (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR NOT NULL,
@@ -50,9 +48,7 @@ CREATE INDEX IF NOT EXISTS idx_mapping_templates_entity
 CREATE INDEX IF NOT EXISTS idx_mapping_templates_company_id
     ON mapping_templates (company_id);
 
--- ---------------------------------------------------------------------------
 -- One scheduled export definition.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS export_schedules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR NOT NULL,
@@ -83,9 +79,7 @@ CREATE INDEX IF NOT EXISTS idx_export_schedules_enabled
 CREATE INDEX IF NOT EXISTS idx_export_schedules_company_id
     ON export_schedules (company_id);
 
--- ---------------------------------------------------------------------------
 -- One chunked import session.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS import_sessions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     entity VARCHAR NOT NULL,
@@ -111,9 +105,7 @@ CREATE INDEX IF NOT EXISTS idx_import_sessions_status
 CREATE INDEX IF NOT EXISTS idx_import_sessions_company_id
     ON import_sessions (company_id);
 
--- ---------------------------------------------------------------------------
 -- New columns on the existing job tables (from 000018).
--- ---------------------------------------------------------------------------
 ALTER TABLE import_jobs ADD COLUMN IF NOT EXISTS actor VARCHAR NOT NULL DEFAULT 'system';
 ALTER TABLE import_jobs ADD COLUMN IF NOT EXISTS company_id UUID;
 CREATE INDEX IF NOT EXISTS idx_import_jobs_company_id

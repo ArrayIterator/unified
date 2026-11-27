@@ -88,9 +88,7 @@
 // `cluster.node.unhealthy`, `cluster.node.healthy`,
 // `cluster.node.removed` (cluster backends only).
 
-// ---------------------------------------------------------------------------
 // Event names.
-// ---------------------------------------------------------------------------
 
 pub const LB_CREATED: &str = "lb.created";
 
@@ -137,9 +135,7 @@ pub const CLUSTER_NODE_HEALTHY: &str = "cluster.node.healthy";
 
 pub const CLUSTER_NODE_REMOVED: &str = "cluster.node.removed";
 
-// ---------------------------------------------------------------------------
 // Defaults.
-// ---------------------------------------------------------------------------
 
 pub(crate) const DEFAULT_HEALTH_PATH: &str = "/health";
 

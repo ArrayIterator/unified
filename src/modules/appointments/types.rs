@@ -1,4 +1,4 @@
-// Appointments module — bookable services, staff calendars, slot
+// Appointments module - bookable services, staff calendars, slot
 // generation, bookings with double-booking prevention, reschedule /
 // cancel with a configurable cancellation policy, no-show marking,
 // reminder rules, a customer-facing public booking flow, and an
@@ -7,42 +7,42 @@
 // Routes live under `/api/v1/appointments`:
 //
 //   Services:
-//     GET/POST /services — list services / create a service.
+//     GET/POST /services - list services / create a service.
 //     GET/PATCH/DELETE /services/{id}.
 //     GET  /services/{id}/slots?date=YYYY-MM-DD&staff_id=&slot_minutes=
-//          — bookable slots for one service on one day.
+//          - bookable slots for one service on one day.
 //   Staff calendars:
-//     GET/POST /staff/{staff_id}/availability — working hours, breaks,
+//     GET/POST /staff/{staff_id}/availability - working hours, breaks,
 //          and days off for one staff member.
 //     PATCH/DELETE /staff/{staff_id}/availability/{availability_id}.
-//     GET/POST /staff/{staff_id}/services — services a staff member
+//     GET/POST /staff/{staff_id}/services - services a staff member
 //          is assigned to (assign / unassign).
 //     DELETE /staff/{staff_id}/services/{service_id}.
-//     GET  /staff/{staff_id}/calendar?from=&to= — appointments.
-//     GET  /staff/{staff_id}/calendar.ics — iCalendar feed.
+//     GET  /staff/{staff_id}/calendar?from=&to= - appointments.
+//     GET  /staff/{staff_id}/calendar.ics - iCalendar feed.
 //   Appointments:
-//     GET/POST / — list appointments / create a booking.
+//     GET/POST / - list appointments / create a booking.
 //     GET/PATCH /{id}.
 //     POST /{id}/confirm, /{id}/reschedule, /{id}/cancel,
 //          /{id}/complete, /{id}/no-show.
-//     GET  /{id}/ics — one appointment as an RFC 5545 .ics file.
+//     GET  /{id}/ics - one appointment as an RFC 5545 .ics file.
 //   Reminders:
-//     GET/POST /{id}/reminders — reminder rows of an appointment.
+//     GET/POST /{id}/reminders - reminder rows of an appointment.
 //     DELETE /{id}/reminders/{reminder_id}.
-//     POST /{id}/reminders/{reminder_id}/send — send one now.
-//     GET/POST /reminder-rules — configurable reminder rules.
+//     POST /{id}/reminders/{reminder_id}/send - send one now.
+//     GET/POST /reminder-rules - configurable reminder rules.
 //     DELETE /reminder-rules/{rule_id}.
 //   Settings:
-//     GET/PATCH /settings — module defaults (slot length, buffers,
+//     GET/PATCH /settings - module defaults (slot length, buffers,
 //          cancellation policy, guest booking, rate limit, ...).
 //   Public (no auth; see the public-access note below):
-//     GET  /public/services — active services only.
-//     GET  /public/services/{id}/slots — public slot lookup.
-//     POST /public/book — guest booking (honeypot + rate limit).
-//     GET  /public/bookings/{code} — look a booking up by its
+//     GET  /public/services - active services only.
+//     GET  /public/services/{id}/slots - public slot lookup.
+//     POST /public/book - guest booking (honeypot + rate limit).
+//     GET  /public/bookings/{code} - look a booking up by its
 //          confirmation code.
 //
-// HONESTY — READ THIS FIRST. What is real in this module:
+// HONESTY - READ THIS FIRST. What is real in this module:
 // in-memory service, availability, staff-service, appointment, and
 // reminder management; slot generation from working hours minus
 // breaks, days off, and already-booked (buffered) time; a server-side
@@ -59,15 +59,15 @@
 // limit. What is NOT built here: durable storage (the in-memory
 // DashMap stores stay authoritative until migration
 // `2026-11-22-000075_appointments` is executed); atomic
-// double-booking prevention under concurrency — the conflict check
+// double-booking prevention under concurrency - the conflict check
 // runs as check-then-insert in memory, so two simultaneous requests
 // for the same slot can both pass; a database exclusion constraint
 // (or a serialisable transaction around the check) is an integrator
 // follow-up, and the migration carries a comment saying so; actual
 // email / push delivery (notifications module); payment collection
 // (a paid service records its price on the appointment, but no
-// `payment.captured` listener confirms bookings — the payments /
-// billing modules own collection); and invoice creation itself —
+// `payment.captured` listener confirms bookings - the payments /
+// billing modules own collection); and invoice creation itself -
 // completing an appointment only emits `billing.invoice.requested`
 // and `crm.activity.requested` as the integration contract, and no
 // listener for either event name exists in the billing or CRM
@@ -78,9 +78,9 @@
 // an endpoint is public only when a rule exists with
 // `public_access: true`, and denied outright when a rule exists
 // with `allowed: false`). There is no reusable per-request
-// "is this endpoint public?" helper to call from a handler — the
+// "is this endpoint public?" helper to call from a handler - the
 // check lives in the API Manager middleware / `resolve_public`
-// path — so the public routes below rely on that gate: an
+// path - so the public routes below rely on that gate: an
 // administrator must create the matching `ApiAccessRule` rows for
 // `GET /api/v1/appointments/public/*` and
 // `POST /api/v1/appointments/public/book`. The routes are
@@ -115,7 +115,7 @@
 //     `appointments.reminder_rule.deleted`
 //   - `appointments.settings.updated`
 //   - `billing.invoice.requested` on completion (contract only: no
-//     billing listener exists for it yet — see the honesty note).
+//     billing listener exists for it yet - see the honesty note).
 //   - `crm.activity.requested` on completion (contract only: the CRM
 //     module owns fulfilment).
 //   - `notification.requested` (booking confirmations, reminders,
@@ -123,14 +123,14 @@
 //     payload shape: `{"kind", "user_id", "title", "body", "module":
 //     "appointments", "link", "priority", "channels"}`. Guest
 //     bookings have no user id, so the customer email address is
-//     carried as both `user_id` and `email` in the payload — the
+//     carried as both `user_id` and `email` in the payload - the
 //     notifications module uses the `email` field for the email
 //     channel.
 //   - `scheduler.enqueue` with `{"kind":
 //     "appointments.reminders.send", "payload": {"appointment_id",
 //     "reminder_id", ...}}` when a reminder row is created.
 // Events this module listens to:
-//   - `appointments.reminders.send_requested` — the event the
+//   - `appointments.reminders.send_requested` - the event the
 //     scheduler emits when an `appointments.reminders.send` job
 //     fires, following its naming rule (`backup.run` ->
 //     `backup.run_requested`); sends the due reminder through
@@ -156,7 +156,7 @@
 // rules. The values seeded in `AppointmentsModule::new` are
 // configurable defaults, clearly marked as such.
 
-// appointments — types.
+// appointments - types.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -530,9 +530,7 @@ pub struct BookingSlot {
     pub service_id: Uuid,
 }
 
-// ---------------------------------------------------------------------------
 // Request bodies
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct CreateServiceRequest {

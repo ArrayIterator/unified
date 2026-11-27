@@ -18,9 +18,7 @@ use super::tools_tls::tool_ssl_check;
 use super::tools_net::{tool_blacklist, tool_http_check, tool_ip_info, tool_subnet, tool_webhook_test, tool_whois};
 use super::tools_monitor::{execute_tool, run_uptime_probe};
 
-// ---------------------------------------------------------------------------
 // Saved checks (CRUD + run).
-// ---------------------------------------------------------------------------
 
 pub(crate) const KNOWN_TOOLS: [&str; 13] = [
     "dns",

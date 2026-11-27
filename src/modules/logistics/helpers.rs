@@ -1,4 +1,4 @@
-//! Logistics module — shipments, fleet, warehouses, delivery — Helpers.
+//! Logistics module - shipments, fleet, warehouses, delivery - Helpers.
 //!
 //! Split from `src/modules/logistics.rs`; behaviour unchanged.
 
@@ -66,7 +66,7 @@ pub(super) fn require_tenant(
 /// The company scope the caller acts in: the tenant context's
 /// company first, the verified caller's server-resolved company
 /// otherwise. Fails closed (403) when both are present and disagree
-/// — a request must not carry one company in its tenant context and
+/// - a request must not carry one company in its tenant context and
 /// another in its verified identity. The `X-Company-Id` header is
 /// NEVER trusted here: only the verified caller (company resolved
 /// from the database at authentication time) and the
@@ -91,7 +91,7 @@ pub(super) fn caller_company(
     }
 }
 
-/// Resolve the caller's company for a WRITE (C3 task 315, strict by
+/// Resolve the caller's company for a WRITE (C3, strict by
 /// default): a write requires a resolved company scope, so an
 /// unresolved caller is refused with 403 instead of silently
 /// writing a global (unscoped) record. Mutation handlers call
@@ -120,7 +120,7 @@ pub(crate) fn require_company_for_write(
 /// When no caller scope is known (neither the tenant context nor
 /// the verified caller carries a company), a body company is refused:
 /// an unresolved caller may not claim a company (the shared
-/// `CallerScope::Unresolved` rule); omitting the company is refused (C3 task 315):
+/// `CallerScope::Unresolved` rule); omitting the company is refused (C3):
 /// a write requires a resolved company scope.
 pub(super) fn require_company_match(
     tenant: &unified_core::tenancy::TenantContext,
@@ -158,7 +158,7 @@ pub(super) fn require_company_match_for(
 /// company-owned record is denied (the shared
 /// `CallerScope::Unresolved` rule). With a scope, only records carrying
 /// exactly that company match, plus unscoped (global/legacy) records
-/// (C3 task 320, rule A); an unresolved caller still sees global rows only.
+/// (C3, rule A); an unresolved caller still sees global rows only.
 /// A caller scope that is not a UUID matches nothing (fail
 /// closed): logistics company ids are UUIDs.
 pub(super) fn in_company_scope(
@@ -192,11 +192,11 @@ pub(super) fn require_record_in_company_scope(
 }
 
 /// Fail closed (403) when a stored record is outside the caller's
-/// company scope FOR A WRITE (C3 task 315, strict by default).
+/// company scope FOR A WRITE (C3, strict by default).
 /// Unlike the read check above (rule A), a write requires an exact
 /// company match: a company caller may write only their own
-/// company's records — global (unscoped) records are platform-only
-/// — and an unresolved caller may write nothing. Mutation handlers
+/// company's records - global (unscoped) records are platform-only
+/// - and an unresolved caller may write nothing. Mutation handlers
 /// call this right after loading the record they mutate; handlers
 /// that only read the record, or load a parent to scope a child
 /// write, keep the read check.
@@ -532,7 +532,7 @@ pub(super) fn valid_sha256_hex(value: &str) -> bool {
 /// address is known, "unknown".
 ///
 /// Note: `realip_remote_addr()` is deliberately NOT used as the
-/// fallback — Actix trusts `X-Forwarded-For` from any client, so
+/// fallback - Actix trusts `X-Forwarded-For` from any client, so
 /// it would return the spoofed header value (see the warning on
 /// `unified_core::hardening::client_ip`).
 pub(super) fn client_address(req: &HttpRequest, settings: &SecuritySettings) -> String {
@@ -643,9 +643,9 @@ pub(super) fn lookup_order(ctx: &AppContext, order_id: &str) -> Option<bool> {
 /// Ask the Calculator module for a distance in kilometres between
 /// two coordinate pairs, through the
 /// `calculator.distance_requested` hook query. Returns `Some(km)`
-/// when a handler answers with a finite non-negative distance —
+/// when a handler answers with a finite non-negative distance -
 /// zero is a legitimate answer (identical origin and destination
-/// coordinates), not "no answer" — else `None` (no handler
+/// coordinates), not "no answer" - else `None` (no handler
 /// answers today).
 pub(super) fn request_distance(
     ctx: &AppContext,
@@ -689,7 +689,7 @@ pub(super) fn dimensional_weight(length_cm: f64, width_cm: f64, height_cm: f64) 
 
 /// Straight-line distance in kilometres between two coordinate
 /// pairs (haversine). Used only for the nearest-neighbour route
-/// reorder heuristic — never as a billable distance.
+/// reorder heuristic - never as a billable distance.
 pub(super) fn haversine_km(lat1: f64, lng1: f64, lat2: f64, lng2: f64) -> f64 {
     const EARTH_RADIUS_KM: f64 = 6371.0;
     let d_lat = (lat2 - lat1).to_radians();
@@ -700,7 +700,7 @@ pub(super) fn haversine_km(lat1: f64, lng1: f64, lat2: f64, lng2: f64) -> f64 {
     // floating-point rounding can push `a` a hair above 1.0, and an
     // unclamped `asin` would return NaN and silently mis-order the
     // route reorder (NaN comparisons are always false). The atan2
-    // form is used for the same reason — it stays well-defined at
+    // form is used for the same reason - it stays well-defined at
     // the antipodes.
     let a = a.clamp(0.0, 1.0);
     2.0 * EARTH_RADIUS_KM * a.sqrt().atan2((1.0 - a).sqrt())

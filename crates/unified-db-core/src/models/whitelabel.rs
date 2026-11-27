@@ -9,10 +9,8 @@ use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
-// Whitelabel + presets (batch 9 notes §5; `New*` structs added per
+// Whitelabel + presets (batch 9 notes sec. 5; `New*` structs added per
 // the file convention, DB-defaulted columns omitted).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = whitelabel_global_settings)]

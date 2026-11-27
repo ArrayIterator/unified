@@ -49,9 +49,7 @@ fn stage_exists(state: &PlmState, tenant_id: &str, slug: &str) -> bool {
         .any(|entry| entry.value().tenant_id == tenant_id && entry.value().slug == slug)
 }
 
-// ---------------------------------------------------------------------------
 // Stage handlers (authenticated)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_stages(
     state: web::Data<PlmState>,

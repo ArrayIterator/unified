@@ -8,7 +8,7 @@
 // Persistence: when a database pool is attached to the `AppContext`, users
 // are stored in the Diesel `users` table (and role assignments in the
 // `user_roles` table). When no pool is present, users live in an in-memory
-// store instead — the fallback is documented here and in the module
+// store instead - the fallback is documented here and in the module
 // description so a deployment without a database still works, while a
 // deployment with a database never silently loses data.
 //

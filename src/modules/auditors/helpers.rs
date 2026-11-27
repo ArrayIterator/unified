@@ -12,9 +12,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 /// Caller identity: the server-verified caller (user id plus
 /// server-resolved role, both required for capability checks),
@@ -59,7 +57,7 @@ pub(crate) fn require_permission(ctx: &AppContext, role: &str, permission: &str)
 /// are read-only always, including on this module's own routes.
 /// The only auditor-allowed read in this module is
 /// `GET /api/v1/auditors/me/scope`, which does not call this guard.
-/// Any account found for the caller blocks the call — usable,
+/// Any account found for the caller blocks the call - usable,
 /// expired, or revoked alike. An expired (but not revoked) auditor
 /// must not slip through: the account still identifies its holder
 /// as an auditor, and auditors may never perform mutations here.
@@ -72,9 +70,7 @@ pub(crate) fn reject_auditor_caller(state: &AuditorsState, actor: &str) -> Unifi
     Ok(())
 }
 
-// ---------------------------------------------------------------------------
 // Tenant edge guard (C3 pilot 3).
-// ---------------------------------------------------------------------------
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request
@@ -94,7 +90,7 @@ pub(crate) fn require_tenant(
 /// The company scope the caller acts in: the tenant context's
 /// company first, the verified caller's server-resolved company
 /// otherwise. Fails closed (403) when both are present and disagree
-/// — a request must not carry one company in its tenant context and
+/// - a request must not carry one company in its tenant context and
 /// another in its verified identity. The `X-Company-Id` header is
 /// NEVER trusted here: only the verified caller (company resolved
 /// from the database at authentication time) and the
@@ -119,7 +115,7 @@ pub(crate) fn caller_company(
     }
 }
 
-/// Resolve the caller's company for a WRITE (C3 task 315, strict by
+/// Resolve the caller's company for a WRITE (C3, strict by
 /// default): a write requires a resolved company scope, so an
 /// unresolved caller is refused with 403 instead of silently
 /// writing a global (unscoped) record. Mutation handlers call
@@ -147,7 +143,7 @@ pub(crate) fn require_company_for_write(
 /// match: entries with no company are visible, every company-owned
 /// entry is denied (the shared `CallerScope::Unresolved` rule).
 /// With a scope, entries carrying exactly that company match, plus
-/// global entries, which are shared content visible to any resolved scope (C3 task 320, rule A).
+/// global entries, which are shared content visible to any resolved scope (C3, rule A).
 pub(crate) fn in_company_scope(
     record_company_id: &Option<Uuid>,
     caller_company: &Option<String>,
@@ -180,11 +176,11 @@ pub(crate) fn require_record_in_company_scope(
 }
 
 /// Fail closed (403) when a stored record is outside the caller's
-/// company scope FOR A WRITE (C3 task 315, strict by default).
+/// company scope FOR A WRITE (C3, strict by default).
 /// Unlike the read check above (rule A), a write requires an exact
 /// company match: a company caller may write only their own
-/// company's records — global (unscoped) records are platform-only
-/// — and an unresolved caller may write nothing. Mutation handlers
+/// company's records - global (unscoped) records are platform-only
+/// - and an unresolved caller may write nothing. Mutation handlers
 /// call this right after loading the record they mutate; handlers
 /// that only read the record, or load a parent to scope a child
 /// write, keep the read check.
@@ -208,7 +204,7 @@ pub(crate) fn require_record_writable_in_company_scope(
 
 /// True when an auditor account is visible to the caller: at least
 /// one of its scope entries names a company in the caller's scope.
-/// Auditor accounts carry no company of their own — their scopes
+/// Auditor accounts carry no company of their own - their scopes
 /// are the company boundary. An account with no scope entries
 /// sees nothing and is visible to nobody.
 pub(crate) fn account_in_scope(
@@ -259,8 +255,8 @@ pub(crate) fn require_scope_entry_company(
 }
 
 /// True when a public link is visible to the caller. Links carry
-/// no company of their own — the target record's company lives in
-/// the owning module, not here — so the creator is the company
+/// no company of their own - the target record's company lives in
+/// the owning module, not here - so the creator is the company
 /// proxy: a scoped caller sees only links they created, and may
 /// only revoke those. An unresolved caller (the platform control
 /// plane) may manage every link.

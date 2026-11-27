@@ -1,4 +1,4 @@
-// timetracker — Hook event names emitted and listened to by this module.
+// timetracker - Hook event names emitted and listened to by this module.
 
 pub const TIMER_STARTED: &str = "timetracker.timer.started";
 pub const TIMER_STOPPED: &str = "timetracker.timer.stopped";

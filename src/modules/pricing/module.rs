@@ -1,4 +1,4 @@
-// pricing — module.
+// pricing - module.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -32,9 +32,7 @@ use super::handlers_prices::*;
 use super::handlers_bundles::*;
 use super::handlers_reconciliation::*;
 
-// ---------------------------------------------------------------------------
 // Module.
-// ---------------------------------------------------------------------------
 
 pub struct PricingModule {
     pub(crate) state: Arc<PricingState>,

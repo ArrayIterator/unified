@@ -3,9 +3,7 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Documents (migration 000065_documents).
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     documents (id) {

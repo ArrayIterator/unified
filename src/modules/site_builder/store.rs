@@ -1,4 +1,4 @@
-// Site Builder — In-memory state and its constructors.
+// Site Builder - In-memory state and its constructors.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -69,8 +69,8 @@ impl SiteBuilderState {
             .cloned()
     }
 
-    /// Seed the default home page as a site-builder page (task 353):
-    /// a hero block and a text block — never a static template. The
+    /// Seed the default home page as a site-builder page: 
+    /// a hero block and a text block - never a static template. The
     /// hero carries the tagline and description as editable block
     /// content (the old hard-coded strings live here as the
     /// documented fallbacks). Runs once at startup; a page with slug

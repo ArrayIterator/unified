@@ -1,7 +1,6 @@
-// storage — sftp.
+// storage - sftp.
 // SFTP provider.
 //
-// Split from `crates/unified-core/src/storage.rs`; moved verbatim, no behaviour changes.
 
 use super::*;
 use crate::error::{UnifiedError, UnifiedResult};
@@ -19,16 +18,14 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::{Arc, RwLock};
 
-// ---------------------------------------------------------------------------
 // SFTP provider (system `sftp` client).
-// ---------------------------------------------------------------------------
 //
 // Added by the storage-manager module (2026-11-22). Delimited section:
 // everything between this header and the "Target configuration"
 // header below belongs to the SFTP provider.
 //
 // There is no SSH/SFTP client library in the dependency set, so this
-// provider runs the system OpenSSH `sftp` binary in batch mode — the
+// provider runs the system OpenSSH `sftp` binary in batch mode - the
 // same approach the service monitor uses for remote checks over the
 // system `ssh` binary, and the backup module uses for `pg_dump`.
 // Blocking process work runs inside `tokio::task::spawn_blocking`,
@@ -39,8 +36,8 @@ use std::sync::{Arc, RwLock};
 //     material). `sftp` is invoked with `-i <keyfile>` and
 //     `BatchMode=yes`, so no interactive prompt is ever possible.
 //   - Password: the password is passed to `sshpass` through the
-//     `SSHPASS` environment variable only — never on a command line,
-//     where it would show in a process listing — following the
+//     `SSHPASS` environment variable only - never on a command line,
+//     where it would show in a process listing - following the
 //     service monitor's pattern. When `sshpass` is not installed,
 //     password authentication is refused with a clear error and
 //     keyfile authentication is the way in. The password itself is
@@ -51,7 +48,7 @@ use std::sync::{Arc, RwLock};
 // Host validation (SSRF safety): the host must be an exact match in
 // the operator-configured allowlist (`allowed_hosts`, the same list
 // the S3 provider uses for extra hosts). There is no suffix rule
-// for SFTP — there is no known provider host family to match
+// for SFTP - there is no known provider host family to match
 // against. IP-literal hosts that are loopback, private, link-local,
 // unspecified, or multicast are rejected outright, even when
 // allowlisted. The host is never taken from a request: callers pass
@@ -90,7 +87,7 @@ pub fn is_allowed_sftp_host(host: &str, allowed_hosts: &[String]) -> bool {
 /// Validate an SFTP host against the allowlist. Rejects empty hosts,
 /// hosts starting with `-` (option injection into the `sftp`
 /// command line), malformed hosts, and IP literals that are
-/// loopback, private, link-local, unspecified, or multicast — even
+/// loopback, private, link-local, unspecified, or multicast - even
 /// when allowlisted. A hostname that is not allowlisted is refused.
 pub fn validate_sftp_host(host: &str, allowed_hosts: &[String]) -> UnifiedResult<()> {
     let host = host.trim();
@@ -517,7 +514,7 @@ impl StorageProvider for SftpProvider {
         let checksum_path = Self::temp_path();
         // `-get` ignores the error when no sidecar exists yet
         // (objects written before sidecars), so legacy objects
-        // still download — unverified, like the local provider.
+        // still download - unverified, like the local provider.
         let batch = format!(
             "-get {remote}.sha256 {}\nget {} {}\n",
             checksum_path.display(),

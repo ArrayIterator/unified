@@ -54,12 +54,10 @@ pub(crate) const STATUSES: [&str; 4] = ["open", "pending", "resolved", "closed"]
 /// Thread priorities, matching the tickets module's scale.
 pub(crate) const PRIORITIES: [&str; 4] = ["low", "normal", "high", "urgent"];
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// One unified thread: a lightweight reference to a conversation
-/// owned by another module. The inbox stores no message bodies —
+/// owned by another module. The inbox stores no message bodies -
 /// only the reference (source channel + source id), the subject,
 /// participants, assignment, SLA snapshot, and read/snooze state.
 /// `source_id` is an opaque string because source modules do not
@@ -77,7 +75,7 @@ pub struct InboxThread {
     /// tenant matches the caller's tenant; a nil UUID means the
     /// thread was ingested from an event payload that carried no
     /// tenant id (unscoped ingestion) and is never served via the
-    /// API — see the module header. Deserialization defaults to
+    /// API - see the module header. Deserialization defaults to
     /// nil so pre-tenancy payloads still parse.
     #[serde(default)]
     pub tenant_id: Uuid,
@@ -196,9 +194,7 @@ pub struct InboxCannedReply {
     pub updated_at: DateTime<Utc>,
 }
 
-// ---------------------------------------------------------------------------
 // Request bodies
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct RegisterThreadRequest {

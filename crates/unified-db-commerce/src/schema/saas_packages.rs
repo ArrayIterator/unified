@@ -3,10 +3,8 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // SaaS packages (migration 000102_saas_packages).
 // Ids are TEXT and there are no FKs by design: no joinable!s.
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     saas_packages (id) {

@@ -11,9 +11,7 @@ use std::path::{Path, PathBuf};
 use super::constants::{MAX_STDERR_CHARS, SECRET_KEY_FRAGMENTS};
 use super::types::{BackupSettings};
 
-// ---------------------------------------------------------------------------
 // Helpers: settings, redaction, paths.
-// ---------------------------------------------------------------------------
 
 /// Read the `backup` section of the configuration, falling back to
 /// defaults for every missing key so the module keeps working before
@@ -193,9 +191,7 @@ pub(crate) fn path_inside_base(candidate: &str, base_dir: &str) -> bool {
     candidate == base || candidate.starts_with(&base)
 }
 
-// ---------------------------------------------------------------------------
 // Helpers: external binaries.
-// ---------------------------------------------------------------------------
 
 /// Find an executable by name on `PATH`, or use it directly when it is
 /// already a path. Returns `None` when no usable file is found.

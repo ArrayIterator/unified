@@ -77,9 +77,7 @@ pub(crate) fn reputation_score(upvotes: i64, downvotes: i64, best_answers: i64) 
         + REP_POINTS_BEST_ANSWER * best_answers
 }
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// Who may see a forum. `public` forums appear on the public
 /// routes; `members_only` forums need an authenticated caller
@@ -172,7 +170,7 @@ pub struct ForumThread {
 /// hidden posts are only visible to their author and to
 /// moderators. `edited` marks a post whose body changed; the
 /// previous bodies live in `ForumPostEdit` rows.
-/// `attachment_ids` holds document/storage references only —
+/// `attachment_ids` holds document/storage references only -
 /// metadata, never file bytes.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ForumPost {
@@ -353,9 +351,7 @@ impl Default for ForumSettings {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Request bodies
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct CreateForumRequest {

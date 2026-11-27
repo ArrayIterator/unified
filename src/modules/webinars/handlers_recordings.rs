@@ -11,9 +11,7 @@ use super::helpers::*;
 use super::state::*;
 use super::types::*;
 
-// ---------------------------------------------------------------------------
 // Recording / replay handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_recordings(
     state: web::Data<WebinarsState>,

@@ -79,9 +79,7 @@ pub(crate) fn resolve_tenant(req: &HttpRequest) -> UnifiedResult<String> {
         .map(|context| context.tenant_id.to_string())
 }
 
-// ---------------------------------------------------------------------------
-// Tenant edge guard (C3 pilot 5, task 319, group B).
-// ---------------------------------------------------------------------------
+// Tenant edge guard (C3 pilot 5, group B).
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request
@@ -190,9 +188,7 @@ pub(crate) fn slugify(name: &str) -> String {
     out
 }
 
-// ---------------------------------------------------------------------------
 // Tenant-scoped loaders
-// ---------------------------------------------------------------------------
 //
 // Every loader checks the row's `tenant_id` against the caller's
 // tenant. A row from another tenant reads as 404, never 403, so
@@ -308,9 +304,7 @@ pub(crate) fn load_report(
     Ok(report)
 }
 
-// ---------------------------------------------------------------------------
 // Visibility
-// ---------------------------------------------------------------------------
 
 /// Visibility gate for a forum: public forums are visible to
 /// everyone; members-only forums need an authenticated caller
@@ -332,9 +326,7 @@ pub(crate) fn post_visible_to(post: &ForumPost, actor: &str, is_manager: bool) -
     !post.hidden || post.author_id == actor || is_manager
 }
 
-// ---------------------------------------------------------------------------
 // Moderation audit
-// ---------------------------------------------------------------------------
 
 /// Record an audited moderator action.
 pub(crate) fn record_moderation(
@@ -359,9 +351,7 @@ pub(crate) fn record_moderation(
     state.moderation_actions.insert(entry.id, entry);
 }
 
-// ---------------------------------------------------------------------------
 // Rate limits
-// ---------------------------------------------------------------------------
 
 /// How many threads / posts the user created in the last hour in
 /// this tenant, for the rate limits. Counts only, never the bodies.
@@ -429,9 +419,7 @@ pub(crate) fn check_post_rate_limit(
     Ok(())
 }
 
-// ---------------------------------------------------------------------------
 // Votes and reputation
-// ---------------------------------------------------------------------------
 
 pub(crate) fn vote_totals(state: &ForumState, post_id: Uuid) -> (i64, i64) {
     let mut up = 0i64;
@@ -523,9 +511,7 @@ pub(crate) fn recompute_reputation(state: &ForumState, tenant_id: &str, user_id:
     }
 }
 
-// ---------------------------------------------------------------------------
 // New-user link limits
-// ---------------------------------------------------------------------------
 
 /// Count links in a body: occurrences of `http://` plus
 /// occurrences of `https://`.
@@ -563,9 +549,7 @@ pub(crate) fn check_new_user_links(
     Ok(())
 }
 
-// ---------------------------------------------------------------------------
 // Views
-// ---------------------------------------------------------------------------
 
 pub(crate) fn thread_view(
     state: &ForumState,
@@ -655,9 +639,7 @@ pub(crate) fn poll_view(state: &ForumState, poll: &ForumPoll, caller_user_id: &s
     value
 }
 
-// ---------------------------------------------------------------------------
 // Search indexing and subscriptions
-// ---------------------------------------------------------------------------
 
 fn snippet(text: &str, max_chars: usize) -> String {
     let trimmed = text.trim();

@@ -7,7 +7,7 @@
 //! for the shipment links itself to the DO and moves an
 //! in-transit DO to delivered; a returned shipment returns its
 //! DOs; a cancelled shipment cancels DOs that have not been
-//! delivered. Draft DOs are never auto-advanced — a draft is
+//! delivered. Draft DOs are never auto-advanced - a draft is
 //! not released yet, so the warehouse issues it first and the
 //! next shipment event moves it. Delivery through the shipment
 //! event alone never bypasses the proof gate: a DO advances to
@@ -46,9 +46,7 @@ fn auto_advance_on(state: &DeliveryNoteState, tenant_id: &str) -> bool {
     state.current_settings(tenant_id).auto_advance_from_shipment
 }
 
-// ---------------------------------------------------------------------------
 // User deletion (users module owns the event)
-// ---------------------------------------------------------------------------
 
 /// `user.deleted` carries `user_id` (falling back to `id`, the
 /// same shape the phone module reads). The user's DOs are
@@ -87,9 +85,7 @@ pub(crate) fn on_user_deleted(state: DeliveryNoteState, ctx: &mut HookContext) {
     }));
 }
 
-// ---------------------------------------------------------------------------
 // Logistics shipment movement (logistics module owns the events)
-// ---------------------------------------------------------------------------
 
 /// `logistics.shipment.status_changed` carries
 /// `shipment_id`, `from_status`, and `to_status`. A shipment
@@ -152,7 +148,7 @@ pub(crate) fn on_shipment_status_changed(state: DeliveryNoteState, ctx: &mut Hoo
 /// `logistics.shipment.delivered` carries `shipment_id` and
 /// `tracking_number`. An in-transit DO with a proof already
 /// linked advances to delivered; one without a proof stays in
-/// transit — the proof event (below) is what normally links
+/// transit - the proof event (below) is what normally links
 /// the proof and completes the delivery, so the proof gate is
 /// never bypassed by this event alone.
 pub(crate) fn on_shipment_delivered(state: DeliveryNoteState, ctx: &mut HookContext) {
@@ -279,7 +275,7 @@ pub(crate) fn on_proof_created(state: DeliveryNoteState, ctx: &mut HookContext) 
 
 /// `logistics.shipment.returned` carries `shipment_id` and a
 /// `reason`. Every in-transit or delivered DO of the shipment
-/// returns (full scope — the whole shipment came back) with
+/// returns (full scope - the whole shipment came back) with
 /// that reason. Returned quantities stay as recorded: the
 /// shipment return is a document-level event, not a recount.
 pub(crate) fn on_shipment_returned(state: DeliveryNoteState, ctx: &mut HookContext) {
@@ -384,14 +380,12 @@ pub(crate) fn on_shipment_cancelled(state: DeliveryNoteState, ctx: &mut HookCont
     }));
 }
 
-// ---------------------------------------------------------------------------
 // Rental returns (rental module owns the event)
-// ---------------------------------------------------------------------------
 
 /// `rental.order.returned` carries `order_id`,
 /// `delivery_id`, `late_fee_minor`, and `returned_at`. Every
 /// in-transit or delivered DO linked to that rental order
-/// returns (full scope — the rental unit came back) with the
+/// returns (full scope - the rental unit came back) with the
 /// rental delivery recorded in the event detail. DOs with no
 /// rental link are skipped, not failed.
 pub(crate) fn on_rental_order_returned(state: DeliveryNoteState, ctx: &mut HookContext) {
@@ -452,9 +446,7 @@ pub(crate) fn on_rental_order_returned(state: DeliveryNoteState, ctx: &mut HookC
     }));
 }
 
-// ---------------------------------------------------------------------------
 // AI grounding hooks (the AI module's runner emits these)
-// ---------------------------------------------------------------------------
 
 /// Ground the `summarize_delivery_note` capability with the
 /// DO's stored facts. The payload carries `tenant_id` and

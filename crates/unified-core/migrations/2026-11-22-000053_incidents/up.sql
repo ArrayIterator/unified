@@ -25,14 +25,14 @@
 --     `store_orders.user_id` in migration 000002. No foreign key
 --     to `users` is stored here.
 --   - `incidents.affected_service_ids` links to Service Monitor
---     service ids (plain VARCHAR — the Service Monitor owns
+--     service ids (plain VARCHAR - the Service Monitor owns
 --     services); `incidents.source_service_id` names the service
 --     for auto-opened incidents. `auto_open_rules.service_id` is
 --     the same service id and is the primary key of its table.
 --   - `incidents.severity` is `critical`, `high`, `medium`, or
 --     `low` (`IncidentSeverity`); `incidents.status` is `open`,
 --     `acknowledged`, `investigating`, `mitigating`, `resolved`,
---     or `closed` (`IncidentStatus`) — the module validates the
+--     or `closed` (`IncidentStatus`) - the module validates the
 --     transition (`open` -> `acknowledged` -> `investigating` ->
 --     `mitigating` -> `resolved` -> `closed`, with `resolved` ->
 --     `investigating` reopen and `investigating` ->
@@ -60,16 +60,14 @@
 --     `open`, `in_progress`, or `done`. `task_reference` is empty
 --     until the tasks module consumes the
 --     `tasks.create.requested` event the module emits (no tasks
---     listener consumes it yet — see the module header).
+--     listener consumes it yet - see the module header).
 --   - `auto_open_rules.enabled` defaults to `false`: auto-open is
 --     opt-in per service. `auto_resolve_on_recovery` is also off
 --     by default.
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One incident.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS incidents (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title VARCHAR(200) NOT NULL,
@@ -100,9 +98,7 @@ CREATE INDEX IF NOT EXISTS idx_incidents_current_responder ON incidents (current
 CREATE INDEX IF NOT EXISTS idx_incidents_responders ON incidents USING GIN (responders);
 CREATE INDEX IF NOT EXISTS idx_incidents_affected_services ON incidents USING GIN (affected_service_ids);
 
--- ---------------------------------------------------------------------------
 -- One append-only timeline entry.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS incident_timeline (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     incident_id UUID NOT NULL REFERENCES incidents (id) ON DELETE CASCADE,
@@ -117,9 +113,7 @@ CREATE INDEX IF NOT EXISTS idx_incident_timeline_incident_id ON incident_timelin
 CREATE INDEX IF NOT EXISTS idx_incident_timeline_kind ON incident_timeline (kind);
 CREATE INDEX IF NOT EXISTS idx_incident_timeline_created_at ON incident_timeline (created_at);
 
--- ---------------------------------------------------------------------------
 -- One on-call rotation.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS on_call_rotations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(200) NOT NULL,
@@ -135,9 +129,7 @@ CREATE TABLE IF NOT EXISTS on_call_rotations (
 
 CREATE INDEX IF NOT EXISTS idx_on_call_rotations_name ON on_call_rotations (name);
 
--- ---------------------------------------------------------------------------
 -- One on-call schedule entry.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS on_call_schedules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     rotation_id UUID NOT NULL REFERENCES on_call_rotations (id) ON DELETE CASCADE,
@@ -155,9 +147,7 @@ CREATE INDEX IF NOT EXISTS idx_on_call_schedules_rotation_id ON on_call_schedule
 CREATE INDEX IF NOT EXISTS idx_on_call_schedules_member_id ON on_call_schedules (member_id);
 CREATE INDEX IF NOT EXISTS idx_on_call_schedules_window ON on_call_schedules (starts_at, ends_at);
 
--- ---------------------------------------------------------------------------
 -- One escalation policy.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS escalation_policies (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(200) NOT NULL,
@@ -170,9 +160,7 @@ CREATE TABLE IF NOT EXISTS escalation_policies (
 
 CREATE INDEX IF NOT EXISTS idx_escalation_policies_name ON escalation_policies (name);
 
--- ---------------------------------------------------------------------------
 -- Per-incident escalation state.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS incident_escalations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     incident_id UUID NOT NULL REFERENCES incidents (id) ON DELETE CASCADE,
@@ -187,9 +175,7 @@ CREATE TABLE IF NOT EXISTS incident_escalations (
 CREATE INDEX IF NOT EXISTS idx_incident_escalations_incident_id ON incident_escalations (incident_id);
 CREATE INDEX IF NOT EXISTS idx_incident_escalations_due ON incident_escalations (status, next_escalation_at);
 
--- ---------------------------------------------------------------------------
 -- One page attempt.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS page_attempts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     incident_id UUID NOT NULL REFERENCES incidents (id) ON DELETE CASCADE,
@@ -205,9 +191,7 @@ CREATE INDEX IF NOT EXISTS idx_page_attempts_incident_id ON page_attempts (incid
 CREATE INDEX IF NOT EXISTS idx_page_attempts_paged_user_id ON page_attempts (paged_user_id);
 CREATE INDEX IF NOT EXISTS idx_page_attempts_status ON page_attempts (status);
 
--- ---------------------------------------------------------------------------
 -- One postmortem (one per incident).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS incident_postmortems (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     incident_id UUID NOT NULL REFERENCES incidents (id) ON DELETE CASCADE,
@@ -222,9 +206,7 @@ CREATE TABLE IF NOT EXISTS incident_postmortems (
 
 CREATE INDEX IF NOT EXISTS idx_incident_postmortems_incident_id ON incident_postmortems (incident_id);
 
--- ---------------------------------------------------------------------------
 -- One postmortem action item.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS postmortem_action_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     postmortem_id UUID NOT NULL REFERENCES incident_postmortems (id) ON DELETE CASCADE,
@@ -239,9 +221,7 @@ CREATE TABLE IF NOT EXISTS postmortem_action_items (
 CREATE INDEX IF NOT EXISTS idx_postmortem_action_items_postmortem_id ON postmortem_action_items (postmortem_id);
 CREATE INDEX IF NOT EXISTS idx_postmortem_action_items_status ON postmortem_action_items (status);
 
--- ---------------------------------------------------------------------------
 -- Per-service auto-open rule (opt-in; off by default).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS auto_open_rules (
     service_id VARCHAR(255) PRIMARY KEY,
     enabled BOOLEAN NOT NULL DEFAULT FALSE,

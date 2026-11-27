@@ -25,9 +25,7 @@ use std::time::Duration;
 use uuid::Uuid;
 use super::{providers::*, jwt::*, state::*, handlers_providers::*, login::*, tokens::*, recovery::*, totp::*, google::*, reset::*};
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct AuthManagerModule {
     pub(crate) state: AuthManagerState,
@@ -158,7 +156,7 @@ impl Module for AuthManagerModule {
     /// database pool is attached, or the load fails (table not
     /// migrated yet, database unreachable), this skips silently and
     /// the lazy hydration in `ensure_revoked_tokens_hydrated`
-    /// still applies — startup must never fail because the
+    /// still applies - startup must never fail because the
     /// revocation table is unavailable.
     fn init(&self, ctx: &AppContext) -> UnifiedResult<()> {
         if let Some(pool) = ctx.db.read().expect("db lock poisoned").clone() {

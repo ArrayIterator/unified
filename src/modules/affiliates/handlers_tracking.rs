@@ -1,4 +1,4 @@
-// affiliates module — Click, conversion, commission, and payout handlers.
+// affiliates module - Click, conversion, commission, and payout handlers.
 //
 // Split from the former single-file module `src/modules/affiliates.rs`.
 // The module root (`affiliates.rs`) re-exports the public items, so the

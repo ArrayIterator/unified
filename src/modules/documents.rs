@@ -1,4 +1,4 @@
-// Documents module — chunked / resumable uploads, multi-file upload,
+// Documents module - chunked / resumable uploads, multi-file upload,
 // per-module allowlists, pluggable virus scanning, versioning,
 // per-file access control with signed expiring download URLs,
 // content deduplication, quotas, and preview metadata.

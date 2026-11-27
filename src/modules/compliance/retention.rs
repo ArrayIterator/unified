@@ -1,4 +1,4 @@
-//! Compliance Center module — GDPR / ISO support: data export — Retention-policy handlers.
+//! Compliance Center module - GDPR / ISO support: data export - Retention-policy handlers.
 //!
 //! Split from `src/modules/compliance.rs`; behaviour unchanged.
 
@@ -233,7 +233,7 @@ pub(super) async fn delete_policy(
 
 /// Queue a retention review through `scheduler.enqueue` with kind
 /// `compliance.retention.review`. The job only flags items for
-/// review — it never deletes anything. See the scheduler note in
+/// review - it never deletes anything. See the scheduler note in
 /// the module header: the kind is not in `KNOWN_KINDS` yet, so the
 /// run records `scheduler_status: "declined"` today.
 ///

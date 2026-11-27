@@ -1,4 +1,4 @@
-// timetracker — HTTP handlers: settings, domains, and hook handlers.
+// timetracker - HTTP handlers: settings, domains, and hook handlers.
 
 use super::*;
 use unified_core::context::AppContext;

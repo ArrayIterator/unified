@@ -1,4 +1,4 @@
-// Contracts — Signer handlers.
+// Contracts - Signer handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -19,9 +19,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Signer handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_signers(
     ctx: web::Data<Arc<AppContext>>,

@@ -9,9 +9,7 @@ use std::net::IpAddr;
 
 use super::constants::*;
 
-// ---------------------------------------------------------------------------
 // Private-key rejection and write-only secret handling
-// ---------------------------------------------------------------------------
 
 /// True when `value` looks like a private key. Anything matching is
 /// rejected at validation time, before it can be stored anywhere:
@@ -192,9 +190,7 @@ pub(crate) fn decrypt_secret(secret: &str, stored: &str) -> UnifiedResult<String
         .map_err(|_| UnifiedError::internal("Stored web3 secret cannot be decrypted"))
 }
 
-// ---------------------------------------------------------------------------
 // Number helpers (string decimals only -- no float loss)
-// ---------------------------------------------------------------------------
 
 /// Convert a `0x`-prefixed hex integer to a decimal string, with
 /// arbitrary precision (chain values exceed 128 bits).
@@ -267,9 +263,7 @@ pub(crate) fn decimal_shift(raw: &str, decimals: u32) -> Option<String> {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Endpoint allowlist (SSRF safety)
-// ---------------------------------------------------------------------------
 
 pub(crate) fn is_loopback_host(host: &str) -> bool {
     host == "localhost" || host.parse::<IpAddr>().is_ok_and(|addr| addr.is_loopback())

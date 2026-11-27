@@ -1,4 +1,4 @@
-// Tenants — control-plane tenant registry, lifecycle, and provisioning.
+// Tenants - control-plane tenant registry, lifecycle, and provisioning.
 
 // Split into one file per concern under `src/modules/tenants/`;
 // this root only declares the submodules and re-exports the

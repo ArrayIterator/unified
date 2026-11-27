@@ -1,4 +1,4 @@
-// records — In-memory state and its methods.
+// records - In-memory state and its methods.
 
 use super::*;
 use chrono::Utc;

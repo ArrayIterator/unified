@@ -1,4 +1,4 @@
-//! Inbox module — Smart Inbox module — one queue unifying email, chat, tickets, and
+//! Inbox module - Smart Inbox module - one queue unifying email, chat, tickets, and
 //!
 //! Split into submodules by concern; the public API is
 //! re-exported below. The full route map and module notes

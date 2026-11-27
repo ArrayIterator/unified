@@ -1,4 +1,4 @@
-//! Documents state (split from state.rs; moved verbatim).
+//! Documents state.
 
 use super::*;
 
@@ -8,8 +8,8 @@ impl DocumentsState {
     /// storage key. There is NO cross-record deduplication: every
     /// upload stores its own copy (storage is the tenant's own
     /// quota). Each upload mints a fresh UUIDv7, so the same bytes
-    /// uploaded twice are two distinct objects — the "upload
-    /// freely" semantics — and the name is known at upload start,
+    /// uploaded twice are two distinct objects - the "upload
+    /// freely" semantics - and the name is known at upload start,
     /// before any byte is hashed. The SHA-256 is still computed
     /// here (and by the caller for streamed uploads) and stored in
     /// the DB metadata as the integrity value; it is simply not
@@ -41,7 +41,7 @@ impl DocumentsState {
 
     /// Path of the object for a PROVIDER (effective) key under the
     /// local storage root, guaranteeing the result stays inside it.
-    /// Callers pass `scope.provider_key(&stored_key)` — never the
+    /// Callers pass `scope.provider_key(&stored_key)` - never the
     /// bare stored key, which carries no scope root.
     fn object_path(&self, key: &str) -> UnifiedResult<PathBuf> {
         validate_key(key)?;
@@ -99,11 +99,11 @@ impl DocumentsState {
     /// `store_content`): the provider only ever sees the rooted
     /// (effective) key.
     /// Local provider: the file is copied in bounded chunks
-    /// straight into the object path (temporary file + rename —
+    /// straight into the object path (temporary file + rename -
     /// NO `.sha256` sidecar yet, because the whole-file hash is
     /// computed later by the lazy-finalize worker, which writes
     /// the sidecar through `record_object_checksum` once the hash
-    /// is verified) — the whole file is never loaded into RAM.
+    /// is verified) - the whole file is never loaded into RAM.
     /// Any other provider: the file is read into memory and stored
     /// through the provider (bounded by the upload size cap, same
     /// as the single-shot path). No deduplication: every call
@@ -111,7 +111,7 @@ impl DocumentsState {
     /// `expected_sha256` is the client-supplied whole-file hash:
     /// it is only format-validated here (the key builder requires
     /// a 64-hex string; the key itself is a UUIDv7 and never
-    /// embeds it) — the real verification happens in the finalize
+    /// embeds it) - the real verification happens in the finalize
     /// worker, not here.
     pub(crate) async fn store_content_from_file(
         &self,
@@ -151,7 +151,7 @@ impl DocumentsState {
 
 
     /// Copy `source` into the object path for `key`, chunk by
-    /// chunk, then — when `checksum` is `Some` — write the
+    /// chunk, then - when `checksum` is `Some` - write the
     /// `.sha256` sidecar. The result is the same on-disk layout
     /// `LocalProvider::upload` produces, without ever holding the
     /// file in RAM. A failed sidecar write removes the object

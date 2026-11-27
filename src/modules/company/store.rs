@@ -1,4 +1,4 @@
-// Company module — in-memory stores, company/site lookups, and hook handlers.
+// Company module - in-memory stores, company/site lookups, and hook handlers.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use unified_core::context::AppContext;
@@ -19,9 +19,7 @@ use std::sync::{Arc, OnceLock};
 use uuid::Uuid;
 use super::*;
 
-// ---------------------------------------------------------------------------
 // In-memory stores (used when no database pool is attached).
-// ---------------------------------------------------------------------------
 
 pub(crate) static COMPANIES: OnceLock<DashMap<Uuid, Company>> = OnceLock::new();
 
@@ -81,13 +79,11 @@ pub(crate) fn db_pool(ctx: &AppContext) -> Option<unified_core::db::DbPool> {
     ctx.db.read().expect("db lock poisoned").clone()
 }
 
-// ---------------------------------------------------------------------------
 // Hook context: `init` stashes the shared application context so the
 // synchronous hook handlers below can use the database. Hook handlers
 // read it lazily, so registration order (hooks before `init`) does not
 // matter. The stashed context shares the live pool/config locks; only
 // the uptime and pause flags are snapshots.
-// ---------------------------------------------------------------------------
 
 pub(crate) static COMPANY_CTX: OnceLock<Arc<AppContext>> = OnceLock::new();
 

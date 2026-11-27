@@ -3,11 +3,9 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Surveys (migration 000055_surveys). The self-reference
 // `surveys.supersedes` gets no `joinable!` (a table cannot join
 // to itself in that form).
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     surveys (id) {

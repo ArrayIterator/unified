@@ -1,4 +1,4 @@
-// Site Builder — Event names, permission strings, limits, and other constants.
+// Site Builder - Event names, permission strings, limits, and other constants.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -52,7 +52,7 @@ pub const EVENT_PAGE_UNPUBLISHED: &str = "site.page_unpublished";
 /// renders a placeholder section carrying that reference; the live
 /// data comes from the marketplace storefront endpoint
 /// (`GET /api/v1/pricing-tables/marketplace/storefronts/{slug}`).
-/// Both blocks render placeholders only — no pricing or vendor data
+/// Both blocks render placeholders only - no pricing or vendor data
 /// is resolved here, so the Site Builder never depends on the
 /// pricing tables module's store.
 pub const BLOCK_TYPES: &[&str] = &[

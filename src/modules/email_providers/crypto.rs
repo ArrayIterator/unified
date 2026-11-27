@@ -12,7 +12,7 @@
 //!
 //! Scope note: the pre-existing `api_key` / `access_key_id` /
 //! `secret_access_key` fields of the 9 API providers are NOT
-//! re-encrypted here — they keep their original write-only treatment
+//! re-encrypted here - they keep their original write-only treatment
 //! (never serialized, never logged). Only the secrets added by task
 //! 350 go through this module. Re-encrypting the old fields would
 //! change every API adapter's credential read path; that is a
@@ -127,8 +127,8 @@ pub(crate) fn encrypt_secret(plaintext: &str) -> UnifiedResult<String> {
     ))
 }
 
-/// Decrypt a `v1.` value with the configured key. Any failure —
-/// unknown format, undecodable blob, bad tag, non-UTF-8 plaintext —
+/// Decrypt a `v1.` value with the configured key. Any failure -
+/// unknown format, undecodable blob, bad tag, non-UTF-8 plaintext -
 /// is an internal error that names the failure, never the secret.
 /// A value that is not in `v1.` format is refused outright (it was
 /// never encrypted by this module).

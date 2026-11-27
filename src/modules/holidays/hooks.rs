@@ -24,13 +24,11 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Hook handlers.
-// ---------------------------------------------------------------------------
 
 /// Answer one `holidays.is_holiday` request. The request MUST carry
 /// `tenant_id`: without it this handler adds no result (fail closed
-/// — the caller falls back to weekends only, as the calendar module
+/// - the caller falls back to weekends only, as the calendar module
 /// documents). The answer is scoped to the tenant's enabled configs:
 /// a country the tenant never selected answers
 /// `source: "not_configured"`. A manual override wins over a synced

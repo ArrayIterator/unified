@@ -11,12 +11,10 @@ use super::{COPY_AVAILABLE, FINE_PAID, FINE_PENDING, ITEM_ACTIVE, LOAN_ACTIVE, L
     LibraryItem, LibraryState, MAX_GROUNDING_CATEGORIES, MAX_GROUNDING_MATCHES, MEMBER_ACTIVE,
     MEMBER_SUSPENDED, item_matches_query, opt_string};
 
-// ---------------------------------------------------------------------------
 // Hook handlers
-// ---------------------------------------------------------------------------
 
 /// Grounding for `library.ai.search_assist_requested`: add catalog
-/// matches for the query. Catalog data only — no member data.
+/// matches for the query. Catalog data only - no member data.
 pub(crate) fn on_search_assist_grounding(state: LibraryState, ctx: &mut HookContext) {
     let query = ctx
         .get("query")
@@ -72,7 +70,7 @@ pub(crate) fn on_search_assist_grounding(state: LibraryState, ctx: &mut HookCont
 
 /// Grounding for `library.ai.recommendations_requested`: add the
 /// member's anonymised loan-history category profile plus available
-/// items in those categories. Category counts only — never raw
+/// items in those categories. Category counts only - never raw
 /// member personal data, never loan titles.
 pub(crate) fn on_recommendations_grounding(state: LibraryState, ctx: &mut HookContext) {
     let user_id = ctx

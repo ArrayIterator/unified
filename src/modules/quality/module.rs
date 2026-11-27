@@ -26,9 +26,7 @@ use super::handlers_inspections::{cancel_inspection, create_inspection, get_insp
 use super::handlers_points::{activate_point, create_criterion, create_point, deactivate_point, delete_criterion, delete_point, get_point, list_criteria, list_points, update_criterion, update_point};
 use super::reports::{get_settings, report_backlog, report_failure_causes, report_pass_rate, report_supplier_score, update_settings};
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct QualityModule {
     pub(crate) state: QualityState,

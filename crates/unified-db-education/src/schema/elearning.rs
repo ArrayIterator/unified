@@ -3,13 +3,11 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // E-learning (migration 000079_elearning). Course certificates
 // live in `elearning_certificates` below: the `certificates` name
 // already belongs to the SSL certificates table (migration
 // 000005), and the migration table was renamed during the final
 // inspection to resolve the collision.
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     courses (id) {

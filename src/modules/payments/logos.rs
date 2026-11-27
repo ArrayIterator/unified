@@ -8,7 +8,7 @@
 //! The files are the source of truth; the sprite (`logos/sprite.svg`,
 //! symbols `provider-logo-payment-<id>`) is generated from them by
 //! `scripts/build-provider-logos-sprite.py --src src/modules/payments/logos
-//! --glob 'payment-*.svg'` — re-run that script after adding or
+//! --glob 'payment-*.svg'` - re-run that script after adding or
 //! changing a logo.
 //!
 //! Three groups live in this directory:
@@ -16,19 +16,19 @@
 //! * **Providers** (12 `PaymentProviderKind`): the catalog returns the
 //!   stem only (`"logo": "payment-paypal"`), never a URL.
 //! * **Card schemes** (5): Visa, Mastercard, American Express,
-//!   Discover, Diners Club, JCB — real brand marks from simple-icons.
+//!   Discover, Diners Club, JCB - real brand marks from simple-icons.
 //!   Mastercard is both a provider kind and a scheme; its file serves
 //!   both roles.
 //! * **Indonesian payment methods** (8): DANA, OVO, GoPay, QRIS,
 //!   ShopeePay, LinkAja, Indomaret, Alfamart. These are METHODS
-//!   offered through Midtrans/Xendit, not providers — none of them
+//!   offered through Midtrans/Xendit, not providers - none of them
 //!   has a simple-icons entry (verified 404 on the current
 //!   simple-icons release), so they are lettermark monograms in the
 //!   same style as the provider fallbacks, not official artwork.
 //!
 //! Lettermark exception (same as email): providers and methods without
 //! a simple-icons entry use a rounded rect plus a `<text>` element
-//! with initials (Arial/Helvetica, bold, 7–8pt). That is the ONE
+//! with initials (Arial/Helvetica, bold, 7-8pt). That is the ONE
 //! deviation from the "no text elements" rule: lettermarks are clean
 //! initial monograms, not trademarked artwork redrawn in detail.
 //! No other text elements are allowed in this directory.
@@ -68,7 +68,7 @@ pub fn payment_logo_exists(logo_id: &str) -> bool {
 ///
 /// The `data-logo` attribute on the emitted `<svg>` names the logo
 /// shown. Returns an empty string for an invalid id or a missing
-/// logo — brand logos have no placeholder (unlike module icons,
+/// logo - brand logos have no placeholder (unlike module icons,
 /// where an unknown-but-valid name renders the placeholder).
 pub fn payment_logo_use(logo_id: &str) -> String {
     if !payment_logo_exists(logo_id) {

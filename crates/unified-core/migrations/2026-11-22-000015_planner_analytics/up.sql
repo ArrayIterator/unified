@@ -36,10 +36,8 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- A capacity pool: the total resources available from one provider
 -- connection, one cluster, or a manually defined set of servers.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS capacity_pools (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR NOT NULL,
@@ -61,9 +59,7 @@ CREATE INDEX IF NOT EXISTS idx_capacity_pools_provider_connection_id
 CREATE INDEX IF NOT EXISTS idx_capacity_pools_cluster_id
     ON capacity_pools (cluster_id);
 
--- ---------------------------------------------------------------------------
 -- One recorded utilisation sample for a pool.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS pool_usage_samples (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     pool_id UUID NOT NULL REFERENCES capacity_pools (id) ON DELETE CASCADE ON UPDATE NO ACTION,
@@ -82,10 +78,8 @@ CREATE INDEX IF NOT EXISTS idx_pool_usage_samples_pool_id
 CREATE INDEX IF NOT EXISTS idx_pool_usage_samples_recorded_at
     ON pool_usage_samples (recorded_at);
 
--- ---------------------------------------------------------------------------
 -- An allocation plan: a reservation of pool capacity for a project
 -- or company over a time window.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS allocation_plans (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     pool_id UUID NOT NULL REFERENCES capacity_pools (id) ON DELETE CASCADE ON UPDATE NO ACTION,
@@ -111,12 +105,10 @@ CREATE INDEX IF NOT EXISTS idx_allocation_plans_status
 CREATE INDEX IF NOT EXISTS idx_allocation_plans_ends_at
     ON allocation_plans (ends_at);
 
--- ---------------------------------------------------------------------------
 -- One recorded sale or refund. Sales come from
 -- `store.order.completed` events; refunds from
 -- `store.order.refunded` events; both can also be recorded
 -- manually.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS analytics_sales (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     order_id VARCHAR,
@@ -137,10 +129,8 @@ CREATE INDEX IF NOT EXISTS idx_analytics_sales_kind
 CREATE INDEX IF NOT EXISTS idx_analytics_sales_recorded_at
     ON analytics_sales (recorded_at);
 
--- ---------------------------------------------------------------------------
 -- Mirror of one license, maintained from license events. The
 -- dashboard and the license summary count from this mirror.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS analytics_license_snapshots (
     license_id VARCHAR PRIMARY KEY,
     license_key VARCHAR,
@@ -154,10 +144,8 @@ CREATE TABLE IF NOT EXISTS analytics_license_snapshots (
 CREATE INDEX IF NOT EXISTS idx_analytics_license_snapshots_status
     ON analytics_license_snapshots (status);
 
--- ---------------------------------------------------------------------------
 -- One recorded usage metric: an API call, a download, a login, or
 -- an upload.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS analytics_metric_samples (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     kind VARCHAR NOT NULL CHECK (kind IN ('api_call', 'download', 'login', 'upload')),
@@ -172,9 +160,7 @@ CREATE INDEX IF NOT EXISTS idx_analytics_metric_samples_kind
 CREATE INDEX IF NOT EXISTS idx_analytics_metric_samples_recorded_at
     ON analytics_metric_samples (recorded_at);
 
--- ---------------------------------------------------------------------------
 -- One recorded health observation for a node or service.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS analytics_health_samples (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     node_id VARCHAR NOT NULL,
@@ -193,10 +179,8 @@ CREATE INDEX IF NOT EXISTS idx_analytics_health_samples_cluster_id
 CREATE INDEX IF NOT EXISTS idx_analytics_health_samples_checked_at
     ON analytics_health_samples (checked_at);
 
--- ---------------------------------------------------------------------------
 -- A report definition: which metrics, over which range, grouped by
 -- which dimensions.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS analytics_reports (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR NOT NULL,
@@ -211,9 +195,7 @@ CREATE TABLE IF NOT EXISTS analytics_reports (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- ---------------------------------------------------------------------------
 -- One generated report run with its result rows.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS analytics_report_runs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     definition_id UUID NOT NULL REFERENCES analytics_reports (id) ON DELETE CASCADE ON UPDATE NO ACTION,
@@ -232,9 +214,7 @@ CREATE INDEX IF NOT EXISTS idx_analytics_report_runs_definition_id
 CREATE INDEX IF NOT EXISTS idx_analytics_report_runs_status
     ON analytics_report_runs (status);
 
--- ---------------------------------------------------------------------------
 -- A report definition on a schedule.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS analytics_scheduled_reports (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     definition_id UUID NOT NULL REFERENCES analytics_reports (id) ON DELETE CASCADE ON UPDATE NO ACTION,

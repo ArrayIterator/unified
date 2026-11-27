@@ -10,9 +10,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
-// Card validation + reference-id settings (batch 18 notes §3b/§3e).
-// ---------------------------------------------------------------------------
+// Card validation + reference-id settings (batch 18 notes sec. 3b/sec. 3e).
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = card_custom_rules)]

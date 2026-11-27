@@ -1,4 +1,4 @@
-// cloud module — Module definition.
+// cloud module - Module definition.
 //
 // The cloud module is the canonical home of cloud hosting, provider
 // connectors, containers, and app deployment. The legacy module ids
@@ -51,9 +51,7 @@ use super::providers::provider_registry;
 use super::virtualization::list_virtualization;
 use crate::modules::ai;
 
-// ---------------------------------------------------------------------------
 // Module definition.
-// ---------------------------------------------------------------------------
 
 pub struct CloudModule {
     state: Arc<HostingState>,

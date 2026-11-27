@@ -20,9 +20,7 @@ use super::types::*;
 use super::validation::*;
 use super::views::*;
 
-// ---------------------------------------------------------------------------
 // Backend handlers.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_backends(
     ctx: web::Data<Arc<AppContext>>,

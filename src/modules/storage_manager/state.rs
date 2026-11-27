@@ -9,9 +9,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Shared state.
-// ---------------------------------------------------------------------------
 
 #[derive(Clone)]
 pub struct StorageManagerState {
@@ -60,8 +58,8 @@ pub struct StorageManagerState {
     pub byo_settings: Arc<RwLock<ByoSettings>>,
     /// Serializes the quota check + reservation step of hub uploads
     /// (see `check_quotas` / `reserve_quota`). The guard is only
-    /// ever held across synchronous work — never across a provider
-    /// call — so two concurrent uploads cannot both pass the check
+    /// ever held across synchronous work - never across a provider
+    /// call - so two concurrent uploads cannot both pass the check
     /// against the same counters and then both store.
     pub quota_guard: Arc<Mutex<()>>,
     /// In-flight plan-quota reservations, keyed by

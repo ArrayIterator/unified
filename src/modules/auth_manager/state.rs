@@ -25,9 +25,7 @@ use std::time::Duration;
 use uuid::Uuid;
 use super::{providers::*, jwt::*, handlers_providers::*, login::*, tokens::*, recovery::*, totp::*, google::*, module::*};
 
-// ---------------------------------------------------------------------------
 // State
-// ---------------------------------------------------------------------------
 
 /// One revoked token: when it was revoked and when the token itself
 /// expires. The expiry is stored alongside the revocation time so
@@ -165,7 +163,7 @@ impl AuthManagerState {
     /// This is the durable source of truth the global auth
     /// middleware and the token-verify path consult directly, so a
     /// revocation written by any process (logout, another
-    /// instance) is enforced immediately — the in-memory map is
+    /// instance) is enforced immediately - the in-memory map is
     /// only a cache of this table and can go stale for rows it did
     /// not write itself. Any database error propagates: callers
     /// fail closed on it (a revocation status that cannot be

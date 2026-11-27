@@ -9,14 +9,12 @@ use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
-// Storage product (storage product notes §4). The notes mirror the
+// Storage product (storage product notes sec. 4). The notes mirror the
 // module structs field-for-field, so `MeteringReport`,
 // `ByoTermsAcceptance` and `ByoHealthCheck` carry no
 // created_at/updated_at even though the tables have them.
 // `ByoConnection.credentials_encrypted` is marked
 // `#[serde(skip_serializing)]` per the notes.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = storage_plans)]

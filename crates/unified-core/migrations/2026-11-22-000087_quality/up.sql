@@ -31,9 +31,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- Quality points.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS quality_points (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL CHECK (char_length(name) BETWEEN 1 AND 200),
@@ -53,9 +51,7 @@ CREATE INDEX IF NOT EXISTS idx_quality_points_scope ON quality_points (scope);
 CREATE INDEX IF NOT EXISTS idx_quality_points_target ON quality_points (target_ref);
 CREATE INDEX IF NOT EXISTS idx_quality_points_active ON quality_points (active);
 
--- ---------------------------------------------------------------------------
 -- Criteria of a quality point (tolerance definitions).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS quality_criteria (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     point_id UUID NOT NULL REFERENCES quality_points (id) ON DELETE CASCADE,
@@ -75,9 +71,7 @@ CREATE TABLE IF NOT EXISTS quality_criteria (
 );
 CREATE INDEX IF NOT EXISTS idx_quality_criteria_point ON quality_criteria (point_id);
 
--- ---------------------------------------------------------------------------
 -- Inspections.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS quality_inspections (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     point_id UUID NOT NULL REFERENCES quality_points (id) ON DELETE RESTRICT,
@@ -101,9 +95,7 @@ CREATE INDEX IF NOT EXISTS idx_quality_inspections_status ON quality_inspections
 CREATE INDEX IF NOT EXISTS idx_quality_inspections_result ON quality_inspections (result);
 CREATE INDEX IF NOT EXISTS idx_quality_inspections_created ON quality_inspections (created_at);
 
--- ---------------------------------------------------------------------------
 -- Quality alerts.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS quality_alerts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     inspection_id UUID NOT NULL REFERENCES quality_inspections (id) ON DELETE CASCADE,
@@ -125,9 +117,7 @@ CREATE INDEX IF NOT EXISTS idx_quality_alerts_target ON quality_alerts (target_r
 CREATE INDEX IF NOT EXISTS idx_quality_alerts_status ON quality_alerts (status);
 CREATE INDEX IF NOT EXISTS idx_quality_alerts_blocked ON quality_alerts (blocked) WHERE blocked = TRUE;
 
--- ---------------------------------------------------------------------------
 -- CAPA (corrective and preventive actions).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS quality_capas (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     inspection_id UUID NOT NULL REFERENCES quality_inspections (id) ON DELETE CASCADE,

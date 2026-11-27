@@ -1,4 +1,4 @@
-//! Logistics module — shipments, fleet, warehouses, delivery — Types.
+//! Logistics module - shipments, fleet, warehouses, delivery - Types.
 //!
 //! Split from `src/modules/logistics.rs`; behaviour unchanged.
 
@@ -144,7 +144,7 @@ pub struct Shipment {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub order_id: Option<String>,
     /// `linked` (store confirmed the order), `unverified` (no
-    /// store answer yet — see the order-link note), or `none`.
+    /// store answer yet - see the order-link note), or `none`.
     pub order_link_status: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub company_id: Option<Uuid>,

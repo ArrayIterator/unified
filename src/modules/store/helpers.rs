@@ -13,7 +13,6 @@ use super::state::StoreState;
 use super::types::{DigitalProduct, DownloadEntitlement, Order, Product};
 
 // Batch 18: payment reference ids (END)
-// ---------------------------------------------------------------------------
 
 pub(crate) fn round_money(value: f64) -> f64 {
     (value * 100.0).round() / 100.0
@@ -161,9 +160,7 @@ pub(crate) fn record_visible_to_caller(req: &HttpRequest, owner: &str, manage: b
     caller_owns(req, owner)
 }
 
-// ---------------------------------------------------------------------------
 // Tenant edge guard (C3 pilot 5, group E).
-// ---------------------------------------------------------------------------
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request
@@ -255,7 +252,7 @@ pub(crate) fn require_company_match_for(
 /// True when a record carrying `record_company_id` is visible to a
 /// caller acting in `caller_company`: with a caller scope, records carrying that company match, plus unscoped
 /// (global/legacy) records, which are shared content visible to any
-/// resolved scope (C3 task 320, rule A — the pilot-3 strict idiom
+/// resolved scope (C3, rule A - the pilot-3 strict idiom
 /// is superseded by the adopted canonical rule); an unresolved
 /// caller sees global records only.
 pub(crate) fn in_company_scope(
@@ -285,11 +282,11 @@ pub(crate) fn require_record_in_company_scope(
 }
 
 /// Fail closed (403) when a stored record is outside the caller's
-/// company scope FOR A WRITE (C3 task 315, strict by default).
+/// company scope FOR A WRITE (C3, strict by default).
 /// Unlike the read check above (rule A), a write requires an exact
 /// company match: a company caller may write only their own
-/// company's records — global (unscoped) records are platform-only
-/// — and an unresolved caller may write nothing. Mutation handlers
+/// company's records - global (unscoped) records are platform-only
+/// - and an unresolved caller may write nothing. Mutation handlers
 /// call this right after loading the record they mutate; handlers
 /// that only read the record, or load a parent to scope a child
 /// write, keep the read check.
@@ -394,7 +391,7 @@ pub(crate) fn is_zero_decimal_currency(currency: &str) -> bool {
 /// Convert a major-unit amount (order totals) to integer minor units.
 ///
 /// Returns `None` for non-finite values and for magnitudes that
-/// would overflow `i64` — the old unchecked `as i64` cast silently
+/// would overflow `i64` - the old unchecked `as i64` cast silently
 /// saturated `1e17` to `i64::MAX`. Callers must handle `None`
 /// (reject the amount, skip the record) instead of assuming a
 /// conversion always succeeds.

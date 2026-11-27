@@ -5,9 +5,7 @@ use std::net::IpAddr;
 
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-// ---------------------------------------------------------------------------
 // IP classification: which addresses are not publicly routable.
-// ---------------------------------------------------------------------------
 /// Address class. Anything other than `Public` is a bogon for Geo
 /// purposes: no MaxMind record exists for it, so lookups skip the
 /// database (settings overrides still apply).

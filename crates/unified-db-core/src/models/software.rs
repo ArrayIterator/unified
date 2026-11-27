@@ -10,9 +10,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Software taxonomy: groups and categories (cycle-safe tree).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = software_taxonomy)]
@@ -44,9 +42,7 @@ pub struct NewSoftwareTaxonomy {
     pub path: String,
 }
 
-// ---------------------------------------------------------------------------
 // Software records: plugins, themes, software, libraries.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 // NOTE: the path must stay fully qualified to the TABLE module.
@@ -94,9 +90,7 @@ pub struct NewSoftware {
     pub screenshots: Value,
 }
 
-// ---------------------------------------------------------------------------
 // Software versions (semver) with platform requirements.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = software_versions)]
@@ -126,9 +120,7 @@ pub struct NewSoftwareVersion {
     pub requirements: Value,
 }
 
-// ---------------------------------------------------------------------------
 // Software releases: a version on a channel (stable / beta).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = software_releases)]
@@ -156,9 +148,7 @@ pub struct NewSoftwareRelease {
     pub published_at: Option<DateTime<Utc>>,
 }
 
-// ---------------------------------------------------------------------------
 // Release files with sha256 / sha512 checksums and integrity status.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = release_files)]
@@ -194,9 +184,7 @@ pub struct NewReleaseFile {
     pub verified_at: Option<DateTime<Utc>>,
 }
 
-// ---------------------------------------------------------------------------
 // Software tags and their many-to-many assignment to software records.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = software_tags)]

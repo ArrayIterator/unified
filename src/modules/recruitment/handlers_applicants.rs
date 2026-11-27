@@ -132,9 +132,7 @@ pub(crate) async fn apply_public(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Applicant handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_job_applicants(
     ctx: web::Data<Arc<AppContext>>,

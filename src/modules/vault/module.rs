@@ -14,9 +14,7 @@ use super::handlers_documents::{create_document, delete_document, download_docum
 use super::handlers_folders::{create_folder, delete_folder, get_folder, list_folder_documents, list_folders, set_folder_retention, update_folder};
 use super::handlers_sharing::{approve_access_request, create_share_link, deny_access_request, flag_document_review, list_access_requests, list_share_links, request_access, resolve_shared_link, retention_review, revoke_share_link};
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct VaultModule {
     pub(crate) state: VaultState,
@@ -46,7 +44,7 @@ impl Module for VaultModule {
     }
 
     fn description(&self) -> &'static str {
-        "Secure document storage per company and client: folders, versioned documents (metadata only — file bytes live in the storage module), append-only access logs, expiring share links, access requests with approvals, and retention rules that flag for review and never auto-delete."
+        "Secure document storage per company and client: folders, versioned documents (metadata only - file bytes live in the storage module), append-only access logs, expiring share links, access requests with approvals, and retention rules that flag for review and never auto-delete."
     }
 
     fn requires(&self) -> &[&'static str] {
@@ -198,7 +196,7 @@ impl Module for VaultModule {
                 method: "GET",
                 path: "/api/v1/vault/documents",
                 owner: "vault",
-                description: "List visible documents (paginated, filter by folder_id, status, company_id, flagged_for_review; scoped to the caller's tenant — company_id is the resolved company, never a client-supplied scope). Clients only see shared documents.",
+                description: "List visible documents (paginated, filter by folder_id, status, company_id, flagged_for_review; scoped to the caller's tenant - company_id is the resolved company, never a client-supplied scope). Clients only see shared documents.",
                 auth: unified_core::auth::RouteAuth::Authenticated,
             },
             RouteInfo {

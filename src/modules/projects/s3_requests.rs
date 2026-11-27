@@ -1,4 +1,4 @@
-// Projects module — task, dependency, comment, and automation inputs.
+// Projects module - task, dependency, comment, and automation inputs.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use super::*;
@@ -29,9 +29,7 @@ use serde_json::Value;
 // `viewer_of`, so handlers take an `HttpRequest` extractor; no
 // handler reads identity from query parameters or the body.
 
-// ---------------------------------------------------------------------------
 // Input structs
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct CreateProjectTask {

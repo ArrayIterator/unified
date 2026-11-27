@@ -4,7 +4,7 @@
 // system widget from GET /api/v1/service-monitor/status, tasks from
 // GET /api/v1/tasks, notifications from GET
 // /api/v1/notifications, and the module grid from GET
-// /api/v1/extensions — the same endpoints the Handlebars dashboard
+// /api/v1/extensions - the same endpoints the Handlebars dashboard
 // uses (assets/js/dashboard.ts). Each widget loads independently and
 // degrades to an honest "unavailable" note when its endpoint does
 // not answer; nothing here invents a number.
@@ -105,7 +105,7 @@ function SystemStatusWidget() {
         <dt className="text-sm text-muted">CPU</dt>
         <dd className="mt-1 font-semibold">{cpu.toFixed(1)}%</dd>
         <dd className="text-xs text-faint">
-          {data.cpu_count || 0} cores · {data.workers || 0} workers
+          {data.cpu_count || 0} cores - {data.workers || 0} workers
         </dd>
       </div>
       <div>
@@ -251,7 +251,7 @@ function NotificationsWidget() {
                   onClick={() => handleMarkRead(item.id)}
                   className="shrink-0"
                 >
-                  {markingId === item.id ? "Saving…" : "Mark read"}
+                  {markingId === item.id ? "Saving..." : "Mark read"}
                 </Button>
               )}
             </div>
@@ -294,7 +294,7 @@ function ModuleGrid() {
           type="search"
           value={query}
           onChange={setQuery}
-          placeholder="Search modules by name or description…"
+          placeholder="Search modules by name or description..."
           className="w-full max-w-md"
         />
       </div>
@@ -325,7 +325,7 @@ function ModuleGrid() {
       )}
       {state.status === "ready" && state.data.length > 0 && modules.length === 0 && (
         <EmptyState>
-          No modules match “{query}”. Try a different search.
+          No modules match "{query}". Try a different search.
         </EmptyState>
       )}
       {state.status === "ready" && modules.length > 0 && (
@@ -433,7 +433,7 @@ export default function DashboardPage() {
           title="Media library"
           action={
             <Link to="/media" className="text-sm text-accent hover:underline">
-              Open media library →
+              Open media library ->
             </Link>
           }
         >
@@ -479,7 +479,7 @@ export default function DashboardPage() {
  * a two-column row when they end up next to each other (the default
  * layout); apart, each renders full width. Tasks and notifications
  * have no widget in the catalogue, so the layout never moves them
- * away — they always render, after the mapped widgets. */
+ * away - they always render, after the mapped widgets. */
 function renderSections(ordered: { id: string; node: ReactNode }[]): ReactNode[] {
   const nodes: ReactNode[] = [];
   for (let index = 0; index < ordered.length; index += 1) {

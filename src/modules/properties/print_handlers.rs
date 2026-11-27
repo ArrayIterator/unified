@@ -1,4 +1,4 @@
-// Properties — SVG / print handlers (authenticated).
+// Properties - SVG / print handlers (authenticated).
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -19,9 +19,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // SVG / print handlers (authenticated)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn get_plan_svg(
     ctx: web::Data<Arc<AppContext>>,
@@ -58,7 +56,7 @@ pub(crate) async fn get_plan_svg(
         Err(error) => return err(error, debug),
     };
     let blocks = state.blocks_of_plan(plan.id);
-    match render_plan_svg(&plan, &blocks, &format!("{} — {}", property.title, plan.name)) {
+    match render_plan_svg(&plan, &blocks, &format!("{} - {}", property.title, plan.name)) {
         Ok(svg) => HttpResponse::Ok()
             .content_type("image/svg+xml; charset=utf-8")
             .body(svg),
@@ -101,7 +99,7 @@ pub(crate) async fn get_plan_print(
         Err(error) => return err(error, debug),
     };
     let blocks = state.blocks_of_plan(plan.id);
-    match render_plan_svg(&plan, &blocks, &format!("{} — {}", property.title, plan.name)) {
+    match render_plan_svg(&plan, &blocks, &format!("{} - {}", property.title, plan.name)) {
         Ok(svg) => {
             let html = render_print_html(&property, &plan, &blocks, &svg, true);
             HttpResponse::Ok()

@@ -1,4 +1,4 @@
-// timetracker — HTTP handlers: teams and team members.
+// timetracker - HTTP handlers: teams and team members.
 
 use super::*;
 use unified_core::context::AppContext;

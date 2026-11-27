@@ -53,12 +53,10 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One declared personal-data field for one module: the field may be
 -- collected, and only for the stated purpose. Created before any
 -- other table because nothing references it; it is the allowlist
 -- that payload validation checks against.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS privacy_field_declarations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     module_id TEXT NOT NULL,
@@ -76,12 +74,10 @@ CREATE INDEX IF NOT EXISTS idx_privacy_field_declarations_module_id
 CREATE INDEX IF NOT EXISTS idx_privacy_field_declarations_field_name
     ON privacy_field_declarations (field_name);
 
--- ---------------------------------------------------------------------------
 -- One anonymization record per user: derived HMAC-SHA-256 tokens
 -- only, never an original value. Created before
 -- `privacy_erasure_requests` because erasure fulfillment
 -- references it (`anonymization_id`).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS privacy_anonymizations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id TEXT NOT NULL,
@@ -102,12 +98,10 @@ CREATE INDEX IF NOT EXISTS idx_privacy_anonymizations_user_id
 CREATE INDEX IF NOT EXISTS idx_privacy_anonymizations_token
     ON privacy_anonymizations (token);
 
--- ---------------------------------------------------------------------------
 -- One visibility default per module. Absence of a row means
 -- private. A row wider than private must have been set explicitly
 -- (`explicit = TRUE`); the module code refuses widening without
 -- an explicit confirmation.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS privacy_visibility_defaults (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     module_id TEXT NOT NULL,
@@ -123,13 +117,11 @@ CREATE TABLE IF NOT EXISTS privacy_visibility_defaults (
 CREATE INDEX IF NOT EXISTS idx_privacy_visibility_defaults_module_id
     ON privacy_visibility_defaults (module_id);
 
--- ---------------------------------------------------------------------------
 -- One consent record per (user, consent type). `granted` is the
 -- latest decision; `withdrawn_at` and `expires_at` derive the
 -- current status (`granted` / `withdrawn` / `expired`) in the
 -- module code. Created before `privacy_consent_history` because
 -- history rows reference it.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS privacy_consents (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id TEXT NOT NULL,
@@ -153,10 +145,8 @@ CREATE INDEX IF NOT EXISTS idx_privacy_consents_consent_type
 CREATE INDEX IF NOT EXISTS idx_privacy_consents_user_id_consent_type
     ON privacy_consents (user_id, consent_type);
 
--- ---------------------------------------------------------------------------
 -- One history entry per consent grant or withdrawal. Append-only:
 -- the module never updates or deletes these rows.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS privacy_consent_history (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     consent_id UUID NOT NULL REFERENCES privacy_consents (id)
@@ -174,13 +164,11 @@ CREATE INDEX IF NOT EXISTS idx_privacy_consent_history_consent_id
 CREATE INDEX IF NOT EXISTS idx_privacy_consent_history_user_id
     ON privacy_consent_history (user_id);
 
--- ---------------------------------------------------------------------------
 -- One right-to-erasure request: scope (user id plus affected
 -- modules), review state, and the anonymization record that
 -- fulfilled it, if any. Fulfillment drives anonymization in the
 -- module code; the token stored here is only a reference to the
 -- anonymization row, never personal data itself.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS privacy_erasure_requests (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id TEXT NOT NULL,
@@ -208,10 +196,8 @@ CREATE INDEX IF NOT EXISTS idx_privacy_erasure_requests_status
 CREATE INDEX IF NOT EXISTS idx_privacy_erasure_requests_anonymization_id
     ON privacy_erasure_requests (anonymization_id);
 
--- ---------------------------------------------------------------------------
 -- One versioned privacy notice for one module. The current notice
 -- is the highest version whose `effective_from` has passed.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS privacy_notices (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     module_id TEXT NOT NULL,
@@ -229,13 +215,11 @@ CREATE INDEX IF NOT EXISTS idx_privacy_notices_module_id_version
 CREATE INDEX IF NOT EXISTS idx_privacy_notices_module_id_effective_from
     ON privacy_notices (module_id, effective_from);
 
--- ---------------------------------------------------------------------------
 -- Append-only trail of privacy actions (redaction-policy change,
 -- anonymization, consent change, erasure step, visibility
 -- change, notice publication). The module also emits every one
 -- of these on the hook bus for the audit module; this table is
 -- the persistence target for the local trail.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS privacy_audit_entries (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     actor TEXT NOT NULL,

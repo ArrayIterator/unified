@@ -17,9 +17,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Handlers: performance reviews
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_review_cycles(
     ctx: web::Data<Arc<AppContext>>,
@@ -450,7 +448,7 @@ pub(crate) async fn complete_review(
 }
 
 /// Whether an update may move a review from `from` to `to`.
-/// Reviews move forward only — draft to submitted — and never
+/// Reviews move forward only - draft to submitted - and never
 /// backwards. Completion is not an update at all: it goes through
 /// the complete endpoint, which emits the completion event.
 pub(crate) fn review_status_transition_allowed(from: &str, to: &str) -> bool {

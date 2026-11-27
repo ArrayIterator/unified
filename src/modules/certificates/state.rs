@@ -40,9 +40,7 @@ use super::types::CertModuleSettings;
 use super::types::CertificateRecord;
 use super::types::RenewalAttempt;
 
-// ---------------------------------------------------------------------------
 // State
-// ---------------------------------------------------------------------------
 
 pub struct CertificatesState {
     pub(crate) hooks: RwLock<Arc<HookBus>>,
@@ -720,9 +718,7 @@ impl CertificatesState {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Certificate modes and Cloudflare detection (state methods).
-// ---------------------------------------------------------------------------
 
 impl CertificatesState {
     pub(crate) fn mode_definitions(&self) -> Vec<CertModeDefinition> {

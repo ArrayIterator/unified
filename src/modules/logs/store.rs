@@ -1,4 +1,4 @@
-// logs — store.
+// logs - store.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -28,10 +28,8 @@ use super::handlers::*;
 use super::hooks::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // State (single global instance so `push_log` and the module share one
 // ring buffer even before the module is initialized)
-// ---------------------------------------------------------------------------
 
 pub struct LogsState {
     pub(crate) hooks: RwLock<Arc<HookBus>>,

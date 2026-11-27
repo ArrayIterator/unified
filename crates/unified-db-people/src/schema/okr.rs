@@ -3,13 +3,11 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // OKRs (migration 000043_okrs). `OkrObjective`, `OkrKeyResult` and
 // `OkrCheckin` carry NUMERIC columns, so per the repo header rule
 // they skip ALL serde derives. The self-reference
 // `okr_objectives.parent_objective_id` gets no `joinable!` (Diesel
 // does not allow a table to join to itself in `allow_tables` form).
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     okr_cycles (id) {

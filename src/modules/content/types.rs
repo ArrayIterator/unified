@@ -1,4 +1,4 @@
-//! Content Management module. — Types.
+//! Content Management module. - Types.
 //!
 //! Split from `src/modules/content.rs`; behaviour unchanged.
 
@@ -55,7 +55,7 @@ pub struct Post {
 /// the documents-store id; `url` is the /files/ URL to render
 /// (public -> `/files/public/{key}`, private ->
 /// `/files/private/{key}` or a signed URL); `description` is the
-/// author-written caption for THIS attachment — it lives with the
+/// author-written caption for THIS attachment - it lives with the
 /// post's attachment reference, NOT on the document row (the
 /// documents metadata columns are a separate, paused task).
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -162,9 +162,7 @@ pub struct UpdatePageInput {
     pub attachments: Option<Vec<PostAttachment>>,
 }
 
-// ---------------------------------------------------------------------------
-// Tags (task 356).
-// ---------------------------------------------------------------------------
+// Tags.
 
 /// A tag: a free-form taxonomy label usable by posts AND custom
 /// entries. The slug is kebab-case and unique per tenant. Tags are
@@ -222,9 +220,7 @@ pub struct AssignTagsInput {
     pub tag_ids: Vec<Uuid>,
 }
 
-// ---------------------------------------------------------------------------
-// Dynamic custom post types (task 356).
-// ---------------------------------------------------------------------------
+// Dynamic custom post types.
 
 /// The built-in features a post type may support. Stored as plain
 /// strings on the definition so a future feature can be added
@@ -380,7 +376,7 @@ pub struct UpdatePostTypeInput {
     pub enabled: Option<bool>,
 }
 
-/// One entry of a custom post type. All entries — of every type —
+/// One entry of a custom post type. All entries - of every type -
 /// live in ONE generic store (one table, `content_custom_entries`,
 /// with a JSONB `fields` column); there is no table per type.
 /// `fields` holds the validated values of the type's dynamic field

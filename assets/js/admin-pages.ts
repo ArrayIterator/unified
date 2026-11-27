@@ -106,7 +106,7 @@
     return fallback;
   }
 
-  /* ---------- CSRF protection ---------- */
+  /* CSRF protection */
   // Cookie-authenticated mutations require a valid `X-CSRF-Token`
   // header: the server answers 403 without one. The token is bound
   // to the session, fetched from `GET /api/v1/security/csrf-token`,
@@ -232,7 +232,7 @@
     box.hidden = false;
   }
 
-  /* ---------- Email templates ---------- */
+  /* Email templates */
 
   function setupEmailTemplates(): void {
     const list = document.getElementById("et-list");
@@ -426,7 +426,7 @@
     loadTemplates();
   }
 
-  /* ---------- Settings ---------- */
+  /* Settings */
 
   function setupSettings(): void {
     const container = document.getElementById("st-list");
@@ -649,7 +649,7 @@
       });
   }
 
-  /* ---------- Themes ---------- */
+  /* Themes */
 
   function setupThemes(): void {
     const list = document.getElementById("th-list");

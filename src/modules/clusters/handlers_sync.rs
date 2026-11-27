@@ -1,4 +1,4 @@
-// clusters — HTTP handlers: sync runs, logs, conflicts, and retries.
+// clusters - HTTP handlers: sync runs, logs, conflicts, and retries.
 
 use super::*;
 use unified_core::context::AppContext;
@@ -127,9 +127,7 @@ fn verify_envelope_plan(
     Ok(())
 }
 
-// ---------------------------------------------------------------------------
 // Sync log handlers.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_sync_logs(
     ctx: web::Data<Arc<AppContext>>,
@@ -201,9 +199,7 @@ pub(crate) async fn get_sync_log(
     json::respond(result, debug)
 }
 
-// ---------------------------------------------------------------------------
 // Node-to-node sync transport: receive and export.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn sync_receive(
     ctx: web::Data<Arc<AppContext>>,
@@ -369,9 +365,7 @@ pub(crate) async fn sync_export(
     json::respond(result, debug)
 }
 
-// ---------------------------------------------------------------------------
 // Local domain state (what sync sends and receives).
-// ---------------------------------------------------------------------------
 
 /// Idempotency scope for staging a local item: the scope embeds a hash
 /// of the canonical request body (domain, key, payload), so the same
@@ -485,10 +479,8 @@ pub(crate) async fn list_local_items(
     json::respond(result, debug)
 }
 
-// ---------------------------------------------------------------------------
 // Sync health overview, conflict visibility, retry queue, settings and
 // the domain registry.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn sync_health_overview(
     ctx: web::Data<Arc<AppContext>>,
@@ -624,9 +616,7 @@ pub(crate) async fn sync_health_overview(
     json::respond(result, debug)
 }
 
-// ---------------------------------------------------------------------------
 // Conflict visibility and resolution.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_conflicts(
     ctx: web::Data<Arc<AppContext>>,
@@ -803,9 +793,7 @@ pub(crate) async fn resolve_conflict(
     json::respond(result, debug)
 }
 
-// ---------------------------------------------------------------------------
 // Failed-sync retry queue and dead-letter handling.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_retries(
     ctx: web::Data<Arc<AppContext>>,

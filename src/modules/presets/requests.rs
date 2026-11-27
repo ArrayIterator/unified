@@ -1,4 +1,4 @@
-//! Presets + Setup Wizard module. — Request bodies.
+//! Presets + Setup Wizard module. - Request bodies.
 //!
 //! Split from `src/modules/presets.rs`; behaviour unchanged.
 

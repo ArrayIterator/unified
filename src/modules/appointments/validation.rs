@@ -1,4 +1,4 @@
-// appointments — validation.
+// appointments - validation.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -27,9 +27,7 @@ use super::handlers_appointments::*;
 use super::handlers_reminders::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Handlers: services
-// ---------------------------------------------------------------------------
 
 pub(crate) fn validate_service_fields(
     duration_minutes: i64,

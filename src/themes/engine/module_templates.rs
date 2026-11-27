@@ -1,7 +1,6 @@
-// engine — module_templates.
+// engine - module_templates.
 // Per-module template registration and rendering.
 //
-// Split from `src/themes/engine.rs`; moved verbatim, no behaviour changes.
 
 use super::*;
 use crate::themes::assets::resolve_asset_url;

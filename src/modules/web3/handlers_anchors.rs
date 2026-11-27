@@ -18,9 +18,7 @@ use super::state::*;
 use super::types::*;
 use super::validation::*;
 
-// ---------------------------------------------------------------------------
 // Handlers: anchors and the transparency ledger
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn create_anchor(
     ctx: web::Data<Arc<AppContext>>,
@@ -539,9 +537,7 @@ pub(crate) async fn public_ledger(
     json::success_response(page, 200)
 }
 
-// ---------------------------------------------------------------------------
 // Pure helpers (W6, W7) -- unit-tested below
-// ---------------------------------------------------------------------------
 
 /// True when a relay HTTP status is a transient failure worth
 /// retrying: any 5xx, or 429 rate limiting. Other 4xx responses are

@@ -1,4 +1,4 @@
-//! Activity Timeline module. — Handlers.
+//! Activity Timeline module. - Handlers.
 //!
 //! Split from `src/modules/timeline.rs`; behaviour unchanged.
 //!

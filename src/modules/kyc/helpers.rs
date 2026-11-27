@@ -188,9 +188,7 @@ pub(crate) fn paginate<T: Serialize + Clone>(
     PageResult::new(page_items, total, &pagination)
 }
 
-// ---------------------------------------------------------------------------
 // Tenant-scoped loaders
-// ---------------------------------------------------------------------------
 //
 // Every loader checks the row's `tenant_id` against the caller's
 // tenant. A row from another tenant reads as 404, never 403, so
@@ -364,9 +362,7 @@ pub(crate) fn check_risk_range_overlap(
     Ok(())
 }
 
-// ---------------------------------------------------------------------------
 // Audit trail
-// ---------------------------------------------------------------------------
 
 /// SHA-256 hex of the audit entry payload
 /// `prev_hash|id|case_id|action|actor|created_at|detail`.

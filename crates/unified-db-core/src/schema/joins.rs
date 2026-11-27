@@ -14,9 +14,7 @@ use super::*;
 // with E0425 ("cannot find type `table` in module `<file>`") and the broken
 // allow-group paths also poisoned the coherence check for the other tables
 // in the group (594x E0119 `AppearsInFromClause` conflicts).
-// ---------------------------------------------------------------------------
 // Joinable tables in this bounded context.
-// ---------------------------------------------------------------------------
 
 diesel::joinable!(users -> companies (company_id));
 diesel::joinable!(user_roles -> users (user_id));
@@ -104,7 +102,6 @@ diesel::joinable!(license_events -> licenses (license_id));
 diesel::joinable!(license_offline_tokens -> licenses (license_id));
 diesel::joinable!(license_activation_history -> licenses (license_id));
 
-// ---------------------------------------------------------------------------
 // Tables allowed to appear in the same query, grouped by join graph.
 //
 // One `allow_tables_to_appear_in_same_query!` invocation generates an
@@ -117,9 +114,7 @@ diesel::joinable!(license_activation_history -> licenses (license_id));
 // no entry at all. If a future query needs two tables from different
 // groups, merge the groups (the compiler reports the missing pair
 // as E0277).
-// ---------------------------------------------------------------------------
 
-// ---------------------------------------------------------------------------
 // Tables allowed to appear in the same query, grouped by join graph.
 //
 // One `allow_tables_to_appear_in_same_query!` invocation generates an
@@ -132,7 +127,6 @@ diesel::joinable!(license_activation_history -> licenses (license_id));
 // loses no query. Tables with no `joinable!` edge need no entry at all.
 // If a future query needs two tables from different groups, merge the
 // groups (the compiler reports the missing pair as E0277).
-// ---------------------------------------------------------------------------
 
 // Join group (restored, 57 tables, e.g. ai_company_policies (+56 more)).
 diesel::allow_tables_to_appear_in_same_query!(
@@ -198,8 +192,6 @@ diesel::allow_tables_to_appear_in_same_query!(
 // Join group 76 (2 tables, e.g. timetracker_entries).
 diesel::allow_tables_to_appear_in_same_query!(timetracker_entries, timetracker_timers,);
 
-// ---------------------------------------------------------------------------
 // Tables added by the integration round (migrations 000032-000107,
 // plus `reference_id_settings` and `tenant_destroy_requests`,
 // which have no migration yet).
-// ---------------------------------------------------------------------------

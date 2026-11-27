@@ -13,9 +13,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Bindings.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_bindings(
     state: web::Data<StorageManagerState>,
@@ -117,7 +115,7 @@ pub(crate) async fn create_binding(
             None => String::new(),
         };
         // Tenant scoping: the binding's company is verified against
-        // the caller's scope — a scoped caller binds for their own
+        // the caller's scope - a scoped caller binds for their own
         // company (an omitted company adopts it); an unresolved
         // caller may only create a global binding.
         let body_company = match &input.company_id {
@@ -331,12 +329,12 @@ pub(crate) async fn resolve_binding_endpoint(
             UnifiedError::bad_request("Query parameter \"module\" is required")
         })?;
         let module_id = valid_module_id(module_raw)?;
-        // Tenant scoping (read rule, C3 task 320): the queried
-        // company is verified against the caller's scope — a scoped
+        // Tenant scoping (read rule, C3): the queried
+        // company is verified against the caller's scope - a scoped
         // caller resolves for their own company (an omitted company
         // adopts it); an unresolved caller may only resolve the
         // global binding. This is a GET, so the write helper
-        // `require_company_match_for` (C3 task 315) does not apply
+        // `require_company_match_for` (C3) does not apply
         // here: it would 403 an unresolved caller resolving the
         // global binding.
         let body_company = params

@@ -1,4 +1,4 @@
-//! Compliance Center module — GDPR / ISO support: data export — Request bodies.
+//! Compliance Center module - GDPR / ISO support: data export - Request bodies.
 //!
 //! Split from `src/modules/compliance.rs`; behaviour unchanged.
 

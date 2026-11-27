@@ -7,9 +7,7 @@ use std::sync::Arc;
 
 use super::{CreateRecordType, StudioState};
 
-// ---------------------------------------------------------------------------
 // Hook query handlers (the hook contract).
-// ---------------------------------------------------------------------------
 
 pub(crate) fn on_fields_requested(state: Arc<StudioState>, ctx: &mut HookContext) {
     let record_type = ctx

@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// --- Handlers: reimbursements -----------------------------------------------
+// Handlers: reimbursements
 
 pub(crate) async fn list_reimbursements(
     ctx: web::Data<Arc<AppContext>>,
@@ -146,7 +146,7 @@ pub(crate) async fn retry_reimbursement(
     }
 }
 
-// --- Reimbursement transitions (unit-testable state moves) ------------------
+// Reimbursement transitions (unit-testable state moves)
 
 /// Atomically move a failed reimbursement back to `pending`.
 /// The failed check and the move happen while the

@@ -11,9 +11,7 @@ use super::{events::*, card_validation::*, card_settings::*, limits::*, provider
 
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(default)]
-// ---------------------------------------------------------------------------
 // Credentials and connections.
-// ---------------------------------------------------------------------------
 /// Credentials for one connection. Every field is optional at the type
 /// level; `validate_connection` enforces the per-kind required set.
 /// Values are write-only: they are never serialized into a view, never
@@ -312,7 +310,7 @@ impl CustomGatewayConfig {
 
 /// One stored provider connection. Kept in memory (same pattern as the
 /// provider registry and the store); durable persistence is a
-/// follow-up for the integrator — see the migration sketch in the
+/// follow-up for the integrator - see the migration sketch in the
 /// coordinator report.
 #[derive(Debug, Clone)]
 pub struct PaymentConnection {
@@ -403,12 +401,10 @@ impl PaymentConnection {
 
 
 
-// ---------------------------------------------------------------------------
 // Connection validation.
-// ---------------------------------------------------------------------------
 /// Validate a user-supplied API endpoint: https only (money must never
 /// travel over plain http), a host, no embedded credentials. Private /
-/// loopback hosts are refused here — a payment processor endpoint is a
+/// loopback hosts are refused here - a payment processor endpoint is a
 /// public service, never localhost.
 pub(crate) fn validate_payment_endpoint(endpoint: Option<&str>, kind: &str) -> UnifiedResult<Url> {
     let Some(raw) = endpoint else {

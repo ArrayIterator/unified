@@ -34,7 +34,7 @@
 --   - `expense_currency_rates.rate` is quoted as target minor
 --     units per one base minor unit; the inverse pair is derived
 --     as `1 / rate` by the module when only the reverse direction
---     is stored. Rates are stored data only — never fetched live.
+--     is stored. Rates are stored data only - never fetched live.
 --   - Report status is CHECK-constrained to the state machine
 --     vocabulary (`draft`, `submitted`, `approved`, `rejected`,
 --     `reimbursed`); reimbursement status to (`pending`, `paid`,
@@ -44,9 +44,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- Expense categories (admin-editable rules).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS expense_categories (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL CHECK (char_length(name) BETWEEN 1 AND 200),
@@ -63,9 +61,7 @@ CREATE TABLE IF NOT EXISTS expense_categories (
 CREATE INDEX IF NOT EXISTS idx_expense_categories_company ON expense_categories (company_id);
 CREATE INDEX IF NOT EXISTS idx_expense_categories_active ON expense_categories (active);
 
--- ---------------------------------------------------------------------------
 -- Expense policies (per-company rules).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS expense_policies (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL CHECK (char_length(name) BETWEEN 1 AND 200),
@@ -83,9 +79,7 @@ CREATE TABLE IF NOT EXISTS expense_policies (
 CREATE INDEX IF NOT EXISTS idx_expense_policies_company ON expense_policies (company_id);
 CREATE INDEX IF NOT EXISTS idx_expense_policies_active ON expense_policies (active);
 
--- ---------------------------------------------------------------------------
 -- Expense reports.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS expense_reports (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     employee_id TEXT NOT NULL CHECK (char_length(employee_id) BETWEEN 1 AND 200),
@@ -111,9 +105,7 @@ CREATE INDEX IF NOT EXISTS idx_expense_reports_status ON expense_reports (status
 CREATE INDEX IF NOT EXISTS idx_expense_reports_company ON expense_reports (company_id);
 CREATE INDEX IF NOT EXISTS idx_expense_reports_policy ON expense_reports (policy_id);
 
--- ---------------------------------------------------------------------------
 -- Expense lines inside a report.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS expenses (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     report_id UUID NOT NULL REFERENCES expense_reports (id) ON DELETE CASCADE,
@@ -136,9 +128,7 @@ CREATE INDEX IF NOT EXISTS idx_expenses_report ON expenses (report_id, expense_d
 CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses (category_id);
 CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses (expense_date);
 
--- ---------------------------------------------------------------------------
 -- Receipt references (storage references only, no bytes).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS expense_receipts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     expense_id UUID NOT NULL REFERENCES expenses (id) ON DELETE CASCADE,
@@ -151,9 +141,7 @@ CREATE TABLE IF NOT EXISTS expense_receipts (
 );
 CREATE INDEX IF NOT EXISTS idx_expense_receipts_expense ON expense_receipts (expense_id);
 
--- ---------------------------------------------------------------------------
 -- Reimbursements (pay-out tracking for approved reports).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS expense_reimbursements (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     report_id UUID NOT NULL REFERENCES expense_reports (id) ON DELETE CASCADE,
@@ -172,9 +160,7 @@ CREATE INDEX IF NOT EXISTS idx_expense_reimbursements_report ON expense_reimburs
 CREATE INDEX IF NOT EXISTS idx_expense_reimbursements_employee ON expense_reimbursements (employee_id);
 CREATE INDEX IF NOT EXISTS idx_expense_reimbursements_status ON expense_reimbursements (status);
 
--- ---------------------------------------------------------------------------
 -- Refunds and adjustments (separate entries, never history edits).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS expense_adjustments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     report_id UUID NOT NULL REFERENCES expense_reports (id) ON DELETE CASCADE,
@@ -187,9 +173,7 @@ CREATE TABLE IF NOT EXISTS expense_adjustments (
 );
 CREATE INDEX IF NOT EXISTS idx_expense_adjustments_report ON expense_adjustments (report_id);
 
--- ---------------------------------------------------------------------------
 -- Stored currency rates (stored data only, never fetched live).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS expense_currency_rates (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     base_currency TEXT NOT NULL CHECK (char_length(base_currency) = 3),

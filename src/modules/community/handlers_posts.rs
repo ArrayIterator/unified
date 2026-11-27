@@ -22,9 +22,7 @@ use unified_core::json;
 use unified_core::pagination::PaginationParams;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Post handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_topic_posts(
     ctx: web::Data<Arc<AppContext>>,
@@ -349,9 +347,7 @@ pub(crate) async fn delete_post(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Vote handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn vote_post(
     ctx: web::Data<Arc<AppContext>>,
@@ -471,9 +467,7 @@ pub(crate) async fn get_post_votes(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Flag + moderation handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn flag_post(
     ctx: web::Data<Arc<AppContext>>,

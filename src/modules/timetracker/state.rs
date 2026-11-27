@@ -1,4 +1,4 @@
-// timetracker — In-memory state and its methods.
+// timetracker - In-memory state and its methods.
 
 use super::*;
 use unified_core::hooks::HookBus;
@@ -9,9 +9,7 @@ use std::sync::{Arc, Mutex, RwLock};
 use std::time::Instant;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Shared state
-// ---------------------------------------------------------------------------
 
 /// In-memory stores for TimeTracker. The hook bus is attached in
 /// `init` (the bus lives in `AppContext`); handlers tolerate a

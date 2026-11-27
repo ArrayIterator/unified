@@ -10,9 +10,7 @@ use serde::Serialize;
 use serde_json::json;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 /// The tenant context for one request, resolved ONLY through
 /// `unified_core::tenancy::TenantContext::from_http_request`

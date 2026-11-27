@@ -25,7 +25,6 @@ use uuid::Uuid;
 use super::{providers::*, jwt::*, state::*, handlers_providers::*, tokens::*, recovery::*, totp::*, google::*, module::*};
 use unified_core::error::UnifiedResult;
 
-// ---------------------------------------------------------------------------
 // Password login helpers
 //
 // `POST /api/v1/auth-manager/jwt/issue` is the password login
@@ -36,7 +35,6 @@ use unified_core::error::UnifiedResult;
 // never request scopes. A failed login feeds the hardening
 // brute-force engine (per IP and per account) and a successful one
 // resets it.
-// ---------------------------------------------------------------------------
 
 /// Minutes a pending TOTP enrolment stays usable.
 pub(crate) const PENDING_TOTP_TTL_MINUTES: i64 = 15;
@@ -405,9 +403,7 @@ pub(crate) fn caller_may_manage_user(scopes: &[String], caller_id: &str, target_
     caller_id == target_user_id || caller_is_admin(scopes)
 }
 
-// ---------------------------------------------------------------------------
 // JWT handlers
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct IssueTokenInput {

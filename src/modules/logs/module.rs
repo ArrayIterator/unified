@@ -1,4 +1,4 @@
-// logs — module.
+// logs - module.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -29,9 +29,7 @@ use super::common::*;
 use super::handlers::*;
 use super::hooks::*;
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct LogsModule {
     pub(crate) state: Arc<LogsState>,

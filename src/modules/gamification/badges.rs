@@ -1,4 +1,4 @@
-// Gamification — Badge / award handlers.
+// Gamification - Badge / award handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -16,9 +16,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Badge / award handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_badges(
     ctx: web::Data<Arc<AppContext>>,

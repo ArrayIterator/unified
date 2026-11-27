@@ -83,9 +83,7 @@ pub mod security_events {
     pub const RATE_LIMITED: &str = "security.rate_limited";
 }
 
-// ---------------------------------------------------------------------------
 // Shared enforcement state
-// ---------------------------------------------------------------------------
 
 /// The shared hardening engine. One instance is shared by the
 /// middleware and the Security module handlers (see `shared_state`).

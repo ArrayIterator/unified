@@ -1,4 +1,4 @@
-// Storage Manager module — the storage hub every other module uses.
+// Storage Manager module - the storage hub every other module uses.
 //
 // This module is the MANAGEMENT layer on top of the existing storage
 // abstraction (`unified_core::storage`): it does not re-implement any
@@ -93,17 +93,17 @@
 //     `storage.byo.terms_changed`, `storage.byo.health_ok`,
 //     `storage.byo.health_failed`, `storage.byo.quota_exceeded`
 // Events this module listens to:
-//   - `storage.object.upload_requested` — answered with the resolved
+//   - `storage.object.upload_requested` - answered with the resolved
 //     binding + upload endpoint (see `on_upload_requested`). Payload:
 //     `{"module", "owner", "company_id"?, "key_hint", "bytes", "mime"?}`.
 //     Result: `{"resolved", "bucket_id", "bucket_name",
 //     "provider_kind", "key", "prefix", "upload_endpoint",
 //     "quota_ok", "quota_warning"}` or `{"resolved": false, "error", ...}`.
-//   - `storage.lifecycle.run_requested` — the event the scheduler
+//   - `storage.lifecycle.run_requested` - the event the scheduler
 //     emits when a `storage.lifecycle.run` job fires (see the
 //     scheduler note below). The handler spawns the run in the
 //     background and answers `{"accepted": true, "queued": true}`.
-//   - `storage.byo.health_check_requested` — the event the
+//   - `storage.byo.health_check_requested` - the event the
 //     scheduler emits when a `storage.byo.health_check` job fires
 //     (see the scheduler note below). The handler spawns health
 //     checks for every active BYO connection in the background and
@@ -122,12 +122,12 @@
 //       ctx.hooks.emit("storage.byo.health_check_requested", payload);
 //   }`
 // Until then BYO health runs only through `POST /byo/health/run`
-// or the in-process fallback — never pretend a job was scheduled
+// or the in-process fallback - never pretend a job was scheduled
 // when the scheduler declined it. The same note applies to
 // `storage.lifecycle.run` above.
 //
 // Storage plans (storage as a product): plans are products sold
-// through Product Management / billing — this module stores only
+// through Product Management / billing - this module stores only
 // the quota, the included provider kinds, and a `product_id`
 // billing reference plus a billing-cycle hint; it never invents a
 // money column. A buyer holds at most one active plan assignment
@@ -148,8 +148,8 @@
 // and object `owner_user` / `company_id` against the
 // caller (admin override only); cross-tenant access answers 404.
 // Bucket endpoint hosts may only come from the operator allowlist
-// (`storage.allowed_hosts` in the application config) — a bucket's
-// own `allowed_hosts` may only narrow that list — and the endpoint
+// (`storage.allowed_hosts` in the application config) - a bucket's
+// own `allowed_hosts` may only narrow that list - and the endpoint
 // hostname is DNS-revalidated at request time (private /
 // link-local resolution is refused). Hub download tokens are
 // single-use and stored as SHA-256 hashes only; BYO activation
@@ -186,10 +186,10 @@
 //       ctx.hooks.emit("storage.lifecycle.run_requested", payload);
 //   }`
 // Until then lifecycle runs only through `POST /lifecycle/run` or
-// the in-process fallback — never pretend a job was scheduled when
+// the in-process fallback - never pretend a job was scheduled when
 // the scheduler declined it.
 //
-// Encryption at rest — honest matrix (the flag is stored per bucket;
+// Encryption at rest - honest matrix (the flag is stored per bucket;
 // enforcement is provider-side where supported):
 //   - S3 / R2: the existing S3 provider does NOT send a
 //     server-side-encryption header today, so the flag is recorded
@@ -241,7 +241,6 @@ use std::sync::Arc;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 
 pub struct StorageManagerModule {
     pub(crate) state: StorageManagerState,

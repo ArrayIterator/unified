@@ -6,9 +6,7 @@ use serde::Serialize;
 
 use super::store::*;
 
-// ---------------------------------------------------------------------------
 // TLS termination lookup.
-// ---------------------------------------------------------------------------
 
 /// TLS certificate information for one domain.
 #[derive(Debug, Clone, Serialize)]

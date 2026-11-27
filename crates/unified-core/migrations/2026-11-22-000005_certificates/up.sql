@@ -24,10 +24,8 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One certificate known to the module: configured, renewed,
 -- installed, or observed as a fallback.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS certificates (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     domain VARCHAR NOT NULL,
@@ -58,9 +56,7 @@ CREATE INDEX IF NOT EXISTS idx_certificates_expires_at
 CREATE INDEX IF NOT EXISTS idx_certificates_fingerprint_sha256
     ON certificates (fingerprint_sha256);
 
--- ---------------------------------------------------------------------------
 -- One renewal attempt, for the renewal history log.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS certificate_renewals (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     domain VARCHAR NOT NULL,
@@ -80,10 +76,8 @@ CREATE INDEX IF NOT EXISTS idx_certificate_renewals_domain
 CREATE INDEX IF NOT EXISTS idx_certificate_renewals_status
     ON certificate_renewals (status);
 
--- ---------------------------------------------------------------------------
 -- Module settings (singleton row): whether ACME is enabled, how
 -- often the expiry check runs, and the ACME configuration document.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS certificate_settings (
     key VARCHAR PRIMARY KEY CHECK (key = 'global'),
     enabled BOOLEAN NOT NULL DEFAULT FALSE,

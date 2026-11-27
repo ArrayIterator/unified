@@ -11,11 +11,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Curriculum (migration 000092_curriculum).
 // Structs carrying NUMERIC columns skip serde derives (PgNumeric
 // has no serde implementation), per the repo header rule.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = curriculum_frameworks)]

@@ -1,4 +1,4 @@
-// Cache module — HTTP access to the shared application cache.
+// Cache module - HTTP access to the shared application cache.
 //
 // Routes under `/api/v1/cache`:
 //
@@ -32,7 +32,7 @@
 // `TenantContext` (resolved from the Host header). These routes take
 // it from the URL instead so an operator or a background job can
 // address a tenant explicitly; a caller must hold the cache
-// capability either way — the tenant id is a scope, not an
+// capability either way - the tenant id is a scope, not an
 // authorization.
 
 mod types;

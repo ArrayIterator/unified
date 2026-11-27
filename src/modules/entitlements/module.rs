@@ -1,7 +1,7 @@
 // Per-product feature limiting (entitlements) module.
 //
 // The selling model: a tenant (company) may buy one product at a
-// time — one module, or one SaaS package bundling several modules —
+// time - one module, or one SaaS package bundling several modules -
 // and the tenant dashboard may activate only what was purchased.
 // An entitlement is DATA, never code: one row grants one module to
 // one tenant from one admin-defined source. The effective
@@ -9,20 +9,20 @@
 // active source grants the module. No entitlement record means not
 // entitled (fail closed).
 //
-// Sources (`source_kind`, a closed taxonomy — the sources
+// Sources (`source_kind`, a closed taxonomy - the sources
 // themselves are admin-defined records):
-//   - `owner_entitlement` — the implicit owner entitlement for a
+//   - `owner_entitlement` - the implicit owner entitlement for a
 //                       sellable CORE module (the same rule as
 //                       `licensing::check_module_entitlement`).
-//   - `license`       — a licensing-module license whose product
+//   - `license`       - a licensing-module license whose product
 //                       names the module (composed through
 //                       `licensing::has_module_entitlement`, never
 //                       re-implemented here).
-//   - `subscription`  — a billing/store subscription backing the
+//   - `subscription`  - a billing/store subscription backing the
 //                       module.
-//   - `saas_package`  — a SaaS package purchase (see
+//   - `saas_package`  - a SaaS package purchase (see
 //                       `crate::modules::saas_packages`).
-//   - `manual_grant`  — an administrator grant, with a reason.
+//   - `manual_grant`  - an administrator grant, with a reason.
 //
 // This module is the GATE, not a second activator: enabling a
 // module checks the entitlement first and then fires the existing
@@ -42,115 +42,115 @@
 //
 // Routes live under `/api/v1/entitlements`:
 //   Tenant dashboard (own tenant, or any tenant for an admin):
-//     GET    /my-modules — every registered module with its
+//     GET    /my-modules - every registered module with its
 //            per-tenant state (entitled with source + expiry, or
 //            locked with an upgrade path), paginated.
-//     GET    /modules/{module_id}/access — one module's access
+//     GET    /modules/{module_id}/access - one module's access
 //            state: entitled / grace_read_only / locked, and
 //            whether writes are allowed.
-//     POST   /modules/{module_id}/enable — enable after the
+//     POST   /modules/{module_id}/enable - enable after the
 //            server-side entitlement check (403
 //            `entitlement.required` + audited attempt when not
 //            entitled).
-//     POST   /modules/{module_id}/disable — disable a module the
+//     POST   /modules/{module_id}/disable - disable a module the
 //            tenant enabled.
 //   Package / product-set changes:
-//     POST   /package-changes/apply — compute the module diff for
+//     POST   /package-changes/apply - compute the module diff for
 //            a new package/product set (newly entitled, kept,
 //            kept via another source, requires_confirmation).
 //            Newly entitled modules are enabled; modules that
 //            would be lost are NEVER silently disabled when the
 //            tenant uses them outside the package. A lost module
 //            with no other source has the replaced source's rows
-//            lapsed (grace, then disabled) — the activation flag
+//            lapsed (grace, then disabled) - the activation flag
 //            alone is never the revocation, because `effective()`
 //            reads any active row as entitled.
-//     GET    /package-changes — list change records (paginated).
-//     GET    /package-changes/{id} — one change record.
-//     POST   /package-changes/{id}/confirm — explicitly confirm
+//     GET    /package-changes - list change records (paginated).
+//     GET    /package-changes/{id} - one change record.
+//     POST   /package-changes/{id}/confirm - explicitly confirm
 //            disabling the modules listed as
 //            `requires_confirmation` (or discard the change).
 //   Admin:
-//     GET    / — list entitlements (paginated, filter by
+//     GET    / - list entitlements (paginated, filter by
 //            company_id / module_id / source_kind / status).
-//     POST   /grants — create a manual grant (reason required).
-//     GET    /{id} — one entitlement.
-//     PATCH  /{id} — revoke / extend / change a grant.
-//     DELETE /{id} — delete a manual-grant row (admin only;
+//     POST   /grants - create a manual grant (reason required).
+//     GET    /{id} - one entitlement.
+//     PATCH  /{id} - revoke / extend / change a grant.
+//     DELETE /{id} - delete a manual-grant row (admin only;
 //            history is kept; never tenant data).
-//     GET    /history — entitlement history per tenant/module
+//     GET    /history - entitlement history per tenant/module
 //            (paginated, filter by company_id / module_id /
 //            action).
-//     GET    /denied-attempts — denied enable attempts (paginated,
+//     GET    /denied-attempts - denied enable attempts (paginated,
 //            filter by company_id / module_id).
-//     GET    /settings — entitlement settings (view).
-//     PUT    /settings — update settings (manage).
-//     POST   /sweep — run the lapse/grace sweep now (manage).
-//   AI (smart module, suggestion only — never purchases):
-//     POST   /ai/suggest — suggest which package unlocks the
+//     GET    /settings - entitlement settings (view).
+//     PUT    /settings - update settings (manage).
+//     POST   /sweep - run the lapse/grace sweep now (manage).
+//   AI (smart module, suggestion only - never purchases):
+//     POST   /ai/suggest - suggest which package unlocks the
 //            modules this tenant tried to use most, from the
 //            denied-attempt audit log.
-//     GET    /ai/capabilities — the AI capabilities this module
+//     GET    /ai/capabilities - the AI capabilities this module
 //            offers.
 //
 // Events emitted on the hook bus:
-//   - `entitlement.granted` — `{"company_id", "module_id",
+//   - `entitlement.granted` - `{"company_id", "module_id",
 //     "source_kind", "source_id", "entitlement_id", "expires_at"}`
-//   - `entitlement.revoked` — `{"company_id", "module_id",
+//   - `entitlement.revoked` - `{"company_id", "module_id",
 //     "source_kind", "source_id", "entitlement_id", "reason"}`
-//   - `entitlement.grace_started` — `{"company_id", "module_id",
+//   - `entitlement.grace_started` - `{"company_id", "module_id",
 //     "entitlement_id", "grace_ends_at", "reason"}`
-//   - `entitlement.disabled` — `{"company_id", "module_id",
+//   - `entitlement.disabled` - `{"company_id", "module_id",
 //     "entitlement_id", "reason"}`
-//   - `entitlement.enable_denied` — `{"company_id", "module_id",
+//   - `entitlement.enable_denied` - `{"company_id", "module_id",
 //     "actor_id", "reason", "error_code"}`
 //   - `module.enabled` / `module.disabled` (core events) when a
 //     module is enabled/disabled for a tenant through this module.
 //   - `module.entitlement.granted` / `module.entitlement.denied`
 //     (core constants) are emitted by the licensing check this
 //     module composes with; this module does not re-emit them.
-//   - `entitlement.upgrade_path_requested` — hook QUERY emitted
+//   - `entitlement.upgrade_path_requested` - hook QUERY emitted
 //     when a locked module needs an upgrade path:
 //     `{"company_id", "module_id", "upgrade_paths": []}`.
 //     A handler (SaaS packages / products) may set
 //     `upgrade_paths` to `[{"kind", "id", "name"}]`; when nothing
 //     answers, the path is null with reason
-//     `no_upgrade_path_provider` — never a fabricated product.
-//   - `entitlement.module_usage_requested` — hook QUERY emitted
+//     `no_upgrade_path_provider` - never a fabricated product.
+//   - `entitlement.module_usage_requested` - hook QUERY emitted
 //     by the package-change diff: `{"company_id", "module_id",
 //     "used_outside_package": false}`. A handler that knows the
 //     tenant uses the module outside the package sets the flag;
 //     when nothing answers, the diff treats the module as used
 //     (fail-safe: it lands in `requires_confirmation`).
-//   - `entitlements.ai.suggest_requested` — hook QUERY the AI
+//   - `entitlements.ai.suggest_requested` - hook QUERY the AI
 //     endpoint emits so the AI module can ground or enrich the
 //     suggestion: `{"company_id", "denied_modules": [...]}`.
 //     This module answers it from the denied-attempt log.
-// Events this module listens to (all read defensively — a missing
+// Events this module listens to (all read defensively - a missing
 // field or an unknown record is skipped, never an error):
-//   - `license.revoked`, `license.expiring` (licensing) —
+//   - `license.revoked`, `license.expiring` (licensing) -
 //     entitlements sourced from that license lapse.
 //   - `subscription.cancelled`, `subscription.expired` (store /
-//     billing) — entitlements sourced from that subscription lapse.
-//   - `saas_packages.cancelled` — entitlements sourced from that
+//     billing) - entitlements sourced from that subscription lapse.
+//   - `saas_packages.cancelled` - entitlements sourced from that
 //     package purchase lapse.
-//   - `tenant.module.granted` (tenants) — mirror the grant into a
+//   - `tenant.module.granted` (tenants) - mirror the grant into a
 //     stored entitlement row (`granted_via` maps onto the source
 //     kinds; `preset` and `builtin` map onto nothing, see the
-//     handler). `tenant.module.revoked` — the module's non-manual
+//     handler). `tenant.module.revoked` - the module's non-manual
 //     rows lapse into grace; manual grants survive it.
 //   - `entitlements.check_requested` and
-//     `saas_packages.entitlement.check_requested` — hook QUERY:
+//     `saas_packages.entitlement.check_requested` - hook QUERY:
 //     `{"company_id", "module_id", "allowed": false}`; answered
 //     with the effective state (this is the answer the SaaS
 //     packages provisioning step waits for). The licensing leg is
 //     evaluated through the `AppContext` stashed at `init`, so
 //     the hook answer agrees with the HTTP path.
-//   - `entitlements.write.check_requested` — hook QUERY:
+//   - `entitlements.write.check_requested` - hook QUERY:
 //     `{"company_id", "module_id", "write_allowed": false}`;
 //     answered false while the module is locked or in read-only
 //     grace.
-//   - `entitlements.grant_requested` — hook COMMAND: another
+//   - `entitlements.grant_requested` - hook COMMAND: another
 //     module (SaaS packages provisioning, store checkout) asks
 //     this module to record a grant:
 //     `{"company_id", "module_id", "source_kind", "source_id",
@@ -160,7 +160,7 @@
 //     (`emitter`) and be on the `GRANT_EMITTERS` allowlist
 //     (`saas_packages`, `store`); anything else is rejected and
 //     mints nothing.
-//   - `entitlements.ai.suggest_requested` — answered as above.
+//   - `entitlements.ai.suggest_requested` - answered as above.
 //
 // Persistence: the live data lives in in-memory DashMap stores
 // (the same approach the licensing and SaaS-packages modules use).
@@ -186,7 +186,7 @@
 // TENANT-SCOPED DATA ACCESS (standing rule). Every tenant-scoped
 // endpoint in this module resolves its tenant ONLY through the
 // tenant context (`TenantScope::resolve`, backed by
-// `TenantContext::from_request` — the context the
+// `TenantContext::from_request` - the context the
 // `TenantResolutionMiddleware` attaches from the Host header).
 // The dashboard listing (`GET /my-modules`) and every other
 // tenant endpoint fail closed with 403 `tenant.required` when no
@@ -201,7 +201,7 @@
 //     (`licensing::has_module_entitlement`, `license.revoked`,
 //     `subscription.cancelled` / `.expired`,
 //     `saas_packages.cancelled`, `entitlements.grant_requested`)
-//     — this module never queries the licenses, subscriptions,
+//     - this module never queries the licenses, subscriptions,
 //     or packages tables directly (it references no control-plane
 //     table at all; its only Diesel surface is its own migration
 //     tables, supplied as snippets for the integrator).
@@ -211,8 +211,8 @@
 //     id (`tenant_id`, uuidv7) alongside the company key, is
 //     written only under a resolved tenant scope, and its durable
 //     tables (`2026-11-22-000092_entitlements`) are TENANT-SCHEMA
-//     tables — created per tenant schema by the migration runner
-//     with the search_path set to that tenant's schema — never
+//     tables - created per tenant schema by the migration runner
+//     with the search_path set to that tenant's schema - never
 //     `public` tables. Control-plane tables (tenants,
 //     subscriptions, domains, billing, licensing) stay in
 //     `public` and are accessed only through their own
@@ -223,14 +223,14 @@
 //     take no tenant scope from a request and name the tenant
 //     explicitly in the filter or body.
 // CONVERGENCE with batch 17 (tenancy plumbing), verified on disk
-// at the time of writing — the plumbing EXISTS now:
+// at the time of writing - the plumbing EXISTS now:
 //   - `unified_core::tenancy` (crates/unified-core/src/tenancy.rs`): the single
 //     source of truth for schema-per-tenant isolation, with
 //     `TenantContext { tenant_id: Uuid, schema_name,
 //     company_id: Option<String>, site_id: Option<String> }`,
 //     `TenantContext::from_http_request(req)` (fail-closed
 //     extractor: 401 when no tenant context, 403 when the tenant
-//     id is not a UUID), `schema_name(Uuid)` — the ONLY place a
+//     id is not a UUID), `schema_name(Uuid)` - the ONLY place a
 //     tenant schema name is ever built (`tenant_` + 32 lowercase
 //     hex), `is_valid_schema_name`, `schema_name_for_str`,
 //     `with_tenant_connection` (the ONLY sanctioned Diesel path
@@ -241,7 +241,7 @@
 //     control-plane handlers. This module resolves tenants ONLY
 //     through `TenantContext::from_http_request` (mapped to 403
 //     `tenant.required` per the standing rule) and never builds
-//     a schema name itself — it reports the derived
+//     a schema name itself - it reports the derived
 //     `schema_name` the context already carries.
 //   - The middleware underneath is `TenantResolutionMiddleware`
 //     (priority 950, wired in `src/http/server.rs`), which
@@ -253,7 +253,7 @@
 //     embedded set inside each tenant schema, so this module's
 //     `000092_entitlements` migration is applied per tenant
 //     schema automatically once the integrator runs tenant
-//     provisioning — no per-module registration is needed for it.
+//     provisioning - no per-module registration is needed for it.
 //   - `tenant_module_grants` (migration `000094_tenant_
 //     isolation`, control-plane `public` table, owned by the
 //     tenants module) is the DURABLE grant record: which modules
@@ -270,14 +270,14 @@
 //     `builtin` needs none (non-sellable modules need no
 //     entitlement). The tenants module is NOT registered in
 //     `src/modules/mod.rs` yet, so none of its events fire until
-//     it registers — same status as `saas_packages`.
+//     it registers - same status as `saas_packages`.
 //   - REMAINING GAP: the in-memory DashMap stores used this
 //     round are process-global keyed by company id, not
 //     per-schema Diesel reads/writes through
 //     `with_tenant_connection`; the durable per-schema wiring
 //     (schema/models entries in the notes) replaces them at
 //     integration time. Until then a restart loses grants made
-//     since the last durable write — the same limitation the
+//     since the last durable write - the same limitation the
 //     licensing and SaaS-packages modules carry.
 //   - ALSO OPEN: the admin grant endpoint and the grant hook
 //     resolve the tenant namespace id through
@@ -285,7 +285,7 @@
 //     else the company id itself when it is a tenant UUID (the
 //     tenants module uses the tenant id as the company id). A
 //     non-UUID company with no explicit tenant fails closed with
-//     400 (admin) or `granted: false` (hook) — the old default
+//     400 (admin) or `granted: false` (hook) - the old default
 //     of `tenant_id = company_id` is gone. There is no separate
 //     company -> tenant lookup in the tree to consult.
 //
@@ -308,7 +308,7 @@
 //     already listens to. Until the provisioning step emits the
 //     grant command, a purchase enables modules without an
 //     entitlement row here, and this module's diff treats those
-//     modules as entitled only through the licensing check —
+//     modules as entitled only through the licensing check -
 //     recorded as OPEN below.
 //   - The AI contract (`AiCapability`, `register_ai_capabilities`,
 //     `run_ai_capability` in `crate::modules::ai`) does NOT exist
@@ -322,7 +322,7 @@
 //     items, register the `suggest_requested` capability there and
 //     have the AI endpoint delegate through `run_ai_capability`.
 //
-// OPEN — known gaps, recorded honestly instead of hidden:
+// OPEN - known gaps, recorded honestly instead of hidden:
 //   - `cargo check` has never run in this environment (no Rust
 //     toolchain, crates.io blocked), so compilation is NOT
 //     verified; see the builder report for the verification that
@@ -375,9 +375,7 @@ use std::sync::Arc;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Module.
-// ---------------------------------------------------------------------------
 
 pub struct EntitlementsModule {
     pub(crate) state: Arc<EntitlementsState>,

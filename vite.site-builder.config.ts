@@ -1,9 +1,9 @@
 import { defineConfig } from "vite";
 
-// Site-builder editor build (GrapeJS, task 353).
+// Site-builder editor build (GrapeJS).
 //
 // The admin page `admin-site-builder` loads this bundle from
-// `/assets/site-builder/dist/` — the Rust server's static asset
+// `/assets/site-builder/dist/` - the Rust server's static asset
 // route serves it from disk, exactly like the React track's
 // `assets/react/dist/`. GrapeJS is bundled locally (no runtime CDN:
 // a self-hosted ERP must work without one); the email builder's

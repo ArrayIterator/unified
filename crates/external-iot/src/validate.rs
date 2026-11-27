@@ -1,11 +1,9 @@
-//! IoT external module (split from lib.rs; moved verbatim).
+//! IoT external module.
 
 use super::*;
 
 
-// ---------------------------------------------------------------------------
 // Validation helpers (pure, unit-tested)
-// ---------------------------------------------------------------------------
 
 fn is_valid_tenant_id(value: &str) -> bool {
     !value.is_empty()

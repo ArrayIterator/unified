@@ -10,9 +10,7 @@ use std::sync::Arc;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Handlers: consent types and consent records
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_consent_types(
     ctx: web::Data<Arc<AppContext>>,

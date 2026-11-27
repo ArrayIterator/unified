@@ -1,4 +1,4 @@
-// Domain Verification — Tokens and attempts (in-memory stores; authoritative).
+// Domain Verification - Tokens and attempts (in-memory stores; authoritative).
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -20,9 +20,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Tokens and attempts (in-memory stores; authoritative).
-// ---------------------------------------------------------------------------
 
 /// One issued verification token. The raw token is NEVER stored:
 /// only its SHA-256 hex digest (`token_hash`) is kept. The rendered

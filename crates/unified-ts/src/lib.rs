@@ -2,7 +2,7 @@
 //
 // Transpile-only: OXC parses the TypeScript source, strips and
 // transforms the TypeScript syntax, and emits plain JavaScript. No
-// JavaScript engine is involved anywhere — the server never executes
+// JavaScript engine is involved anywhere - the server never executes
 // the scripts; the browser runs the emitted JavaScript. That is why
 // this crate is small and has no runtime cost beyond startup.
 //
@@ -20,7 +20,7 @@
 // `assets/js/` directory; the returned map (public path ->
 // JavaScript source) is held in RAM and served from memory, so no
 // `.js` files exist in the repository. `tsc --noEmit` (package.json
-// `check` script) is the dev-time type check — the transpiler itself
+// `check` script) is the dev-time type check - the transpiler itself
 // never type-checks.
 
 use std::collections::HashMap;
@@ -92,7 +92,7 @@ pub fn transpile_typescript(source: &str, filename: &str) -> Result<String, Tran
     }
     let mut program = parsed.program;
     // The transformer needs semantic scoping (OXC 0.159 runs it via
-    // `build_with_scoping`); a plain semantic pass is enough here —
+    // `build_with_scoping`); a plain semantic pass is enough here -
     // the dashboard scripts use no enums or scope-dependent syntax.
     let scoping = SemanticBuilder::new()
         .build(&program)

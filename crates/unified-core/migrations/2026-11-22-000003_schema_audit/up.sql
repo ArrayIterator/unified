@@ -39,11 +39,9 @@
 --     vcs_provider_settings keeps provider as its primary key; both
 --     are deliberate natural keys, not surrogate-UUID tables.
 
--- ---------------------------------------------------------------------------
 -- 1. Missing created_at / updated_at columns.
 --    NOT NULL DEFAULT now() backfills existing rows with the migration
 --    time, which is the honest value for a pre-launch database.
--- ---------------------------------------------------------------------------
 ALTER TABLE software_releases
     ADD COLUMN updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
 
@@ -74,14 +72,12 @@ ALTER TABLE software_tag_assignments
 ALTER TABLE license_activations
     ADD COLUMN updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
 
--- ---------------------------------------------------------------------------
 -- 2. Money: DOUBLE PRECISION -> NUMERIC(19,4).
 --    USING (col::numeric(19,4)) converts the stored binary value to its
 --    decimal representation; on a pre-launch database the values are
 --    short decimals, so no rounding surprises are expected. Existing
 --    DOUBLE values with more than 4 fractional digits would be rounded
 --    by the cast; see docs/SCHEMA.md.
--- ---------------------------------------------------------------------------
 ALTER TABLE store_products
     ALTER COLUMN price TYPE NUMERIC(19,4) USING price::numeric(19,4),
     ALTER COLUMN renewal_price TYPE NUMERIC(19,4) USING renewal_price::numeric(19,4);
@@ -102,12 +98,10 @@ ALTER TABLE store_order_items
     ALTER COLUMN unit_price TYPE NUMERIC(19,4) USING unit_price::numeric(19,4),
     ALTER COLUMN line_total TYPE NUMERIC(19,4) USING line_total::numeric(19,4);
 
--- ---------------------------------------------------------------------------
 -- 3. CHECK constraints.
 --    Every value list below is taken from the validation code in
 --    src/modules (licensing.rs, domains.rs, geo.rs, store.rs), not
 --    invented here; see docs/SCHEMA.md for the source of each list.
--- ---------------------------------------------------------------------------
 
 -- Licenses: the four states validated in licensing.rs.
 ALTER TABLE licenses
@@ -205,10 +199,8 @@ ALTER TABLE software_taxonomy
     ADD CONSTRAINT chk_software_taxonomy_depth
         CHECK (depth >= 0);
 
--- ---------------------------------------------------------------------------
 -- 4. Missing indexes: every foreign key and every filtered / searched
 --    column gets one. Indexes that already exist are not repeated here.
--- ---------------------------------------------------------------------------
 -- Foreign keys without an index.
 CREATE INDEX IF NOT EXISTS idx_store_order_items_tier_id
     ON store_order_items (tier_id);
@@ -253,12 +245,10 @@ CREATE INDEX IF NOT EXISTS idx_store_entitlements_expires_at
 CREATE INDEX IF NOT EXISTS idx_domains_ssl_expires_at
     ON domains (ssl_expires_at);
 
--- ---------------------------------------------------------------------------
 -- 5. Missing unique constraints.
 --    Safe on a pre-launch database: no production rows exist yet, and
 --    both rules mirror uniqueness the application already assumes
 --    (licenses.license_key is unique; one release per version + channel).
--- ---------------------------------------------------------------------------
 CREATE UNIQUE INDEX IF NOT EXISTS uq_store_issued_licenses_license_key
     ON store_issued_licenses (license_key);
 

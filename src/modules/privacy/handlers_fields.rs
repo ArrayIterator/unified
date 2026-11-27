@@ -10,9 +10,7 @@ use std::sync::Arc;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Handlers: redaction, field declarations, payload validation
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn redact(
     ctx: web::Data<Arc<AppContext>>,

@@ -7,9 +7,7 @@ use std::sync::{Arc};
 use super::state::DepartmentsState;
 use super::validation::{now, within_working_hours};
 
-// ---------------------------------------------------------------------------
 // Hook handlers
-// ---------------------------------------------------------------------------
 
 /// Answer `ticket.route_requested` with the routed department, when
 /// one matches. No result means "no route" and the ticket stays

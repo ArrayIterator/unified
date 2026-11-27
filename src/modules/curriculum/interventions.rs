@@ -1,4 +1,4 @@
-//! Curriculum module — competency-based school curricula. — Intervention handlers (remedial + enrichment).
+//! Curriculum module - competency-based school curricula. - Intervention handlers (remedial + enrichment).
 //!
 //! Split from `src/modules/curriculum.rs`; behaviour unchanged.
 

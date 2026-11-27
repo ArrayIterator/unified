@@ -13,10 +13,10 @@ use super::types::QualityAlert;
 use super::types::QualityCriterion;
 use super::types::QualityPoint;
 
-// --- Loaders ---------------------------------------------------------------
+// Loaders
 
 /// Loaders are tenant-scoped: a record owned by another tenant
-/// is reported as not found, never as a forbidden record — the
+/// is reported as not found, never as a forbidden record - the
 /// caller learns nothing about records outside its tenant.
 fn not_found(what: &str, id: Uuid) -> UnifiedError {
     UnifiedError::not_found(format!("{what} not found: {id}"))

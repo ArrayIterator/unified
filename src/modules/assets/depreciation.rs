@@ -22,7 +22,7 @@ use super::helpers::{minor_to_major};
 /// Calculator module is not registered, or no handler answers, or
 /// the answer carries an error, the asset is left with
 /// `depreciation_status: "pending"` and the reason in
-/// `depreciation_error` — an honest record, never a guessed
+/// `depreciation_error` - an honest record, never a guessed
 /// schedule. Returns true when a schedule was stored.
 ///
 /// Resolved (A-M1): the Calculator module now answers

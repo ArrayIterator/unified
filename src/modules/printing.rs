@@ -1,4 +1,4 @@
-// Printing module — paper sizes, thermal (ESC/POS) printing,
+// Printing module - paper sizes, thermal (ESC/POS) printing,
 // printer profiles, and the print-job queue.
 
 // Split into one file per concern under `src/modules/printing/`;

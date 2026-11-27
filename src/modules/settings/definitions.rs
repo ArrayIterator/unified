@@ -1,7 +1,7 @@
-//! Settings - site definitions (WordPress General Settings parity, task 351).
+//! Settings - site definitions (WordPress General Settings parity).
 //!
 //! Data-driven definitions for the `site` namespace: the fields
-//! WordPress shows under Settings > General, as data — not a
+//! WordPress shows under Settings > General, as data - not a
 //! hard-coded form. The generic KV store, the `settings.merge` /
 //! `config.validate` hooks and the GET/PUT/DELETE API stay exactly
 //! as they are; these definitions add a discovery + validation
@@ -9,8 +9,8 @@
 //! lists them with their effective values (stored value, or the
 //! compiled-in default when nothing is stored), and a
 //! `config.validate` handler refuses values that do not match their
-//! definition. Unknown `site/*` keys are NOT rejected — the KV store
-//! stays open for modules that keep their own site keys — but a
+//! definition. Unknown `site/*` keys are NOT rejected - the KV store
+//! stays open for modules that keep their own site keys - but a
 //! value for a KNOWN key must match its type, its option list, and
 //! its shape rule (URL, email, non-empty title).
 //!
@@ -18,7 +18,7 @@
 //! (420 zones including UTC); the role options mirror the seven
 //! static default roles (`roles/seeds.rs`) and the language options
 //! are derived live from the built-in language catalogue
-//! (`i18n/languages.rs`) — the timezone options likewise from
+//! (`i18n/languages.rs`) - the timezone options likewise from
 //! `IANA_TIMEZONES` in this file. Both are generated, never
 //! hand-kept literals, so a change to either source list flows
 //! straight into validation and the definitions endpoint.
@@ -624,7 +624,7 @@ fn build_site_definitions() -> Vec<SiteSettingDef> {
     ];
     // The timezone and language option lists are derived from their
     // single sources -- the IANA list in this file and the i18n
-    // language catalogue -- never hand-kept literals (task 361). The
+    // language catalogue -- never hand-kept literals. The
     // literal above leaves both `options` as `None`; they are filled
     // in here so validation and the definitions endpoint always agree
     // with the source lists.
@@ -833,7 +833,7 @@ mod tests {
             .unwrap();
         // Mirrors the built-in catalogue exactly: same codes, same
         // count, same order. The catalogue grew from 12 to 42
-        // languages (task 361); this test pins the derivation, not
+        // languages; this test pins the derivation, not
         // the number.
         assert_eq!(
             languages.len(),

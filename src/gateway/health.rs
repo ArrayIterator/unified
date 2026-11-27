@@ -13,7 +13,7 @@
 //     observed by the management module and update this state too.
 //
 // Split of responsibilities (forced by the public API surface):
-//   - Balancer pools: the load-balancer module owns probing — it has
+//   - Balancer pools: the load-balancer module owns probing - it has
 //     the full backend list and its own sweeper, and the gateway
 //     cannot enumerate a balancer's backends (the list accessor is
 //     private; only `eligible_backends` is public). The gateway
@@ -346,7 +346,7 @@ async fn probe_lb_backend(
 
 /// One sweep pass: probe every direct pool address that is due, and
 /// every currently-eligible load-balancer backend that is due. A
-/// backend the load balancer already excluded is not probed here —
+/// backend the load balancer already excluded is not probed here -
 /// its recovery is observed through `lb.backend.healthy` events.
 /// Direct addresses marked unhealthy ARE re-probed (they are
 /// enumerable from the rules), so recovery re-adds them.

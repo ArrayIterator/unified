@@ -20,9 +20,7 @@ use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 use super::{constants::*, types::*, seed::*, auth::*, helpers::*, provisioning::*, handlers_packages::*, handlers_purchases::*, handlers_ai::*, events::*, module::*};
 
-// ---------------------------------------------------------------------------
 // In-memory stores (authoritative at runtime; see the module header).
-// ---------------------------------------------------------------------------
 
 #[derive(Clone)]
 pub struct SaasPackagesState {

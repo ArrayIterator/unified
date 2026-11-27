@@ -12,9 +12,7 @@ use std::sync::Arc;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct NotificationsModule {
     pub(crate) state: Arc<NotificationsState>,

@@ -13,9 +13,7 @@ use super::types::{CreateTag, CreateTaxonomyNode, MoveTaxonomyNode, PERM_SOFTWAR
 use super::state::SoftwareState;
 use super::validation::{build_tree, is_descendant_of, matches_search, new_id, now, paginate, recompute_subtree, respond_created, slugify, taxonomy_path};
 
-// ---------------------------------------------------------------------------
 // Taxonomy handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_taxonomy(
     ctx: web::Data<Arc<AppContext>>,
@@ -437,9 +435,7 @@ pub(crate) async fn taxonomy_tree(
     json::success_response(page, 200)
 }
 
-// ---------------------------------------------------------------------------
 // Tag handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_tags(
     ctx: web::Data<Arc<AppContext>>,

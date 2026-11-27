@@ -12,9 +12,7 @@ use super::{constants::*, types::*, inputs::*, state::*, helpers::*, handlers_in
 
 
 
-// ---------------------------------------------------------------------------
 // Escalation-policy handlers
-// ---------------------------------------------------------------------------
 pub(crate) async fn list_policies(
     ctx: web::Data<Arc<AppContext>>,
     state: web::Data<IncidentsState>,
@@ -51,7 +49,7 @@ pub(crate) fn validate_severities(values: &[String]) -> UnifiedResult<Vec<String
         let trimmed = raw.trim().to_lowercase();
         if IncidentSeverity::from_str(&trimmed).is_none() {
             return Err(UnifiedError::bad_request(format!(
-                "applies_to_severities must contain only critical, high, medium, low — got \"{raw}\""
+                "applies_to_severities must contain only critical, high, medium, low - got \"{raw}\""
             )));
         }
         if !out.contains(&trimmed) {

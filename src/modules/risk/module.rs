@@ -1,4 +1,4 @@
-// risk — module.
+// risk - module.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -23,9 +23,7 @@ use super::handlers_plans::*;
 use super::handlers_templates::*;
 use super::handlers_instances::*;
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct RiskModule {
     pub(crate) state: Arc<RiskState>,

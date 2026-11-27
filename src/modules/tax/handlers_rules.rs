@@ -1,4 +1,4 @@
-// Tax module — tax rule and computation handlers.
+// Tax module - tax rule and computation handlers.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use super::*;
@@ -23,9 +23,7 @@ use std::time::Duration;
 use url::Url;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Handlers: rules
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_rules(
     ctx: web::Data<Arc<AppContext>>,
@@ -416,9 +414,7 @@ pub(crate) async fn delete_rule(
     json::respond(result, ctx.is_debug())
 }
 
-// ---------------------------------------------------------------------------
 // Handlers: compute and computations
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn compute_tax(
     ctx: web::Data<Arc<AppContext>>,

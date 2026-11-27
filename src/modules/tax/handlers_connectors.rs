@@ -1,4 +1,4 @@
-// Tax module — connector and audit handlers.
+// Tax module - connector and audit handlers.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use super::*;
@@ -23,9 +23,7 @@ use std::time::Duration;
 use url::Url;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Handlers: connectors
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_connectors(
     ctx: web::Data<Arc<AppContext>>,
@@ -262,8 +260,8 @@ pub(crate) async fn update_connector(
         let company_id = acting_company(&ctx, &_tenant, &req, &caller)?;
         let input = body.into_inner();
         // Read the current connector first, with no write guard held,
-        // so every validation — including the name-uniqueness scan
-        // over the same map — runs before any mutation is applied.
+        // so every validation - including the name-uniqueness scan
+        // over the same map - runs before any mutation is applied.
         // A failed validation must leave the stored connector
         // untouched.
         let current = state
@@ -669,9 +667,7 @@ pub(crate) async fn test_connector(
     json::success_response(result, 200)
 }
 
-// ---------------------------------------------------------------------------
 // Handlers: audit trail
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_audit(
     ctx: web::Data<Arc<AppContext>>,

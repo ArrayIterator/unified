@@ -1,4 +1,4 @@
-// pricing — handlers rules.
+// pricing - handlers rules.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -31,9 +31,7 @@ use super::handlers_bundles::*;
 use super::handlers_reconciliation::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // HTTP handlers: discount rules.
-// ---------------------------------------------------------------------------
 
 pub(crate) fn rule_from_create(
     state: &PricingState,

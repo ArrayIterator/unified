@@ -25,10 +25,8 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One certificate-mode change per row: the newest row per domain is
 -- the domain's current mode; earlier rows are its mode history.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS domain_cert_modes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     domain VARCHAR NOT NULL,
@@ -53,9 +51,7 @@ CREATE INDEX IF NOT EXISTS idx_domain_cert_modes_mode
 CREATE INDEX IF NOT EXISTS idx_domain_cert_modes_status
     ON domain_cert_modes (status);
 
--- ---------------------------------------------------------------------------
 -- One stored Cloudflare detection result per domain.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS cloudflare_detections (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     domain VARCHAR NOT NULL,
@@ -77,11 +73,9 @@ CREATE INDEX IF NOT EXISTS idx_cloudflare_detections_detected
 CREATE INDEX IF NOT EXISTS idx_cloudflare_detections_checked_at
     ON cloudflare_detections (checked_at);
 
--- ---------------------------------------------------------------------------
 -- Stored Cloudflare IP-range snapshot (singleton row): fetched ranges
 -- plus their fetch date and sources. Empty lists mean "never fetched
 -- successfully"; the DNS detection method reports that honestly.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS cloudflare_ip_ranges (
     key VARCHAR PRIMARY KEY DEFAULT 'global',
     v4 JSONB NOT NULL DEFAULT '[]'::jsonb,

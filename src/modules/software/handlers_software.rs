@@ -22,9 +22,7 @@ use super::state::SoftwareState;
 use super::validation::{matches_search, new_id, now, paginate, respond_created, slugify, validate_kind, validate_status_transition, validate_url};
 use super::handlers_versions::release_files;
 
-// ---------------------------------------------------------------------------
 // Software record handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_software(
     ctx: web::Data<Arc<AppContext>>,
@@ -588,7 +586,7 @@ pub(crate) async fn software_release_history(
 
 /// Latest published releases.
 ///
-/// PUBLIC endpoint: no caller/permission gate by design — only
+/// PUBLIC endpoint: no caller/permission gate by design - only
 /// `published` releases are listed, and access is gated by the API
 /// Manager's `ApiAccessRule` for this path (default deny).
 pub(crate) async fn latest_releases(
@@ -642,9 +640,7 @@ pub(crate) async fn latest_releases(
     json::success_response(page, 200)
 }
 
-// ---------------------------------------------------------------------------
 // Software tag assignment handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_software_tags(
     ctx: web::Data<Arc<AppContext>>,

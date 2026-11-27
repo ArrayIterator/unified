@@ -17,9 +17,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Handlers: attendance
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_attendance(
     ctx: web::Data<Arc<AppContext>>,

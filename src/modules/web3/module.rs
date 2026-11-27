@@ -17,9 +17,7 @@ use super::polling::on_poll_requested;
 use super::state::*;
 use super::ai_capabilities::AI_CAPABILITIES;
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct Web3Module {
     state: Arc<Web3State>,

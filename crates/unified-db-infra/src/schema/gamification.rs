@@ -3,9 +3,7 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Gamification (migration 000059_gamification).
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     gamification_rules (id) {

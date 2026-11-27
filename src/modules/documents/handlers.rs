@@ -1,4 +1,4 @@
-// documents — HTTP handlers.
+// documents - HTTP handlers.
 
 use super::types::UpdateDocumentMetadataRequest;
 use super::validation::push_multipart_text;
@@ -15,9 +15,7 @@ use serde_json::{Value, json};
 use std::path::Path;
 use std::sync::Arc;
 
-// ---------------------------------------------------------------------------
-// Handlers — documents
-// ---------------------------------------------------------------------------
+// Handlers - documents
 
 pub(crate) async fn list_documents(
     state: web::Data<Arc<DocumentsState>>,
@@ -45,8 +43,8 @@ pub(crate) async fn list_documents(
         .documents
         .iter()
         .map(|entry| entry.value().clone())
-        // Role-scoped listing (task 355): the endpoint itself
-        // filters — an author never receives another owner's
+        // Role-scoped listing: the endpoint itself
+        // filters - an author never receives another owner's
         // private row (see `list_visible` in validation.rs).
         .filter(|document| list_visible(document, &_scope, is_admin, &found.actor))
         .filter(|document| {
@@ -171,7 +169,7 @@ pub(crate) async fn update_document_metadata(
 /// `module_id`, `company_id` (optional), `scope` (optional,
 /// default `owner`), `visibility` (optional, `public` or
 /// `private`, default `private`), `folder_id` (optional, the
-/// target folder — empty or absent means the library root) plus
+/// target folder - empty or absent means the library root) plus
 /// one `file` field per file.
 /// Each file is validated against the per-module allowlist before
 /// acceptance; per-file outcomes are reported so one bad file does
@@ -481,7 +479,7 @@ pub(crate) async fn issue_signed_url(
         // The scope is embedded in the token: the redemption route
         // has no tenant context, so the token itself must carry the
         // scope the provider root is resolved from. The URL points
-        // at the private file route (the API is JSON-only — file
+        // at the private file route (the API is JSON-only - file
         // bytes never flow through `/api/v1/*`); the token travels
         // as a query parameter.
         let storage_scope = StorageScope::Tenant(_tenant.tenant_id);
@@ -497,9 +495,7 @@ pub(crate) async fn issue_signed_url(
     json::respond(result, debug)
 }
 
-// ---------------------------------------------------------------------------
-// Handlers — versions
-// ---------------------------------------------------------------------------
+// Handlers - versions
 
 /// Re-upload one file as a new version of an existing document
 /// (multipart field `file`).
@@ -871,9 +867,7 @@ pub(crate) async fn rescan_document(
     json::respond(result, debug)
 }
 
-// ---------------------------------------------------------------------------
-// Handlers — visibility + picker
-// ---------------------------------------------------------------------------
+// Handlers - visibility + picker
 
 /// Flip a document's visibility between public and private
 /// (`POST /{id}/flip`, body `{"visibility": "public"|"private"}`).
@@ -925,7 +919,7 @@ pub(crate) async fn flip_document_visibility(
 
 /// Shared media picker (`GET /picker`): the public-only tab of
 /// the media library. Returns ONLY public documents in the
-/// caller's company scope — private files are invisible here
+/// caller's company scope - private files are invisible here
 /// until a manager/admin flips them public. Any author in the
 /// company may attach a public file (public visibility means
 /// "visible to the tenant"); the document's owner/admin rules
@@ -933,7 +927,7 @@ pub(crate) async fn flip_document_visibility(
 /// pagination parameters.
 /// Picker visibility: only PUBLIC documents, inside the caller's
 /// company scope, ever reach the picker list. A private file is
-/// invisible until a manager/admin flips it public — the picker tab
+/// invisible until a manager/admin flips it public - the picker tab
 /// cannot leak it, whatever the search terms.
 fn picker_visible(document: &DocumentRecord, caller_company: &Option<String>) -> bool {
     document.visibility == "public" && in_company_scope(&document.company_id, caller_company)
@@ -1041,7 +1035,7 @@ mod tests {
             &test_document("public", "company-1"),
             &company
         ));
-        // Private + in scope: invisible — the picker tab cannot
+        // Private + in scope: invisible - the picker tab cannot
         // leak it, whatever the search terms.
         assert!(!picker_visible(
             &test_document("private", "company-1"),

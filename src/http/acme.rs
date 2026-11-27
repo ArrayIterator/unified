@@ -130,7 +130,7 @@ impl AcmeProvider {
     /// Whether this client can obtain a wildcard certificate from
     /// the provider. Always false: the providers can issue
     /// wildcards, but only over DNS-01, and this client is HTTP-01
-    /// only — `order_certificate` rejects `*.` domains. Reporting
+    /// only - `order_certificate` rejects `*.` domains. Reporting
     /// the provider's capability here would over-claim what the
     /// client can actually do.
     pub fn supports_wildcard(&self) -> bool {
@@ -578,7 +578,6 @@ fn renewal_domains(storage: &SslStorage, domain: &str) -> Vec<String> {
     domains
 }
 
-// ---------------------------------------------------------------------------
 // Advanced certificate management: challenge support matrix, key types,
 // and the config-first ACME configuration.
 //
@@ -591,7 +590,6 @@ fn renewal_domains(storage: &SslStorage, domain: &str) -> Vec<String> {
 // same reason (see `order_certificate` above). A certificate issued
 // with DNS-01 elsewhere can still be installed through the
 // certificates module, which validates it before it goes live.
-// ---------------------------------------------------------------------------
 
 /// Default expiry-alert thresholds, in days before expiry.
 pub const DEFAULT_ALERT_THRESHOLDS: &[i64] = &[30, 14, 7, 1];

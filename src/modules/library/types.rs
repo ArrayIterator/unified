@@ -134,9 +134,7 @@ pub const AI_CAPABILITIES: &[AiCapability] = &[
     },
 ];
 
-// ---------------------------------------------------------------------------
 // Configurable settings (admin-editable; defaults are defaults only)
-// ---------------------------------------------------------------------------
 
 /// All behaviour-shaping lists and defaults of this module. An
 /// administrator edits these through `PUT /settings`; no code path
@@ -271,9 +269,7 @@ impl Default for LibrarySettings {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Entities
-// ---------------------------------------------------------------------------
 
 /// One catalog entry: a book, ebook, journal, or other item. The
 /// physical and digital forms share one record; `digital_ref` /
@@ -485,9 +481,7 @@ pub struct DigitalAccess {
     pub updated_at: DateTime<Utc>,
 }
 
-// ---------------------------------------------------------------------------
 // Request bodies
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct CreateItemRequest {

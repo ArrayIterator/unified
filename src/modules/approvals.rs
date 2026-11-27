@@ -1,4 +1,4 @@
-// Generic Approvals module — data-driven approval workflows for any
+// Generic Approvals module - data-driven approval workflows for any
 // record in any module, without duplicating another module's data.
 
 // Split into per-concern files under `src/modules/approvals/`; the full

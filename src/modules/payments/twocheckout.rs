@@ -8,9 +8,7 @@ use super::{events::*, card_validation::*, card_settings::*, limits::*, provider
 
 
 
-// ---------------------------------------------------------------------------
 // 2Checkout.
-// ---------------------------------------------------------------------------
 impl ProviderAdapter {
     /// 2Checkout charge: places an order with a client-side token
     /// (EesToken). Billing details are required by 2CO and must be

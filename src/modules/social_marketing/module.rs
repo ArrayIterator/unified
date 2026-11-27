@@ -35,9 +35,7 @@ use unified_core::error::UnifiedResult;
 use unified_core::hooks::{HookBus, HookContext};
 use unified_core::modules::{Module, ModuleRegistry, RouteInfo, RouteVersionSupport};
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct SocialMarketingModule {
     pub(crate) state: SocialMarketingState,
@@ -245,7 +243,7 @@ impl Module for SocialMarketingModule {
                 method: "GET",
                 path: "/api/v1/social-marketing/accounts",
                 owner: "social_marketing",
-                description: "List connected social accounts (paginated, filter by network, connected, enabled, token-expired; search by handle/display name; masked view — no credential).",
+                description: "List connected social accounts (paginated, filter by network, connected, enabled, token-expired; search by handle/display name; masked view - no credential).",
                 auth,
             },
             RouteInfo {
@@ -259,7 +257,7 @@ impl Module for SocialMarketingModule {
                 method: "GET",
                 path: "/api/v1/social-marketing/accounts/{account_id}",
                 owner: "social_marketing",
-                description: "Get one social account (masked view — the credential and webhook secret never appear).",
+                description: "Get one social account (masked view - the credential and webhook secret never appear).",
                 auth,
             },
             RouteInfo {
@@ -350,7 +348,7 @@ impl Module for SocialMarketingModule {
                 method: "POST",
                 path: "/api/v1/social-marketing/posts/{post_id}/schedule",
                 owner: "social_marketing",
-                description: "Schedule a post for a future publish time; emits social.post.scheduled for a scheduler to pick up — this module runs no runner (manager).",
+                description: "Schedule a post for a future publish time; emits social.post.scheduled for a scheduler to pick up - this module runs no runner (manager).",
                 auth,
             },
             RouteInfo {
@@ -441,7 +439,7 @@ impl Module for SocialMarketingModule {
                 method: "POST",
                 path: "/api/v1/social-marketing/metrics-ingest/{account_id}",
                 owner: "social_marketing",
-                description: "PUBLIC (webhook-secret gated): provider metrics-ingest callback — upserts reported metric values for one post targeting this account. Metrics are reported values only; this module never fetches live numbers.",
+                description: "PUBLIC (webhook-secret gated): provider metrics-ingest callback - upserts reported metric values for one post targeting this account. Metrics are reported values only; this module never fetches live numbers.",
                 auth: public,
             },
             RouteInfo {

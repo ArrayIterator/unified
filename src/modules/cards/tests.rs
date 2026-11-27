@@ -1,4 +1,4 @@
-// cards — Unit tests.
+// cards - Unit tests.
 
 use super::*;
 use unified_core::hooks::HookContext;
@@ -233,7 +233,7 @@ fn canonical_publisher_test_pans_rejected_in_live_mode() {
         );
     }
     // Every listed test PAN is rejected in live mode (the default)
-    // and accepted in sandbox mode — none slips through as a
+    // and accepted in sandbox mode - none slips through as a
     // valid real card.
     let state = state();
     for pan in TEST_PANS {
@@ -257,7 +257,7 @@ fn canonical_publisher_test_pans_rejected_in_live_mode() {
 fn inactive_laser_brand_is_flagged() {
     let state = state();
     // 6706000000000004: Luhn-valid (sum 20), Laser prefix 6706,
-    // length 16 — a Laser prefix no active brand outranks
+    // length 16 - a Laser prefix no active brand outranks
     // (Maestro wins only the 6304 tie).
     assert_eq!(luhn_checksum("6706000000000004"), Some(20));
     let result = validate(&state, "6706000000000004");
@@ -353,7 +353,7 @@ fn update_custom_rule_override_can_be_cleared() {
 #[test]
 fn hook_path_enforces_max_raw_number_length() {
     let state = Arc::new(state());
-    // 65 characters: one over the limit. Refused at the gate —
+    // 65 characters: one over the limit. Refused at the gate -
     // no validation, no recording, and the input never echoed.
     let long = "4".repeat(MAX_RAW_NUMBER_LENGTH + 1);
     let mut ctx = HookContext::new(

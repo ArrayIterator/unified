@@ -1,4 +1,4 @@
-//! Content Management module. — Category handlers.
+//! Content Management module. - Category handlers.
 //!
 //! Split from `src/modules/content.rs`; behaviour unchanged.
 

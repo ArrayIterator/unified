@@ -17,9 +17,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Auditor handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn create_auditor(
     ctx: web::Data<Arc<AppContext>>,
@@ -792,10 +790,10 @@ mod tests {
         (web::Data::new(Arc::new(ctx)), web::Data::new(state))
     }
 
-    /// The company the handler tests act as (C3 task 315).
+    /// The company the handler tests act as (C3).
     const TEST_COMPANY_ID: &str = "22222222-3333-4444-8555-666666666666";
 
-    /// A request scoped to the test company (C3 task 315):
+    /// A request scoped to the test company (C3):
     /// mutation handlers require a resolved company, so the
     /// happy-path tests carry one on both the tenant context and
     /// the verified caller.

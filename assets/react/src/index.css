@@ -1,7 +1,7 @@
 @import "tailwindcss";
 /* Active theme tokens (themes/<theme>/react/theme.css, resolved
  * through the `@theme` Vite alias): the theme owns the design
- * tokens — the app only consumes them. tailwindcss-animate provides
+ * tokens - the app only consumes them. tailwindcss-animate provides
  * the `animate-in` / `animate-out` utilities the Untitled UI
  * components use. */
 @import "@theme/theme.css";
@@ -14,7 +14,7 @@
  * Semantic colours live in CSS variables that flip under `.dark`;
  * `@theme inline` maps them to Tailwind utilities (bg-surface,
  * text-muted, border-border, ...) so `dark:` classes are not needed
- * for themed surfaces — the variable does the switching.
+ * for themed surfaces - the variable does the switching.
  * Static scales (brand, gold) are declared directly in @theme.
  *
  * Dark mode is class-based: the toggle adds `.dark` to <html>

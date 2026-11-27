@@ -19,7 +19,6 @@ use uuid::Uuid;
 use super::constants::*;
 use super::types::*;
 
-// ---------------------------------------------------------------------------
 // Caller authentication and capability enforcement.
 //
 // Every endpoint in this module requires a valid Auth Manager JWT
@@ -44,7 +43,6 @@ use super::types::*;
 // caller's session token and issued by `GET /api/v1/security/
 // csrf-token`). Bearer tokens are never attached automatically by
 // browsers, so Bearer-authenticated requests are exempt.
-// ---------------------------------------------------------------------------
 
 /// Maximum clock skew (seconds) tolerated between the token issuer
 /// and this server when checking `iat` / `nbf`.

@@ -1,7 +1,6 @@
-// hardening — brute_force.
+// hardening - brute_force.
 // Login-failure tracking, lockouts, and failed-auth clusters.
 //
-// Split from `crates/unified-core/src/hardening.rs`; moved verbatim, no behaviour changes.
 
 use super::*;
 use crate::error::UnifiedError;
@@ -22,9 +21,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 
-// ---------------------------------------------------------------------------
 // State records
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
 pub(crate) struct AttemptState {

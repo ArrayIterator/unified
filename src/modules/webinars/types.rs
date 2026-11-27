@@ -190,9 +190,7 @@ pub(crate) const SEED_POLLS_ENABLED_DEFAULT: bool = true;
 
 pub(crate) const SEED_RECORDING_ENABLED_DEFAULT: bool = true;
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// A presenter's role inside one webinar.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -570,9 +568,7 @@ pub struct ReplayView {
     pub attended: bool,
 }
 
-// ---------------------------------------------------------------------------
 // Request bodies
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct CreateWebinarRequest {

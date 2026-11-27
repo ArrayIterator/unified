@@ -9,7 +9,7 @@ import { Illustration as Illustrations } from "../../shared-assets/illustrations
 import { cx } from "../../../utils/cx";
 
 interface RootContextProps {
-    /** Scales the whole empty state — the header icon or illustration, the heading and description type, the avatar decorations, and the spacing between the sections. Read by every sub-component through context. */
+    /** Scales the whole empty state - the header icon or illustration, the heading and description type, the avatar decorations, and the spacing between the sections. Read by every sub-component through context. */
     size?: "sm" | "md" | "lg";
 }
 
@@ -133,7 +133,7 @@ interface AvatarRadiusProps extends ComponentPropsWithRef<"div"> {
 
 /**
  * Predefined avatar slots positioned on concentric circle rings.
- * Each slot defines: ring radius, CSS angle (0°=top, clockwise), and avatar size class.
+ * Each slot defines: ring radius, CSS angle (0deg=top, clockwise), and avatar size class.
  */
 const avatarSlots = [
     { ring: 80, angle: 330, size: "size-8" },
@@ -192,13 +192,13 @@ const AvatarRadius = ({ avatars = [], ...props }: AvatarRadiusProps) => {
 };
 
 interface AvatarRowProps extends ComponentPropsWithRef<"div"> {
-    /** Avatars fanned out either side of the children, growing towards the centre. The first few fill the left group and the next few the right — three or four per side depending on the root size — and any extras are ignored. */
+    /** Avatars fanned out either side of the children, growing towards the centre. The first few fill the left group and the next few the right - three or four per side depending on the root size - and any extras are ignored. */
     avatars?: Array<{ src: string; alt?: string }>;
     /** Content placed between the two avatar groups, typically the empty state's featured icon or illustration. */
     children?: ReactNode;
 }
 
-/** Avatar sizes per root size — ordered smallest to largest (left edge → center). */
+/** Avatar sizes per root size - ordered smallest to largest (left edge -> center). */
 const rowStyles = {
     sm: ["size-8 rounded-md", "size-9 rounded-[7px]", "size-10 rounded-lg", "size-11 rounded-[9px]"],
     md: ["size-10 rounded-lg", "size-11 rounded-[9px]", "size-12 rounded-[10px]"],

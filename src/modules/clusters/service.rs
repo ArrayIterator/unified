@@ -1,4 +1,4 @@
-// clusters — Internal service helpers shared by the handlers.
+// clusters - Internal service helpers shared by the handlers.
 
 use super::*;
 use unified_core::context::AppContext;
@@ -13,14 +13,12 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Caller identity and capability checks.
 //
 // Admin endpoints require `X-User-Id` and `X-Role` headers. The role is
 // checked through the `role.check` hook answered by the roles module.
 // The check fails closed: no answer means not allowed. Node-to-node
 // endpoints do not use this; they authenticate with HMAC signatures.
-// ---------------------------------------------------------------------------
 
 pub(crate) struct Caller {
     pub(crate) actor: String,
@@ -61,9 +59,7 @@ pub(crate) fn require_permission(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Health probing.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn probe_node(
     state: &Arc<ClustersState>,
@@ -161,9 +157,7 @@ pub(crate) async fn probe_node(
     Ok(record)
 }
 
-// ---------------------------------------------------------------------------
 // Conflict handling: last-write-wins on `updated_at`, never silent.
-// ---------------------------------------------------------------------------
 
 /// Apply incoming items to the local domain store. Returns
 /// (applied, skipped, conflicts). A conflict is recorded whenever both
@@ -308,9 +302,7 @@ pub(crate) fn local_items_for_domain(state: &Arc<ClustersState>, domain: &str) -
         .unwrap_or_default()
 }
 
-// ---------------------------------------------------------------------------
 // Sync execution.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct SyncRunSummary {

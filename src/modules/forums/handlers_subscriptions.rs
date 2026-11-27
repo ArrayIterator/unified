@@ -18,9 +18,7 @@ use super::helpers::{caller, created, err, load_forum, load_thread, ok, paginate
 use super::state::ForumState;
 use super::types::ForumSubscription;
 
-// ---------------------------------------------------------------------------
 // Thread subscriptions
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn subscribe_thread(
     ctx: web::Data<Arc<AppContext>>,
@@ -134,9 +132,7 @@ pub(crate) async fn unsubscribe_thread(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Forum subscriptions
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn subscribe_forum(
     ctx: web::Data<Arc<AppContext>>,
@@ -250,9 +246,7 @@ pub(crate) async fn unsubscribe_forum(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Own subscriptions
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_subscriptions(
     ctx: web::Data<Arc<AppContext>>,

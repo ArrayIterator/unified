@@ -13,9 +13,7 @@ use unified_core::provider_registry::{
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-// ---------------------------------------------------------------------------
 // Provider kinds and capabilities.
-// ---------------------------------------------------------------------------
 /// Every email provider this module can talk to.
 pub enum EmailProviderKind {
     Mailchimp,
@@ -435,9 +433,7 @@ pub fn catalog() -> Vec<Arc<ProviderDefinition>> {
     provider_registry().list_family_enabled("email")
 }
 
-// ---------------------------------------------------------------------------
-// Registry-backed attributes (C12, task 269).
-// ---------------------------------------------------------------------------
+// Registry-backed attributes (C12).
 /// The `&'static` view of one provider's registry definition; see the
 /// same bridge in the payments module. Capabilities and settings
 /// fields are owned types and read the definition directly, so only
@@ -502,7 +498,7 @@ pub fn capabilities_for(kind: EmailProviderKind) -> EmailCapabilities {
     }
 }
 
-/// Capabilities from a registry definition directly (task 354):
+/// Capabilities from a registry definition directly: 
 /// the catalog entry for a hook-provided definition has no enum
 /// kind, so it reads its capabilities here.
 pub fn capabilities_for_definition(def: &ProviderDefinition) -> EmailCapabilities {
@@ -540,7 +536,7 @@ pub struct SettingsFieldDef {
 }
 
 /// Settings-page field definitions per provider kind, from the
-/// provider registry (C12, task 269). The seed holds the full
+/// provider registry (C12). The seed holds the full
 /// expanded lists, including the common sender / webhook / test-mode
 /// fields. A missing definition yields no fields.
 pub(crate) fn settings_fields(kind: EmailProviderKind) -> Vec<SettingsFieldDef> {
@@ -551,7 +547,7 @@ pub(crate) fn settings_fields(kind: EmailProviderKind) -> Vec<SettingsFieldDef> 
 }
 
 /// Settings-page field definitions from a registry definition
-/// directly (task 354): the catalog entry for a hook-provided
+/// directly: the catalog entry for a hook-provided
 /// definition has no enum kind, so it reads its fields here.
 pub(crate) fn settings_fields_for_definition(
     def: &ProviderDefinition,
@@ -777,7 +773,7 @@ mod tests {
         // resolve from that data. No enum variant exists for it and no
         // match arm was added. (Building an adapter for it needs the
         // string-keyed factory in `registry.rs`; the connection model
-        // still keys on the enum — see INTEGRATION_NOTES_C12.)
+        // still keys on the enum - see INTEGRATION_NOTES_C12.)
         let mut def = unified_core::provider_registry::ProviderDefinition::new(
             "email",
             "acme_mail",

@@ -1,45 +1,45 @@
-// Auditors & Public Link Sharing module — temporary sandbox
+// Auditors & Public Link Sharing module - temporary sandbox
 // auditor accounts with scoped read-only access, and public links
 // that expose exactly one resource in one view.
 //
 // Routes live under `/api/v1/auditors` and `/api/v1/sharing`:
 //
 //   Auditors:
-//     POST / — create a temp auditor account (expiry required).
-//     GET  / — list auditor accounts (paginated, filter by status,
+//     POST / - create a temp auditor account (expiry required).
+//     GET  / - list auditor accounts (paginated, filter by status,
 //          auditor_of, company_id, search on label/email).
-//     GET  /{id} — one auditor account with its scope.
-//     POST /{id}/revoke — revoke immediately (kills live sessions).
-//     POST /{id}/extend — extend the expiry (capped at the maximum).
-//     GET  /{id}/sessions — sessions of one auditor.
-//     POST /{id}/sessions/{session_id}/revoke — kill one session.
-//     GET  /{id}/activity — auditor action log (paginated, filter
+//     GET  /{id} - one auditor account with its scope.
+//     POST /{id}/revoke - revoke immediately (kills live sessions).
+//     POST /{id}/extend - extend the expiry (capped at the maximum).
+//     GET  /{id}/sessions - sessions of one auditor.
+//     POST /{id}/sessions/{session_id}/revoke - kill one session.
+//     GET  /{id}/activity - auditor action log (paginated, filter
 //          by action, allowed).
-//     GET  /sessions/active — active auditor sessions (banner data
+//     GET  /sessions/active - active auditor sessions (banner data
 //          for the UI: who is watching, since when, what scope).
-//     GET  /me/scope — the calling auditor's own scope (self only).
-//     POST /expire-sweep — run the expiry sweep now (admin).
+//     GET  /me/scope - the calling auditor's own scope (self only).
+//     POST /expire-sweep - run the expiry sweep now (admin).
 //   Public links:
-//     POST /api/v1/sharing/links — create a link (the target's
+//     POST /api/v1/sharing/links - create a link (the target's
 //          `allow_public_link` flag is enforced server-side through
 //          the `sharing.allow_check` hook; a false answer is a 403).
-//     GET  /api/v1/sharing/links — list links (paginated, filter by
+//     GET  /api/v1/sharing/links - list links (paginated, filter by
 //          scope_kind, created_by, revoked, expired).
-//     GET  /api/v1/sharing/links/{id} — one link (never the token).
-//     POST /api/v1/sharing/links/{id}/revoke — revoke a link.
-//     GET  /api/v1/sharing/links/{id}/access-log — access log of one
+//     GET  /api/v1/sharing/links/{id} - one link (never the token).
+//     POST /api/v1/sharing/links/{id}/revoke - revoke a link.
+//     GET  /api/v1/sharing/links/{id}/access-log - access log of one
 //          link (paginated, filter by allowed).
-//     GET  /api/v1/sharing/access-log — access log of all links
+//     GET  /api/v1/sharing/access-log - access log of all links
 //          (paginated, filter by allowed, link_id, reason).
-//     GET  /api/v1/sharing/kinds — registered shareable kinds.
+//     GET  /api/v1/sharing/kinds - registered shareable kinds.
 //   Public (no auth; see the public-access note below):
 //     GET  /api/v1/sharing/public/{token}?scope_kind=&scope_id=
-//          &scope_view= — validate a link token and return its scope
+//          &scope_view= - validate a link token and return its scope
 //          descriptor. Serves NO resource content: the owning module
 //          serves content after calling
 //          `unified_core::sharing::validate_public_link` itself.
 //
-// HONESTY — READ THIS FIRST. What is real in this module:
+// HONESTY - READ THIS FIRST. What is real in this module:
 // in-memory auditor accounts, scopes, sessions, action log, public
 // links, and access log; Argon2id hashing of the auditor one-time
 // password (shown exactly once at creation); SHA-256 token hashes
@@ -58,7 +58,7 @@
 // by opaque id string, following the codebase convention; the
 // users module stays the source of truth for identity, and no
 // user row is created or modified here); login / session issuing
-// for auditors (the auth flow owns sessions — this module only
+// for auditors (the auth flow owns sessions - this module only
 // records a session row when `auth.login` fires for an auditor
 // user id, and revokes sessions by marking them revoked); the
 // resource content behind a public link (owning modules serve it
@@ -104,7 +104,7 @@
 // `apikey.create` action before any scope lookup). Auditor callers
 // are recognised by `X-User-Id` matching an active auditor account;
 // when a request carries an auditor identity, the module's own
-// handlers reject every mutation with 403 — auditors are
+// handlers reject every mutation with 403 - auditors are
 // read-only always, including on this module's own routes (an
 // auditor may read its own scope and nothing else here).
 //
@@ -120,15 +120,15 @@
 //   - `notification.requested` when an auditor account is created
 //     or revoked, addressed to the creating admin (`auditor_of`).
 // Events this module listens to:
-//   - `auditors.expire_requested` — the event the scheduler emits
+//   - `auditors.expire_requested` - the event the scheduler emits
 //     when an `auditors.expire` job fires, following its naming
 //     rule (`backup.run` -> `backup.run_requested`); expires the
 //     named account (when due) or sweeps all due accounts.
-//   - `auditors.scope.check` — answers `allowed` from the stored
+//   - `auditors.scope.check` - answers `allowed` from the stored
 //     auditor scope for one (module, kind, record, company,
 //     action) tuple; `action` is `"read"` or `"export"`, anything
 //     else is denied.
-//   - `auth.login` — when the logging-in user id belongs to an
+//   - `auth.login` - when the logging-in user id belongs to an
 //     active auditor account, records a session row so the banner
 //     endpoint can show it. The payload shape is read defensively
 //     (`user_id`, then `actor`, then `id`); an unrecognised payload
@@ -155,9 +155,7 @@ use std::sync::Arc;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct AuditorsModule {
     pub(crate) state: AuditorsState,
@@ -299,7 +297,7 @@ impl Module for AuditorsModule {
             RouteInfo { method: "POST", path: "/api/v1/auditors/{id}/sessions/{session_id}/revoke", owner: "auditors", description: "Kill one auditor session.", auth: unified_core::auth::RouteAuth::Authenticated},
             RouteInfo { method: "GET", path: "/api/v1/auditors/{id}/activity", owner: "auditors", description: "Auditor action log (paginated, filter by action, allowed).", auth: unified_core::auth::RouteAuth::Authenticated},
             RouteInfo { method: "GET", path: "/api/v1/auditors/sessions/active", owner: "auditors", description: "Active auditor sessions for the UI banner (who is watching, since when, what scope).", auth: unified_core::auth::RouteAuth::Authenticated},
-            RouteInfo { method: "GET", path: "/api/v1/auditors/me/scope", owner: "auditors", description: "The calling auditor's own scope (self only; no role capability — the caller must be an active auditor account).", auth: unified_core::auth::RouteAuth::Authenticated},
+            RouteInfo { method: "GET", path: "/api/v1/auditors/me/scope", owner: "auditors", description: "The calling auditor's own scope (self only; no role capability - the caller must be an active auditor account).", auth: unified_core::auth::RouteAuth::Authenticated},
             RouteInfo { method: "POST", path: "/api/v1/auditors/expire-sweep", owner: "auditors", description: "Run the auditor expiry sweep now (admin; same sweep the auditors.expire job runs).", auth: unified_core::auth::RouteAuth::Authenticated},
             RouteInfo { method: "POST", path: "/api/v1/sharing/links", owner: "auditors", description: "Create a public link (target allow_public_link enforced server-side via sharing.allow_check; 403 when false).", auth: unified_core::auth::RouteAuth::Authenticated},
             RouteInfo { method: "GET", path: "/api/v1/sharing/links", owner: "auditors", description: "List public links (paginated, filter by scope_kind, created_by, revoked, expired).", auth: unified_core::auth::RouteAuth::Authenticated},

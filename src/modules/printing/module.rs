@@ -1,43 +1,43 @@
 //! printing - module.
 
-// Printing module — paper sizes, thermal (ESC/POS) printing,
+// Printing module - paper sizes, thermal (ESC/POS) printing,
 // printer profiles, and the print-job queue.
 //
 // Routes live under `/api/v1/printing`:
 //
 //   Paper sizes:
-//     GET/POST /paper-sizes — list (standards + custom) / create a
+//     GET/POST /paper-sizes - list (standards + custom) / create a
 //       custom size. Standards are read-only through the API.
-//     GET/PUT/DELETE /paper-sizes/{code} — one size. Only custom
+//     GET/PUT/DELETE /paper-sizes/{code} - one size. Only custom
 //       sizes can be updated or deleted.
-//     GET/PUT /paper-sizes/defaults/{company_id} — the default
+//     GET/PUT /paper-sizes/defaults/{company_id} - the default
 //       paper size of one company.
 //   Printer profiles:
-//     GET/POST /printer-profiles — list / create.
-//     GET/PUT/DELETE /printer-profiles/{id} — one profile.
-//     POST /printer-profiles/{id}/set-default — default profile
+//     GET/POST /printer-profiles - list / create.
+//     GET/PUT/DELETE /printer-profiles/{id} - one profile.
+//     POST /printer-profiles/{id}/set-default - default profile
 //       for the profile's company (or the global default).
 //   Print jobs:
-//     GET/POST /print-jobs — list (paginated, filtered) / create.
-//     GET  /print-jobs/{id} — one job.
-//     GET  /print-jobs/{id}/escpos — ESC/POS stream (base64) plus
+//     GET/POST /print-jobs - list (paginated, filtered) / create.
+//     GET  /print-jobs/{id} - one job.
+//     GET  /print-jobs/{id}/escpos - ESC/POS stream (base64) plus
 //       the human-readable text preview of a thermal job.
-//     POST /print-jobs/{id}/process — hand the job to the
+//     POST /print-jobs/{id}/process - hand the job to the
 //       deployment-side dispatcher; the job stays `printing`
 //       until the dispatcher confirms delivery.
-//     POST /print-jobs/{id}/complete — dispatcher confirmation
+//     POST /print-jobs/{id}/complete - dispatcher confirmation
 //       that the job printed; only then is it `done` and the
 //       user notified.
-//     POST /print-jobs/{id}/fail — mark a job failed with a reason.
-//     POST /print-jobs/{id}/cancel — cancel a queued job; it
+//     POST /print-jobs/{id}/fail - mark a job failed with a reason.
+//     POST /print-jobs/{id}/cancel - cancel a queued job; it
 //       becomes `cancelled`, never `failed`.
-//     POST /print-jobs/{id}/reprint — queue a fresh copy of a
+//     POST /print-jobs/{id}/reprint - queue a fresh copy of a
 //       done or failed job.
 //   Thermal preview (no job stored):
-//     POST /thermal/preview — render thermal lines as text preview
+//     POST /thermal/preview - render thermal lines as text preview
 //       plus the ESC/POS stream (base64).
 //
-// PAPER-SIZE RULE — READ THIS FIRST. Standard paper sizes ARE
+// PAPER-SIZE RULE - READ THIS FIRST. Standard paper sizes ARE
 // hard-coded here as constants (ISO 216 A0-A6, Letter, Legal,
 // Tabloid, and the common thermal roll widths 58mm and 80mm)
 // because they ARE international standards: their dimensions do
@@ -49,7 +49,7 @@
 // can never be edited or deleted through the API; a custom size
 // can, and deleting one never deletes the standard rows.
 //
-// HONESTY — READ THIS FIRST. What is real in this module:
+// HONESTY - READ THIS FIRST. What is real in this module:
 // paper-size registry (standards + custom), printer profiles as
 // data-driven records, ESC/POS byte-stream generation for thermal
 // receipts and invoices (text, bold, double size, alignment, cut,
@@ -103,9 +103,7 @@ use super::{events::*, paper::*, thermal::*, profiles::*, jobs::*, state::*, aut
 
 
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 pub struct PrintingModule {
     pub(crate) state: Arc<PrintingState>,
 }

@@ -1,4 +1,4 @@
-// hosting module — Account handlers.
+// hosting module - Account handlers.
 //
 // Split from the former single-file module `src/modules/hosting.rs`.
 // The module root (`hosting.rs`) re-exports the public items, so the
@@ -33,9 +33,7 @@ use super::helpers::{
     validate_usage_against_plan,
 };
 
-// ---------------------------------------------------------------------------
 // Account handlers.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_accounts(
     ctx: web::Data<Arc<AppContext>>,

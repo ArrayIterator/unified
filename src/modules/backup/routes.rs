@@ -20,9 +20,7 @@ use super::state::{BackupExecutor, BackupState};
 use super::types::{BackupRun, BackupStatus, DbSnapshot};
 use super::ai_capabilities::AI_CAPABILITIES;
 
-// ---------------------------------------------------------------------------
 // Module definition.
-// ---------------------------------------------------------------------------
 
 pub struct BackupModule {
     pub(crate) state: Arc<BackupState>,

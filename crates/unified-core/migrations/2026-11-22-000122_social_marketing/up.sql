@@ -50,7 +50,7 @@
 --     `scheduled`, `publishing`, `published`, `failed`,
 --     `cancelled`), the campaign status (`draft`, `active`,
 --     `paused`, `completed`, `cancelled`), and the metric
---     source (`webhook`, `manual`) — those are the shape of
+--     source (`webhook`, `manual`) - those are the shape of
 --     the module, not its content.
 --   - No money is stored anywhere in this module: no price,
 --     cost, or charge column exists, and `f64` is never used
@@ -111,7 +111,6 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- Social networks: one admin-defined network per tenant.
 -- `kind` is `http` (generic adapter: POST JSON to
 -- `api_base_url` plus `publish_path` with the configured
@@ -124,7 +123,6 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- `posts_per_minute` is the per-network publish rate
 -- limit. `request_fields` is an optional JSON object of
 -- extra fields merged into every HTTP adapter request body.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS social_networks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -151,7 +149,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_social_networks_tenant_slug ON social_netw
 CREATE INDEX IF NOT EXISTS idx_social_networks_tenant_kind ON social_networks (tenant_id, kind, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_social_networks_tenant_enabled ON social_networks (tenant_id, enabled, created_at DESC);
 
--- ---------------------------------------------------------------------------
 -- Social accounts: one connected account per tenant on a
 -- network. `handle` is the account's public handle on its
 -- network. `credential_encrypted` holds only the `v1.`
@@ -162,7 +159,6 @@ CREATE INDEX IF NOT EXISTS idx_social_networks_tenant_enabled ON social_networks
 -- when the stored token stops being usable (NULL means it
 -- never expires). `connected` is false after a disconnect,
 -- which also clears the stored credential.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS social_accounts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -185,7 +181,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_social_accounts_tenant_network_handle ON s
 CREATE INDEX IF NOT EXISTS idx_social_accounts_tenant_network ON social_accounts (tenant_id, network_id, created_at ASC);
 CREATE INDEX IF NOT EXISTS idx_social_accounts_tenant_connected ON social_accounts (tenant_id, connected, created_at DESC);
 
--- ---------------------------------------------------------------------------
 -- Social posts: one post per tenant. `campaign_id` is an
 -- optional campaign reference (no foreign key).
 -- `network_id` is the network the post publishes through
@@ -201,7 +196,6 @@ CREATE INDEX IF NOT EXISTS idx_social_accounts_tenant_connected ON social_accoun
 -- publish result per target account. `error` is the
 -- provider's failure text truncated to 500 characters,
 -- never a credential.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS social_posts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -226,14 +220,12 @@ CREATE INDEX IF NOT EXISTS idx_social_posts_tenant_status ON social_posts (tenan
 CREATE INDEX IF NOT EXISTS idx_social_posts_tenant_network ON social_posts (tenant_id, network_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_social_posts_tenant_campaign ON social_posts (tenant_id, campaign_id, created_at ASC);
 
--- ---------------------------------------------------------------------------
 -- Social campaigns: one campaign per tenant grouping posts.
 -- `goal` is a free-text goal label; `goal_metric` names
 -- the metric the goal is measured in (any metric slug,
 -- data) and `goal_target` is the integer count the
 -- campaign aims for. `status` is `draft`, `active`,
 -- `paused`, `completed`, or `cancelled`.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS social_campaigns (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -252,14 +244,12 @@ CREATE TABLE IF NOT EXISTS social_campaigns (
 );
 CREATE INDEX IF NOT EXISTS idx_social_campaigns_tenant_status ON social_campaigns (tenant_id, status, created_at DESC);
 
--- ---------------------------------------------------------------------------
 -- Social metrics: one reported metric value per (post,
 -- metric, source). Metrics arrive only through the
 -- provider verification-token webhook (`webhook`) or
 -- manual entry (`manual`); this module never fetches live
 -- numbers. `account_id` names the account that reported
 -- the value, when a webhook reported it.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS social_metrics (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),
@@ -276,7 +266,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_social_metrics_post_metric_source ON socia
 CREATE INDEX IF NOT EXISTS idx_social_metrics_tenant_post ON social_metrics (tenant_id, post_id, created_at ASC);
 CREATE INDEX IF NOT EXISTS idx_social_metrics_tenant_metric ON social_metrics (tenant_id, metric, created_at DESC);
 
--- ---------------------------------------------------------------------------
 -- Audit trail: one row per change to a network, an account,
 -- a post, a campaign, or a metric (creates, updates,
 -- deletes, connects, disconnects, schedules, publishes,
@@ -285,7 +274,6 @@ CREATE INDEX IF NOT EXISTS idx_social_metrics_tenant_metric ON social_metrics (t
 -- id as TEXT; `action` names the change; `before` / `after`
 -- are the serialized rows (or NULL for creates / deletes).
 -- Audit rows are never updated or deleted through the API.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS social_audit (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id TEXT NOT NULL CHECK (char_length(tenant_id) BETWEEN 1 AND 200),

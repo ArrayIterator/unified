@@ -3,11 +3,9 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Appointments (migration 000077_appointments). `AppointmentService`
 // and `Appointment` carry NUMERIC columns, so they skip ALL serde
 // derives per the repo header rule.
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     appointment_services (id) {

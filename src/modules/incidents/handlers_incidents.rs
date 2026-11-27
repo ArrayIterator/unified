@@ -12,9 +12,7 @@ use super::{constants::*, types::*, inputs::*, state::*, helpers::*, handlers_ro
 
 
 
-// ---------------------------------------------------------------------------
 // Incident handlers
-// ---------------------------------------------------------------------------
 pub(crate) async fn list_incidents(
     ctx: web::Data<Arc<AppContext>>,
     state: web::Data<IncidentsState>,
@@ -337,7 +335,7 @@ pub(crate) fn apply_status_transition(
         actor
     );
     if let Some(note) = note {
-        message.push_str(&format!(" — {note}"));
+        message.push_str(&format!(" - {note}"));
     }
     state.add_timeline(incident.id, actor, "status_change", message);
     state.emit(

@@ -1,4 +1,4 @@
-// Company module — request bodies and pagination.
+// Company module - request bodies and pagination.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use unified_core::context::AppContext;
@@ -19,9 +19,7 @@ use std::sync::{Arc, OnceLock};
 use uuid::Uuid;
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Request types.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct CreateCompanyRequest {
@@ -75,12 +73,10 @@ pub(crate) fn paginate<T: serde::Serialize + Clone>(items: Vec<T>, params: &Pagi
     PageResult::new(page_items, total, &pagination)
 }
 
-// ---------------------------------------------------------------------------
 // Caller identity and capability checks (same trusted-parameter
 // pattern as the tax module: X-User-Id plus X-Role headers,
 // `role.check` hook, fail closed). Every handler checks a
 // capability first, before any database or store access.
-// ---------------------------------------------------------------------------
 
 /// Capability names checked through the `role.check` hook.
 pub const PERM_COMPANY_VIEW: &str = "company:view";
@@ -128,9 +124,7 @@ pub(crate) fn require_permission(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Tenant edge guard (C3 pilot 3).
-// ---------------------------------------------------------------------------
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request
@@ -143,7 +137,7 @@ pub(crate) fn require_permission(
 /// `company_id` filter would be circular here: the guard is a
 /// fail-closed gate only, and no per-record company check is
 /// applied. A company-scoped caller managing companies is a
-/// control-plane concern (task 315), not a C3 record partition.
+/// control-plane concern, not a C3 record partition.
 pub(crate) fn require_tenant(
     req: &HttpRequest,
 ) -> UnifiedResult<unified_core::tenancy::TenantContext> {

@@ -42,9 +42,7 @@ pub(crate) fn valid_severity(severity: &str) -> bool {
     matches!(severity, "minor" | "major" | "critical")
 }
 
-// ---------------------------------------------------------------------------
 // Caller identity and capability checks (write routes only)
-// ---------------------------------------------------------------------------
 
 /// The server-verified caller (see `unified_core::caller::Caller`):
 /// the user id identifies the actor, the server-resolved role is the
@@ -89,9 +87,7 @@ pub(crate) fn require_statuspage_manage(ctx: &AppContext, req: &HttpRequest) -> 
     }
 }
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 pub(crate) fn uptime_key(component_id: Uuid, date: &NaiveDate) -> String {
     format!("{}:{}", component_id, date.format("%Y-%m-%d"))
@@ -286,9 +282,7 @@ pub(crate) fn render_status_html(
     )
 }
 
-// ---------------------------------------------------------------------------
 // Public handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) fn sorted_components(state: &StatusPageState) -> Vec<ComponentStatusView> {
     let mut components: Vec<StatusComponent> = state

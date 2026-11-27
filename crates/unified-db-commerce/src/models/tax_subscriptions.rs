@@ -11,12 +11,10 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Tax Management (2026-11-22-000038_tax). Money structs carry no serde
 // derives (PgNumeric has none); the notes' `New*` snippets show
-// `Deserialize` on money structs — dropped here per the repo money
+// `Deserialize` on money structs - dropped here per the repo money
 // convention.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable)]
 #[diesel(table_name = tax_rules)]
@@ -242,14 +240,12 @@ pub struct NewTaxAuditEntry {
     pub details: Value,
 }
 
-// ---------------------------------------------------------------------------
 // Subscriptions (2026-11-22-000040_subscriptions). `NewSubscription`
 // deliberately includes the defaulted business fields (see the notes:
 // the writer must persist the values the store computed at
 // activation; the SQL defaults would be wrong data). Money structs
 // carry no serde derives (PgNumeric has none); the notes' `New*`
-// snippet shows `Deserialize` on the money struct — dropped here.
-// ---------------------------------------------------------------------------
+// snippet shows `Deserialize` on the money struct - dropped here.
 
 #[derive(Debug, Clone, Queryable, Selectable)]
 #[diesel(table_name = subscriptions)]

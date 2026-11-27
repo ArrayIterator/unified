@@ -1,5 +1,5 @@
 /**
- * GENERATED — do not edit by hand.
+ * GENERATED - do not edit by hand.
  * Source of truth: crates/unified-scripting/unified.d.ts
  * Regenerate with: npm run sync   (in packages/unified-sdk-types)
  * Verify with:     npm run check
@@ -189,8 +189,8 @@ declare namespace Unified {
   interface Db {
     kv: Kv;
     /**
-     * Tenant-scoped read-only query. SELECT only — WITH is refused
-     * because a CTE can carry a write — `$1`/`$2`/...
+     * Tenant-scoped read-only query. SELECT only - WITH is refused
+     * because a CTE can carry a write - `$1`/`$2`/...
      * parameters substituted as escaped text literals (see
      * `substitute_params` in the scripting crate), 1000-row and
      * 64-parameter caps. Fails without a tenant context or a

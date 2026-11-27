@@ -10,10 +10,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Tenants (batch 17; models derived from the `tenants.rs` header
-// snippets — no model structs were given in the notes).
-// ---------------------------------------------------------------------------
+// snippets - no model structs were given in the notes).
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 // NOTE: the path must stay fully qualified to the TABLE module.
@@ -119,10 +117,8 @@ pub struct NewTenantModuleGrant {
     pub revoke_reason: Option<String>,
 }
 
-// ---------------------------------------------------------------------------
 // Tenant destroy requests (no migration yet; derived from the
 // `DestroyRequest` struct in src/modules/tenant_destroy.rs).
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Queryable, Selectable, Serialize)]
 #[diesel(table_name = tenant_destroy_requests)]

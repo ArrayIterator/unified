@@ -1,4 +1,4 @@
-//! Cloudflare connector module. — Handlers: accounts and zones.
+//! Cloudflare connector module. - Handlers: accounts and zones.
 //!
 //! Split from `src/modules/cloudflare.rs`; behaviour unchanged.
 

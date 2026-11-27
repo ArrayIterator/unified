@@ -1,4 +1,4 @@
-// Gamification — Event listeners (defensive: missing ids are skipped, never errors).
+// Gamification - Event listeners (defensive: missing ids are skipped, never errors).
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -17,9 +17,7 @@ use uuid::Uuid;
 use super::*;
 use super::helpers::{has_source_award, has_source_award_today};
 
-// ---------------------------------------------------------------------------
 // Event listeners (defensive: missing ids are skipped, never errors)
-// ---------------------------------------------------------------------------
 
 pub(crate) fn on_ticket_updated(state: GamificationState, ctx: &mut HookContext) {
     let data = ctx.data.clone();

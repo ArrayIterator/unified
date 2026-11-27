@@ -13,9 +13,7 @@ use std::sync::Arc;
 use std::sync::RwLock;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// How points expire. `fixed` expires each earn after
 /// `expiry_days` from the earn date; `inactivity` expires the

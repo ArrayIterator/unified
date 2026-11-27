@@ -23,9 +23,7 @@ use super::types::{
     Workbook, EVENT_WORKBOOK_CREATED, EVENT_WORKBOOK_DELETED, EVENT_WORKBOOK_UPDATED,
 };
 
-// ---------------------------------------------------------------------------
 // Workbooks
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_workbooks(
     state: web::Data<SpreadsheetsState>,
@@ -332,9 +330,7 @@ pub(crate) async fn delete_workbook(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Sheets
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_sheets(
     state: web::Data<SpreadsheetsState>,

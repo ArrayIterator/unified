@@ -31,7 +31,6 @@ use std::time::{Duration, Instant};
 use uuid::Uuid;
 use super::{keys::*, expiry::*, store::*, hooks::*, types::*, validation::*, handlers::*, helpers::*, product_handlers::*, verify::*, offline::*, distribution::*, releases::*, module::*};
 
-// ---------------------------------------------------------------------------
 // Licensing as a service (batch 7).
 //
 // New tables (migration 2026-11-22-000068_licensing_saas): see the
@@ -41,7 +40,6 @@ use super::{keys::*, expiry::*, store::*, hooks::*, types::*, validation::*, han
 // crates/unified-core/src/db/schema.rs` / crates/unified-core/src/db/models.rs` and the Diesel writers.
 // No handler below touches crates/unified-core/src/db/schema.rs` tables that do not
 // exist yet, so nothing here can fail to compile on a missing table.
-// ---------------------------------------------------------------------------
 
 /// Emitted when a public verification call fails (invalid key, wrong
 /// product, expired, suspended, revoked, or out of seats). Payload:
@@ -122,9 +120,7 @@ pub const DISTRIBUTION_CHANNEL_FILE: &str = "file";
 /// consumer can mistake an offline token for a revocable credential.
 pub(crate) const OFFLINE_TRUST_NOTE: &str = "Offline token trust model: this token is a bearer credential and can be replayed until expiry; it is valid for exactly one product; revoking the license or the token does not affect verifications that already hold the token; offline verification performs no database lookup.";
 
-// ---------------------------------------------------------------------------
 // SaaS records (in-memory in this round; see the section header).
-// ---------------------------------------------------------------------------
 
 /// Per-product licensing settings. `product` is the slug, unique.
 /// `key_format` is `standard` (prefix + checksum body) or `custom`

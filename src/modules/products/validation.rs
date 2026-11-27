@@ -11,9 +11,7 @@ use uuid::Uuid;
 use super::types::{BILLING_PERIODS, BUNDLE_RULES, LicenseTemplate, MAX_DUNNING_RETRIES, MAX_DUNNING_RETRY_INTERVAL_DAYS, MAX_GRACE_PERIOD_DAYS, PRICING_MODELS, PRODUCT_KINDS, PRORATION_POLICIES, TaxonomyNode, TaxonomyTreeNode, default_dunning_max_retries, default_dunning_retry_interval_days, default_proration_policy};
 use super::state::ProductsState;
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 pub(crate) fn new_id() -> String {
     Uuid::new_v4().to_string()

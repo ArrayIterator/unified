@@ -65,7 +65,7 @@ fn validate_party_update(
 /// No handler answers that query today, so an unanswered query
 /// records the link as `unverified` (the same convention the
 /// logistics module itself uses for unverified store order
-/// links) and the response carries a warning — the DO is still
+/// links) and the response carries a warning - the DO is still
 /// created, because the snapshot in the request body is the
 /// document's source of truth, not the lookup.
 fn lookup_shipment(state: &DeliveryNoteState, shipment_id: Uuid) -> (String, Option<String>) {
@@ -357,8 +357,8 @@ pub(crate) async fn create_note(
 }
 
 /// Create a draft DO from a logistics shipment id. The shipment
-/// is linked by id only (no foreign key); the snapshot — parties,
-/// driver, vehicle, warehouse, items — comes from the request
+/// is linked by id only (no foreign key); the snapshot - parties,
+/// driver, vehicle, warehouse, items - comes from the request
 /// body, so the DO freezes the shipment's state at creation
 /// time and later shipment edits never rewrite its history.
 pub(crate) async fn create_note_from_shipment(
@@ -662,7 +662,7 @@ pub(crate) async fn issue_note(
 /// status (draft -> issued, issued -> in_transit, in_transit
 /// -> delivered); with a `target` it moves to that status when
 /// the machine allows it. Delivering through this endpoint
-/// still needs a linked proof of delivery — use the deliver
+/// still needs a linked proof of delivery - use the deliver
 /// endpoint to attach one.
 pub(crate) async fn advance_note(
     state: web::Data<DeliveryNoteState>,

@@ -12,9 +12,7 @@ use super::{constants::*, settings::*, types::*, module::*, helpers::*, inputs::
 
 
 
-// ---------------------------------------------------------------------------
 // Handlers: results and analytics
-// ---------------------------------------------------------------------------
 pub(crate) fn result_visible(
     _state: &ExamsState,
     ctx: &AppContext,

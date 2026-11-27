@@ -7,8 +7,8 @@
 //! caller's tenant (see `resolve_caller_company` in types.rs);
 //! only an explicitly-decided platform scope (control-plane request
 //! by a verified admin with no resolvable company) may access any
-//! tenant — a caller with no company is unresolved and reads global
-//! rows only — and a manage capability never widens the tenant scope.
+//! tenant - a caller with no company is unresolved and reads global
+//! rows only - and a manage capability never widens the tenant scope.
 
 use actix_multipart::Multipart;
 use actix_web::{HttpRequest, HttpResponse, web};
@@ -61,9 +61,7 @@ fn authorize(ctx: &AppContext, req: &HttpRequest, permission: &str) -> UnifiedRe
     Ok(resolve_caller_company(ctx, req, &caller))
 }
 
-// ---------------------------------------------------------------------------
 // Handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_files(
     ctx: web::Data<Arc<AppContext>>,

@@ -1,4 +1,4 @@
-// routes module — Handlers.
+// routes module - Handlers.
 //
 // Split from the former single-file module `src/modules/routes.rs`.
 // The module root (`routes.rs`) re-exports the public items, so the
@@ -23,9 +23,7 @@ use super::views::{RouteChangeView, RouteView};
 use super::helpers::{PERM_ROUTES_MANAGE, PERM_ROUTES_VIEW, caller, require_permission};
 use super::requests::{ClearOverrideQuery, SetOverrideInput, emit_route_changed, parse_source};
 
-// ---------------------------------------------------------------------------
 // Handlers.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_routes(
     registry: web::Data<Arc<RouteRegistry>>,

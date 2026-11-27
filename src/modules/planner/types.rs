@@ -14,9 +14,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 use super::{constants::*, helpers::*, state::*, handlers_pools::*, forecast::*, handlers_plans::*, events::*, module::*};
 
-// ---------------------------------------------------------------------------
 // Types.
-// ---------------------------------------------------------------------------
 
 /// One resource bundle: CPU cores, RAM, disk and bandwidth. Used for pool
 /// capacity, plan reservations, usage samples and overcommit math, so the
@@ -143,7 +141,7 @@ impl AllocationPlan {
     /// anyone calls the explicit expire endpoint. The end instant is
     /// exclusive: a plan whose `ends_at` is exactly `at` is already
     /// past its end, so capacity is released at `ends_at`, not after
-    /// it — otherwise a plan ending exactly now would still hold
+    /// it - otherwise a plan ending exactly now would still hold
     /// capacity for that instant.
     pub(crate) fn is_past_end(&self, at: DateTime<Utc>) -> bool {
         self.ends_at <= at
@@ -156,9 +154,7 @@ impl AllocationPlan {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Views.
-// ---------------------------------------------------------------------------
 
 /// Pool view with live allocation and headroom numbers.
 #[derive(Debug, Clone, Serialize)]
@@ -230,9 +226,7 @@ pub(crate) struct ForecastView {
     pub(crate) disclaimer: String,
 }
 
-// ---------------------------------------------------------------------------
 // Request types.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct CreatePoolRequest {

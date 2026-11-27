@@ -12,7 +12,7 @@
 //! the risk bands are all rows an admin creates through the
 //! API. The only values fixed in code are the status machine,
 //! the verdict outcome vocabulary, and the documented risk
-//! score formula below — the score thresholds themselves are
+//! score formula below - the score thresholds themselves are
 //! data (risk-level rows).
 //!
 //! Money: this module carries no money fields, so there is no
@@ -87,9 +87,7 @@ pub(crate) const DELETED_USER_ID: &str = "deleted-user";
 pub(crate) const AUDIT_GENESIS_HASH: &str =
     "0000000000000000000000000000000000000000000000000000000000000000";
 
-// ---------------------------------------------------------------------------
 // Pure domain functions (unit-tested below)
-// ---------------------------------------------------------------------------
 
 /// Case status machine. Allowed transitions:
 /// draft -> submitted; submitted -> verifying,
@@ -126,7 +124,7 @@ pub fn can_transition(from: KycCaseStatus, to: KycCaseStatus) -> bool {
 /// `[min_score, max_score]` range contains it. Levels are
 /// considered in `min_score` order; the first match wins.
 /// `None` when the tenant has no level covering the score
-/// (for example when no risk levels exist yet) — the caller
+/// (for example when no risk levels exist yet) - the caller
 /// stores no level rather than inventing one.
 pub fn resolve_risk_level<'a>(levels: &'a [KycRiskLevel], score: i64) -> Option<&'a KycRiskLevel> {
     let mut ordered: Vec<&KycRiskLevel> = levels.iter().filter(|level| level.active).collect();
@@ -140,7 +138,7 @@ pub fn resolve_risk_level<'a>(levels: &'a [KycRiskLevel], score: i64) -> Option<
 /// is the module's documented scoring rule; the thresholds
 /// that turn a score into a level are data (risk-level rows).
 /// A rejected verdict is always maximum risk. A verified
-/// verdict scores on the confidence gap, halved — a confident
+/// verdict scores on the confidence gap, halved - a confident
 /// verification is low risk. An uncertain verdict scores on
 /// the full confidence gap. Every failed check adds 5 points.
 /// The result is clamped to 0-100.
@@ -216,8 +214,8 @@ pub fn resolve_verification_context(
 /// `uncertain`, or `rejected`), `confidence` (0-100), and
 /// `reasons` (a list of short strings); `failed_checks` is
 /// optional. The output may carry surrounding prose, so the
-/// first `{` … last `}` span is parsed. `None` when the output
-/// is not parseable or fails validation — the caller records an
+/// first `{` ... last `}` span is parsed. `None` when the output
+/// is not parseable or fails validation - the caller records an
 /// `uncertain` verdict with a parse-failure reason instead of
 /// failing the run.
 pub fn parse_ai_verdict(output: &str) -> Option<KycAiVerdict> {
@@ -291,9 +289,7 @@ pub fn valid_content_hash(hash: &str) -> bool {
             .all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c))
 }
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// Case status. Serialized snake_case.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -436,7 +432,7 @@ pub struct KycCase {
 /// One linked identity document on a case. Only the
 /// documents-module reference (`document_id`), the SHA-256 of
 /// the document bytes (`content_hash`), and file metadata are
-/// stored — never the file itself. `document_type_code` names
+/// stored - never the file itself. `document_type_code` names
 /// a document-type row by code.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KycDocument {
@@ -496,7 +492,7 @@ pub struct KycSubjectType {
 /// under, as data. One context is active per tenant. The
 /// context declares which case fields and document metadata
 /// the AI may see (`visible_fields`) and which checks it must
-/// run (`checks` — values are data, the module never invents
+/// run (`checks` - values are data, the module never invents
 /// a check name). `version` increments on every update; a
 /// verdict records the version it ran under.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -605,9 +601,7 @@ pub struct KycAuditEntry {
     pub created_at: DateTime<Utc>,
 }
 
-// ---------------------------------------------------------------------------
 // Request bodies
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct CreateCaseRequest {

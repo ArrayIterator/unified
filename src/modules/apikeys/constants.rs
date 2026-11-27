@@ -1,8 +1,6 @@
 //! apikeys module - Key format, tiers, rotation limits and scope actions.
 
-// ---------------------------------------------------------------------------
 // Constants.
-// ---------------------------------------------------------------------------
 
 /// Prefix of every generated key. The prefix is part of the masked
 /// display value, never a secret by itself.

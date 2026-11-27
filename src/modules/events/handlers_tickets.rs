@@ -1,4 +1,4 @@
-// Events Manager — Ticket-type handlers.
+// Events Manager - Ticket-type handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -28,9 +28,7 @@ use super::hooks::*;
 use super::module::*;
 use super::constants::{DEFAULT_PER_ORDER};
 
-// ---------------------------------------------------------------------------
 // Ticket-type handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_ticket_types(
     ctx: web::Data<Arc<AppContext>>,

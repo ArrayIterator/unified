@@ -15,7 +15,7 @@
 // target, not yet their read path.
 //
 // KNOWN COLLISIONS (resolved during the final inspection; do not
-// reintroduce — see the integration report):
+// reintroduce - see the integration report):
 // - `certificates` is the SSL-certificate table (migration
 //   000005). Migration 000079_elearning used to create a second
 //   `certificates` table with a different shape (course
@@ -32,7 +32,7 @@
 //   migration yet (derived from the `DestroyRequest` struct in
 //   `src/modules/tenant_destroy.rs`). `destroyed_tenants` is NOT
 //   added: no struct or DDL for it exists anywhere (the module
-//   states destroyed tenants have no record of their own — the
+//   states destroyed tenants have no record of their own - the
 //   `tenants` row itself is the guard record, with `destroyed_at`
 //   and `export_reference` already recorded there).
 //

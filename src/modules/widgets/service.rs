@@ -1,4 +1,4 @@
-// Widgets — layout service: built-in defaults and DB-backed load /
+// Widgets - layout service: built-in defaults and DB-backed load /
 // save / reset.
 //
 // The database is the ONLY authority for stored layouts. Reads
@@ -72,7 +72,7 @@ where
 /// The built-in default items for a zone, in display order. The
 /// seeded zones keep their explicit defaults; any other zone starts
 /// from the catalogue in order (first item pinned). A zone's default
-/// is only the starting point — a user's own row, then the shared
+/// is only the starting point - a user's own row, then the shared
 /// row, win over it (see `load_layout`).
 fn default_items(context: &str) -> Vec<WidgetItem> {
     let pinned = true;
@@ -191,7 +191,7 @@ fn layout_from_row(row: WidgetLayoutRow, ctx: &AppContext) -> WidgetLayout {
 
 /// Load a layout: the user's own row first, then the shared (team)
 /// default row for the zone, then the built-in default. A user
-/// always starts from the shared default and diverges by saving —
+/// always starts from the shared default and diverges by saving -
 /// saving never touches the shared row unless `shared` was asked
 /// for. Without a database pool the built-in default is returned
 /// (reads degrade, writes do not).

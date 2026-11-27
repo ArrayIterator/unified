@@ -20,7 +20,7 @@
 --     `signed`, `active`, `expired`, `terminated`, or `voided`
 --     (`ContractStatus`). The module derives `expired` at read time
 --     for an `active` contract whose end date passed; the stored
---     status never moves to `expired` on its own — the scheduler
+--     status never moves to `expired` on its own - the scheduler
 --     listener or the check-expiry endpoint materialises it.
 --   - `contracts.value` is NUMERIC(19,4) (money), never negative.
 --     `currency` is a 3-letter ISO code.
@@ -34,7 +34,7 @@
 --     is `not_scheduled`, `queued`, or `declined` (the scheduler
 --     does not know the `contracts.expiry_alert` job kind yet).
 --   - `contract_signers.token_hash` stores only the SHA-256 hash
---     of the signing token — the raw token is returned once, at
+--     of the signing token - the raw token is returned once, at
 --     creation and at resend, and is never persisted. The hash is
 --     unique so a token maps to exactly one signer. A signer email
 --     is unique per contract.
@@ -50,9 +50,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One contract template.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS contract_templates (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(200) NOT NULL,
@@ -65,9 +63,7 @@ CREATE TABLE IF NOT EXISTS contract_templates (
 );
 CREATE INDEX IF NOT EXISTS idx_contract_templates_name ON contract_templates (name);
 
--- ---------------------------------------------------------------------------
 -- One contract.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS contracts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     template_id UUID REFERENCES contract_templates (id) ON DELETE SET NULL,
@@ -103,9 +99,7 @@ CREATE INDEX IF NOT EXISTS idx_contracts_template_id ON contracts (template_id);
 CREATE INDEX IF NOT EXISTS idx_contracts_renewed_from_id ON contracts (renewed_from_id);
 CREATE INDEX IF NOT EXISTS idx_contracts_ends_at ON contracts (ends_at);
 
--- ---------------------------------------------------------------------------
 -- One signer of a contract.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS contract_signers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     contract_id UUID NOT NULL REFERENCES contracts (id) ON DELETE CASCADE,
@@ -127,9 +121,7 @@ CREATE INDEX IF NOT EXISTS idx_contract_signers_contract_id ON contract_signers 
 CREATE INDEX IF NOT EXISTS idx_contract_signers_token_hash ON contract_signers (token_hash);
 CREATE INDEX IF NOT EXISTS idx_contract_signers_status ON contract_signers (status);
 
--- ---------------------------------------------------------------------------
 -- One audit-trail entry for a contract.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS contract_audit_trail (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     contract_id UUID NOT NULL REFERENCES contracts (id) ON DELETE CASCADE,

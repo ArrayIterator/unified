@@ -1,4 +1,4 @@
-// Elearning — Review handlers.
+// Elearning - Review handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -20,9 +20,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Review handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) fn course_rating_summary(state: &ElearningState, course_id: Uuid) -> Value {
     let ratings: Vec<i64> = state

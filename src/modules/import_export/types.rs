@@ -3,13 +3,11 @@
 use serde::{Deserialize, Serialize};
 use std::sync::{OnceLock, RwLock};
 
-/// Maximum accepted import payload in bytes (10 MiB).
 pub(crate) const DEFAULT_MAX_FILE_BYTES: usize = 10 * 1024 * 1024;
 
 /// Maximum rows per single-shot import file.
 pub(crate) const DEFAULT_MAX_ROWS_PER_FILE: usize = 10_000;
 
-/// Maximum bytes per chunked-import chunk (2 MiB).
 pub(crate) const DEFAULT_MAX_CHUNK_BYTES: usize = 2 * 1024 * 1024;
 
 /// Maximum rows across all chunks of one import session.
@@ -18,7 +16,6 @@ pub(crate) const DEFAULT_MAX_ROWS_PER_SESSION: usize = 50_000;
 /// Maximum rows per export job (also the streaming cap).
 pub(crate) const DEFAULT_MAX_EXPORT_ROWS: usize = 10_000;
 
-/// Maximum export content kept in memory per job (50 MiB).
 pub(crate) const DEFAULT_MAX_EXPORT_BYTES: usize = 50 * 1024 * 1024;
 
 /// Default formats. Admin-editable through the settings endpoint.

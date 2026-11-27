@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// --- Handlers: expenses ------------------------------------------------------
+// Handlers: expenses
 
 pub(crate) async fn list_report_expenses(
     ctx: web::Data<Arc<AppContext>>,

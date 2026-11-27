@@ -7,9 +7,7 @@ use url::Url;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Connection validation.
-// ---------------------------------------------------------------------------
 
 /// Required credential / field set per kind. `endpoint` and `region`
 /// requirements are checked here too, so a bad connection is rejected

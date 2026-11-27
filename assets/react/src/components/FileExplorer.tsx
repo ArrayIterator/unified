@@ -4,15 +4,15 @@
 // move, visibility flip, delete with confirm).
 //
 // One component serves two modes over the same data:
-//   - "manage" — the full media manager (`GET /api/v1/documents`,
+//   - "manage" - the full media manager (`GET /api/v1/documents`,
 //     role-scoped by the server: admins see public + private, author
 //     roles see public + their own private rows; another owner's
 //     private document never reaches this UI).
-//   - "pick" — the embed picker (`GET /api/v1/documents/picker`,
+//   - "pick" - the embed picker (`GET /api/v1/documents/picker`,
 //     public-only for every role: content embeds a public URL, and
 //     a private file would 404 for readers, so it never appears
 //     here until it is flipped public).
-// All data comes from fetch calls — zero full page reloads. The
+// All data comes from fetch calls - zero full page reloads. The
 // server enforces every permission (owner-or-admin for rename /
 // move / flip / delete, scan gate for making a file public); the
 // UI hides actions it knows the caller may not use, but never
@@ -463,7 +463,7 @@ export default function FileExplorer({
   return (
     <div className="space-y-4">
       {error !== null && (
-        <Alert tone="error" title="Something went wrong">
+        <Alert tone="error" title="Error">
           {error}
         </Alert>
       )}
@@ -525,7 +525,7 @@ export default function FileExplorer({
       </div>
       {search.trim() !== "" && (
         <p className="text-xs text-faint">
-          Searching the whole library — the folder filter is off while searching.
+          Searching the whole library - the folder filter is off while searching.
         </p>
       )}
 
@@ -629,8 +629,8 @@ export default function FileExplorer({
             {currentFolderName === null
               ? "Library root"
               : `Folder: ${currentFolderName}`}{" "}
-            · {total} file{total === 1 ? "" : "s"}
-            {isPick && " · public files only"}
+            - {total} file{total === 1 ? "" : "s"}
+            {isPick && " - public files only"}
           </p>
 
           {loading ? (
@@ -638,7 +638,7 @@ export default function FileExplorer({
           ) : items.length === 0 ? (
             <EmptyState>
               {isPick
-                ? "No public files here yet. Upload one below — it appears once it is public."
+                ? "No public files here yet. Upload one below - it appears once it is public."
                 : "No files here yet. Drop files below to upload the first one."}
             </EmptyState>
           ) : view === "grid" ? (
@@ -704,7 +704,7 @@ export default function FileExplorer({
                 isDisabled={page <= 1}
                 onClick={() => setPage((value) => Math.max(1, value - 1))}
               >
-                ← Previous
+                <- Previous
               </Button>
               <span className="text-muted">
                 Page {page} of {totalPages}
@@ -715,7 +715,7 @@ export default function FileExplorer({
                 isDisabled={page >= totalPages}
                 onClick={() => setPage((value) => Math.min(totalPages, value + 1))}
               >
-                Next →
+                Next ->
               </Button>
             </div>
           )}
@@ -757,7 +757,7 @@ export default function FileExplorer({
           >
             <p className="text-sm font-medium">
               Drop files here to upload
-              {currentFolderName ? ` into "${currentFolderName}"` : ""} — or{" "}
+              {currentFolderName ? ` into "${currentFolderName}"` : ""} - or{" "}
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
@@ -928,7 +928,7 @@ export default function FileExplorer({
                   )
                   .map((folder) => ({
                     id: folder.id,
-                    label: `${"— ".repeat(folder.depth)}${folder.name}`,
+                    label: `${"- ".repeat(folder.depth)}${folder.name}`,
                   })),
               ]}
               selectedKey={moveDestination}
@@ -946,7 +946,7 @@ export default function FileExplorer({
         </Dialog>
       )}
 
-      {/* Delete confirm — the server re-checks ownership and refuses
+      {/* Delete confirm - the server re-checks ownership and refuses
         a non-empty folder delete (409) regardless of this dialog. */}
       {deleteTarget !== null && (
         <Dialog
@@ -957,9 +957,9 @@ export default function FileExplorer({
           }}
         >
           <p className="text-sm">
-            Delete “{deleteTarget.name}” permanently?
+            Delete "{deleteTarget.name}" permanently?
             {deleteTarget.kind === "folder" &&
-              " The folder must be empty — move or delete its contents first."}
+              " The folder must be empty - move or delete its contents first."}
             {deleteTarget.kind === "document" && " All versions are deleted too."}
           </p>
           <div className="mt-4 flex gap-2">
@@ -1019,7 +1019,7 @@ function FolderNode({
             aria-label={isOpen ? "Collapse folder" : "Expand folder"}
             className="shrink-0 rounded px-1 hover:bg-surface-hover"
           >
-            {isOpen ? "▾" : "▸"}
+            {isOpen ? "v" : ">"}
           </button>
         )}
         <button
@@ -1039,7 +1039,7 @@ function FolderNode({
               onClick={() => onRename(node.folder.id, node.folder.name)}
               className="rounded px-1 text-xs hover:bg-surface-hover"
             >
-              ✎
+              Rename
             </button>
             <button
               type="button"
@@ -1048,7 +1048,7 @@ function FolderNode({
               onClick={() => onMove?.(node.folder.id, node.folder.name)}
               className="rounded px-1 text-xs hover:bg-surface-hover"
             >
-              ⇢
+              Move
             </button>
             <button
               type="button"
@@ -1057,7 +1057,7 @@ function FolderNode({
               onClick={() => onDelete?.(node.folder.id, node.folder.name)}
               className="rounded px-1 text-xs hover:bg-surface-hover"
             >
-              ✕
+              x
             </button>
           </span>
         )}
@@ -1174,9 +1174,9 @@ function FileCard(props: {
         ) : (
           <span className="mb-2 flex h-32 items-center justify-center rounded-md bg-surface-muted text-2xl text-muted">
             {item.mime.startsWith("video/")
-              ? "▶"
+              ? "Play"
               : item.mime.startsWith("audio/")
-                ? "♪"
+                ? "Audio"
                 : item.mime === "application/pdf"
                   ? "PDF"
                   : "File"}
@@ -1186,7 +1186,7 @@ function FileCard(props: {
           {item.name}
         </span>
         <span className="mt-1 block text-xs text-muted">
-          {formatBytes(item.size)} · {formatRelativeTime(item.created_at)}
+          {formatBytes(item.size)} - {formatRelativeTime(item.created_at)}
         </span>
         <span className="mt-2 flex gap-1">
           <Badge tone={item.visibility === "public" ? "success" : "warning"}>
@@ -1202,7 +1202,7 @@ function FileCard(props: {
       </span>
       {isPick && selected && (
         <span className="mt-2 block text-xs font-medium text-accent">
-          Selected — attach below.
+          Selected - attach below.
         </span>
       )}
     </li>

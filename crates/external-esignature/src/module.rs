@@ -1,11 +1,9 @@
-//! eSignature external module (split from lib.rs; moved verbatim).
+//! eSignature external module.
 
 use super::*;
 
 
-// ---------------------------------------------------------------------------
 // Module implementation
-// ---------------------------------------------------------------------------
 
 /// The e-signature module. One struct holding the shared in-memory
 /// state; all behaviour is in the `Module` implementation below.
@@ -125,7 +123,7 @@ impl Module for EsignatureModule {
     fn route_info(&self) -> Vec<RouteInfo> {
         // Auth split: the tenant-scoped `/requests/*` routes are
         // `Authenticated`; the token-gated signing routes and the
-        // certificate-hash verification are `Public` — their
+        // certificate-hash verification are `Public` - their
         // credential is the HMAC signing token / the certificate
         // hash itself, because external signers have no account and
         // no token to present. (Parent decision: sign/verify GETs

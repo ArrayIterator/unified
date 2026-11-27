@@ -1,4 +1,4 @@
-// Contracts — Helpers.
+// Contracts - Helpers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -19,9 +19,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 /// Caller identity: the server-verified caller (user id plus
 /// server-resolved role, both required for capability checks),
@@ -62,9 +60,7 @@ pub(crate) fn require_permission(ctx: &AppContext, role: &str, permission: &str)
     }
 }
 
-// ---------------------------------------------------------------------------
 // Tenant edge guard (C3 pilot 4, group B).
-// ---------------------------------------------------------------------------
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request
@@ -186,7 +182,7 @@ pub(crate) fn valid_currency(currency: &str) -> UnifiedResult<String> {
 }
 
 /// SHA-256 hex digest. Used for signing-token storage, content
-/// sealing, and IP / user-agent hashing in the audit trail — the
+/// sealing, and IP / user-agent hashing in the audit trail - the
 /// raw value is never stored or logged.
 pub(crate) fn hash_value(value: &str) -> String {
     let mut hasher = sha2::Sha256::new();
@@ -517,7 +513,7 @@ pub(crate) fn transition(
             // Sealing straight from Sent: the only caller that
             // targets Signed is the sealing step in `sign_via_link`,
             // which only runs once every non-declined signer
-            // signed — a single signer, or every other signer
+            // signed - a single signer, or every other signer
             // declined (see `all_non_declined_signed`).
             ContractStatus::Signed,
             ContractStatus::Terminated,
@@ -555,7 +551,7 @@ pub(crate) fn transition(
 }
 
 /// Activation guard: a contract whose end date already passed
-/// must not become active — it would read as expired at once.
+/// must not become active - it would read as expired at once.
 /// Returns a 422 when `ends_at <= now`.
 pub(crate) fn reject_activation_if_ended(
     contract: &Contract,
@@ -678,7 +674,7 @@ pub(crate) fn materialise_expiry(state: &ContractsState, contract: &mut Contract
 
 /// Public view of a contract: the sealed hash is exposed (it
 /// proves the sealed content) but no signer token material ever
-/// appears here — tokens live only on signer rows as hashes.
+/// appears here - tokens live only on signer rows as hashes.
 pub(crate) fn contract_view(state: &ContractsState, contract: &Contract) -> Value {
     let now = Utc::now();
     let signers = signers_of(state, contract.id);

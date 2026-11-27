@@ -20,8 +20,8 @@ use super::helpers::{
 
 /// List the sellable modules as product offerings
 /// (`GET /api/v1/products/module-offerings`). The offerings are
-/// derived from the module registry in memory — no database row
-/// backs them — so this endpoint reads nothing from the product
+/// derived from the module registry in memory - no database row
+/// backs them - so this endpoint reads nothing from the product
 /// catalogue. Requires the `products:read` permission (fail-closed
 /// through the `role.check` hook). Supports the standard pagination
 /// parameters plus an exact `category` filter, which is validated
@@ -72,9 +72,7 @@ pub(crate) async fn list_module_offerings(
     json::respond(result, debug)
 }
 
-// ---------------------------------------------------------------------------
 // Option handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_options(
     ctx: web::Data<Arc<AppContext>>,
@@ -201,9 +199,7 @@ pub(crate) async fn delete_option(
     json::respond(result, ctx.is_debug())
 }
 
-// ---------------------------------------------------------------------------
 // Variant handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_variants(
     ctx: web::Data<Arc<AppContext>>,
@@ -483,9 +479,7 @@ pub(crate) async fn delete_variant(
     json::respond(result, ctx.is_debug())
 }
 
-// ---------------------------------------------------------------------------
 // Bundle handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_bundle_items(
     ctx: web::Data<Arc<AppContext>>,
@@ -681,9 +675,7 @@ pub(crate) async fn update_bundle_rule(
     json::respond(result, ctx.is_debug())
 }
 
-// ---------------------------------------------------------------------------
 // Pricing tier handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_tiers(
     ctx: web::Data<Arc<AppContext>>,
@@ -980,9 +972,7 @@ pub(crate) async fn delete_tier(
     json::respond(result, ctx.is_debug())
 }
 
-// ---------------------------------------------------------------------------
 // Regional price handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_regional_prices(
     ctx: web::Data<Arc<AppContext>>,
@@ -1142,9 +1132,7 @@ pub(crate) async fn delete_regional_price(
     json::respond(result, ctx.is_debug())
 }
 
-// ---------------------------------------------------------------------------
 // Usage price handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_usage_prices(
     ctx: web::Data<Arc<AppContext>>,
@@ -1316,9 +1304,7 @@ pub(crate) async fn delete_usage_price(
     json::respond(result, ctx.is_debug())
 }
 
-// ---------------------------------------------------------------------------
 // Tax rule handlers (global)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_tax_rules(
     ctx: web::Data<Arc<AppContext>>,

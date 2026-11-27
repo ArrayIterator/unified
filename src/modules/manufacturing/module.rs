@@ -112,9 +112,7 @@ use super::ai_capabilities::AI_CAPABILITIES;
 
 
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 pub struct ManufacturingModule {
     pub(crate) state: ManufacturingState,
 }

@@ -1,4 +1,4 @@
-// Properties — GeoJSON validation, measurement, and hashing.
+// Properties - GeoJSON validation, measurement, and hashing.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -19,9 +19,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // GeoJSON validation, measurement, and hashing
-// ---------------------------------------------------------------------------
 
 /// What `validate_geometry` returns for a geometry that passed
 /// every check: its kind, the server-computed measurements, and
@@ -36,7 +34,7 @@ pub struct ValidatedGeometry {
 }
 
 /// Validate a GeoJSON geometry object. Accepted types are
-/// `Polygon`, `MultiPolygon`, and `LineString` only — no `Point`,
+/// `Polygon`, `MultiPolygon`, and `LineString` only - no `Point`,
 /// no `GeometryCollection`, no `Feature` wrapper (the geometry
 /// object itself is what is stored). Every position must be
 /// exactly `[longitude, latitude]` with finite numbers in range.

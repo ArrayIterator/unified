@@ -15,9 +15,7 @@ use super::constants::MAX_SLUG_LEN;
 use super::constants::PERM_QUALITY_INSPECT;
 use super::constants::PERM_QUALITY_MANAGE;
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 /// Caller identity: the server-verified caller (user id plus
 /// server-resolved role, both required for capability checks),
@@ -55,7 +53,7 @@ pub(crate) fn is_supervisor(ctx: &AppContext, role: &str) -> bool {
 /// (see `unified_core::tenancy`): this function returns the tenancy
 /// `TenantContext` (tenant id as Uuid + schema name derived only
 /// by `tenancy::schema_name()`), and the Diesel persistence wiring
-/// — when it lands — takes the Uuid from here into
+/// - when it lands - takes the Uuid from here into
 /// `tenancy::with_tenant_connection`. Fail closed:
 /// `from_http_request` answers 401 when the request did not
 /// resolve to a tenant and 403 when the resolved tenant id is not
@@ -164,7 +162,7 @@ pub(crate) fn optional_text(
 }
 
 /// Validate a value against a settings list. The list is the live
-/// admin-configured one — never a constant in this file.
+/// admin-configured one - never a constant in this file.
 pub(crate) fn require_in_list(
     value: &str,
     field: &str,

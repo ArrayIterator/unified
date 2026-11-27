@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""C3 pilot 4 group E verification (task 316): procurement, vcs,
+"""C3 pilot 4 group E verification: procurement, vcs,
 content, crm, ai_support, maintenance, webhooks, saved_views,
 downloader.
 
@@ -13,7 +13,7 @@ For each module, per routed handler (routed = names appearing in
     company with `require_caller_company(`; GET handlers must resolve
     it with `caller_company(` (mismatch -> 403)
 
-Task 315 (2026-11-23): `require_caller_company` is the pre-315
+`require_caller_company` is the pre-315
 strict write gate, equivalent to the newer
 `require_company_for_write`; these modules already used it, so
 the C.3 rename left them untouched and this rule is unchanged.

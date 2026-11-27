@@ -2,9 +2,7 @@
 
 use super::languages::*;
 
-// ---------------------------------------------------------------------------
 // Locale handling, plural rules, currencies, and gettext-style catalogues.
-// ---------------------------------------------------------------------------
 
 /// Normalise a locale to BCP 47 shape: language lowercase, region
 /// uppercase, hyphen separated (`en_US` / `EN-us` -> `en-US`).
@@ -149,7 +147,7 @@ pub fn plural_form_count(locale: &str) -> usize {
 ///   (fractions only) has no gettext form, so a 3-form catalogue
 ///   falls back to the caller-supplied plural for fractional counts.
 /// - Latvian: gettext commonly uses 3 forms in (one, zero, other)
-///   order, while CLDR orders them (zero, one, other) — the first
+///   order, while CLDR orders them (zero, one, other) - the first
 ///   two stored forms are swapped relative to a gettext catalogue.
 ///   Catalogues using the current standard formula store (one,
 ///   other, zero) instead; the loader detects that formula from

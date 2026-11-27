@@ -1,4 +1,4 @@
-// Third-party VCS integrations — Provider and provider-settings handlers.
+// Third-party VCS integrations - Provider and provider-settings handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};

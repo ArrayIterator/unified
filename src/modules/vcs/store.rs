@@ -1,4 +1,4 @@
-// Third-party VCS integrations — In-memory state and its constructors.
+// Third-party VCS integrations - In-memory state and its constructors.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -41,9 +41,7 @@ pub struct RateLimitState {
     pub retry_after_until: Option<Instant>,
 }
 
-// ---------------------------------------------------------------------------
 // Module state.
-// ---------------------------------------------------------------------------
 
 pub struct VcsState {
     pub(crate) hooks: RwLock<Arc<HookBus>>,

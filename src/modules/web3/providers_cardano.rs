@@ -12,9 +12,7 @@ use super::helpers::*;
 use super::providers::*;
 use super::types::*;
 
-// ---------------------------------------------------------------------------
 // Cardano provider (Blockfrost- or Koios-style REST)
-// ---------------------------------------------------------------------------
 
 /// REST provider for Cardano. `api_style` is `"blockfrost"` (API key
 /// sent as the `project_id` header) or `"koios"` (no key needed).

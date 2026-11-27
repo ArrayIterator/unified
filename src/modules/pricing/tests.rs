@@ -1,4 +1,4 @@
-// pricing — unit tests for the pure calculation functions.
+// pricing - unit tests for the pure calculation functions.
 // This file is the body of `#[cfg(test)] mod tests;` declared
 // in the module root.
 //

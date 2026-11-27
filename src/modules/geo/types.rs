@@ -7,9 +7,7 @@ use serde::{Deserialize, Serialize};
 
 
 #[derive(Debug, Deserialize)]
-// ---------------------------------------------------------------------------
 // Request / response types.
-// ---------------------------------------------------------------------------
 pub(crate) struct LookupQuery {
     pub(crate) ip: Option<String>,
 }

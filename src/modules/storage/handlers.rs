@@ -45,9 +45,7 @@ use super::types::ObjectQuery;
 use super::types::SignedUrlRequest;
 use super::types::StorageStatusView;
 
-// ---------------------------------------------------------------------------
 // Handlers.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn get_status(ctx: web::Data<Arc<AppContext>>, req: HttpRequest) -> HttpResponse {
     let debug = ctx.is_debug();
@@ -452,7 +450,7 @@ pub(crate) async fn delete_object(
             // any counted-but-gone contribution. Other providers
             // cannot reconcile here (S3, R2 and Drive do not list
             // at all; SFTP lists only one level), so for them
-            // usage keeps tracking module uploads only — see the
+            // usage keeps tracking module uploads only - see the
             // note on `TargetUsage`.
             if let Ok(keys) = provider.list("").await {
                 reconcile_usage_from_listing(&name, &keys);

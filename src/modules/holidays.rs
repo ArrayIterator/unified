@@ -1,4 +1,4 @@
-//! Holidays module — global public-holiday synchronization.
+//! Holidays module - global public-holiday synchronization.
 //!
 //! Split into one file per concern under `holidays/`; this file only
 //! declares the submodules and re-exports the public API. The full

@@ -17,7 +17,6 @@ use super::state::*;
 use super::types::*;
 use super::validation::*;
 
-// ---------------------------------------------------------------------------
 // Caller identity and capabilities.
 //
 // Write handlers resolve the caller from the `X-User-Id` / `X-Role`
@@ -28,7 +27,6 @@ use super::validation::*;
 // missing roles handler (or a silent one) denies. Read endpoints
 // stay public: listing, translating and negotiating a language are
 // unauthenticated by design.
-// ---------------------------------------------------------------------------
 
 /// Capability required to write translations (upsert, delete, and
 /// bulk .po catalogue import).
@@ -82,9 +80,7 @@ pub(crate) fn require_caller_permission(
     Ok(caller)
 }
 
-// ---------------------------------------------------------------------------
 // Handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_languages() -> HttpResponse {
     api_json::success_response(json!({ "languages": builtin_languages() }), 200)

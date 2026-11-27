@@ -22,9 +22,7 @@ use super::scheduler::*;
 use super::state::*;
 use super::ai_capabilities::AI_CAPABILITIES;
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct WebinarsModule {
     state: WebinarsState,

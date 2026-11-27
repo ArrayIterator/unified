@@ -4,7 +4,7 @@
 //! server side of that contract: it transpiles `.ts` sources to
 //! JavaScript in memory (OXC, via `unified-ts`), executes them in an
 //! embedded QuickJS runtime, and injects one `Unified` global object
-//! holding the whole SDK — the same shape as Bun's `Bun` global.
+//! holding the whole SDK - the same shape as Bun's `Bun` global.
 //!
 //! There is deliberately no V8 here: QuickJS is small (~1 MB),
 //! embeddable, and musl-friendly, while V8 would break the static

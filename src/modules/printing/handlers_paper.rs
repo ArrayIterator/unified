@@ -12,9 +12,7 @@ use super::{events::*, paper::*, thermal::*, profiles::*, jobs::*, state::*, aut
 
 
 
-// ---------------------------------------------------------------------------
 // Paper-size handlers
-// ---------------------------------------------------------------------------
 pub(crate) async fn list_paper_sizes(
     state: web::Data<Arc<PrintingState>>,
     ctx: web::Data<Arc<AppContext>>,

@@ -24,14 +24,12 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Types.
-// ---------------------------------------------------------------------------
 
 /// Provider kind. The kind selects the request shape and the parser;
 /// everything else about a provider (base URL, allowlist, rate
 /// limits, key requirement, calendar ids) is DATA on the definition,
-/// so adding a provider never requires a code change — except a
+/// so adding a provider never requires a code change - except a
 /// genuinely new wire shape, which adds one kind here and one parse
 /// arm in `fetch_holidays_for_provider`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -367,9 +365,7 @@ pub(crate) struct SyncSummary {
     pub(crate) scheduler_status: String,
 }
 
-// ---------------------------------------------------------------------------
 // Request DTOs.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct CreateProviderRequest {

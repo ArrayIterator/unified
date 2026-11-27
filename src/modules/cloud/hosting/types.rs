@@ -1,4 +1,4 @@
-// hosting module — Domain types.
+// hosting module - Domain types.
 //
 // Split from the former single-file module `src/modules/hosting.rs`.
 // The module root (`hosting.rs`) re-exports the public items, so the
@@ -22,9 +22,7 @@ use serde_json::{json, Value};
 use std::sync::{Arc, OnceLock};
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Types.
-// ---------------------------------------------------------------------------
 
 /// Billing cycle of a hosting plan.
 pub const BILLING_CYCLES: [&str; 2] = ["monthly", "yearly"];

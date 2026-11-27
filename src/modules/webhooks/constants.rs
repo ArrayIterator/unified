@@ -1,4 +1,4 @@
-// Webhooks — Constants.
+// Webhooks - Constants.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -25,9 +25,7 @@ use super::*;
 
 pub(crate) type HmacSha256 = Hmac<Sha256>;
 
-// ---------------------------------------------------------------------------
 // Constants.
-// ---------------------------------------------------------------------------
 
 /// Default retry attempts per delivery (1..=10).
 pub(crate) const DEFAULT_MAX_ATTEMPTS: u32 = 3;
@@ -118,7 +116,7 @@ pub const KNOWN_EVENTS: &[&str] = &[
     "license.validate_requested",
     // Batch 18 (cards / reference ids): only the outcome events
     // are subscribable. `cards.validate_requested` is deliberately
-    // absent — its payload carries the card number, expiry, and
+    // absent - its payload carries the card number, expiry, and
     // CVV, which must never leave the process to a webhook
     // endpoint. `cards.custom_rule.changed` is not listed either:
     // the cards module does not emit it yet.

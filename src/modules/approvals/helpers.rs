@@ -1,4 +1,4 @@
-// Generic Approvals — Small shared helpers: caller identity, capability checks, and HTTP responses.
+// Generic Approvals - Small shared helpers: caller identity, capability checks, and HTTP responses.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -27,9 +27,7 @@ use super::handlers_dashboards::*;
 use super::hooks::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 /// Caller identity: the server-verified caller (user id plus
 /// server-resolved role, both required for capability checks),

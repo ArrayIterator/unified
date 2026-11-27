@@ -1,4 +1,4 @@
-// Pos module — sale handlers.
+// Pos module - sale handlers.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use unified_core::context::AppContext;
@@ -19,9 +19,7 @@ use std::sync::{
 use uuid::Uuid;
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Sale handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_sales(
     ctx: web::Data<Arc<AppContext>>,

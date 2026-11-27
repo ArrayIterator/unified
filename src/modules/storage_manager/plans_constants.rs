@@ -8,13 +8,11 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
-// ---------------------------------------------------------------------------
 // Storage plans (storage as a product) + bring-your-own storage (BYO).
 //
 // Plans are products: the price itself is owned by Product
 // Management / billing, so a plan stores only a `product_id`
-// billing reference and a billing-cycle hint — never a money
+// billing reference and a billing-cycle hint - never a money
 // column. A buyer (company and/or user) holds at most one active
 // assignment. Changing a plan re-checks current usage against the
 // new quota and refuses with 409 when usage exceeds it. Usage is
@@ -33,7 +31,6 @@ use super::*;
 // Credentials follow the bucket pattern exactly: write-only,
 // encrypted with the same versioned `v1.` construction, never
 // returned, logged, or placed in a hook payload.
-// ---------------------------------------------------------------------------
 
 /// Canonical provider-kind names accepted by plans and the BYO
 /// allowlist. `drive` is the Google Drive kind; `s3-compatible` is

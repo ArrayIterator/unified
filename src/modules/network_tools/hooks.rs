@@ -7,9 +7,7 @@ use uuid::Uuid;
 use super::store::{hook_ctx, runs_store, uptime_monitors_store};
 use super::tools_monitor::check_cert_watches_sync;
 
-// ---------------------------------------------------------------------------
 // Hook handlers.
-// ---------------------------------------------------------------------------
 
 /// Answer `network_tools.uptime.check_requested` (payload
 /// `{"monitor_id", "actor"}`). Hook handlers are synchronous, so this

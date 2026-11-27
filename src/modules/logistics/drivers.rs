@@ -1,4 +1,4 @@
-//! Logistics module — shipments, fleet, warehouses, delivery — Driver handlers.
+//! Logistics module - shipments, fleet, warehouses, delivery - Driver handlers.
 //!
 //! Split from `src/modules/logistics.rs`; behaviour unchanged.
 

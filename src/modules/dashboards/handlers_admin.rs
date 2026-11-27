@@ -134,8 +134,8 @@ pub(crate) async fn get_admin_users(
     let search = pagination.search.clone().map(|value| value.to_lowercase());
     // Tenant scoping (C3): the client-supplied `company_id` filter
     // must never widen the caller's scope. On a tenant host the
-    // filter is forced to the resolved tenant's company — asking for
-    // another company is a 403 — so a tenant admin can only ever
+    // filter is forced to the resolved tenant's company - asking for
+    // another company is a 403 - so a tenant admin can only ever
     // list their own users. On a proven control-plane request (no
     // tenant context) the filter stays caller-supplied, as before.
     let tenant = match overview_tenant_scope(&req) {
@@ -249,9 +249,7 @@ pub(crate) async fn get_admin_users(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Page handlers (HTML; auth failures stay in the standard JSON envelope)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn admin_page(
     req: HttpRequest,
@@ -307,7 +305,7 @@ pub(crate) async fn admin_page_inner(
     } else {
         current_path
     };
-    let mut data = page_data(&ctx, &state, &caller, "admin", &format!("Admin — {section}"), &current_path);
+    let mut data = page_data(&ctx, &state, &caller, "admin", &format!("Admin - {section}"), &current_path);
     let tenant = match overview_tenant_scope(&req) {
         Ok(tenant) => tenant,
         Err(error) => return error_response(&error, debug),

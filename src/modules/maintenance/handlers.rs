@@ -1,4 +1,4 @@
-// Maintenance module — maintenance window and mode HTTP handlers.
+// Maintenance module - maintenance window and mode HTTP handlers.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use unified_core::context::AppContext;
@@ -17,9 +17,7 @@ use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_windows(
     state: web::Data<Arc<MaintenanceState>>,

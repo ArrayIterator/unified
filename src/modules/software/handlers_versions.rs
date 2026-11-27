@@ -19,9 +19,7 @@ use super::types::{CreateRelease, CreateVersion, PERM_SOFTWARE_CREATE, PERM_SOFT
 use super::state::SoftwareState;
 use super::validation::{matches_search, new_id, now, paginate, respond_created, validate_requirements, validate_version_string};
 
-// ---------------------------------------------------------------------------
 // Version handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_versions(
     ctx: web::Data<Arc<AppContext>>,
@@ -235,9 +233,7 @@ pub(crate) async fn delete_version(
     json::respond(result, ctx.is_debug())
 }
 
-// ---------------------------------------------------------------------------
 // Release handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_releases(
     ctx: web::Data<Arc<AppContext>>,
@@ -516,7 +512,7 @@ pub(crate) async fn release_files(
 
 /// Download a release.
 ///
-/// PUBLIC endpoint: no caller/permission gate by design — delivery
+/// PUBLIC endpoint: no caller/permission gate by design - delivery
 /// is gated by the API Manager's `ApiAccessRule` for this path
 /// (default deny) plus the license-key check below when the version
 /// requires a license. Only published releases can be downloaded.
@@ -661,10 +657,10 @@ mod tests {
         web::Data::new(Arc::new(ctx))
     }
 
-    /// The company the handler tests act as (C3 task 315).
+    /// The company the handler tests act as (C3).
     const TEST_COMPANY: &str = "company-a";
 
-    /// A request scoped to the test company (C3 task 315):
+    /// A request scoped to the test company (C3):
     /// mutation handlers require a resolved company, so the
     /// happy-path tests carry one on both the tenant context and
     /// the verified caller.

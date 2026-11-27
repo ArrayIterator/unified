@@ -12,9 +12,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // BYO terms.
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_byo_terms(
     state: web::Data<StorageManagerState>,

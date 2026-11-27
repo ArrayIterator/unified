@@ -80,32 +80,32 @@
 //
 // # Events emitted
 //
-// - `pricing.recommendation.created` — a recommendation was computed.
-// - `pricing.recommendation.confirmed` — an admin confirmed one.
+// - `pricing.recommendation.created` - a recommendation was computed.
+// - `pricing.recommendation.confirmed` - an admin confirmed one.
 // - `pricing.price_version.submitted` / `.approved` / `.rejected` /
-//   `.activated` — price version lifecycle.
-// - `pricing.discount.evaluated` — a discount evaluation ran.
-// - `pricing.coupon.redeemed` — a coupon redemption was recorded.
-// - `pricing.proration.computed` — a proration was computed.
-// - `pricing.invoice.reconciled` — a reconciliation matched.
-// - `pricing.invoice.reconciliation_failed` — a reconciliation
+//   `.activated` - price version lifecycle.
+// - `pricing.discount.evaluated` - a discount evaluation ran.
+// - `pricing.coupon.redeemed` - a coupon redemption was recorded.
+// - `pricing.proration.computed` - a proration was computed.
+// - `pricing.invoice.reconciled` - a reconciliation matched.
+// - `pricing.invoice.reconciliation_failed` - a reconciliation
 //   mismatched (issuing must be blocked).
-// - `pricing.invoice.previewed` — an invoice preview was produced.
-// - `pricing.credit_note.created` / `.issued` — credit note lifecycle.
-// - `pricing.ai.draft_created` — an AI narrative draft was produced
+// - `pricing.invoice.previewed` - an invoice preview was produced.
+// - `pricing.credit_note.created` / `.issued` - credit note lifecycle.
+// - `pricing.ai.draft_created` - an AI narrative draft was produced
 //   from a stored recommendation (numbers only from the engine).
 //
 // # Events answered (requested by other modules)
 //
-// - `pricing.discount.evaluate_requested` — the store and billing
+// - `pricing.discount.evaluate_requested` - the store and billing
 //   call this to evaluate discounts; the answer is added with
 //   `add_result` and never mutates the caller's order.
-// - `pricing.invoice.validate_requested` — billing calls this
+// - `pricing.invoice.validate_requested` - billing calls this
 //   before issuing an invoice; the answer carries `valid` and the
 //   per-component discrepancy. Billing amounts arriving as JSON
 //   numbers are read through their decimal string form and parsed
 //   with integer math; this module never performs float arithmetic.
-// - `pricing.ai.recommend_requested` — the AI module asks for a
+// - `pricing.ai.recommend_requested` - the AI module asks for a
 //   recommendation narrative; the answer words a stored
 //   recommendation record. The AI never invents prices: every
 //   number in the draft comes from the engine.
@@ -151,7 +151,7 @@
 // tenant (never leaks). The tenant context is resolved ONLY from
 // `TenantContext::from_request` (the middleware-attached context
 // from crates/unified-core/src/middleware.rs`, resolved through the
-// `tenant.resolve_requested` hook) — never from a client-supplied
+// `tenant.resolve_requested` hook) - never from a client-supplied
 // header, and never from a hard-coded tenant id, schema name, or
 // package id. NO TENANT CONTEXT MEANS FAIL CLOSED: `caller()`
 // resolves the tenant first, so every HTTP handler answers 403
@@ -161,22 +161,22 @@
 // result when it is absent or malformed. Settings are per-tenant.
 // The only exception is the currency registry: ISO 4217 codes are
 // standard constants and the currency rows are platform reference
-// data, identical for every tenant — but the currency endpoints
+// data, identical for every tenant - but the currency endpoints
 // still require a resolved tenant context, so there is no
 // anonymous or public access. Control-plane tables (tenants,
 // subscriptions, domains, billing, licensing) live in `public`
 // and are touched only through their own modules/events, never
 // from here; this module issues no SQL at all.
 //
-// CONVERGENCE POINT (batch 17 — schema-per-tenant plumbing is NOT
+// CONVERGENCE POINT (batch 17 - schema-per-tenant plumbing is NOT
 // on disk yet, verified 2026-11-22: there is no `schema_name`
 // helper, no tenant schema extractor, and no `search_path`
 // handling anywhere in `src/`; `TenantContext` carries a tenant
 // id, company id, site id, kind, and host, but no schema name and
 // no package entitlements). This module deliberately does NOT
 // invent its own schema-name derivation. When batch 17 lands its
-// plumbing, the integrator swaps exactly one function —
-// `resolve_tenant` in this file — to also return the batch-17
+// plumbing, the integrator swaps exactly one function -
+// `resolve_tenant` in this file - to also return the batch-17
 // schema name / search_path handle, and re-points the migration
 // tables (every `pricing_*` table already carries a `tenant_id`
 // column) at the per-tenant schema instead of `public`. No
@@ -196,7 +196,7 @@
 // supplied to the integrator in the notes, and nothing in this file
 // references a table that does not exist yet.
 
-// pricing — money.
+// pricing - money.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -229,9 +229,7 @@ use super::handlers_bundles::*;
 use super::handlers_reconciliation::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Capabilities and constants.
-// ---------------------------------------------------------------------------
 
 /// Read pricing rules, coupons, recommendations, price versions,
 /// proration records, reconciliations, and settings.
@@ -312,9 +310,7 @@ pub const SEEDED_CURRENCIES: [(&str, i64); 12] = [
     ("VND", 0),
 ];
 
-// ---------------------------------------------------------------------------
 // Money core (pure functions; no database, no I/O).
-// ---------------------------------------------------------------------------
 
 /// One money amount as supplied by API callers: an exact decimal
 /// string such as `"19.99"`, parsed with integer arithmetic only.
@@ -388,7 +384,7 @@ pub fn validate_currency(currency: &str) -> UnifiedResult<()> {
 /// Rejects negative amounts, non-numeric input, and more fractional
 /// digits than the storage scale allows. No floating point is used.
 /// Accepts an optional leading `+`; a leading `-` is rejected here
-/// because prices, costs, and discounts are non-negative — signed
+/// because prices, costs, and discounts are non-negative - signed
 /// adjustments (proration credits, credit notes) are built by the
 /// engine from non-negative parts, never parsed from input.
 pub fn parse_scaled_amount(amount: &str, currency: &str) -> UnifiedResult<i64> {

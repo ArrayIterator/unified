@@ -3,9 +3,7 @@
 // Split out of `src/schema.rs` (see `src/lib.rs`); the tables below are
 // byte-identical to the originals, only regrouped.
 
-// ---------------------------------------------------------------------------
 // Calendar (migration 000101_calendar).
-// ---------------------------------------------------------------------------
 
 diesel::table! {
     calendar_feeds (id) {

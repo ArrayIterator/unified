@@ -14,9 +14,7 @@ use super::state::*;
 use super::types::*;
 use super::validation::*;
 
-// ---------------------------------------------------------------------------
 // Transaction dedup (W9)
-// ---------------------------------------------------------------------------
 
 /// Normalise a transaction hash for dedup: trimmed, lowercased.
 /// Providers return the same hash in different cases (EVM hashes
@@ -50,9 +48,7 @@ pub(crate) fn insert_tx_if_new(state: &Arc<Web3State>, record: &ChainTxRecord) -
     }
 }
 
-// ---------------------------------------------------------------------------
 // Polling (web3.poll) -- called by the scheduler, not by this module
-// ---------------------------------------------------------------------------
 
 /// Poll every watched address on its network, store newly seen
 /// transactions (deduplicated by network + hash), and emit
@@ -167,7 +163,7 @@ pub async fn poll_watched_addresses(
 /// Run the watched-address poll for `web3.poll_requested`, the
 /// event the scheduler dispatches for the `web3.poll` job kind.
 /// Hook handlers are synchronous but the poll is async network
-/// work, so — like the geo update hook — it runs on a detached
+/// work, so - like the geo update hook - it runs on a detached
 /// thread with its own current-thread runtime. The hook result only
 /// records that the poll started; the summary is logged when the
 /// poll finishes, and each new transaction is still emitted as

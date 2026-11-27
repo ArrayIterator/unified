@@ -1,4 +1,4 @@
-// surveys module — Survey handlers.
+// surveys module - Survey handlers.
 //
 // Split from the former single-file module `src/modules/surveys.rs`.
 // The module root (`surveys.rs`) re-exports the public items, so the
@@ -29,9 +29,7 @@ use super::helpers::{
     require_company, require_permission, require_tenant, require_text,
 };
 
-// ---------------------------------------------------------------------------
 // Survey handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) fn survey_view(state: &SurveysState, survey: &Survey) -> Value {
     let mut value = serde_json::to_value(survey).unwrap_or(Value::Null);
@@ -209,7 +207,7 @@ pub(crate) async fn get_survey(
 /// Update a survey. A draft is edited in place. A published (or
 /// archived) survey is never edited in place: the update creates a
 /// new draft version in the same family (questions copied), and
-/// the new version is returned — responses keep referencing the
+/// the new version is returned - responses keep referencing the
 /// version they answered.
 pub(crate) async fn update_survey(
     ctx: web::Data<Arc<AppContext>>,

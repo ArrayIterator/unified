@@ -8,9 +8,7 @@ use super::{constants::*, types::*, inputs::*, helpers::*, store::*, validation:
 
 
 
-// ---------------------------------------------------------------------------
 // Settings handlers
-// ---------------------------------------------------------------------------
 pub(crate) async fn get_settings(
     ctx: web::Data<Arc<AppContext>>,
     state: web::Data<ManufacturingState>,

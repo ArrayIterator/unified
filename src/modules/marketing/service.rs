@@ -1,4 +1,4 @@
-// Marketing Automation — Business logic shared by handlers and hooks.
+// Marketing Automation - Business logic shared by handlers and hooks.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -250,9 +250,7 @@ pub(crate) fn record_segment_evaluation(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Consent, suppression, and the send gate.
-// ---------------------------------------------------------------------------
 
 /// True when the contact is suppressed globally, or for this
 /// campaign. Suppression is always honoured before any send.
@@ -428,9 +426,7 @@ pub(crate) fn request_mail_send(state: &MarketingState, payload: Value) -> Unifi
     }
 }
 
-// ---------------------------------------------------------------------------
 // Lead scoring.
-// ---------------------------------------------------------------------------
 
 /// Effective points of one score event, applying the owning rule's
 /// linear decay. An event whose rule was deleted keeps full points.
@@ -554,9 +550,7 @@ pub(crate) fn apply_score_action(
     rules.len()
 }
 
-// ---------------------------------------------------------------------------
 // Campaign send execution.
-// ---------------------------------------------------------------------------
 
 /// Variant assignment for a recipient: the bucket is derived from
 /// the recipient, so the same contact always sees the same variant.

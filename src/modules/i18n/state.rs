@@ -33,9 +33,7 @@ fn temp_path_for(target: &PathBuf) -> PathBuf {
     target.with_file_name(name)
 }
 
-// ---------------------------------------------------------------------------
 // State
-// ---------------------------------------------------------------------------
 
 #[derive(Clone)]
 pub struct I18nState {

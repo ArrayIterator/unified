@@ -23,7 +23,7 @@
 //!
 //! Authentication: the dispatcher and the list endpoint declare
 //! `RouteAuth::Authenticated` (enforced by the global auth
-//! middleware once it lands — inspection C1); the reload
+//! middleware once it lands - inspection C1); the reload
 //! endpoints additionally require the `scripting:manage`
 //! capability in the handler itself (`caller_from`), so they fail
 //! closed (403) while the middleware is still being wired.
@@ -284,7 +284,7 @@ pub fn register(registry: &ModuleRegistry) {
     registry.register(Arc::new(ScriptingModule::new()));
 }
 
-// ---------------------------------------------------------- handlers
+// handlers
 
 fn engine_or_503(
     engine: &Option<web::Data<Arc<ScriptingEngine>>>,

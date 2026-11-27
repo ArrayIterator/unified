@@ -1,4 +1,4 @@
-// Events Manager — Event and occurrence handlers.
+// Events Manager - Event and occurrence handlers.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -27,9 +27,7 @@ use super::handlers_public::*;
 use super::hooks::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Default reminders
-// ---------------------------------------------------------------------------
 
 /// Create the default 24h / 1h reminders for an event, unless
 /// reminders already exist for it. Called on event creation.
@@ -69,9 +67,7 @@ pub(crate) fn can_manage_event(ctx: &AppContext, role: &str, event: &Event, acto
     require_permission(ctx, role, PERM_EVENTS_MANAGE)
 }
 
-// ---------------------------------------------------------------------------
 // Event handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_events(
     ctx: web::Data<Arc<AppContext>>,
@@ -688,9 +684,7 @@ pub(crate) async fn complete_event(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Occurrence handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_occurrences(
     ctx: web::Data<Arc<AppContext>>,

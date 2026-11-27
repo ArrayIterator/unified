@@ -1,4 +1,4 @@
-// Third-party VCS integrations — Provider abstraction, provider API types, and release parsing.
+// Third-party VCS integrations - Provider abstraction, provider API types, and release parsing.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -35,9 +35,7 @@ use super::handlers_drafts::*;
 use super::webhooks::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Provider abstraction.
-// ---------------------------------------------------------------------------
 
 /// A third-party version-control hosting provider.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -122,9 +120,7 @@ pub fn catalog() -> Vec<Arc<ProviderDefinition>> {
     provider_registry().list_family_enabled("vcs")
 }
 
-// ---------------------------------------------------------------------------
-// Registry-backed attributes (C12, task 269).
-// ---------------------------------------------------------------------------
+// Registry-backed attributes (C12).
 /// The `&'static` view of one provider's registry definition; see the
 /// same bridge in the payments module. The release/tag path shapes
 /// stay protocol code (driven by `api_style` in a follow-up).
@@ -239,9 +235,7 @@ pub(crate) fn encode_path_segment(value: &str) -> String {
     out
 }
 
-// ---------------------------------------------------------------------------
 // Provider settings (write-only credentials).
-// ---------------------------------------------------------------------------
 
 /// Per-provider settings. This struct deliberately does NOT implement
 /// `Serialize`: the token and webhook secret must never be serialized
@@ -276,9 +270,7 @@ pub struct ProviderView {
     pub webhook_configured: bool,
 }
 
-// ---------------------------------------------------------------------------
 // Provider API: releases and tags.
-// ---------------------------------------------------------------------------
 
 /// One release or tag as returned by a provider.
 #[derive(Debug, Clone, Serialize)]
@@ -594,7 +586,7 @@ mod tests {
         // base URL, auth scheme, and webhook header from that data.
         // No enum variant exists for it and no match arm was added.
         // (Release/tag path shapes are still protocol code keyed by
-        // `api_style`; a generic path shape is follow-up work — see
+        // `api_style`; a generic path shape is follow-up work - see
         // INTEGRATION_NOTES_C12.)
         let mut def = unified_core::provider_registry::ProviderDefinition::new(
             "vcs", "gitea", "Gitea", "generic",

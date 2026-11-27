@@ -21,9 +21,7 @@ use super::types::PanelCapabilities;
 use super::types::PanelConnection;
 use super::types::PanelCredentials;
 
-// ---------------------------------------------------------------------------
 // Request types.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct CreateConnectionRequest {
@@ -73,7 +71,6 @@ pub struct MarkLocalChangedRequest {
     pub prefer_local: bool,
 }
 
-// ---------------------------------------------------------------------------
 // Caller authentication (same pattern as calculator / bi /
 // supervision: `X-User-Id` + `X-Role` headers, capability checked
 // through the `role.check` hook, fail closed).
@@ -83,7 +80,6 @@ pub struct MarkLocalChangedRequest {
 // unauthenticated caller must never reach them. Reads need
 // `panels.view`; anything that writes state or talks to a panel
 // needs `panels.manage`.
-// ---------------------------------------------------------------------------
 
 /// The caller, from the `X-User-Id` and `X-Role` headers.
 pub(crate) struct Caller {
@@ -152,9 +148,7 @@ pub struct ResolveConflictRequest {
     pub resolution: String,
 }
 
-// ---------------------------------------------------------------------------
 // Views.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Serialize)]
 pub(crate) struct PanelKindView {
@@ -165,9 +159,7 @@ pub(crate) struct PanelKindView {
     pub(crate) endpoint_required: bool,
 }
 
-// ---------------------------------------------------------------------------
 // Shared handler helpers.
-// ---------------------------------------------------------------------------
 
 pub(crate) fn paginate<T: Serialize + Clone>(
     items: Vec<T>,
@@ -387,9 +379,7 @@ mod tests {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Tenant edge guard (C3 pilot 4, group C).
-// ---------------------------------------------------------------------------
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request

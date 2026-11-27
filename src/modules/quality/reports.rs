@@ -35,9 +35,7 @@ use super::state::QualityState;
 use super::types::Inspection;
 use super::types::UpdateSettingsInput;
 
-// ---------------------------------------------------------------------------
 // Report handlers
-// ---------------------------------------------------------------------------
 
 /// The timestamp a windowed report attributes an inspection to:
 /// when it was actually inspected. Completed inspections always
@@ -376,7 +374,7 @@ pub(crate) async fn report_supplier_score(
         // Supplier scope only: inspections whose point scope is
         // `supplier` or `incoming_goods` for this supplier. The
         // scope names come from the live settings list, so an
-        // admin-added scope is never silently excluded — the
+        // admin-added scope is never silently excluded - the
         // caller may also pass scope= to widen the set.
         let scope_filter = params.filters.get("scope").cloned();
         let mut scoped: Vec<Inspection> = Vec::new();
@@ -443,9 +441,7 @@ pub(crate) async fn report_supplier_score(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Settings handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn get_settings(
     ctx: web::Data<Arc<AppContext>>,
@@ -640,7 +636,7 @@ mod tests {
         assert_eq!(rows.len(), 1);
         // ...and is excluded from a window that ended before the
         // inspection, even though it was created long before that
-        // too — the inspected date decides both bounds.
+        // too - the inspected date decides both bounds.
         let rows = report_inspections(
             &state,
             "tenant-a",

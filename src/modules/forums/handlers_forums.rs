@@ -132,9 +132,7 @@ fn load_category_of_forum(
     Ok(category)
 }
 
-// ---------------------------------------------------------------------------
 // Forum handlers (authenticated)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_forums(
     state: web::Data<ForumState>,
@@ -399,9 +397,7 @@ pub(crate) async fn delete_forum(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Category handlers (authenticated, nested under a forum)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_forum_categories(
     state: web::Data<ForumState>,
@@ -635,9 +631,7 @@ pub(crate) async fn delete_category(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Public handlers (no caller; tenant resolution still applies)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_public_forums(
     state: web::Data<ForumState>,

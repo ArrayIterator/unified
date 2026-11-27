@@ -7,9 +7,7 @@ use std::collections::HashMap;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Visibility
-// ---------------------------------------------------------------------------
 
 /// Visibility of a record or collection. Ordered narrowest to
 /// widest; new records default to the narrowest.
@@ -47,9 +45,7 @@ pub fn default_visibility() -> Visibility {
     Visibility::Private
 }
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FieldDeclaration {
@@ -208,9 +204,7 @@ pub struct EffectiveVisibility {
     pub explicit: bool,
 }
 
-// ---------------------------------------------------------------------------
 // Request inputs
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct RedactInput {

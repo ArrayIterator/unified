@@ -9,11 +9,9 @@ use super::{constants::*, vocabulary::*, events::*, settings::*, records::*, sta
 
 
 
-// ---------------------------------------------------------------------------
 // Viewer identity and capability checks (same trusted-parameter
 // pattern as the SaaS-packages module: X-User-Id plus X-Role
 // headers, `role.check` hook, fail closed).
-// ---------------------------------------------------------------------------
 /// Caller identity: the server-verified caller (user id plus
 /// server-resolved role, both required for capability checks).
 pub struct Caller {
@@ -54,9 +52,9 @@ pub(crate) fn require_permission(ctx: &AppContext, role: &str, permission: &str)
 }
 
 /// Reject tenant-resolved requests from this control-plane
-/// handler (C3 task 315, decision (a)): platform writes go only
+/// handler (C3, decision (a)): platform writes go only
 /// through an explicit, audited platform scope. Mirrors
-/// `tenancy::ControlPlaneGuard` — a request that resolved to a
+/// `tenancy::ControlPlaneGuard` - a request that resolved to a
 /// tenant host is rejected outright (403); the guard's predicate
 /// (`ControlPlaneGuard::is_control_plane_request`) is the single
 /// source of truth, so this never drifts from the guard.

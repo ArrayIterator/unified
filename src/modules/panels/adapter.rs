@@ -33,9 +33,7 @@ use super::types::PanelService;
 use super::types::PanelSyncCounts;
 use super::types::capabilities_for;
 
-// ---------------------------------------------------------------------------
 // Common adapter interface.
-// ---------------------------------------------------------------------------
 
 /// The interface every panel adapter implements. List methods have
 /// default implementations that fail with a clear "not supported"
@@ -131,9 +129,7 @@ pub(crate) fn unsupported(kind: PanelKind, collection: &str) -> UnifiedError {
     ))
 }
 
-// ---------------------------------------------------------------------------
 // Shared HTTP helpers.
-// ---------------------------------------------------------------------------
 
 pub(crate) fn hex_encode(bytes: &[u8]) -> String {
     const HEX: &[u8; 16] = b"0123456789abcdef";
@@ -154,7 +150,7 @@ pub fn payload_hash(payload: &Value) -> String {
 /// Build the shared panel HTTP client for one connection base URL.
 /// Redirects are NOT followed blindly (the reqwest default follows
 /// up to 10): a redirect is followed only when its target passes
-/// the same checks as the configured endpoint — same host, http(s),
+/// the same checks as the configured endpoint - same host, http(s),
 /// no embedded credentials, and no private / loopback / link-local
 /// address unless the connection opted into a private endpoint.
 /// That keeps a panel 302 to an internal host from bypassing the
@@ -361,9 +357,7 @@ pub(crate) fn normalize_status(raw: &str) -> String {
     }
 }
 
-// ---------------------------------------------------------------------------
 // JSON value helpers.
-// ---------------------------------------------------------------------------
 
 /// A string, number, or boolean rendered as a string.
 pub(crate) fn value_to_string(value: &Value) -> Option<String> {

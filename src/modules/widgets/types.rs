@@ -1,4 +1,4 @@
-// Widgets — shared types: widget definitions, layouts, contexts,
+// Widgets - shared types: widget definitions, layouts, contexts,
 // and the hook + capability names other modules use to talk to this
 // module.
 //
@@ -43,7 +43,7 @@ pub const CONTEXT_USER_DASHBOARD: &str = "user-dashboard";
 pub const CONTEXT_RESELLER_DASHBOARD: &str = "reseller-dashboard";
 
 /// The seeded zones: the first widgetized dashboard pages. A zone is
-/// just a kebab-case page id — see `validation::is_valid_zone` — so
+/// just a kebab-case page id - see `validation::is_valid_zone` - so
 /// any other dashboard/admin page can declare its own zone without
 /// touching this module (the front page is NOT a zone: it is
 /// site-builder output).

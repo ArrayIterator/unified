@@ -18,9 +18,7 @@ use unified_core::error::{UnifiedError, UnifiedResult};
 use unified_core::json;
 use unified_core::pagination::PaginationParams;
 
-// ---------------------------------------------------------------------------
 // Handlers: departments
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_departments(
     ctx: web::Data<Arc<AppContext>>,
@@ -405,9 +403,7 @@ pub(crate) async fn get_department_sla(
     json::respond(result, false)
 }
 
-// ---------------------------------------------------------------------------
 // Handlers: agents
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_agents(
     ctx: web::Data<Arc<AppContext>>,

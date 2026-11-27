@@ -1,4 +1,4 @@
-// cards — Internal service helpers shared by the handlers.
+// cards - Internal service helpers shared by the handlers.
 
 use super::*;
 use unified_core::context::AppContext;
@@ -11,12 +11,10 @@ use serde::Serialize;
 use serde_json::json;
 use std::sync::Arc;
 
-// ---------------------------------------------------------------------------
 // Caller identity and capability checks (same shape as the other
 // modules: `X-User-Id` identifies the actor, `X-Role` carries the
 // role slug the capability check runs against, `role.check`
-// answers; no answer means not allowed — fail closed).
-// ---------------------------------------------------------------------------
+// answers; no answer means not allowed - fail closed).
 
 pub(crate) struct Caller {
     pub(crate) actor: String,
@@ -55,9 +53,7 @@ pub(crate) fn require_permission(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Tenant edge guard (C3 pilot 5, group A).
-// ---------------------------------------------------------------------------
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request
@@ -81,7 +77,7 @@ pub(crate) fn require_tenant(
 /// The company scope the caller acts in: the tenant context's
 /// company first, the verified caller's server-resolved company
 /// otherwise. Fails closed (403) when both are present and disagree
-/// — a request must not carry one company in its tenant context and
+/// - a request must not carry one company in its tenant context and
 /// another in its verified identity. The `X-Company-Id` header is
 /// NEVER trusted here: only the verified caller (company resolved
 /// from the database at authentication time) and the
@@ -243,9 +239,7 @@ pub(crate) fn matches_search(haystack: &str, params: &PaginationParams) -> bool 
     }
 }
 
-// ---------------------------------------------------------------------------
 // Hook answerer.
-// ---------------------------------------------------------------------------
 
 /// Answer `cards.validate_requested`: validate the number from the
 /// event payload (never stored), set the result on the context, and
@@ -254,7 +248,7 @@ pub(crate) fn matches_search(haystack: &str, params: &PaginationParams) -> bool 
 /// refused outright (fail closed, no validation, no emit). A
 /// number-less payload is answered only in modes `"method"` and
 /// `"claim"` (stored method / claimed brand + expiry); mode
-/// `"full"` — and any unknown or absent mode — still requires the
+/// `"full"` - and any unknown or absent mode - still requires the
 /// number, so a number-less payload is never accepted as a fully
 /// validated new card.
 pub(crate) fn on_validate_requested(state: Arc<CardsState>, ctx: &mut HookContext) {
@@ -334,7 +328,7 @@ pub(crate) fn on_validate_requested(state: Arc<CardsState>, ctx: &mut HookContex
             // claim modes may proceed, and only with the brand +
             // expiry checks. Mode `full` (and any unknown mode, or
             // a payload with no mode at all) still requires the
-            // number — a number-less payload is never accepted as
+            // number - a number-less payload is never accepted as
             // a fully validated new card.
             if mode != "method" && mode != "claim" {
                 ctx.set(

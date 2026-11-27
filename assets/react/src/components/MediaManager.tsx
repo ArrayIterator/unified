@@ -3,7 +3,7 @@
 // author understands why some files are missing:
 //   - the picker (embed) lists public files only, for every role;
 //   - this manager list shows admins public + private, and authors
-//     public files plus their own private files — another owner's
+//     public files plus their own private files - another owner's
 //     private file never appears here (the server filters the list
 //     endpoint itself, `list_visible`);
 //   - a private file becomes visible in the picker once it is
@@ -19,8 +19,8 @@ export default function MediaManager() {
       <Card title="Media library">
         <p className="text-sm text-muted">
           Your files, organized in folders. Authors see public files plus
-          their own private files — another author&apos;s private file never
-          appears here. Mark your own private file public (“Make public”) and
+          their own private files - another author&apos;s private file never
+          appears here. Mark your own private file public ("Make public") and
           it shows up in the picker for everyone to embed.
         </p>
       </Card>

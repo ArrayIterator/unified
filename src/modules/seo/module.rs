@@ -21,9 +21,7 @@ use super::ai_capabilities::AI_CAPABILITIES;
 
 
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 pub struct SeoModule {
     pub(crate) state: SeoState,
 }

@@ -33,7 +33,7 @@
 //
 // The cache is bounded (see `MAX_ENTRIES`): the oldest entries are
 // dropped when the cap is hit, so the feed is a rolling window, not a
-// durable log — the audit log and the records store remain the durable
+// durable log - the audit log and the records store remain the durable
 // sources of truth.
 
 pub mod ai_capabilities;

@@ -1,4 +1,4 @@
-// routes module — Redirect helpers.
+// routes module - Redirect helpers.
 //
 // Split from the former single-file module `src/modules/routes.rs`.
 // The module root (`routes.rs`) re-exports the public items, so the
@@ -19,7 +19,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::sync::{Arc, RwLock};
 
-// ---------------------------------------------------------------------------
 // Redirect helper for the server wiring.
 //
 // `resolve_redirect` is the function the HTTP server calls before
@@ -29,7 +28,6 @@ use std::sync::{Arc, RwLock};
 // route's current effective path, a redirect never points at another
 // old path and redirects never chain. See the server.rs snippet in
 // the coordinator report for the exact installation point.
-// ---------------------------------------------------------------------------
 
 /// Permission strings for this module's HTTP handlers.
 pub(crate) const PERM_ROUTES_VIEW: &str = "routes.view";

@@ -6,9 +6,7 @@ use serde_json::{json};
 use std::sync::{Arc};
 use super::state::ProductsState;
 
-// ---------------------------------------------------------------------------
 // Hook handlers: this module answers other modules' questions.
-// ---------------------------------------------------------------------------
 
 /// Answer `product.entitlement.check` with payload
 /// `{"product_id", "user_id"}` and result `{"entitled": bool, ...}`.

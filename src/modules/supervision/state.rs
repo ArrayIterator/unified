@@ -14,9 +14,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Shared state
-// ---------------------------------------------------------------------------
 
 /// In-memory stores for supervision. The hook bus is attached in
 /// `init` (the bus lives in `AppContext`); handlers tolerate a
@@ -86,9 +84,7 @@ impl SupervisionState {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 /// Caller identity: the server-verified caller (user id plus
 /// server-resolved role, both required for capability checks),

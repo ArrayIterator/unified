@@ -18,8 +18,8 @@ use super::types::VaultFolder;
 
 /// True when `document` belongs to `tenant_id`. Records carry
 /// the tenant they were created under (bound server-side from the
-/// resolved tenant context); a record from another tenant — or a
-/// record with no tenant at all — is never visible, so tenant
+/// resolved tenant context); a record from another tenant - or a
+/// record with no tenant at all - is never visible, so tenant
 /// isolation fails closed.
 pub(crate) fn in_tenant(document_tenant: &Option<String>, tenant_id: &str) -> bool {
     document_tenant.as_deref() == Some(tenant_id)
@@ -58,7 +58,7 @@ pub(crate) fn can_see_document(
 
 /// True when `caller` may decide an access request or revoke a
 /// share link for `document`: the document owner, or a
-/// manage-capability holder scoped to the document's company —
+/// manage-capability holder scoped to the document's company -
 /// the caller's resolved company id must equal the document's
 /// company id (both unscoped counts as a match). Tenant scoping
 /// is enforced separately by the loaders, so a caller from

@@ -1,4 +1,4 @@
-// Expenses module — employee expense reports with categories,
+// Expenses module - employee expense reports with categories,
 //
 // Split into submodules; the full module documentation lives in `module.rs`.
 

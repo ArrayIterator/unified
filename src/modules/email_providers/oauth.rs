@@ -8,8 +8,8 @@
 //! is a sign-in client bound to the auth manager's own accounts and
 //! redirect URIs, while these flows belong to an email connection
 //! (client id/secret on the connection, redirect back to this
-//! module's callback). The patterns are the same — PKCE (S256),
-//! state token, 600s pending-flow TTL, 60s refresh skew —
+//! module's callback). The patterns are the same - PKCE (S256),
+//! state token, 600s pending-flow TTL, 60s refresh skew -
 //! re-implemented here in the email module's own terms.
 //!
 //! Flow: `GET /connections/{id}/oauth/authorize` returns the provider
@@ -20,7 +20,7 @@
 //! and stores them on the connection. The adapter refreshes an
 //! expired access token from the stored refresh token on first use
 //! and persists the rotated tokens. Revocation clears the stored
-//! tokens; Google and Yahoo also get a server-side revoke call —
+//! tokens; Google and Yahoo also get a server-side revoke call -
 //! Microsoft has no token-revocation endpoint, so clearing the
 //! stored tokens IS the revocation there.
 //!
@@ -50,7 +50,7 @@ use uuid::Uuid;
 
 /// Static OAuth2 configuration for one account provider: endpoints,
 /// SMTP server, and the scopes the authorization URL requests.
-/// All values are constants — no per-provider code path reads
+/// All values are constants - no per-provider code path reads
 /// anything from user input for the endpoint hosts.
 #[derive(Debug, Clone, Copy)]
 pub struct OAuthProviderConfig {
@@ -118,9 +118,7 @@ pub(crate) fn is_oauth_kind(kind: EmailProviderKind) -> bool {
     config_for(kind).is_some()
 }
 
-// ---------------------------------------------------------------------------
 // PKCE and state tokens.
-// ---------------------------------------------------------------------------
 
 /// A PKCE code verifier: 43 URL-safe characters (RFC 7636).
 pub(crate) fn new_code_verifier() -> String {
@@ -177,14 +175,12 @@ pub(crate) fn take_pending_flow(state: &str) -> Option<PendingOAuthFlow> {
     Some(flow)
 }
 
-// ---------------------------------------------------------------------------
 // Redirect URI validation.
-// ---------------------------------------------------------------------------
 
 /// Validate the redirect URI the admin registered at the provider:
 /// https anywhere, or http only on localhost (the local-admin
-/// development case). Anything else — plain http to a public host,
-/// or a non-http(s) scheme — is refused, so a stolen client id
+/// development case). Anything else - plain http to a public host,
+/// or a non-http(s) scheme - is refused, so a stolen client id
 /// cannot exfiltrate the authorization code to an attacker host.
 pub(crate) fn validate_redirect_uri(raw: &str) -> UnifiedResult<Url> {
     let url = Url::parse(raw)
@@ -207,9 +203,7 @@ pub(crate) fn validate_redirect_uri(raw: &str) -> UnifiedResult<Url> {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Authorization URL.
-// ---------------------------------------------------------------------------
 
 /// Build the provider authorization URL for a connection and store
 /// the pending flow. Returns `(authorization_url, state)`: the admin
@@ -266,9 +260,7 @@ pub(crate) fn authorization_url(
     Ok((url.to_string(), state))
 }
 
-// ---------------------------------------------------------------------------
 // Token exchange, refresh, revocation.
-// ---------------------------------------------------------------------------
 
 /// A token endpoint response. `expires_in` is always returned by
 /// the three providers; when it is missing the token is treated as
@@ -341,7 +333,7 @@ async fn post_token_form(
 
 /// Exchange an authorization code for tokens. The code verifier
 /// comes from the pending flow (PKCE), never from the callback
-/// query — a stolen code alone cannot be exchanged.
+/// query - a stolen code alone cannot be exchanged.
 pub(crate) async fn exchange_code(
     kind: EmailProviderKind,
     client_id: &str,
@@ -379,7 +371,7 @@ pub(crate) async fn refresh_access_token(
 
 /// Revoke a token server-side. Returns `Ok(true)` when the provider
 /// confirmed the revocation, `Ok(false)` when the provider has no
-/// revocation endpoint (Microsoft) or answered non-2xx — the caller
+/// revocation endpoint (Microsoft) or answered non-2xx - the caller
 /// still clears the stored tokens either way. Only a transport
 /// failure is an error.
 pub(crate) async fn revoke_token(
@@ -415,9 +407,7 @@ pub(crate) async fn revoke_token(
     Ok(response.status().is_success())
 }
 
-// ---------------------------------------------------------------------------
 // Expiry.
-// ---------------------------------------------------------------------------
 
 /// Refresh skew: a token expiring within 60 seconds is treated as
 /// expired, matching the auth manager's Google refresh skew.

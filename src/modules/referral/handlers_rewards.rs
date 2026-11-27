@@ -110,7 +110,7 @@ pub(crate) async fn get_reward(
 }
 
 /// Mark a reward paid (manager): records that billing / HR
-/// paid the reward out elsewhere — this endpoint moves no
+/// paid the reward out elsewhere - this endpoint moves no
 /// money, it only records the payout with who marked it and
 /// when. A pending reward whose retention period has elapsed
 /// is promoted to eligible first, so a payout is never

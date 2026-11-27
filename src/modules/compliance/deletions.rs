@@ -1,4 +1,4 @@
-//! Compliance Center module — GDPR / ISO support: data export — Deletion handlers.
+//! Compliance Center module - GDPR / ISO support: data export - Deletion handlers.
 //!
 //! Split from `src/modules/compliance.rs`; behaviour unchanged.
 

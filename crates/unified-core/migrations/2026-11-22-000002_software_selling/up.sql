@@ -25,9 +25,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- Hierarchical taxonomy: groups and categories (cycle-safe tree).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS software_taxonomy (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     kind VARCHAR NOT NULL CHECK (kind IN ('group', 'category')),
@@ -55,9 +53,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_software_taxonomy_kind_parent_slug
         slug
     );
 
--- ---------------------------------------------------------------------------
 -- Software records: plugins, themes, software, libraries.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS software (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     slug VARCHAR NOT NULL UNIQUE,
@@ -83,9 +79,7 @@ CREATE INDEX IF NOT EXISTS idx_software_vendor_company_id ON software (vendor_co
 CREATE INDEX IF NOT EXISTS idx_software_group_id ON software (group_id);
 CREATE INDEX IF NOT EXISTS idx_software_category_id ON software (category_id);
 
--- ---------------------------------------------------------------------------
 -- Software versions (semver) with platform requirements.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS software_versions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     product VARCHAR NOT NULL,
@@ -107,9 +101,7 @@ CREATE INDEX IF NOT EXISTS idx_software_versions_product
 CREATE UNIQUE INDEX IF NOT EXISTS uq_software_versions_software_version
     ON software_versions (software_id, version);
 
--- ---------------------------------------------------------------------------
 -- Releases: a version on a channel (stable / beta), draft or published.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS software_releases (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     version_id UUID NOT NULL REFERENCES software_versions (id) ON DELETE CASCADE,
@@ -126,9 +118,7 @@ CREATE INDEX IF NOT EXISTS idx_software_releases_version_id
 CREATE INDEX IF NOT EXISTS idx_software_releases_status
     ON software_releases (status);
 
--- ---------------------------------------------------------------------------
 -- Release files with sha256 / sha512 checksums and integrity status.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS release_files (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     release_id UUID NOT NULL REFERENCES software_releases (id) ON DELETE CASCADE,
@@ -153,9 +143,7 @@ CREATE INDEX IF NOT EXISTS idx_release_files_version_id
 CREATE INDEX IF NOT EXISTS idx_release_files_integrity_status
     ON release_files (integrity_status);
 
--- ---------------------------------------------------------------------------
 -- Tags and their many-to-many assignment to software records.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS software_tags (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     slug VARCHAR NOT NULL UNIQUE,
@@ -174,9 +162,7 @@ CREATE TABLE IF NOT EXISTS software_tag_assignments (
 CREATE INDEX IF NOT EXISTS idx_software_tag_assignments_tag_id
     ON software_tag_assignments (tag_id);
 
--- ---------------------------------------------------------------------------
 -- Store products: sellable software with pricing model and vendor.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS store_products (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR NOT NULL,
@@ -211,9 +197,7 @@ CREATE INDEX IF NOT EXISTS idx_store_products_software_slug
 CREATE INDEX IF NOT EXISTS idx_store_products_company_id
     ON store_products (company_id);
 
--- ---------------------------------------------------------------------------
 -- Pricing tiers / editions per product.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS store_pricing_tiers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     product_id UUID NOT NULL REFERENCES store_products (id) ON DELETE CASCADE,
@@ -236,9 +220,7 @@ CREATE TABLE IF NOT EXISTS store_pricing_tiers (
 CREATE INDEX IF NOT EXISTS idx_store_pricing_tiers_product_id
     ON store_pricing_tiers (product_id);
 
--- ---------------------------------------------------------------------------
 -- Discount coupons.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS store_coupons (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     code VARCHAR NOT NULL UNIQUE,
@@ -255,9 +237,7 @@ CREATE TABLE IF NOT EXISTS store_coupons (
 
 CREATE INDEX IF NOT EXISTS idx_store_coupons_active ON store_coupons (active);
 
--- ---------------------------------------------------------------------------
 -- Orders with validated lifecycle and coupon totals.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS store_orders (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id VARCHAR NOT NULL,
@@ -307,9 +287,7 @@ CREATE INDEX IF NOT EXISTS idx_store_order_items_order_id
 CREATE INDEX IF NOT EXISTS idx_store_order_items_product_id
     ON store_order_items (product_id);
 
--- ---------------------------------------------------------------------------
 -- Download entitlements and download history (mirror of issued licenses).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS store_entitlements (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     license_id UUID REFERENCES licenses (id) ON DELETE SET NULL,
@@ -353,9 +331,7 @@ CREATE INDEX IF NOT EXISTS idx_store_downloads_license_id
 CREATE INDEX IF NOT EXISTS idx_store_downloads_release_id
     ON store_downloads (release_id);
 
--- ---------------------------------------------------------------------------
 -- Update-API catalog: latest known version per software slug.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS store_catalog (
     slug VARCHAR PRIMARY KEY,
     name VARCHAR NOT NULL,
@@ -377,9 +353,7 @@ CREATE TABLE IF NOT EXISTS store_catalog (
 CREATE INDEX IF NOT EXISTS idx_store_catalog_product_id
     ON store_catalog (product_id);
 
--- ---------------------------------------------------------------------------
 -- Store mirror of licenses issued through `order.created`.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS store_issued_licenses (
     license_id UUID PRIMARY KEY REFERENCES licenses (id) ON DELETE CASCADE,
     license_key VARCHAR NOT NULL,
@@ -395,9 +369,7 @@ CREATE TABLE IF NOT EXISTS store_issued_licenses (
 CREATE INDEX IF NOT EXISTS idx_store_issued_licenses_order_id
     ON store_issued_licenses (order_id);
 
--- ---------------------------------------------------------------------------
 -- VCS repository connections (GitHub / GitLab / Bitbucket).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS vcs_connections (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     provider VARCHAR NOT NULL
@@ -426,9 +398,7 @@ CREATE INDEX IF NOT EXISTS idx_vcs_connections_sync_status
 CREATE UNIQUE INDEX IF NOT EXISTS uq_vcs_connections_provider_owner_repo_host
     ON vcs_connections (provider, owner, repo, COALESCE(host, ''));
 
--- ---------------------------------------------------------------------------
 -- VCS version drafts imported from a provider (never auto-published).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS vcs_version_drafts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     connection_id UUID NOT NULL REFERENCES vcs_connections (id) ON DELETE CASCADE,
@@ -456,9 +426,7 @@ CREATE INDEX IF NOT EXISTS idx_vcs_version_drafts_software_id
 CREATE INDEX IF NOT EXISTS idx_vcs_version_drafts_status
     ON vcs_version_drafts (status);
 
--- ---------------------------------------------------------------------------
 -- VCS sync history (manual and webhook-triggered sync runs).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS vcs_sync_history (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     connection_id UUID NOT NULL REFERENCES vcs_connections (id) ON DELETE CASCADE,
@@ -479,11 +447,9 @@ CREATE INDEX IF NOT EXISTS idx_vcs_sync_history_connection_id
 CREATE INDEX IF NOT EXISTS idx_vcs_sync_history_status
     ON vcs_sync_history (status);
 
--- ---------------------------------------------------------------------------
 -- VCS provider settings. Tokens live in `*_encrypted` columns and must
 -- be encrypted before insert; the encryption helper is still open
 -- work (see TODO.md). The columns only reserve the shape.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS vcs_provider_settings (
     provider VARCHAR PRIMARY KEY
         CHECK (provider IN ('github', 'gitlab', 'bitbucket')),

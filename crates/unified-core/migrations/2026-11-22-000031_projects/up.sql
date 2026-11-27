@@ -48,10 +48,8 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ---------------------------------------------------------------------------
 -- One project. The methodology selects the working style; the status
 -- and visibility are plain state, not a workflow.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS projects (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
@@ -83,9 +81,7 @@ CREATE INDEX IF NOT EXISTS idx_projects_status
 CREATE INDEX IF NOT EXISTS idx_projects_methodology
     ON projects (methodology);
 
--- ---------------------------------------------------------------------------
 -- One membership of a user in a project, with a role.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS project_members (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     project_id UUID NOT NULL REFERENCES projects (id)
@@ -102,10 +98,8 @@ CREATE INDEX IF NOT EXISTS idx_project_members_project_id
 CREATE INDEX IF NOT EXISTS idx_project_members_user_id
     ON project_members (user_id);
 
--- ---------------------------------------------------------------------------
 -- One board inside a project (a Kanban board, a Scrum board, a
 -- Waterfall board, or any other board kind the methodology needs).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS project_boards (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     project_id UUID NOT NULL REFERENCES projects (id)
@@ -120,10 +114,8 @@ CREATE TABLE IF NOT EXISTS project_boards (
 CREATE INDEX IF NOT EXISTS idx_project_boards_project_id
     ON project_boards (project_id);
 
--- ---------------------------------------------------------------------------
 -- One column on a board. `status_key` is the task status value this
 -- column represents; `position` orders columns left to right.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS project_board_columns (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     board_id UUID NOT NULL REFERENCES project_boards (id)
@@ -139,9 +131,7 @@ CREATE TABLE IF NOT EXISTS project_board_columns (
 CREATE INDEX IF NOT EXISTS idx_project_board_columns_board_id
     ON project_board_columns (board_id);
 
--- ---------------------------------------------------------------------------
 -- One milestone: a dated checkpoint a project aims at.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS project_milestones (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     project_id UUID NOT NULL REFERENCES projects (id)
@@ -158,11 +148,9 @@ CREATE TABLE IF NOT EXISTS project_milestones (
 CREATE INDEX IF NOT EXISTS idx_project_milestones_project_id
     ON project_milestones (project_id);
 
--- ---------------------------------------------------------------------------
 -- One sprint: a time-boxed iteration with a goal, planned and actual
 -- velocity, and notes from the standup, the review, and the
 -- retrospective.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS project_sprints (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     project_id UUID NOT NULL REFERENCES projects (id)
@@ -185,10 +173,8 @@ CREATE TABLE IF NOT EXISTS project_sprints (
 CREATE INDEX IF NOT EXISTS idx_project_sprints_project_id_status
     ON project_sprints (project_id, status);
 
--- ---------------------------------------------------------------------------
 -- One phase: a Waterfall / PRINCE2 stage / DMAIC step / hybrid phase
 -- with a gate decision at its end.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS project_phases (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     project_id UUID NOT NULL REFERENCES projects (id)
@@ -211,10 +197,8 @@ CREATE TABLE IF NOT EXISTS project_phases (
 CREATE INDEX IF NOT EXISTS idx_project_phases_project_id
     ON project_phases (project_id);
 
--- ---------------------------------------------------------------------------
 -- One Shape Up cycle: a shaping / betting / building / cooldown
 -- loop with an appetite in weeks and a pitch that won the bet.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS project_cycles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     project_id UUID NOT NULL REFERENCES projects (id)
@@ -236,10 +220,8 @@ CREATE TABLE IF NOT EXISTS project_cycles (
 CREATE INDEX IF NOT EXISTS idx_project_cycles_project_id
     ON project_cycles (project_id);
 
--- ---------------------------------------------------------------------------
 -- One SAFe program increment: a longer planning horizon with
 -- objectives, spanning several sprints.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS project_program_increments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     project_id UUID NOT NULL REFERENCES projects (id)
@@ -257,11 +239,9 @@ CREATE TABLE IF NOT EXISTS project_program_increments (
 CREATE INDEX IF NOT EXISTS idx_project_program_increments_project_id
     ON project_program_increments (project_id);
 
--- ---------------------------------------------------------------------------
 -- One PRINCE2 business case: the justification for a project, with
 -- benefits, costs, and risks, plus an exception report when the
 -- project goes off its tolerances.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS project_business_cases (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     project_id UUID NOT NULL REFERENCES projects (id)
@@ -281,14 +261,12 @@ CREATE TABLE IF NOT EXISTS project_business_cases (
 CREATE INDEX IF NOT EXISTS idx_project_business_cases_project_id
     ON project_business_cases (project_id);
 
--- ---------------------------------------------------------------------------
 -- One task: the unit of work. A task may be a story, bug, spike,
 -- feature, enabler, or chore; it may belong to a sprint, a phase, a
 -- cycle, a program increment, or a milestone, and it may carry the
 -- methodology-specific fields (process group and knowledge area for
 -- PMBOK, waste flag and pair partner for Lean and XP, DMAIC phase
 -- for Six Sigma, appetite for Shape Up).
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS project_tasks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     project_id UUID NOT NULL REFERENCES projects (id)
@@ -345,11 +323,9 @@ CREATE INDEX IF NOT EXISTS idx_project_tasks_sprint_id
 CREATE INDEX IF NOT EXISTS idx_project_tasks_parent_id
     ON project_tasks (parent_id);
 
--- ---------------------------------------------------------------------------
 -- One dependency between two tasks (finish-start, start-start,
 -- finish-finish, start-finish, blocks, or related), with a lag in
 -- days for the Critical Path methods.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS project_task_dependencies (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     task_id UUID NOT NULL REFERENCES project_tasks (id)
@@ -369,9 +345,7 @@ CREATE INDEX IF NOT EXISTS idx_project_task_dependencies_task_id
 CREATE INDEX IF NOT EXISTS idx_project_task_dependencies_depends_on_task_id
     ON project_task_dependencies (depends_on_task_id);
 
--- ---------------------------------------------------------------------------
 -- One comment on a task.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS project_task_comments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     task_id UUID NOT NULL REFERENCES project_tasks (id)
@@ -385,9 +359,7 @@ CREATE TABLE IF NOT EXISTS project_task_comments (
 CREATE INDEX IF NOT EXISTS idx_project_task_comments_task_id
     ON project_task_comments (task_id);
 
--- ---------------------------------------------------------------------------
 -- One watcher on a task: a user who gets notified about it.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS project_task_watchers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     task_id UUID NOT NULL REFERENCES project_tasks (id)
@@ -400,10 +372,8 @@ CREATE TABLE IF NOT EXISTS project_task_watchers (
 CREATE INDEX IF NOT EXISTS idx_project_task_watchers_task_id
     ON project_task_watchers (task_id);
 
--- ---------------------------------------------------------------------------
 -- One file attached to a task. Only references are stored here; the
 -- file itself lives in the storage module.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS project_task_attachments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     task_id UUID NOT NULL REFERENCES project_tasks (id)
@@ -421,12 +391,10 @@ CREATE TABLE IF NOT EXISTS project_task_attachments (
 CREATE INDEX IF NOT EXISTS idx_project_task_attachments_task_id
     ON project_task_attachments (task_id);
 
--- ---------------------------------------------------------------------------
 -- One time entry: hours logged against a task (and its project) by
 -- a user, optionally billable and optionally already billed on an
 -- invoice. A running timer is an entry with `timer_running` set
 -- and no `ended_at` yet.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS project_time_entries (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     task_id UUID NOT NULL REFERENCES project_tasks (id)
@@ -454,11 +422,9 @@ CREATE INDEX IF NOT EXISTS idx_project_time_entries_user_id
 CREATE INDEX IF NOT EXISTS idx_project_time_entries_task_id
     ON project_time_entries (task_id);
 
--- ---------------------------------------------------------------------------
 -- One automation rule: when the trigger fires and the conditions
 -- match, the actions run. `run_count` and `last_run_at` record the
 -- rule's own history.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS project_automation_rules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     project_id UUID NOT NULL REFERENCES projects (id)
@@ -478,10 +444,8 @@ CREATE TABLE IF NOT EXISTS project_automation_rules (
 CREATE INDEX IF NOT EXISTS idx_project_automation_rules_project_id
     ON project_automation_rules (project_id);
 
--- ---------------------------------------------------------------------------
 -- One project template: the seed boards, columns, statuses, phases,
 -- and custom fields a methodology ships with.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS project_templates (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
@@ -500,11 +464,9 @@ CREATE TABLE IF NOT EXISTS project_templates (
 CREATE INDEX IF NOT EXISTS idx_project_templates_methodology
     ON project_templates (methodology);
 
--- ---------------------------------------------------------------------------
 -- One activity record: who did what to which project target, with
 -- the details as JSON. Append-only; no `updated_at` is maintained
 -- because an activity record is never edited after it is written.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS project_activity (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     project_id UUID NOT NULL REFERENCES projects (id)

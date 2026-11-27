@@ -5,7 +5,7 @@
 //! Numbers are decimal strings, never floating point: a cell
 //! number is stored as its decimal string (`12.50` keeps its
 //! scale in the string), and the evaluator computes on
-//! [`Decimal`], an integer mantissa plus a scale — `f64` is
+//! [`Decimal`], an integer mantissa plus a scale - `f64` is
 //! never used for a stored or returned number anywhere in
 //! this module.
 
@@ -53,7 +53,7 @@ pub(crate) const MAX_VERSIONS_PER_SHEET: i64 = 100;
 /// Public-link token: 48 random alphanumeric characters
 /// (~285 bits), following the sign module pattern. The raw
 /// token is returned exactly once (when the link is enabled)
-/// and is never stored — only its SHA-256 hash.
+/// and is never stored - only its SHA-256 hash.
 pub(crate) const PUBLIC_TOKEN_LEN: usize = 48;
 
 /// Capability names checked through the `role.check` hook.
@@ -111,15 +111,13 @@ pub fn is_error_token(value: &str) -> bool {
     )
 }
 
-// ---------------------------------------------------------------------------
 // Decimal: integer mantissa + scale, no floating point
-// ---------------------------------------------------------------------------
 
 /// A decimal number as an integer mantissa plus a scale: the
 /// value is `mantissa / 10^scale`. `12.50` is mantissa `1250`,
 /// scale `2`; parsing keeps the written scale, arithmetic
 /// normalizes trailing zeroes away. All operations are checked
-/// — overflow is an error, never a silent wrap or a float.
+/// - overflow is an error, never a silent wrap or a float.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Decimal {
     pub mantissa: i128,
@@ -442,9 +440,7 @@ impl std::fmt::Display for Decimal {
     }
 }
 
-// ---------------------------------------------------------------------------
 // A1 addresses
-// ---------------------------------------------------------------------------
 
 /// Parse an A1 address (`B12`, `$B$12`, `AA100`) into a
 /// zero-based `(row, column)`. Column letters are case
@@ -582,9 +578,7 @@ pub fn computed_for_typed(raw: &str, kind: CellKind) -> String {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// Cell value kind. Serialized snake_case.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -634,7 +628,7 @@ impl CellKind {
 
 /// One number-format definition from tenant settings: a name
 /// the cell references plus the pattern that renders it. The
-/// pattern is data — the module never hard-codes a format list
+/// pattern is data - the module never hard-codes a format list
 /// in code; the defaults live in the settings row and in the
 /// migration seed.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -676,7 +670,7 @@ pub struct Sheet {
     pub updated_at: DateTime<Utc>,
 }
 
-/// One cell. `raw_value` is what the user typed — a formula
+/// One cell. `raw_value` is what the user typed - a formula
 /// starts with `=` and is kept verbatim. `computed_value` is
 /// the evaluated result: a decimal string for numbers, `TRUE`
 /// / `FALSE` for booleans, an ISO date for dates, the text
@@ -799,9 +793,7 @@ impl Default for SpreadsheetSettings {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Request bodies
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct CreateWorkbookRequest {

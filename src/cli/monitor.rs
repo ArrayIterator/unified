@@ -8,12 +8,12 @@
 //
 // Panels (keys 1-6, or Left/Right arrows):
 //
-//   1. Active Connections — HTTP vs WebSocket counts, requests per second.
-//   2. Server Info       — version, uptime, mode, workers, listeners, memory.
-//   3. Network Monitor   — interfaces, bytes in/out per second and totals.
-//   4. Process Monitor   — top processes by CPU / memory.
-//   5. Disk Monitor      — disk usage per mounted disk.
-//   6. App Usage         — per-module request counts, hook events, Geo lookups.
+//   1. Active Connections - HTTP vs WebSocket counts, requests per second.
+//   2. Server Info       - version, uptime, mode, workers, listeners, memory.
+//   3. Network Monitor   - interfaces, bytes in/out per second and totals.
+//   4. Process Monitor   - top processes by CPU / memory.
+//   5. Disk Monitor      - disk usage per mounted disk.
+//   6. App Usage         - per-module request counts, hook events, Geo lookups.
 //
 // Sampling is tiered: CPU, memory, processes and networks refresh every
 // second, while disks (mount list, usage, I/O rates) refresh every 30
@@ -467,7 +467,7 @@ fn draw_ui(frame: &mut Frame, data: &MonitorData, panel: Panel) {
             Block::default()
                 .borders(Borders::ALL)
                 .title(format!(
-                    " Unified Monitor — updated {} ",
+                    " Unified Monitor - updated {} ",
                     data.collected_at.format("%H:%M:%S")
                 )),
         )
@@ -490,7 +490,7 @@ fn draw_ui(frame: &mut Frame, data: &MonitorData, panel: Panel) {
     }
 
     let footer = Paragraph::new(
-        " 1-6 switch panel · Left/Right switch panel · c/m sort processes · q or Esc quits · refreshes every second ",
+        " 1-6 switch panel - Left/Right switch panel - c/m sort processes - q or Esc quits - refreshes every second ",
     )
     .style(Style::default().fg(Color::DarkGray));
     frame.render_widget(footer, chunks[2]);

@@ -20,9 +20,7 @@ use super::state::*;
 use super::types::*;
 use super::validation::*;
 
-// ---------------------------------------------------------------------------
 // Chain provider abstraction
-// ---------------------------------------------------------------------------
 
 /// The contract every chain provider implements. All calls are async
 /// and time-bounded by the shared HTTP client; every error is mapped
@@ -109,9 +107,7 @@ impl Default for ChainProviderRegistry {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Provider HTTP helpers (generic errors only -- never echo bodies)
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn provider_get(
     client: &reqwest::Client,
@@ -204,9 +200,7 @@ pub(crate) fn parse_unix_ts(value: &Value) -> Option<DateTime<Utc>> {
     DateTime::from_timestamp(secs, 0)
 }
 
-// ---------------------------------------------------------------------------
 // Provider construction from a stored network record
-// ---------------------------------------------------------------------------
 
 /// Build a provider for a stored network, reusing the registry
 /// entry when one is cached. The provider API key is decrypted in

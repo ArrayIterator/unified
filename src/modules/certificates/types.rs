@@ -11,9 +11,7 @@ use chrono::Utc;
 use serde::Deserialize;
 use serde::Serialize;
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// One certificate known to this module: configured, renewed,
 /// installed, or observed as a fallback.

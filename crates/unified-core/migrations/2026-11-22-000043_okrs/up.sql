@@ -23,7 +23,7 @@
 --     `parent_objective_id` is a self reference (SET NULL on
 --     delete: deleting a parent keeps its children, matching the
 --     module). `final_score` is set only when the cycle closes
---     (mean key-result progress, 0.0–1.0).
+--     (mean key-result progress, 0.0-1.0).
 --   - `okr_key_results` values are NUMERIC(19,4) (money-grade
 --     precision, reused for generic measured values). Progress is
 --     computed, never stored: (current - start) / (target - start).

@@ -9,9 +9,7 @@ use uuid::Uuid;
 
 use super::constants::{DOMAIN_NONE, MODE_ALLOWED, MODE_DENIED, MODE_INHERIT};
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 /// Per-company allowance override mode.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -44,7 +42,7 @@ impl AllowanceMode {
 }
 
 /// Global admin setting: whether white labelling is allowed by
-/// default. Default `false` (deny) — fail closed.
+/// default. Default `false` (deny) - fail closed.
 #[derive(Debug, Clone, Serialize)]
 pub struct GlobalAllowance {
     pub allow_whitelabel: bool,
@@ -260,9 +258,7 @@ pub struct HistoryEntry {
     pub created_at: DateTime<Utc>,
 }
 
-// ---------------------------------------------------------------------------
 // Request inputs
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub struct PutGlobalAllowanceInput {

@@ -5,9 +5,7 @@
 // file lives here, whole, so no join group spans files.
 
 use super::*;
-// ---------------------------------------------------------------------------
 // Joinable tables in this bounded context.
-// ---------------------------------------------------------------------------
 
 diesel::joinable!(hr_contracts -> hr_employees (employee_id));
 diesel::joinable!(hr_leave_balances -> hr_employees (employee_id));
@@ -48,7 +46,6 @@ diesel::joinable!(appointment_staff_services -> appointment_services (service_id
 diesel::joinable!(appointments -> appointment_services (service_id));
 diesel::joinable!(appointment_reminders -> appointments (appointment_id));
 
-// ---------------------------------------------------------------------------
 // Tables allowed to appear in the same query, grouped by join graph.
 //
 // One `allow_tables_to_appear_in_same_query!` invocation generates an
@@ -61,7 +58,6 @@ diesel::joinable!(appointment_reminders -> appointments (appointment_id));
 // no entry at all. If a future query needs two tables from different
 // groups, merge the groups (the compiler reports the missing pair
 // as E0277).
-// ---------------------------------------------------------------------------
 
 // Join group 3 (13 tables, e.g. hr_attendance_records (+12 more)).
 diesel::allow_tables_to_appear_in_same_query!(

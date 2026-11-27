@@ -12,9 +12,7 @@ use super::{events::*, paper::*, thermal::*, profiles::*, jobs::*, auth::*, hook
 
 
 
-// ---------------------------------------------------------------------------
 // State
-// ---------------------------------------------------------------------------
 pub struct PrintingState {
     pub(crate) hooks: RwLock<Arc<HookBus>>,
     pub(crate) paper_sizes: DashMap<String, PaperSize>,
@@ -190,8 +188,8 @@ impl PrintingState {
 
     /// Queue a fresh copy of an existing job (reprint). The copy
     /// keeps the original payload, restarts at `queued` with zero
-    /// attempts, and gets a new id. Only a finished job — `done`
-    /// or `failed` — may be reprinted: reprinting a queued or
+    /// attempts, and gets a new id. Only a finished job - `done`
+    /// or `failed` - may be reprinted: reprinting a queued or
     /// printing job would silently duplicate it in the queue.
     pub(crate) fn reprint_job(&self, job_id: &str, requested_by: &str) -> UnifiedResult<PrintJob> {
         let original = self

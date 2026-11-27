@@ -1,7 +1,6 @@
-// hardening — middleware.
+// hardening - middleware.
 // Actix middlewares: headers, IP filter, rate limit, body size.
 //
-// Split from `crates/unified-core/src/hardening.rs`; moved verbatim, no behaviour changes.
 
 use super::helpers::rate_limited_response;
 use super::helpers::set_header;
@@ -24,9 +23,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 
-// ---------------------------------------------------------------------------
 // Middleware
-// ---------------------------------------------------------------------------
 
 /// Adds the configured security headers to every response. Runs first
 /// (priority 1000) so error responses short-circuited by the later

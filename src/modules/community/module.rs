@@ -15,9 +15,7 @@ use super::handlers_posts::{create_post, delete_post, flag_post, get_post, get_p
 use super::handlers_members::{create_announcement, delete_announcement, get_announcement, get_member, get_public_topic, get_settings, join_community, list_announcements, list_members, list_public_topics, publish_announcement, update_announcement, update_settings};
 use super::ai_capabilities::AI_CAPABILITIES;
 
-// ---------------------------------------------------------------------------
 // Module
-// ---------------------------------------------------------------------------
 
 pub struct CommunityModule {
     pub(crate) state: CommunityState,

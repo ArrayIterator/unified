@@ -13,9 +13,7 @@ use super::helpers::*;
 use super::state::*;
 use super::types::*;
 
-// ---------------------------------------------------------------------------
 // Vendor handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_vendors(
     ctx: web::Data<Arc<AppContext>>,

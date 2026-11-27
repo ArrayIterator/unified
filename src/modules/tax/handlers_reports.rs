@@ -1,4 +1,4 @@
-// Tax module — settings and report handlers.
+// Tax module - settings and report handlers.
 // Split from the former single-file module; items keep their original names and behaviour. Private items are `pub(crate)` so sibling files in this module can use them.
 
 use super::*;
@@ -23,9 +23,7 @@ use std::time::Duration;
 use url::Url;
 use uuid::Uuid;
 
-// ---------------------------------------------------------------------------
 // Handlers: settings
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn get_settings(
     ctx: web::Data<Arc<AppContext>>,
@@ -157,9 +155,7 @@ pub(crate) async fn update_settings(
     json::respond(result, ctx.is_debug())
 }
 
-// ---------------------------------------------------------------------------
 // Handlers: reports
-// ---------------------------------------------------------------------------
 
 /// Parse the `period_start` / `period_end` query filters. Both are
 /// optional; when absent the range is open-ended.

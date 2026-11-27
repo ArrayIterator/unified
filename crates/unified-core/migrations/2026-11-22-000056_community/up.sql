@@ -18,7 +18,7 @@
 --   - `community_posts.parent_post_id` is NULL for a top-level
 --     post and names a top-level post for a reply; replies are
 --     exactly one level deep (enforced in the module, not by a
---     CHECK — SQL cannot express "the parent has no parent"
+--     CHECK - SQL cannot express "the parent has no parent"
 --     without a trigger). `hidden` posts are moderator- or
 --     spam-hidden. `edited` marks a post whose body changed.
 --   - `community_post_edits` keeps the previous body of every

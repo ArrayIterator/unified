@@ -8,9 +8,7 @@ use super::types::{SoftwareVersion, VersionRequirements};
 use super::state::SoftwareState;
 use super::validation::{new_id, now, validate_version_string};
 
-// ---------------------------------------------------------------------------
 // Hook handlers: VCS import and validation.
-// ---------------------------------------------------------------------------
 
 /// Answer `vcs.software.validate` (from the VCS module) with
 /// `{ "valid": bool }`, so a repository connection can only point at a

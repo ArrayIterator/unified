@@ -15,9 +15,7 @@ use super::{events::*, card_validation::*, card_settings::*, limits::*, provider
 
 
 
-// ---------------------------------------------------------------------------
 // Handler helpers.
-// ---------------------------------------------------------------------------
 /// Paginate an already-sorted, already-filtered list.
 pub(crate) fn paginate<T: Serialize + Clone>(items: Vec<T>, params: &PaginationParams) -> PageResult<T> {
     let pagination = params.normalized();
@@ -90,8 +88,8 @@ pub(crate) fn find_by_idempotency(connection_id: Uuid, key: &str) -> Option<Paym
 /// Return a replayed transaction only when it belongs to the
 /// customer this request acts for. Idempotency keys are scoped to
 /// (connection, key), not to a customer, so a replay lookup can
-/// otherwise hand one customer's transaction — amount, provider
-/// id, order — to another customer who guessed or reused the key.
+/// otherwise hand one customer's transaction - amount, provider
+/// id, order - to another customer who guessed or reused the key.
 /// A foreign replay reads as a generic conflict, never as the
 /// other customer's record.
 pub(crate) fn replay_for_customer(
@@ -118,13 +116,13 @@ pub(crate) fn replay_for_customer(
 /// `record_transaction` overwrites the sentinel with the real
 /// transaction id; a loser waits briefly for that record
 /// (`wait_for_idempotency`) instead of charging. `find_by_idempotency`
-/// ignores the sentinel — it points at no transaction row — so a
+/// ignores the sentinel - it points at no transaction row - so a
 /// replay lookup never returns a half-finished claim.
 ///
 /// PER-PROCESS ONLY: the claim lives in the in-memory DashMap, so
 /// two instances of this service can still both claim the same key.
 /// Multi-instance deployments must enforce the claim in Postgres
-/// instead — see migration 2026-11-22-000112
+/// instead - see migration 2026-11-22-000112
 /// (`payment_idempotency_claims`, primary key on
 /// (connection_id, idempotency_key)): insert the claim row first
 /// and treat a unique-violation as "already claimed".
@@ -141,7 +139,7 @@ pub(crate) fn claim_idempotency(connection_id: Uuid, key: &str) -> Option<Uuid> 
 
 
 /// Release a claim, but only when the entry still holds the
-/// expected id — never remove a completed record. Call this on
+/// expected id - never remove a completed record. Call this on
 /// every path where the provider call failed before a transaction
 /// was recorded; a recorded transaction overwrites the sentinel
 /// and must be left in place.
@@ -392,7 +390,7 @@ pub(crate) fn notify(state: &PaymentsState, user_id: &str, kind: &str, title: &s
 pub(crate) struct ProviderCatalogView {
     pub(crate) kind: String,
     pub(crate) display_name: String,
-    /// Logo stem only (for example `"payment-paypal"`), never a URL —
+    /// Logo stem only (for example `"payment-paypal"`), never a URL -
     /// see `src/modules/payments/logos.rs`.
     pub(crate) logo: String,
     pub(crate) capabilities: PaymentCapabilities,
@@ -423,9 +421,7 @@ pub(crate) fn catalog_view(kind: PaymentProviderKind) -> ProviderCatalogView {
 
 
 
-// ---------------------------------------------------------------------------
 // Handlers: catalog.
-// ---------------------------------------------------------------------------
 pub(crate) async fn list_providers(ctx: web::Data<Arc<AppContext>>) -> HttpResponse {
     let debug = ctx.is_debug();
     let result: UnifiedResult<Vec<ProviderCatalogView>> =
@@ -474,9 +470,7 @@ pub(crate) async fn get_provider_settings(
 
 
 
-// ---------------------------------------------------------------------------
 // Handlers: connections.
-// ---------------------------------------------------------------------------
 pub(crate) async fn list_connections(
     ctx: web::Data<Arc<AppContext>>,
     req: HttpRequest,

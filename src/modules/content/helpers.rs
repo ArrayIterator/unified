@@ -1,4 +1,4 @@
-//! Content Management module. — Helpers.
+//! Content Management module. - Helpers.
 //!
 //! Split from `src/modules/content.rs`; behaviour unchanged.
 
@@ -73,9 +73,7 @@ pub(super) fn require_permission(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Tenant edge guard (C3 pilot 4, group E).
-// ---------------------------------------------------------------------------
 
 /// Fail-closed tenant gate: resolves the tenant context the
 /// tenant-resolution middleware attached to the request. A request
@@ -85,7 +83,7 @@ pub(super) fn require_permission(
 /// module calls this FIRST, before `caller` or any capability check.
 ///
 /// Records in this module carry no company field, so the guard is a
-/// fail-closed gate only — there is no per-record company check to
+/// fail-closed gate only - there is no per-record company check to
 /// apply. Real partitioning needs a `tenant_id` on the record, a
 /// C11 follow-up, not a C3 gate.
 pub(super) fn require_tenant(
@@ -97,7 +95,7 @@ pub(super) fn require_tenant(
 /// The company scope the caller acts in: the tenant context's
 /// company first, the verified caller's server-resolved company
 /// otherwise. Fails closed (403) when both are present and disagree
-/// — a request must not carry one company in its tenant context and
+/// - a request must not carry one company in its tenant context and
 /// another in its verified identity. The `X-Company-Id` header is
 /// NEVER trusted here: only the verified caller (company resolved
 /// from the database at authentication time) and the
@@ -122,7 +120,7 @@ pub(super) fn caller_company(
 
 /// Writes require a resolved company: a mutating handler with no
 /// resolvable company scope is refused (403). Reads proceed on the
-/// tenant gate plus the mismatch check above — records here carry
+/// tenant gate plus the mismatch check above - records here carry
 /// no company field, so there is nothing to partition on read.
 pub(super) fn require_caller_company(
     tenant: &unified_core::tenancy::TenantContext,
@@ -135,11 +133,11 @@ pub(super) fn require_caller_company(
 /// Resolve the author a create body may record (`author_id` on a
 /// post or page). The recorded author is the header caller: a body
 /// value naming someone else is forgery and is rejected with 403,
-/// EXCEPT when the caller holds `content.manage` — the
+/// EXCEPT when the caller holds `content.manage` - the
 /// admin/on-behalf flow (an editor publishing under another
 /// author's byline), verified through the same `role.check`
 /// pattern as every other check. An omitted author stays omitted:
-/// no false attribution is recorded, and no author is invented —
+/// no false attribution is recorded, and no author is invented -
 /// only a supplied value naming someone else is refused.
 pub(super) fn resolve_body_author(
     requested: Option<Uuid>,

@@ -78,9 +78,7 @@ use super::resolve::resolve_host_with;
 use super::store::aliases_store;
 use super::store::settings;
 
-// ---------------------------------------------------------------------------
 // Module definition.
-// ---------------------------------------------------------------------------
 
 pub struct SaasDomainsModule;
 

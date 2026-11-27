@@ -1,4 +1,4 @@
-// Marketing Automation — Hook-bus listeners.
+// Marketing Automation - Hook-bus listeners.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -30,9 +30,7 @@ use super::handlers_scores::*;
 use super::handlers_audience::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Hook listeners.
-// ---------------------------------------------------------------------------
 
 pub(crate) fn hook_mail_outcome(state: &Arc<MarketingState>, ctx: &mut HookContext, delivered: bool) {
     let job_id = ctx

@@ -10,9 +10,7 @@ use uuid::Uuid;
 use super::types::{AUDIENCE_ADMINS, AUDIENCE_ALL, AUDIENCE_DEPARTMENT, AUDIENCE_ROLE, AUDIENCE_SEGMENT, AUDIENCE_USER, AUDIENCE_USERS, Announcement, ChangelogEntry, ReadReceipt, STATUS_PUBLISHED};
 use super::handlers_announcements::publish_due;
 
-// ---------------------------------------------------------------------------
 // State
-// ---------------------------------------------------------------------------
 
 pub struct AnnouncementsState {
     pub(crate) hooks: RwLock<Arc<HookBus>>,

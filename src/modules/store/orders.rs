@@ -74,7 +74,7 @@ pub(crate) fn license_owner(state: &StoreState, license_id: &str) -> Option<Stri
 }
 
 /// Answer `store.order.licenses` with payload `{"order_id"}`:
-/// the license ids the store issued for that order — the same list
+/// the license ids the store issued for that order - the same list
 /// the refunded event carries. Licensing asks this when an upgrade
 /// event names an order but no license ids, so a billing plan
 /// change can still reach the licenses it upgrades.
@@ -520,9 +520,7 @@ pub(crate) async fn download_order(
     json::respond(result, false)
 }
 
-// ---------------------------------------------------------------------------
 // Entitlements and signed downloads
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_entitlements(
     state: web::Data<Arc<StoreState>>,

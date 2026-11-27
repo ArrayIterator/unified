@@ -31,9 +31,7 @@ use std::time::{Duration, Instant};
 use uuid::Uuid;
 use super::{keys::*, expiry::*, hooks::*, types::*, validation::*, handlers::*, products::*, helpers::*, product_handlers::*, verify::*, offline::*, distribution::*, releases::*, module::*};
 
-// ---------------------------------------------------------------------------
 // In-memory stores (used when no database pool is attached).
-// ---------------------------------------------------------------------------
 
 pub(crate) static LICENSES: OnceLock<DashMap<Uuid, License>> = OnceLock::new();
 
@@ -121,14 +119,12 @@ pub(crate) fn db_find_license_by_id(pool: &unified_core::db::DbPool, id: Uuid) -
         .map_err(|error| UnifiedError::internal(format!("Cannot load license: {error}")))
 }
 
-// ---------------------------------------------------------------------------
 // Hook context: `init` stashes the shared application context (config,
 // hook bus, module registry, database pool) so the synchronous hook
 // handlers below can use the database and emit events. Hook handlers
 // read it lazily, so registration order (hooks before `init`) does not
 // matter. The stashed context shares the live pool/config locks; only
 // the uptime and pause flags are snapshots.
-// ---------------------------------------------------------------------------
 
 pub(crate) static LICENSING_CTX: OnceLock<Arc<AppContext>> = OnceLock::new();
 
@@ -220,12 +216,10 @@ pub(crate) fn failed_verifications_store() -> &'static DashMap<String, u64> {
     FAILED_VERIFICATIONS.get_or_init(DashMap::new)
 }
 
-// ---------------------------------------------------------------------------
 // Per-license mutexes.
 //
 // Two independent lock maps (they must stay separate: the activation
 // path calls the event append, so sharing one mutex would deadlock).
-// ---------------------------------------------------------------------------
 
 /// Per-license mutexes serialising the seat check-and-insert in
 /// `validate_and_maybe_activate`: without one, two concurrent

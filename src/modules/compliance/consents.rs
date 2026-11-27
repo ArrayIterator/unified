@@ -1,4 +1,4 @@
-//! Compliance Center module — GDPR / ISO support: data export — Consent handlers (append-only).
+//! Compliance Center module - GDPR / ISO support: data export - Consent handlers (append-only).
 //!
 //! Split from `src/modules/compliance.rs`; behaviour unchanged.
 

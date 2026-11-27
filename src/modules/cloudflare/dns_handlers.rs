@@ -1,4 +1,4 @@
-//! Cloudflare connector module. — Handlers: DNS records.
+//! Cloudflare connector module. - Handlers: DNS records.
 //!
 //! Split from `src/modules/cloudflare.rs`; behaviour unchanged.
 

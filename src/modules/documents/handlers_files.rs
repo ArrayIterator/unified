@@ -1,17 +1,17 @@
-// documents — HTTP handlers: /files/* direct file serving.
+// documents - HTTP handlers: /files/* direct file serving.
 //
 // Two routes, one pattern, two opposite trust models:
-// - GET /files/public/{key}: ZERO checks — no auth, no DB read.
+// - GET /files/public/{key}: ZERO checks - no auth, no DB read.
 //   The key's first segment IS the visibility decision (the object
 //   lives in the tenant's public area). Found -> serve; not found
 //   -> fall through to the next middleware (the app's normal 404
-//   handling — the same JSON envelope + redirect check the
+//   handling - the same JSON envelope + redirect check the
 //   server's default 404 produces; this handler generates no 404
 //   body of its own).
-// - GET /files/private/{key}: the access lock. Rule 1 — load the
+// - GET /files/private/{key}: the access lock. Rule 1 - load the
 //   DB row + visibility; public -> skip the header check, serve.
-//   Rule 2 — private -> check the header (auth). Rule 3 — valid
-//   -> proceed. Rule 4 — found -> serve, not found -> 404. ALL
+//   Rule 2 - private -> check the header (auth). Rule 3 - valid
+//   -> proceed. Rule 4 - found -> serve, not found -> 404. ALL
 //   failures -> 404 uniform (invalid auth is also 404, never
 //   401/403), with an S3-style XML error body.
 //
@@ -57,7 +57,7 @@ impl FileQuery {
 }
 
 /// S3-style XML error body for private-route failures (uniform
-/// 404 — the body never says which check failed).
+/// 404 - the body never says which check failed).
 fn xml_not_found() -> HttpResponse {
     HttpResponse::NotFound()
         .content_type("application/xml")
@@ -161,8 +161,8 @@ pub(crate) fn private_access_decision(
 }
 
 /// Pure token-scope decision for the private route: a signed token
-/// grants access only when it names THIS document, and — when the
-/// request arrived on a tenant host — when its scope IS that tenant.
+/// grants access only when it names THIS document, and - when the
+/// request arrived on a tenant host - when its scope IS that tenant.
 /// A token issued for another tenant (or another document) never
 /// replays here, even though the token itself verifies.
 fn token_grants_access(
@@ -182,10 +182,10 @@ fn token_grants_access(
     }
 }
 
-/// Rules 2–3 for a private document: the header auth chain
+/// Rules 2-3 for a private document: the header auth chain
 /// (tenant + company scope + read capability + record scope +
 /// can_read + download gate). Returns the caller's actor id on
-/// success, `None` on any failure — the caller turns it into a
+/// success, `None` on any failure - the caller turns it into a
 /// uniform 404, never a 401/403.
 fn private_caller_actor(
     state: &DocumentsState,
@@ -210,7 +210,7 @@ fn private_caller_actor(
 
 /// Build the file response for one object: headers + a streamed
 /// body. `total` is the authoritative object size (from the
-/// provider, not the DB row — an old version's key has an old
+/// provider, not the DB row - an old version's key has an old
 /// size). `download_name` is the original filename when known
 /// (`Some` -> `inline`/`attachment` carries it; `None` -> no
 /// Content-Disposition). `not_found` is returned when the object
@@ -336,12 +336,12 @@ async fn serve_object(
     }
 }
 
-/// GET /files/public/{key}: ZERO checks — no auth, no DB read.
+/// GET /files/public/{key}: ZERO checks - no auth, no DB read.
 /// The tenant scope comes from the host (tenant hosts serve
 /// their tenant's public area; the control-plane host serves the
 /// system public area). The object size comes from the provider
 /// (a stat / HEAD, never a byte read); the Content-Type comes
-/// from the extension only (no DB mime, no head sniff — the
+/// from the extension only (no DB mime, no head sniff - the
 /// extension is validated at upload). A miss falls through to the
 /// app's normal 404 handling.
 pub(crate) async fn serve_public_file(
@@ -401,10 +401,10 @@ pub(crate) async fn serve_public_file(
 }
 
 /// GET /files/private/{key}: the access lock (the 4-rule flow).
-/// Rule 1 — load the DB row + visibility; public -> skip the
-/// header check, serve. Rule 2 — private -> check the header
+/// Rule 1 - load the DB row + visibility; public -> skip the
+/// header check, serve. Rule 2 - private -> check the header
 /// (auth) or a signed token (`?token=`, the token IS the auth).
-/// Rule 3 — valid -> proceed. Rule 4 — found -> serve, not found
+/// Rule 3 - valid -> proceed. Rule 4 - found -> serve, not found
 /// -> 404. ALL failures -> 404 uniform (invalid auth is also
 /// 404, never 401/403), with an S3-style XML error body. The
 /// scope comes from the host tenant, else from a signed token
@@ -438,7 +438,7 @@ pub(crate) async fn serve_private_file(
     };
     // A token is valid for this file only when it names this
     // document and (when a host tenant resolved) that tenant's
-    // scope — a token for another tenant cannot replay here.
+    // scope - a token for another tenant cannot replay here.
     let token_ok = token_grants_access(
         &token_claim,
         &document,

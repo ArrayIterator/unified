@@ -1,4 +1,4 @@
-// appointments — handlers reminders.
+// appointments - handlers reminders.
 
 use unified_core::context::AppContext;
 use unified_core::error::{UnifiedError, UnifiedResult};
@@ -27,9 +27,7 @@ use super::handlers_staff::*;
 use super::handlers_appointments::*;
 use super::module::*;
 
-// ---------------------------------------------------------------------------
 // Handlers: appointment reminders
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_appointment_reminders(
     ctx: web::Data<Arc<AppContext>>,
@@ -217,9 +215,7 @@ pub(crate) async fn send_appointment_reminder(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Handlers: reminder rules
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn list_reminder_rules(
     ctx: web::Data<Arc<AppContext>>,
@@ -334,9 +330,7 @@ pub(crate) async fn delete_reminder_rule(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Handlers: settings
-// ---------------------------------------------------------------------------
 
 pub(crate) async fn get_settings(
     ctx: web::Data<Arc<AppContext>>,

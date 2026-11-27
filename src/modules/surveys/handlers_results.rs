@@ -1,4 +1,4 @@
-// surveys module — Results and response handlers.
+// surveys module - Results and response handlers.
 //
 // Split from the former single-file module `src/modules/surveys.rs`.
 // The module root (`surveys.rs`) re-exports the public items, so the
@@ -29,9 +29,7 @@ use super::helpers::{
 };
 use super::service::{question_stats, trend_buckets};
 
-// ---------------------------------------------------------------------------
 // Results and response handlers
-// ---------------------------------------------------------------------------
 
 pub(crate) fn parse_rfc3339(raw: &str) -> Option<DateTime<Utc>> {
     DateTime::parse_from_rfc3339(raw)

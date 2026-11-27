@@ -20,9 +20,7 @@ use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 use super::{constants::*, state::*, seed::*, auth::*, helpers::*, provisioning::*, handlers_packages::*, handlers_purchases::*, handlers_ai::*, events::*, module::*};
 
-// ---------------------------------------------------------------------------
 // Configurable settings (admin-editable; defaults are defaults only)
-// ---------------------------------------------------------------------------
 
 /// All behaviour-shaping defaults of this module. An administrator
 /// edits these through `PUT /settings`; every validation and
@@ -123,9 +121,7 @@ impl SaasPackagesSettings {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Stored records.
-// ---------------------------------------------------------------------------
 
 /// One module inside a package, with its required flag and order.
 /// Mirrors the presets module entry shape so the two modules agree
@@ -314,9 +310,7 @@ pub struct PackageDiff {
     pub kept_shared: Vec<String>,
 }
 
-// ---------------------------------------------------------------------------
 // Request bodies.
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct PackageModuleInput {

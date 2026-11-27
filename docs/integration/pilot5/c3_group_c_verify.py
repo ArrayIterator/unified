@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""C3 pilot 5 group C verification (task 319): kyc, payments, phone
+"""C3 pilot 5 group C verification: kyc, payments, phone
 (guard work) plus library, files, studio (verify-only).
 
 For each module, per routed handler (same routed-set rule as
@@ -27,7 +27,7 @@ Guard shapes (adapted per module; see group-c-results.md for why):
     shared `authorize()` helper (handlers.rs -> types.rs
     `resolve_caller_company`, no header trust) and filter with
     `CallerScope::can_access_record`. Verify-only. NOTE: files has
-    NO fail-closed tenant gate — `authorize()` never calls
+    NO fail-closed tenant gate - `authorize()` never calls
     `TenantContext::from_http_request` as a gate; a request with no
     resolved tenant context proceeds as Unresolved (global rows
     only) / Platform (control-plane admin). Those handlers are
@@ -44,7 +44,7 @@ Order: the guard precedes the first identity/capability/ownership
 call. Scope-checked: body mentions a scope marker for the module
 (see MODULES below); otherwise gate-only.
 
-Task 315/320 (2026-11-23): these shapes are unchanged -- kyc/phone
+These shapes are unchanged -- kyc/phone
 records carry `tenant_id` (not `company_id`), payments guards by
 ownership, library uses the `CallerScope` idiom (its
 `require_company_match_for` was fixed to refuse unresolved writes

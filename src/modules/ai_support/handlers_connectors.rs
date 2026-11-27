@@ -4,7 +4,7 @@
 // `ai-support.connectors.manage` capability via the `role.check`
 // hook (fail closed) plus the `X-User-Id` / `X-Role` headers.
 // Connectors are owned per user, like conversations: only the
-// owner — or a platform admin (`admin` / `super_admin` role) —
+// owner - or a platform admin (`admin` / `super_admin` role) -
 // may read, update or delete one. Responses never carry the
 // stored config verbatim: secret-bearing fields are masked.
 
@@ -17,9 +17,7 @@ use uuid::Uuid;
 
 use super::*;
 
-// ---------------------------------------------------------------------------
 // Connector handlers
-// ---------------------------------------------------------------------------
 
 /// Create one connector record. The name-uniqueness scan and the
 /// insert run under `state.connector_write`, so two concurrent
